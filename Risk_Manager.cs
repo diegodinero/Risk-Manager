@@ -17,14 +17,18 @@ namespace Risk_Manager
         {
             return new PluginInfo
             {
-                Name = "RiskManagerPlugin",
-                Title = loc.key("Risk Manager Overview"),
+                Name = "RiskManager.Panel",
+                Title = loc.key("Risk Manager UI"),
                 Group = PluginGroup.Portfolio,
-                ShortName = "RMMBS",
-                SortIndex = 35,
+                ShortName = "RMMUI",
+                SortIndex = 34,
                 WindowParameters = new NativeWindowParameters(NativeWindowParameters.Panel)
                 {
-                    BrowserUsageType = BrowserUsageType.None
+                    BrowserUsageType = BrowserUsageType.None,
+
+                    // With the following line:
+                    WindowStyle = NativeWindowStyle.SingleBorderWindow,
+                    
                 },
                 CustomProperties = new Dictionary<string, object>
                 {

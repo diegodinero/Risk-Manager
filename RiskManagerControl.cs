@@ -45,9 +45,9 @@ namespace Risk_Manager
             leftTabControl = new TabControl
             {
                 Dock = DockStyle.Fill,
-                Alignment = TabAlignment.Left,
+                Alignment = TabAlignment.Top,  // Change from TabAlignment.Left to TabAlignment.Top
                 SizeMode = TabSizeMode.Fixed,
-                ItemSize = new Size(32, 140),
+                ItemSize = new Size(100, 23),  // Width, Height (adjust as needed for horizontal tabs)
                 DrawMode = TabDrawMode.OwnerDrawFixed,
                 Multiline = true,
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular),
@@ -251,15 +251,16 @@ namespace Risk_Manager
             var rc = e.Bounds;
             var text = leftTabControl.TabPages[e.Index].Text;
             var isSelected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+            
             using var backBrush = new SolidBrush(isSelected ? SystemColors.ControlLight : leftTabControl.BackColor);
             g.FillRectangle(backBrush, rc);
 
-            g.TranslateTransform(rc.Left + rc.Width / 2f, rc.Top + rc.Height / 2f);
-            g.RotateTransform(-90f);
+            // No rotation — draw text normally for horizontal tabs
             using var textBrush = new SolidBrush(SystemColors.ControlText);
             var textSize = g.MeasureString(text, leftTabControl.Font);
-            g.DrawString(text, leftTabControl.Font, textBrush, -textSize.Width / 2f, -textSize.Height / 2f);
-            g.ResetTransform();
+            var x = rc.Left + (rc.Width - textSize.Width) / 2;
+            var y = rc.Top + (rc.Height - textSize.Height) / 2;
+            g.DrawString(text, leftTabControl.Font, textBrush, x, y);
 
             if ((e.State & DrawItemState.Focus) == DrawItemState.Focus)
                 ControlPaint.DrawFocusRectangle(g, rc);
