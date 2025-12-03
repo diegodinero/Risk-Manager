@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Platforms>AnyCPU</Platforms>
+    <AlgoType>Indicator</AlgoType>
+    <AssemblyName>Risk_Manager</AssemblyName>
+    <RootNamespace>Risk_Manager</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.9\..\..\Settings\Scripts\Indicators\Risk Manager</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.9\..\..\Settings\Scripts\Indicators\Risk Manager</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="TradingPlatform.BusinessLayer">
+      <HintPath>..\..\..\Desktop\Quantower\TradingPlatform\v1.145.9\bin\TradingPlatform.BusinessLayer.dll</HintPath>
+    </Reference>
+    <Reference Include="TradingPlatform.PresentationLayer.Plugins">
+      <HintPath>..\..\..\Desktop\Quantower\TradingPlatform\v1.145.9\bin\TradingPlatform.PresentationLayer.Plugins.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>
