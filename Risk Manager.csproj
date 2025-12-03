@@ -1,3 +1,4 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8</TargetFramework>
@@ -16,7 +17,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="TradingPlatform.BusinessLayer">
-      <HintPath>..\..\..\Desktop\Quantower\TradingPlatform\v1.145.9\bin\TradingPlatform.BusinessLayer.dll</HintPath>
+      <HintPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.9\bin\TradingPlatform.BusinessLayer.dll</HintPath>
     </Reference>
     <Reference Include="TradingPlatform.PresentationLayer.Plugins">
       <HintPath>..\..\..\Desktop\Quantower\TradingPlatform\v1.145.9\bin\TradingPlatform.PresentationLayer.Plugins.dll</HintPath>

@@ -1,6 +1,7 @@
 // Copyright QUANTOWER LLC. © 2017-2023. All rights reserved.
 
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Plugins;
@@ -12,59 +13,43 @@ namespace Risk_Manager
     /// Information about API you can find here: http://api.quantower.com
     /// Code samples: https://github.com/Quantower/Examples
     /// </summary>
-	public class Risk_Manager : Indicator
+	public class Risk_Manager : Plugin
     {
         /// <summary>
         /// Indicator's constructor. Contains general information: name, description, LineSeries etc. 
         /// </summary>
-        public Risk_Manager()
-            : base()
+        public static PluginInfo GetInfo()
         {
-            // Defines indicator's name and description.
-            Name = "Risk_Manager";
-            Description = "My indicator's annotation";
-
-            // Defines line on demand with particular parameters.
-            AddLineSeries("line1", Color.CadetBlue, 1, LineStyle.Solid);
-
-            // By default indicator will be applied on main window of the chart
-            SeparateWindow = false;
+            return new PluginInfo
+            {
+                Name = "RiskManagerPlugin",
+                Title = loc.key("Risk Manager Overview"),
+                Group = PluginGroup.Portfolio,
+                ShortName = "RMMBS",
+                SortIndex = 35,
+                WindowParameters = new NativeWindowParameters(NativeWindowParameters.Panel)
+                {
+                    BrowserUsageType = BrowserUsageType.None
+                },
+                CustomProperties = new Dictionary<string, object>
+                {
+                    { PluginInfo.Const.ALLOW_MANUAL_CREATION, true }
+                }
+            };
         }
 
         /// <summary>
-        /// This function will be called after creating an indicator as well as after its input params reset or chart (symbol or timeframe) updates.
+        /// Initialize called once on plugin creation
         /// </summary>
-        protected override void OnInit()
+        public override void Initialize()
         {
-            // Add your initialization code here
+            base.Initialize();
         }
 
-        /// <summary>
-        /// Calculation entry point. This function is called when a price data updates. 
-        /// Will be runing under the HistoricalBar mode during history loading. 
-        /// Under NewTick during realtime. 
-        /// Under NewBar if start of the new bar is required.
-        /// </summary>
-        /// <param name="args">Provides data of updating reason and incoming price.</param>
-        protected override void OnUpdate(UpdateArgs args)
+        public override void Populate(PluginParameters args = null)
         {
-            // Add your calculations here.         
-
-            //
-            // An example of accessing the prices          
-            // ----------------------------
-            //
-            // double bid = Bid();                          // To get current Bid price
-            // double open = Open(5);                       // To get open price for the fifth bar before the current
-            // 
-
-            //
-            // An example of settings values for indicator's lines
-            // -----------------------------------------------
-            //            
-            // SetValue(1.43);                              // To set value for first line of the indicator
-            // SetValue(1.43, 1);                           // To set value for second line of the indicator
-            // SetValue(1.43, 1, 5);                        // To set value for fifth bar before the current for second line of the indicator
+            base.Populate(args);
+            //PerformFullUpdate();
         }
     }
 }
