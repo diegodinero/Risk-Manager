@@ -320,12 +320,144 @@ namespace Risk_Manager
             return mainPanel;
         }
 
+        private Control CreateBlockSymbolsPanel()
+        {
+            var mainPanel = new Panel { BackColor = Color.SteelBlue, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "Block Trading on Symbols",
+                Dock = DockStyle.Top,
+                Height = 28,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Padding = new Padding(8, 0, 0, 0),
+                BackColor = Color.SteelBlue,
+                ForeColor = Color.White
+            };
+            mainPanel.Controls.Add(titleLabel);
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Select the symbols you want to block trading on:",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(8, 4, 8, 4),
+                BackColor = Color.SteelBlue,
+                ForeColor = Color.White,
+                AutoSize = false
+            };
+            mainPanel.Controls.Add(subtitleLabel);
+
+            // DataGridView for symbols
+            var symbolsGrid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AllowUserToResizeRows = false,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                ReadOnly = false,
+                BackgroundColor = Color.White,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+            };
+
+            // Add columns: Symbol (left) and Block (right with checkbox)
+            var symbolColumn = new DataGridViewTextBoxColumn
+            {
+                Name = "Symbol",
+                HeaderText = "Symbol",
+                ReadOnly = true,
+                FillWeight = 70
+            };
+            symbolsGrid.Columns.Add(symbolColumn);
+
+            var blockColumn = new DataGridViewCheckBoxColumn
+            {
+                Name = "Block",
+                HeaderText = "Block Trading",
+                ReadOnly = false,
+                FillWeight = 30,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            };
+            symbolsGrid.Columns.Add(blockColumn);
+
+            // Sample data (replace with real symbol list from Core.Instance or plugin storage)
+            var sampleSymbols = new[]
+            {
+                "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "NFLX",
+                "AMD", "INTC", "COST", "CSCO", "IBM", "ORCL", "SAP", "ADBE"
+            };
+
+            foreach (var symbol in sampleSymbols)
+            {
+                symbolsGrid.Rows.Add(symbol, false); // Symbol name, Block checkbox (default false)
+            }
+
+            mainPanel.Controls.Add(symbolsGrid);
+
+            // SAVE SETTINGS button at bottom
+            var saveButton = new Button
+            {
+                Text = "SAVE SETTINGS",
+                Dock = DockStyle.Bottom,
+                Height = 36,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = SystemColors.Control,
+                Cursor = Cursors.Hand
+            };
+            saveButton.Click += (s, e) =>
+            {
+                // Collect blocked symbols
+                var blockedSymbols = new List<string>();
+                foreach (DataGridViewRow row in symbolsGrid.Rows)
+                {
+                    bool isBlocked = (bool)(row.Cells["Block"].Value ?? false);
+                    if (isBlocked)
+                    {
+                        string symbol = row.Cells["Symbol"].Value?.ToString();
+                        if (!string.IsNullOrEmpty(symbol))
+                            blockedSymbols.Add(symbol);
+                    }
+                }
+
+                // Save to file or plugin storage
+                try
+                {
+                    var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                    var settingsPath = System.IO.Path.Combine(desktop, "BlockSymbols_Settings.txt");
+                    var lines = blockedSymbols.Select(s => $"Block={s}").ToList();
+                    System.IO.File.WriteAllLines(settingsPath, lines);
+                    MessageBox.Show($"Block Symbols settings saved! ({blockedSymbols.Count} symbols blocked)", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to save settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+            mainPanel.Controls.Add(saveButton);
+
+            return mainPanel;
+        }
+
         private Control CreatePlaceholderPanel(string title)
         {
             // Handle Feature Toggles specially
             if (string.Equals(title, "Feature Toggles", StringComparison.OrdinalIgnoreCase))
             {
                 return CreateFeatureTogglesPanel();
+            }
+
+            // Handle Block Symbols specially
+            if (string.Equals(title, "Block Symbols", StringComparison.OrdinalIgnoreCase))
+            {
+                return CreateBlockSymbolsPanel();
             }
 
             // Default placeholder for other tabs
@@ -337,7 +469,8 @@ namespace Risk_Manager
                 Height = 28,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Padding = new Padding(8, 0, 0, 0)
+                Padding = new Padding(8, 0, 0, 0),
+                ForeColor = Color.White
             };
             pnl.Controls.Add(lbl);
 
