@@ -678,6 +678,96 @@ namespace Risk_Manager
             return mainPanel;
         }
 
+        private Control CreateLockSettingsPanel()
+        {
+            var mainPanel = new Panel { BackColor = Color.SteelBlue, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "Lock Settings",
+                Dock = DockStyle.Top,
+                Height = 28,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Padding = new Padding(8, 0, 0, 0),
+                BackColor = Color.SteelBlue,
+                ForeColor = Color.White
+            };
+            mainPanel.Controls.Add(titleLabel);
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Prevent changes to settings.",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(8, 4, 8, 4),
+                BackColor = Color.SteelBlue,
+                ForeColor = Color.White,
+                AutoSize = false
+            };
+            mainPanel.Controls.Add(subtitleLabel);
+
+            // Content panel for checkbox
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = SystemColors.Window,
+                Padding = new Padding(8)
+            };
+            mainPanel.Controls.Add(contentArea);
+
+            // Enable Settings Lock checkbox
+            var lockCheckbox = new CheckBox
+            {
+                Text = "Enable Settings Lock",
+                Left = 0,
+                Top = 0,
+                Width = 250,
+                Height = 24,
+                Checked = false,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                AutoSize = false
+            };
+            contentArea.Controls.Add(lockCheckbox);
+
+            // SAVE SETTINGS button at bottom
+            var saveButton = new Button
+            {
+                Text = "SAVE SETTINGS",
+                Dock = DockStyle.Bottom,
+                Height = 36,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = SystemColors.Control,
+                Cursor = Cursors.Hand
+            };
+            saveButton.Click += (s, e) =>
+            {
+                // Save lock state
+                try
+                {
+                    var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                    var settingsPath = System.IO.Path.Combine(desktop, "LockSettings_Settings.txt");
+                    var lines = new List<string>
+                    {
+                        $"SettingsLocked={lockCheckbox.Checked}"
+                    };
+                    System.IO.File.WriteAllLines(settingsPath, lines);
+                    MessageBox.Show($"Lock Settings saved! (Settings Lock: {(lockCheckbox.Checked ? "Enabled" : "Disabled")})", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to save settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+            mainPanel.Controls.Add(saveButton);
+
+            return mainPanel;
+        }
+
         private Control CreatePlaceholderPanel(string title)
         {
             // Handle Feature Toggles specially
@@ -696,6 +786,12 @@ namespace Risk_Manager
             if (string.Equals(title, "Allowed Trading Times", StringComparison.OrdinalIgnoreCase))
             {
                 return CreateAllowedTradingTimesPanel();
+            }
+
+            // Handle Lock Settings specially
+            if (string.Equals(title, "Lock Settings", StringComparison.OrdinalIgnoreCase))
+            {
+                return CreateLockSettingsPanel();
             }
 
             // Default placeholder for other tabs
