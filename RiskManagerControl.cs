@@ -200,8 +200,135 @@ namespace Risk_Manager
             }
         }
 
+        private Control CreateFeatureTogglesPanel()
+        {
+            var mainPanel = new Panel { BackColor = Color.SteelBlue, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "Feature Toggles",
+                Dock = DockStyle.Top,
+                Height = 28,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Padding = new Padding(8, 0, 0, 0),
+                BackColor = Color.SteelBlue
+            };
+            mainPanel.Controls.Add(titleLabel);
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Enable/disable features without expanding the page. Scroll if there are many toggles.",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(8, 4, 8, 4),
+                BackColor = Color.SteelBlue,
+                AutoSize = false    
+            };
+            mainPanel.Controls.Add(subtitleLabel);
+
+            // Scrollable panel for checkboxes
+            var scrollPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = SystemColors.Window,
+                Padding = new Padding(8)
+            };
+            mainPanel.Controls.Add(scrollPanel);
+
+            // Feature list (in order)
+            var features = new[]
+            {
+                "Enable All Features",
+                "Block Symbols",
+                "Allowed Sessions",
+                "Daily Loss",
+                "Daily Profit",
+                "Position Size",
+                "Position Win",
+                "Position Loss",
+                "Weekly Loss",
+                "Weekly Profit"
+            };
+
+            var checkboxes = new Dictionary<string, CheckBox>();
+            int y = 0;
+
+            foreach (var feature in features)
+            {
+                var checkbox = new CheckBox
+                {
+                    Text = feature,
+                    Left = 0,
+                    Top = y,
+                    Width = scrollPanel.Width - 20, // Account for scrollbar
+                    Height = 24,
+                    Checked = true, // Default all to checked
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    BackColor = SystemColors.Window
+                };
+                checkbox.AutoSize = false;
+                scrollPanel.Controls.Add(checkbox);
+                checkboxes[feature] = checkbox;
+                y += 28;
+            }
+
+            // Save Settings button at bottom
+            var saveButton = new Button
+            {
+                Text = "SAVE SETTINGS",
+                Dock = DockStyle.Bottom,
+                Height = 36,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = SystemColors.Control,
+                Cursor = Cursors.Hand
+            };
+            saveButton.Click += (s, e) =>
+            {
+                // Collect all toggle states
+                var settings = new Dictionary<string, bool>();
+                foreach (var feature in features)
+                {
+                    settings[feature] = checkboxes[feature].Checked;
+                }
+
+                // Log or save settings (example: write to file or plugin storage)
+                try
+                {
+                    var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                    var settingsPath = System.IO.Path.Combine(desktop, "FeatureToggles_Settings.txt");
+                    var lines = new List<string>();
+                    foreach (var kvp in settings)
+                    {
+                        lines.Add($"{kvp.Key}={kvp.Value}");
+                    }
+                    System.IO.File.WriteAllLines(settingsPath, lines);
+                    MessageBox.Show("Feature toggles saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to save settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+            mainPanel.Controls.Add(saveButton);
+
+            return mainPanel;
+        }
+
         private Control CreatePlaceholderPanel(string title)
         {
+            // Handle Feature Toggles specially
+            if (string.Equals(title, "Feature Toggles", StringComparison.OrdinalIgnoreCase))
+            {
+                return CreateFeatureTogglesPanel();
+            }
+
+            // Default placeholder for other tabs
             var pnl = new Panel { BackColor = Color.SteelBlue };
             var lbl = new Label
             {
