@@ -17,10 +17,13 @@ namespace Risk_Manager
         private readonly Dictionary<string, Control> pageContents = new();
         private DataGridView statsGrid;
         private System.Windows.Forms.Timer statsRefreshTimer;
+        private Account selectedAccount;
+        private DataGridView statsDetailGrid;
+        private System.Windows.Forms.Timer statsDetailRefreshTimer;
 
         private static readonly string[] TabNames = new[]
         {
-            "Stats", "Feature Toggles", "Block Symbols", "Allowed Trading Times",
+            "Accounts Summary", "Stats", "Feature Toggles", "Block Symbols", "Allowed Trading Times",
             "Daily Loss", "Daily Profit Target", "Position Size", "Position Win",
             "Position Loss", "Weekly Loss", "Weekly Profit Target", "Lock Settings",
             "Manual Lock", "Copy Settings"
@@ -67,9 +70,13 @@ namespace Risk_Manager
             // Create pages and contents
             foreach (var name in TabNames)
             {
-                Control placeholder = string.Equals(name, "Stats", StringComparison.OrdinalIgnoreCase)
-                    ? CreateStatsPanel()
-                    : CreatePlaceholderPanel(name);
+                Control placeholder;
+                if (string.Equals(name, "Accounts Summary", StringComparison.OrdinalIgnoreCase))
+                    placeholder = CreateAccountsSummaryPanel();
+                else if (string.Equals(name, "Stats", StringComparison.OrdinalIgnoreCase))
+                    placeholder = CreateAccountStatsPanel();
+                else
+                    placeholder = CreatePlaceholderPanel(name);
 
                 var page = new TabPage(name) { BackColor = SystemColors.Control };
                 leftTabControl.TabPages.Add(page);
@@ -85,7 +92,7 @@ namespace Risk_Manager
                 ShowPage(TabNames[0]);
         }
 
-        private Control CreateStatsPanel()
+        private Control CreateAccountsSummaryPanel()
         {
             statsGrid = new DataGridView
             {
@@ -108,9 +115,26 @@ namespace Risk_Manager
             statsGrid.Columns.Add("Positions", "Positions");
             statsGrid.Columns.Add("Status", "Status");
 
-            RefreshStats();
+            // Allow row selection to populate Stats tab
+            statsGrid.SelectionChanged += (s, e) =>
+            {
+                if (statsGrid.SelectedRows.Count > 0)
+                {
+                    var selectedRowIndex = statsGrid.SelectedRows[0].Index;
+                    if (selectedRowIndex >= 0 && selectedRowIndex < statsGrid.Rows.Count)
+                    {
+                        var core = Core.Instance;
+                        if (core?.Accounts is System.Collections.ICollection accts && selectedRowIndex < accts.Count)
+                        {
+                            selectedAccount = core.Accounts.ElementAtOrDefault(selectedRowIndex);
+                        }
+                    }
+                }
+            };
+
+            RefreshAccountsSummary();
             statsRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
-            statsRefreshTimer.Tick += (s, e) => RefreshStats();
+            statsRefreshTimer.Tick += (s, e) => RefreshAccountsSummary();
             statsRefreshTimer.Start();
 
             var panel = new Panel { Dock = DockStyle.Fill, BackColor = Color.SteelBlue };
@@ -118,9 +142,9 @@ namespace Risk_Manager
             return panel;
         }
 
-        private void RefreshStats()
+        private void RefreshAccountsSummary()
         {
-            if (InvokeRequired) { BeginInvoke(new Action(RefreshStats)); return; }
+            if (InvokeRequired) { BeginInvoke(new Action(RefreshAccountsSummary)); return; }
             if (statsGrid == null) return;
 
             try
@@ -163,7 +187,6 @@ namespace Risk_Manager
                     }
 
                     double dailyPnL = 0, grossPnL = 0;
-                    // AdditionalInfo collection may not support LINQ; iterate safely
                     if (account.AdditionalInfo != null)
                     {
                         foreach (var info in account.AdditionalInfo)
@@ -197,6 +220,138 @@ namespace Risk_Manager
             finally
             {
                 statsGrid.ResumeLayout();
+            }
+        }
+
+        private Control CreateAccountStatsPanel()
+        {
+            var mainPanel = new Panel { BackColor = Color.SteelBlue, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "Stats",
+                Dock = DockStyle.Top,
+                Height = 28,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Padding = new Padding(8, 0, 0, 0),
+                BackColor = Color.SteelBlue,
+                ForeColor = Color.White
+            };
+            mainPanel.Controls.Add(titleLabel);
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Stats Panel",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(8, 4, 8, 4),
+                BackColor = Color.SteelBlue,
+                ForeColor = Color.White,
+                AutoSize = false
+            };
+            mainPanel.Controls.Add(subtitleLabel);
+
+            // Stats display grid
+            statsDetailGrid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                BackgroundColor = Color.White,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells
+            };
+
+            statsDetailGrid.Columns.Add("Metric", "Metric");
+            statsDetailGrid.Columns.Add("Value", "Value");
+
+            RefreshAccountStats();
+            statsDetailRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            statsDetailRefreshTimer.Tick += (s, e) => RefreshAccountStats();
+            statsDetailRefreshTimer.Start();
+
+            mainPanel.Controls.Add(statsDetailGrid);
+            return mainPanel;
+        }
+
+        private void RefreshAccountStats()
+        {
+            if (InvokeRequired) { BeginInvoke(new Action(RefreshAccountStats)); return; }
+            if (statsDetailGrid == null) return;
+
+            try
+            {
+                statsDetailGrid.SuspendLayout();
+                statsDetailGrid.Rows.Clear();
+
+                if (selectedAccount == null)
+                {
+                    statsDetailGrid.Rows.Add("Status", "No account selected");
+                    return;
+                }
+
+                var core = Core.Instance;
+
+                // Daily Net (sum of Daily Profit and Daily Loss)
+                double dailyProfit = 0, dailyLoss = 0, weeklyProfit = 0, weeklyLoss = 0, drawdown = 0;
+
+                if (selectedAccount.AdditionalInfo != null)
+                {
+                    foreach (var info in selectedAccount.AdditionalInfo)
+                    {
+                        if (info?.Id == null) continue;
+                        var id = info.Id;
+
+                        if (string.Equals(id, "Daily Profit", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (info.Value is double dp) dailyProfit = dp;
+                        }
+                        if (string.Equals(id, "Daily Loss", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (info.Value is double dl) dailyLoss = dl;
+                        }
+                        if (string.Equals(id, "Weekly Profit", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (info.Value is double wp) weeklyProfit = wp;
+                        }
+                        if (string.Equals(id, "Weekly Loss", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (info.Value is double wl) weeklyLoss = wl;
+                        }
+                        if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (info.Value is double dd) drawdown = dd;
+                        }
+                    }
+                }
+
+                double dailyNet = dailyProfit + dailyLoss;
+                double weeklyNet = weeklyProfit + weeklyLoss;
+
+                statsDetailGrid.Rows.Add("Account", selectedAccount.Name ?? selectedAccount.Id ?? "Unknown");
+                statsDetailGrid.Rows.Add("Balance", selectedAccount.Balance.ToString("N2"));
+                statsDetailGrid.Rows.Add("Daily Net", dailyNet.ToString("N2"));
+                statsDetailGrid.Rows.Add("Daily Profit", dailyProfit.ToString("N2"));
+                statsDetailGrid.Rows.Add("Daily Loss", dailyLoss.ToString("N2"));
+                statsDetailGrid.Rows.Add("Weekly Net", weeklyNet.ToString("N2"));
+                statsDetailGrid.Rows.Add("Weekly Profit", weeklyProfit.ToString("N2"));
+                statsDetailGrid.Rows.Add("Weekly Loss", weeklyLoss.ToString("N2"));
+                statsDetailGrid.Rows.Add("Drawdown", drawdown.ToString("N2"));
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
+            finally
+            {
+                statsDetailGrid.ResumeLayout();
             }
         }
 
