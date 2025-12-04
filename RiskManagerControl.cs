@@ -571,7 +571,7 @@ namespace Risk_Manager
             };
             symbolsGrid.Columns.Add(blockColumn);
 
-            // Sample symbols for demonstration - in production, load from Core.Instance.Symbols or similar data source
+            // TODO: Replace sample symbols with actual data from Core.Instance.Symbols or similar data source
             var sampleSymbols = new[] { "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "NFLX" };
             foreach (var symbol in sampleSymbols)
             {
