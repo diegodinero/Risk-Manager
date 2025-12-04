@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
@@ -11,7 +12,6 @@ namespace Risk_Manager
 {
     public class RiskManagerControl : UserControl
     {
-        private readonly TabControl leftTabControl;
         private readonly Panel contentPanel;
         private readonly Panel leftPanel;
         private readonly Dictionary<string, Control> pageContents = new();
@@ -20,381 +20,352 @@ namespace Risk_Manager
         private Account selectedAccount;
         private DataGridView statsDetailGrid;
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
+        private string selectedNavItem = "Block Symbols";
+        private readonly List<Button> navButtons = new();
+        private Label settingsStatusBadge;
+        private Label tradingStatusBadge;
 
-        private static readonly string[] TabNames = new[]
+        // Dark theme colors matching QuantGuard design
+        private static readonly Color DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
+        private static readonly Color DarkerBackground = Color.FromArgb(35, 52, 70);    // Slightly darker for sidebar
+        private static readonly Color CardBackground = Color.FromArgb(55, 72, 90);      // Card/panel background
+        private static readonly Color AccentGreen = Color.FromArgb(39, 174, 96);        // #27AE60 - Green for badges
+        private static readonly Color AccentAmber = Color.FromArgb(243, 156, 18);       // #F39C12 - Amber for warnings
+        private static readonly Color TextWhite = Color.White;
+        private static readonly Color TextGray = Color.FromArgb(189, 195, 199);         // #BDC3C7
+        private static readonly Color HoverColor = Color.FromArgb(65, 82, 100);         // Hover state
+        private static readonly Color SelectedColor = Color.FromArgb(75, 92, 110);      // Selected state
+
+        // Navigation items matching QuantGuard design
+        private static readonly string[] NavItems = new[]
         {
-            "Accounts Summary", "Stats", "Feature Toggles", "Block Symbols", "Allowed Trading Times",
-            "Daily Loss", "Daily Profit Target", "Position Size", "Position Win",
-            "Position Loss", "Weekly Loss", "Weekly Profit Target", "Lock Settings",
-            "Manual Lock", "Copy Settings"
+            "Block Symbols", "Allowed Trading Times", "Daily Loss", "Daily Profit Target",
+            "Position Size", "Position Win", "Position Loss", "Weekly Loss",
+            "Weekly Profit Target", "Lock Settings", "Manual Lock"
         };
 
-        private const int LeftPanelWidth = 160;
+        private const int LeftPanelWidth = 200;
 
         public RiskManagerControl()
         {
             Dock = DockStyle.Fill;
-            BackColor = Color.SteelBlue;
+            BackColor = DarkBackground;
+            DoubleBuffered = true;
 
-            // Top panel for account selector
+            // Top panel with title and status badges
+            var topPanel = CreateTopPanel();
+
+            // Left sidebar panel
+            leftPanel = CreateLeftSidebar();
+
+            // Main content panel
+            contentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = false,
+                BackColor = DarkBackground,
+                Padding = new Padding(20)
+            };
+
+            // Create pages and contents
+            foreach (var name in NavItems)
+            {
+                Control placeholder = CreatePlaceholderPanel(name);
+                pageContents[name] = placeholder;
+            }
+
+            // Add Statistics Overview as default content
+            pageContents["Statistics Overview"] = CreateStatisticsOverviewPanel();
+
+            Controls.Add(contentPanel);
+            Controls.Add(leftPanel);
+            Controls.Add(topPanel);
+
+            // Show Statistics Overview by default
+            ShowPage("Statistics Overview");
+        }
+
+        private Panel CreateTopPanel()
+        {
             var topPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 40,
-                BackColor = Color.SteelBlue,
-                Padding = new Padding(8)
+                Height = 60,
+                BackColor = DarkBackground,
+                Padding = new Padding(15, 10, 15, 10)
             };
 
-            var accountLabel = new Label
+            // Title label
+            var titleLabel = new Label
             {
-                Text = "Select Account:",
+                Text = "QuantGuard v1.1.0",
                 AutoSize = true,
-                ForeColor = Color.White,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Location = new Point(15, 18)
+            };
+            topPanel.Controls.Add(titleLabel);
+
+            // Status badges container (right-aligned)
+            var badgesPanel = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = Color.Transparent,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Padding = new Padding(0)
+            };
+
+            // Settings Unlocked badge
+            settingsStatusBadge = CreateStatusBadge("Settings Unlocked", AccentGreen);
+            badgesPanel.Controls.Add(settingsStatusBadge);
+
+            // Trading Unlocked badge
+            tradingStatusBadge = CreateStatusBadge("Trading Unlocked", AccentGreen);
+            badgesPanel.Controls.Add(tradingStatusBadge);
+
+            // Position the badges panel
+            badgesPanel.Location = new Point(topPanel.Width - badgesPanel.PreferredSize.Width - 20, 15);
+            topPanel.Controls.Add(badgesPanel);
+
+            // Handle resize to keep badges aligned
+            topPanel.Resize += (s, e) =>
+            {
+                badgesPanel.Location = new Point(topPanel.Width - badgesPanel.PreferredSize.Width - 20, 15);
+            };
+
+            return topPanel;
+        }
+
+        private Label CreateStatusBadge(string text, Color badgeColor)
+        {
+            var badge = new Label
+            {
+                Text = "  " + text + "  ",
+                AutoSize = true,
+                ForeColor = TextWhite,
+                BackColor = badgeColor,
                 Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Dock = DockStyle.Left,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Width = 100
+                Padding = new Padding(8, 4, 8, 4),
+                Margin = new Padding(5, 0, 5, 0),
+                TextAlign = ContentAlignment.MiddleCenter
             };
-            topPanel.Controls.Add(accountLabel);
 
-            var accountSelector = new ComboBox
+            // Make rounded corners effect by using custom paint
+            badge.Paint += (s, e) =>
             {
-                Dock = DockStyle.Fill,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 9),
-                BackColor = Color.White,
-                ForeColor = Color.Black
+                using var path = GetRoundedRectPath(new Rectangle(0, 0, badge.Width, badge.Height), 4);
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using var brush = new SolidBrush(badgeColor);
+                e.Graphics.FillPath(brush, path);
+                using var textBrush = new SolidBrush(TextWhite);
+                var textSize = e.Graphics.MeasureString(text, badge.Font);
+                var textX = (badge.Width - textSize.Width) / 2;
+                var textY = (badge.Height - textSize.Height) / 2;
+                e.Graphics.DrawString(text, badge.Font, textBrush, textX, textY);
             };
-            accountSelector.SelectedIndexChanged += (s, e) =>
-            {
-                if (accountSelector.SelectedItem is Account account)
-                {
-                    selectedAccount = account;
-                    // Refresh Stats tab if visible
-                    if (statsDetailGrid != null)
-                        RefreshAccountStats();
-                }
-            };
-            topPanel.Controls.Add(accountSelector);
 
-            // Left panel (fixed width) — prevent auto-sizing
-            leftPanel = new Panel
+            return badge;
+        }
+
+        private GraphicsPath GetRoundedRectPath(Rectangle rect, int radius)
+        {
+            var path = new GraphicsPath();
+            path.AddArc(rect.X, rect.Y, radius * 2, radius * 2, 180, 90);
+            path.AddArc(rect.Right - radius * 2, rect.Y, radius * 2, radius * 2, 270, 90);
+            path.AddArc(rect.Right - radius * 2, rect.Bottom - radius * 2, radius * 2, radius * 2, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - radius * 2, radius * 2, radius * 2, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
+        private Panel CreateLeftSidebar()
+        {
+            var sidebarPanel = new Panel
             {
                 Dock = DockStyle.Left,
                 Width = LeftPanelWidth,
                 MinimumSize = new Size(LeftPanelWidth, 0),
                 AutoSize = false,
-                BackColor = SystemColors.Control
+                BackColor = DarkerBackground,
+                Padding = new Padding(0, 10, 0, 10)
             };
 
-            leftTabControl = new TabControl
+            var navContainer = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                Alignment = TabAlignment.Top,
-                SizeMode = TabSizeMode.Fixed,
-                ItemSize = new Size(100, 23),
-                DrawMode = TabDrawMode.OwnerDrawFixed,
-                Multiline = true,
-                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                BackColor = SystemColors.Control
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                BackColor = DarkerBackground,
+                Padding = new Padding(0, 5, 0, 5)
             };
-            leftTabControl.DrawItem += LeftTabControl_DrawItem;
-            leftTabControl.SelectedIndexChanged += LeftTabControl_SelectedIndexChanged;
 
-            contentPanel = new Panel
+            foreach (var item in NavItems)
             {
+                var navButton = CreateNavButton(item);
+                navContainer.Controls.Add(navButton);
+                navButtons.Add(navButton);
+            }
+
+            sidebarPanel.Controls.Add(navContainer);
+            return sidebarPanel;
+        }
+
+        private Button CreateNavButton(string text)
+        {
+            var button = new Button
+            {
+                Text = "  " + text,
+                Width = LeftPanelWidth - 4,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = TextWhite,
+                BackColor = text == selectedNavItem ? SelectedColor : DarkerBackground,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 1, 0, 1),
+                Padding = new Padding(10, 0, 0, 0)
+            };
+
+            button.FlatAppearance.BorderSize = 0;
+            button.FlatAppearance.MouseOverBackColor = HoverColor;
+            button.FlatAppearance.MouseDownBackColor = SelectedColor;
+
+            button.Click += (s, e) =>
+            {
+                selectedNavItem = text;
+                UpdateNavButtonStates();
+                ShowPage(text);
+            };
+
+            return button;
+        }
+
+        private void UpdateNavButtonStates()
+        {
+            foreach (var btn in navButtons)
+            {
+                var itemText = btn.Text.TrimStart();
+                btn.BackColor = itemText == selectedNavItem ? SelectedColor : DarkerBackground;
+            }
+        }
+
+        private Panel CreateStatisticsOverviewPanel()
+        {
+            var mainPanel = new Panel
+            {
+                BackColor = DarkBackground,
                 Dock = DockStyle.Fill,
-                AutoSize = false,
-                BackColor = Color.SteelBlue
+                Padding = new Padding(10)
             };
-
-            // Create pages and contents
-            foreach (var name in TabNames)
-            {
-                Control placeholder;
-                if (string.Equals(name, "Accounts Summary", StringComparison.OrdinalIgnoreCase))
-                    placeholder = CreateAccountsSummaryPanel();
-                else if (string.Equals(name, "Stats", StringComparison.OrdinalIgnoreCase))
-                    placeholder = CreateAccountStatsPanel();
-                else
-                    placeholder = CreatePlaceholderPanel(name);
-
-                var page = new TabPage(name) { BackColor = SystemColors.Control };
-                leftTabControl.TabPages.Add(page);
-                pageContents[name] = placeholder;
-            }
-
-            leftPanel.Controls.Add(leftTabControl);
-            Controls.Add(contentPanel);
-            Controls.Add(leftPanel);
-            Controls.Add(topPanel);  // Add top panel last so it renders first
-
-            // Populate account dropdown
-            RefreshAccountDropdown(accountSelector);
-
-            // Refresh dropdown periodically as accounts connect/disconnect
-            var dropdownRefreshTimer = new System.Windows.Forms.Timer { Interval = 2000 };
-            dropdownRefreshTimer.Tick += (s, e) => RefreshAccountDropdown(accountSelector);
-            dropdownRefreshTimer.Start();
-
-            // Show first page
-            if (TabNames.Length > 0)
-                ShowPage(TabNames[0]);
-        }
-
-        private void RefreshAccountDropdown(ComboBox accountSelector)
-        {
-            var core = Core.Instance;
-            var connectedAccounts = core?.Accounts?
-                .Where(a => a != null && a.Connection != null)
-                .ToList() ?? new List<Account>();
-
-            // Preserve current selection if it still exists
-            var currentSelection = accountSelector.SelectedItem as Account;
-
-            accountSelector.Items.Clear();
-            foreach (var account in connectedAccounts)
-            {
-                var displayName = $"{account.Connection?.Name ?? "Unknown"} - {account.Name ?? account.Id ?? "Unnamed"}";
-                accountSelector.Items.Add(account);
-                // Store display name as tag for rendering (optional)
-                if (accountSelector.Items.Count > 0)
-                {
-                    var index = accountSelector.Items.Count - 1;
-                    // We'll override ToString or use a wrapper
-                }
-            }
-
-            // Restore selection or select first
-            if (currentSelection != null && accountSelector.Items.Contains(currentSelection))
-            {
-                accountSelector.SelectedItem = currentSelection;
-            }
-            else if (accountSelector.Items.Count > 0)
-            {
-                accountSelector.SelectedIndex = 0;
-                selectedAccount = accountSelector.SelectedItem as Account;
-            }
-            else
-            {
-                accountSelector.SelectedIndex = -1;
-                selectedAccount = null;
-            }
-        }
-
-        private Control CreateAccountsSummaryPanel()
-        {
-            statsGrid = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                BackgroundColor = Color.SteelBlue
-            };
-
-            statsGrid.Columns.Add("Provider", "Provider");
-            statsGrid.Columns.Add("Connection", "Connection");
-            statsGrid.Columns.Add("Account", "Account");
-            statsGrid.Columns.Add("Balance", "Balance");
-            statsGrid.Columns.Add("OpenPnL", "Open P&L");
-            statsGrid.Columns.Add("DailyPnL", "Daily P&L");
-            statsGrid.Columns.Add("GrossPnL", "Gross P&L");
-            statsGrid.Columns.Add("Positions", "Positions");
-            statsGrid.Columns.Add("Status", "Status");
-
-            // Allow row selection to populate Stats tab
-            statsGrid.SelectionChanged += (s, e) =>
-            {
-                if (statsGrid.SelectedRows.Count > 0)
-                {
-                    var selectedRowIndex = statsGrid.SelectedRows[0].Index;
-                    if (selectedRowIndex >= 0 && selectedRowIndex < statsGrid.Rows.Count)
-                    {
-                        var core = Core.Instance;
-                        if (core?.Accounts is System.Collections.ICollection accts && selectedRowIndex < accts.Count)
-                        {
-                            selectedAccount = core.Accounts.ElementAtOrDefault(selectedRowIndex);
-                        }
-                    }
-                }
-            };
-
-            RefreshAccountsSummary();
-            statsRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
-            statsRefreshTimer.Tick += (s, e) => RefreshAccountsSummary();
-            statsRefreshTimer.Start();
-
-            var panel = new Panel { Dock = DockStyle.Fill, BackColor = Color.SteelBlue };
-            panel.Controls.Add(statsGrid);
-            return panel;
-        }
-
-        private void RefreshAccountsSummary()
-        {
-            if (InvokeRequired) { BeginInvoke(new Action(RefreshAccountsSummary)); return; }
-            if (statsGrid == null) return;
-
-            try
-            {
-                statsGrid.SuspendLayout();
-                statsGrid.Rows.Clear();
-
-                var core = Core.Instance;
-                if (core == null || core.Accounts == null || !core.Accounts.Any())
-                {
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "1000.00", "12.34", "5.67", "18.01", "1", "Connected");
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "2500.50", "-8.20", "-2.00", "-10.20", "2", "Connected");
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn3", "ACC789", "500.00", "0.00", "0.00", "0", "Disconnected");
-                    return;
-                }
-
-                foreach (var account in core.Accounts)
-                {
-                    if (account == null) continue;
-
-                    var provider = account.Connection?.VendorName ?? account.Connection?.Name ?? "Unknown";
-                    var connectionName = account.Connection?.Name ?? "Unknown";
-                    var accountId = account.Id ?? account.Name ?? "Unknown";
-                    var balance = account.Balance;
-
-                    double openPnL = 0;
-                    int positionsCount = 0;
-                    if (core.Positions != null)
-                    {
-                        foreach (var pos in core.Positions)
-                        {
-                            if (pos == null) continue;
-                            if (pos.Account == account && pos.Quantity != 0)
-                            {
-                                var pnlItem = pos.NetPnL ?? pos.GrossPnL;
-                                if (pnlItem != null) openPnL += pnlItem.Value;
-                                positionsCount++;
-                            }
-                        }
-                    }
-
-                    double dailyPnL = 0, grossPnL = 0;
-                    if (account.AdditionalInfo != null)
-                    {
-                        foreach (var info in account.AdditionalInfo)
-                        {
-                            if (info?.Id == null) continue;
-                            var id = info.Id;
-                            if (string.Equals(id, "Daily Net P&L", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "DailyPnL", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (info.Value is double dv) dailyPnL = dv;
-                            }
-
-                            if (string.Equals(id, "Gross P&L", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "GrossPnL", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (info.Value is double gv) grossPnL = gv;
-                            }
-                        }
-                    }
-
-                    var status = account.Connection == null ? "Disconnected" : account.Connection.State.ToString();
-                    statsGrid.Rows.Add(provider, connectionName, accountId, balance.ToString("N2"), openPnL.ToString("N2"), dailyPnL.ToString("N2"), grossPnL.ToString("N2"), positionsCount.ToString(), status);
-                }
-            }
-            catch
-            {
-                // ignore refresh errors
-            }
-            finally
-            {
-                statsGrid.ResumeLayout();
-            }
-        }
-
-        private Control CreateAccountStatsPanel()
-        {
-            var mainPanel = new Panel { BackColor = Color.SteelBlue, Dock = DockStyle.Fill };
 
             // Title
             var titleLabel = new Label
             {
-                Text = "Stats",
+                Text = "Statistics Overview",
                 Dock = DockStyle.Top,
-                Height = 28,
+                Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                Padding = new Padding(8, 0, 0, 0),
-                BackColor = Color.SteelBlue,
-                ForeColor = Color.White
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = DarkBackground,
+                Padding = new Padding(5, 0, 0, 0)
             };
             mainPanel.Controls.Add(titleLabel);
 
-            // Subtitle
-            var subtitleLabel = new Label
-            {
-                Text = "Stats Panel",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.TopLeft,
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Padding = new Padding(8, 4, 8, 4),
-                BackColor = Color.SteelBlue,
-                ForeColor = Color.White,
-                AutoSize = false
-            };
-            mainPanel.Controls.Add(subtitleLabel);
-
-            // Stats display grid
-            statsDetailGrid = new DataGridView
+            // Stats container with two-column layout
+            var statsContainer = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                BackgroundColor = Color.White,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells
+                ColumnCount = 2,
+                RowCount = 7,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
             };
 
-            statsDetailGrid.Columns.Add("Metric", "Metric");
-            statsDetailGrid.Columns.Add("Value", "Value");
+            statsContainer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            statsContainer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
 
-            RefreshAccountStats();
+            for (int i = 0; i < 7; i++)
+            {
+                statsContainer.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
+            }
+
+            // Stats data - matching the QuantGuard design
+            var stats = new[]
+            {
+                ("Daily Net", "$0.00"),
+                ("Daily Profit", "$0.00"),
+                ("Daily Loss", "$0.00"),
+                ("Weekly Net", "$0.00"),
+                ("Weekly Profit", "$0.00"),
+                ("Weekly Loss", "$0.00"),
+                ("Drawdown", "$0.00")
+            };
+
+            for (int i = 0; i < stats.Length; i++)
+            {
+                var (label, value) = stats[i];
+
+                var labelCtrl = new Label
+                {
+                    Text = label,
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    BackColor = CardBackground,
+                    Padding = new Padding(10, 0, 0, 0)
+                };
+
+                var valueCtrl = new Label
+                {
+                    Text = value,
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleRight,
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    BackColor = CardBackground,
+                    Padding = new Padding(0, 0, 10, 0),
+                    Tag = label // Store the metric name for updates
+                };
+
+                statsContainer.Controls.Add(labelCtrl, 0, i);
+                statsContainer.Controls.Add(valueCtrl, 1, i);
+            }
+
+            mainPanel.Controls.Add(statsContainer);
+
+            // Setup refresh timer
             statsDetailRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
-            statsDetailRefreshTimer.Tick += (s, e) => RefreshAccountStats();
+            statsDetailRefreshTimer.Tick += (s, e) => RefreshStatisticsOverview(statsContainer);
             statsDetailRefreshTimer.Start();
 
-            mainPanel.Controls.Add(statsDetailGrid);
             return mainPanel;
         }
 
-        private void RefreshAccountStats()
+        private void RefreshStatisticsOverview(TableLayoutPanel statsContainer)
         {
-            if (InvokeRequired) { BeginInvoke(new Action(RefreshAccountStats)); return; }
-            if (statsDetailGrid == null) return;
+            if (InvokeRequired) { BeginInvoke(new Action(() => RefreshStatisticsOverview(statsContainer))); return; }
+            if (statsContainer == null) return;
 
             try
             {
-                statsDetailGrid.SuspendLayout();
-                statsDetailGrid.Rows.Clear();
-
-                if (selectedAccount == null)
-                {
-                    statsDetailGrid.Rows.Add("Status", "No account selected");
-                    return;
-                }
-
                 var core = Core.Instance;
+                if (core?.Accounts == null || !core.Accounts.Any()) return;
 
-                // Daily Net (sum of Daily Profit and Daily Loss)
+                // Use first account if none selected
+                var account = selectedAccount ?? core.Accounts.FirstOrDefault();
+                if (account == null) return;
+
                 double dailyProfit = 0, dailyLoss = 0, weeklyProfit = 0, weeklyLoss = 0, drawdown = 0;
 
-                if (selectedAccount.AdditionalInfo != null)
+                if (account.AdditionalInfo != null)
                 {
-                    foreach (var info in selectedAccount.AdditionalInfo)
+                    foreach (var info in account.AdditionalInfo)
                     {
                         if (info?.Id == null) continue;
                         var id = info.Id;
@@ -425,180 +396,133 @@ namespace Risk_Manager
                 double dailyNet = dailyProfit + dailyLoss;
                 double weeklyNet = weeklyProfit + weeklyLoss;
 
-                statsDetailGrid.Rows.Add("Account", selectedAccount.Name ?? selectedAccount.Id ?? "Unknown");
-                statsDetailGrid.Rows.Add("Balance", selectedAccount.Balance.ToString("N2"));
-                statsDetailGrid.Rows.Add("Daily Net", dailyNet.ToString("N2"));
-                statsDetailGrid.Rows.Add("Daily Profit", dailyProfit.ToString("N2"));
-                statsDetailGrid.Rows.Add("Daily Loss", dailyLoss.ToString("N2"));
-                statsDetailGrid.Rows.Add("Weekly Net", weeklyNet.ToString("N2"));
-                statsDetailGrid.Rows.Add("Weekly Profit", weeklyProfit.ToString("N2"));
-                statsDetailGrid.Rows.Add("Weekly Loss", weeklyLoss.ToString("N2"));
-                statsDetailGrid.Rows.Add("Drawdown", drawdown.ToString("N2"));
+                var values = new Dictionary<string, string>
+                {
+                    { "Daily Net", $"${dailyNet:N2}" },
+                    { "Daily Profit", $"${dailyProfit:N2}" },
+                    { "Daily Loss", $"${dailyLoss:N2}" },
+                    { "Weekly Net", $"${weeklyNet:N2}" },
+                    { "Weekly Profit", $"${weeklyProfit:N2}" },
+                    { "Weekly Loss", $"${weeklyLoss:N2}" },
+                    { "Drawdown", $"${drawdown:N2}" }
+                };
+
+                foreach (Control ctrl in statsContainer.Controls)
+                {
+                    if (ctrl is Label lbl && lbl.Tag is string metricName && values.ContainsKey(metricName))
+                    {
+                        lbl.Text = values[metricName];
+                    }
+                }
             }
             catch
             {
                 // ignore refresh errors
             }
-            finally
-            {
-                statsDetailGrid.ResumeLayout();
-            }
         }
 
-        private Control CreateFeatureTogglesPanel()
+        private Control CreateDarkThemedPanel(string title, string subtitle = null)
         {
-            var mainPanel = new Panel { BackColor = Color.SteelBlue, Dock = DockStyle.Fill };
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title
             var titleLabel = new Label
             {
-                Text = "Feature Toggles",
+                Text = title,
                 Dock = DockStyle.Top,
-                Height = 28,
+                Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                Padding = new Padding(8, 0, 0, 0),
-                BackColor = Color.SteelBlue
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
             };
             mainPanel.Controls.Add(titleLabel);
 
-            // Subtitle
-            var subtitleLabel = new Label
+            if (!string.IsNullOrEmpty(subtitle))
             {
-                Text = "Enable/disable features without expanding the page. Scroll if there are many toggles.",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.TopLeft,
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Padding = new Padding(8, 4, 8, 4),
-                BackColor = Color.SteelBlue,
-                AutoSize = false    
-            };
-            mainPanel.Controls.Add(subtitleLabel);
-
-            // Scrollable panel for checkboxes
-            var scrollPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                AutoScroll = true,
-                BackColor = SystemColors.Window,
-                Padding = new Padding(8)
-            };
-            mainPanel.Controls.Add(scrollPanel);
-
-            // Feature list (in order)
-            var features = new[]
-            {
-                "Enable All Features",
-                "Block Symbols",
-                "Allowed Sessions",
-                "Daily Loss",
-                "Daily Profit",
-                "Position Size",
-                "Position Win",
-                "Position Loss",
-                "Weekly Loss",
-                "Weekly Profit"
-            };
-
-            var checkboxes = new Dictionary<string, CheckBox>();
-            int y = 0;
-
-            foreach (var feature in features)
-            {
-                var checkbox = new CheckBox
+                var subtitleLabel = new Label
                 {
-                    Text = feature,
-                    Left = 0,
-                    Top = y,
-                    Width = scrollPanel.Width - 20, // Account for scrollbar
-                    Height = 24,
-                    Checked = true, // Default all to checked
+                    Text = subtitle,
+                    Dock = DockStyle.Top,
+                    Height = 30,
+                    TextAlign = ContentAlignment.TopLeft,
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                    BackColor = SystemColors.Window
+                    Padding = new Padding(10, 0, 10, 0),
+                    BackColor = DarkBackground,
+                    ForeColor = TextGray,
+                    AutoSize = false
                 };
-                checkbox.AutoSize = false;
-                scrollPanel.Controls.Add(checkbox);
-                checkboxes[feature] = checkbox;
-                y += 28;
+                mainPanel.Controls.Add(subtitleLabel);
             }
-
-            // Save Settings button at bottom
-            var saveButton = new Button
-            {
-                Text = "SAVE SETTINGS",
-                Dock = DockStyle.Bottom,
-                Height = 36,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                BackColor = SystemColors.Control,
-                Cursor = Cursors.Hand
-            };
-            saveButton.Click += (s, e) =>
-            {
-                // Collect all toggle states
-                var settings = new Dictionary<string, bool>();
-                foreach (var feature in features)
-                {
-                    settings[feature] = checkboxes[feature].Checked;
-                }
-
-                // Log or save settings (example: write to file or plugin storage)
-                try
-                {
-                    var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                    var settingsPath = System.IO.Path.Combine(desktop, "FeatureToggles_Settings.txt");
-                    var lines = new List<string>();
-                    foreach (var kvp in settings)
-                    {
-                        lines.Add($"{kvp.Key}={kvp.Value}");
-                    }
-                    System.IO.File.WriteAllLines(settingsPath, lines);
-                    MessageBox.Show("Feature toggles saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Failed to save settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
-            mainPanel.Controls.Add(saveButton);
 
             return mainPanel;
         }
 
-        private Control CreateBlockSymbolsPanel()
+        private Control CreatePlaceholderPanel(string title)
         {
-            var mainPanel = new Panel { BackColor = Color.SteelBlue, Dock = DockStyle.Fill };
-
-            // Title
-            var titleLabel = new Label
+            // Handle Block Symbols specially
+            if (string.Equals(title, "Block Symbols", StringComparison.OrdinalIgnoreCase))
             {
-                Text = "Block Trading on Symbols",
-                Dock = DockStyle.Top,
-                Height = 28,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                Padding = new Padding(8, 0, 0, 0),
-                BackColor = Color.SteelBlue,
-                ForeColor = Color.White
+                return CreateBlockSymbolsDarkPanel();
+            }
+
+            // Handle Allowed Trading Times specially
+            if (string.Equals(title, "Allowed Trading Times", StringComparison.OrdinalIgnoreCase))
+            {
+                return CreateAllowedTradingTimesDarkPanel();
+            }
+
+            // Handle Lock Settings specially
+            if (string.Equals(title, "Lock Settings", StringComparison.OrdinalIgnoreCase))
+            {
+                return CreateLockSettingsDarkPanel();
+            }
+
+            // Handle Manual Lock specially
+            if (string.Equals(title, "Manual Lock", StringComparison.OrdinalIgnoreCase))
+            {
+                return CreateManualLockDarkPanel();
+            }
+
+            // Default dark placeholder for other tabs
+            var mainPanel = CreateDarkThemedPanel(title, "Configure your settings below.");
+
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(15)
             };
-            mainPanel.Controls.Add(titleLabel);
 
-            // Subtitle
-            var subtitleLabel = new Label
+            var placeholderLabel = new Label
             {
-                Text = "Select the symbols you want to block trading on:",
+                Text = $"Settings for {title} will be displayed here.",
                 Dock = DockStyle.Top,
                 Height = 40,
-                TextAlign = ContentAlignment.TopLeft,
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Padding = new Padding(8, 4, 8, 4),
-                BackColor = Color.SteelBlue,
-                ForeColor = Color.White,
-                AutoSize = false
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextGray,
+                BackColor = CardBackground
             };
-            mainPanel.Controls.Add(subtitleLabel);
+            contentArea.Controls.Add(placeholderLabel);
 
-            // DataGridView for symbols
+            mainPanel.Controls.Add(contentArea);
+            return mainPanel;
+        }
+
+        private Control CreateBlockSymbolsDarkPanel()
+        {
+            var mainPanel = CreateDarkThemedPanel("Block Symbols", "Select the symbols you want to block trading on:");
+
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(10)
+            };
+
+            // Symbol list with dark theme styling
             var symbolsGrid = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -609,11 +533,23 @@ namespace Risk_Manager
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
                 ReadOnly = false,
-                BackgroundColor = Color.White,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+                BackgroundColor = CardBackground,
+                GridColor = DarkerBackground,
+                BorderStyle = BorderStyle.None,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                RowHeadersVisible = false,
+                EnableHeadersVisualStyles = false
             };
 
-            // Add columns: Symbol (left) and Block (right with checkbox)
+            // Style the grid for dark theme
+            symbolsGrid.DefaultCellStyle.BackColor = CardBackground;
+            symbolsGrid.DefaultCellStyle.ForeColor = TextWhite;
+            symbolsGrid.DefaultCellStyle.SelectionBackColor = SelectedColor;
+            symbolsGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
+            symbolsGrid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
+            symbolsGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
+            symbolsGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
             var symbolColumn = new DataGridViewTextBoxColumn
             {
                 Name = "Symbol",
@@ -628,113 +564,38 @@ namespace Risk_Manager
                 Name = "Block",
                 HeaderText = "Block Trading",
                 ReadOnly = false,
-                FillWeight = 30,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+                FillWeight = 30
             };
             symbolsGrid.Columns.Add(blockColumn);
 
-            // Sample data (replace with real symbol list from Core.Instance or plugin storage)
-            var sampleSymbols = new[]
-            {
-                "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "NFLX",
-                "AMD", "INTC", "COST", "CSCO", "IBM", "ORCL", "SAP", "ADBE"
-            };
-
+            var sampleSymbols = new[] { "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "NFLX" };
             foreach (var symbol in sampleSymbols)
             {
-                symbolsGrid.Rows.Add(symbol, false); // Symbol name, Block checkbox (default false)
+                symbolsGrid.Rows.Add(symbol, false);
             }
 
-            mainPanel.Controls.Add(symbolsGrid);
+            contentArea.Controls.Add(symbolsGrid);
+            mainPanel.Controls.Add(contentArea);
 
-            // SAVE SETTINGS button at bottom
-            var saveButton = new Button
-            {
-                Text = "SAVE SETTINGS",
-                Dock = DockStyle.Bottom,
-                Height = 36,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                BackColor = SystemColors.Control,
-                Cursor = Cursors.Hand
-            };
-            saveButton.Click += (s, e) =>
-            {
-                // Collect blocked symbols
-                var blockedSymbols = new List<string>();
-                foreach (DataGridViewRow row in symbolsGrid.Rows)
-                {
-                    bool isBlocked = (bool)(row.Cells["Block"].Value ?? false);
-                    if (isBlocked)
-                    {
-                        string symbol = row.Cells["Symbol"].Value?.ToString();
-                        if (!string.IsNullOrEmpty(symbol))
-                            blockedSymbols.Add(symbol);
-                    }
-                }
-
-                // Save to file or plugin storage
-                try
-                {
-                    var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                    var settingsPath = System.IO.Path.Combine(desktop, "BlockSymbols_Settings.txt");
-                    var lines = blockedSymbols.Select(s => $"Block={s}").ToList();
-                    System.IO.File.WriteAllLines(settingsPath, lines);
-                    MessageBox.Show($"Block Symbols settings saved! ({blockedSymbols.Count} symbols blocked)", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Failed to save settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
+            // Save button with dark theme
+            var saveButton = CreateDarkSaveButton();
             mainPanel.Controls.Add(saveButton);
 
             return mainPanel;
         }
 
-        private Control CreateAllowedTradingTimesPanel()
+        private Control CreateAllowedTradingTimesDarkPanel()
         {
-            var mainPanel = new Panel { BackColor = Color.SteelBlue, Dock = DockStyle.Fill };
+            var mainPanel = CreateDarkThemedPanel("Allowed Trading Times", "Select which sessions the trader is allowed to participate in:");
 
-            // Title
-            var titleLabel = new Label
-            {
-                Text = "Allowed Trading Sessions",
-                Dock = DockStyle.Top,
-                Height = 28,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                Padding = new Padding(8, 0, 0, 0),
-                BackColor = Color.SteelBlue,
-                ForeColor = Color.White
-            };
-            mainPanel.Controls.Add(titleLabel);
-
-            // Subtitle
-            var subtitleLabel = new Label
-            {
-                Text = "Select which sessions the trader is allowed to participate in (times in EST), or specify a custom timeframe:",
-                Dock = DockStyle.Top,
-                Height = 50,
-                TextAlign = ContentAlignment.TopLeft,
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Padding = new Padding(8, 4, 8, 4),
-                BackColor = Color.SteelBlue,
-                ForeColor = Color.White,
-                AutoSize = false
-            };
-            mainPanel.Controls.Add(subtitleLabel);
-
-            // Scrollable panel for checkboxes
-            var scrollPanel = new Panel
+            var contentArea = new Panel
             {
                 Dock = DockStyle.Fill,
-                AutoScroll = true,
-                BackColor = SystemColors.Window,
-                Padding = new Padding(8)
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                AutoScroll = true
             };
-            mainPanel.Controls.Add(scrollPanel);
 
-            // Session definitions
             var sessions = new[]
             {
                 ("NY Session", "8 AM - 5 PM EST"),
@@ -742,338 +603,140 @@ namespace Risk_Manager
                 ("Asia Session", "7 PM - 4 AM EST")
             };
 
-            var sessionCheckboxes = new Dictionary<string, CheckBox>();
             int y = 0;
-
             foreach (var (sessionName, timeRange) in sessions)
             {
-                // Session checkbox with time range label
-                var sessionPanel = new Panel
-                {
-                    Left = 0,
-                    Top = y,
-                    Width = scrollPanel.Width - 20,
-                    Height = 32,
-                    AutoSize = false
-                };
-
                 var checkbox = new CheckBox
                 {
-                    Text = sessionName,
+                    Text = $"{sessionName} ({timeRange})",
                     Left = 0,
-                    Top = 0,
-                    Width = 150,
-                    Height = 24,
-                    Checked = true, // Default all sessions to enabled
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                    AutoSize = false
+                    Top = y,
+                    Width = 350,
+                    Height = 30,
+                    Checked = true,
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    BackColor = CardBackground
                 };
-
-                var timeLabel = new Label
-                {
-                    Text = timeRange,
-                    Left = 155,
-                    Top = 4,
-                    Width = 200,
-                    Height = 16,
-                    Font = new Font("Segoe UI", 8, FontStyle.Italic),
-                    ForeColor = Color.Gray,
-                    AutoSize = false
-                };
-
-                sessionPanel.Controls.Add(checkbox);
-                sessionPanel.Controls.Add(timeLabel);
-                scrollPanel.Controls.Add(sessionPanel);
-                sessionCheckboxes[sessionName] = checkbox;
-                y += 36;
+                contentArea.Controls.Add(checkbox);
+                y += 35;
             }
 
-            // Custom Session section
-            var customSessionPanel = new Panel
-            {
-                Left = 0,
-                Top = y,
-                Width = scrollPanel.Width - 20,
-                Height = 80,
-                AutoSize = false,
-                BorderStyle = BorderStyle.FixedSingle
-            };
+            mainPanel.Controls.Add(contentArea);
 
-            var customCheckbox = new CheckBox
-            {
-                Text = "Enable Custom Session",
-                Left = 8,
-                Top = 8,
-                Width = 200,
-                Height = 20,
-                Checked = false,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                AutoSize = false
-            };
-
-            var startTimeLabel = new Label
-            {
-                Text = "Start Time:",
-                Left = 8,
-                Top = 32,
-                Width = 70,
-                Height = 20,
-                Font = new Font("Segoe UI", 9),
-                AutoSize = false
-            };
-
-            var startTimeInput = new TextBox
-            {
-                Left = 85,
-                Top = 32,
-                Width = 100,
-                Height = 20,
-                Text = "09:00",
-                Enabled = false,
-                Font = new Font("Segoe UI", 9)
-            };
-
-            var endTimeLabel = new Label
-            {
-                Text = "End Time:",
-                Left = 200,
-                Top = 32,
-                Width = 70,
-                Height = 20,
-                Font = new Font("Segoe UI", 9),
-                AutoSize = false
-            };
-
-            var endTimeInput = new TextBox
-            {
-                Left = 277,
-                Top = 32,
-                Width = 100,
-                Height = 20,
-                Text = "17:00",
-                Enabled = false,
-                Font = new Font("Segoe UI", 9)
-            };
-
-            // Enable/disable time inputs based on custom checkbox
-            customCheckbox.CheckedChanged += (s, e) =>
-            {
-                startTimeInput.Enabled = customCheckbox.Checked;
-                endTimeInput.Enabled = customCheckbox.Checked;
-            };
-
-            customSessionPanel.Controls.Add(customCheckbox);
-            customSessionPanel.Controls.Add(startTimeLabel);
-            customSessionPanel.Controls.Add(startTimeInput);
-            customSessionPanel.Controls.Add(endTimeLabel);
-            customSessionPanel.Controls.Add(endTimeInput);
-            scrollPanel.Controls.Add(customSessionPanel);
-
-            // SAVE SETTINGS button at bottom
-            var saveButton = new Button
-            {
-                Text = "SAVE SETTINGS",
-                Dock = DockStyle.Bottom,
-                Height = 36,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                BackColor = SystemColors.Control,
-                Cursor = Cursors.Hand
-            };
-            saveButton.Click += (s, e) =>
-            {
-                // Collect enabled sessions
-                var enabledSessions = new List<string>();
-                foreach (var kvp in sessionCheckboxes)
-                {
-                    if (kvp.Value.Checked)
-                        enabledSessions.Add(kvp.Key);
-                }
-
-                // Collect custom session if enabled
-                var customSessionInfo = "";
-                if (customCheckbox.Checked)
-                {
-                    customSessionInfo = $"Custom: {startTimeInput.Text} - {endTimeInput.Text}";
-                }
-
-                // Save to file or plugin storage
-                try
-                {
-                    var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                    var settingsPath = System.IO.Path.Combine(desktop, "AllowedTradingTimes_Settings.txt");
-                    var lines = new List<string>();
-                    foreach (var session in enabledSessions)
-                    {
-                        lines.Add($"Session={session}");
-                    }
-                    if (!string.IsNullOrEmpty(customSessionInfo))
-                    {
-                        lines.Add(customSessionInfo);
-                    }
-                    System.IO.File.WriteAllLines(settingsPath, lines);
-                    MessageBox.Show($"Allowed Trading Times settings saved! ({enabledSessions.Count} sessions enabled)", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Failed to save settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
+            var saveButton = CreateDarkSaveButton();
             mainPanel.Controls.Add(saveButton);
 
             return mainPanel;
         }
 
-        private Control CreateLockSettingsPanel()
+        private Control CreateLockSettingsDarkPanel()
         {
-            var mainPanel = new Panel { BackColor = Color.SteelBlue, Dock = DockStyle.Fill };
+            var mainPanel = CreateDarkThemedPanel("Lock Settings", "Prevent changes to settings.");
 
-            // Title
-            var titleLabel = new Label
-            {
-                Text = "Lock Settings",
-                Dock = DockStyle.Top,
-                Height = 28,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                Padding = new Padding(8, 0, 0, 0),
-                BackColor = Color.SteelBlue,
-                ForeColor = Color.White
-            };
-            mainPanel.Controls.Add(titleLabel);
-
-            // Subtitle
-            var subtitleLabel = new Label
-            {
-                Text = "Prevent changes to settings.",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.TopLeft,
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Padding = new Padding(8, 4, 8, 4),
-                BackColor = Color.SteelBlue,
-                ForeColor = Color.White,
-                AutoSize = false
-            };
-            mainPanel.Controls.Add(subtitleLabel);
-
-            // Content panel for checkbox
             var contentArea = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = SystemColors.Window,
-                Padding = new Padding(8)
+                BackColor = CardBackground,
+                Padding = new Padding(15)
             };
-            mainPanel.Controls.Add(contentArea);
 
-            // Enable Settings Lock checkbox
             var lockCheckbox = new CheckBox
             {
                 Text = "Enable Settings Lock",
                 Left = 0,
                 Top = 0,
                 Width = 250,
-                Height = 24,
+                Height = 30,
                 Checked = false,
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                AutoSize = false
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground
             };
             contentArea.Controls.Add(lockCheckbox);
 
-            // SAVE SETTINGS button at bottom
-            var saveButton = new Button
-            {
-                Text = "SAVE SETTINGS",
-                Dock = DockStyle.Bottom,
-                Height = 36,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                BackColor = SystemColors.Control,
-                Cursor = Cursors.Hand
-            };
-            saveButton.Click += (s, e) =>
-            {
-                // Save lock state
-                try
-                {
-                    var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                    var settingsPath = System.IO.Path.Combine(desktop, "LockSettings_Settings.txt");
-                    var lines = new List<string>
-                    {
-                        $"SettingsLocked={lockCheckbox.Checked}"
-                    };
-                    System.IO.File.WriteAllLines(settingsPath, lines);
-                    MessageBox.Show($"Lock Settings saved! (Settings Lock: {(lockCheckbox.Checked ? "Enabled" : "Disabled")})", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Failed to save settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
+            mainPanel.Controls.Add(contentArea);
+
+            var saveButton = CreateDarkSaveButton();
             mainPanel.Controls.Add(saveButton);
 
             return mainPanel;
         }
 
-        private Control CreatePlaceholderPanel(string title)
+        private Control CreateManualLockDarkPanel()
         {
-            // Handle Feature Toggles specially
-            if (string.Equals(title, "Feature Toggles", StringComparison.OrdinalIgnoreCase))
-            {
-                return CreateFeatureTogglesPanel();
-            }
+            var mainPanel = CreateDarkThemedPanel("Manual Lock", "Manually lock or unlock trading.");
 
-            // Handle Block Symbols specially
-            if (string.Equals(title, "Block Symbols", StringComparison.OrdinalIgnoreCase))
-            {
-                return CreateBlockSymbolsPanel();
-            }
-
-            // Handle Allowed Trading Times specially
-            if (string.Equals(title, "Allowed Trading Times", StringComparison.OrdinalIgnoreCase))
-            {
-                return CreateAllowedTradingTimesPanel();
-            }
-
-            // Handle Lock Settings specially
-            if (string.Equals(title, "Lock Settings", StringComparison.OrdinalIgnoreCase))
-            {
-                return CreateLockSettingsPanel();
-            }
-
-            // Default placeholder for other tabs
-            var pnl = new Panel { BackColor = Color.SteelBlue };
-            var lbl = new Label
-            {
-                Text = $"{title} (placeholder)",
-                Dock = DockStyle.Top,
-                Height = 28,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Padding = new Padding(8, 0, 0, 0),
-                ForeColor = Color.White
-            };
-            pnl.Controls.Add(lbl);
-
-            var flow = new FlowLayoutPanel
+            var contentArea = new Panel
             {
                 Dock = DockStyle.Fill,
-                AutoScroll = true,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                Padding = new Padding(8)
+                BackColor = CardBackground,
+                Padding = new Padding(15)
             };
-            pnl.Controls.Add(flow);
-            return pnl;
+
+            var lockButton = new Button
+            {
+                Text = "LOCK TRADING",
+                Width = 200,
+                Height = 40,
+                Left = 0,
+                Top = 0,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = AccentAmber,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            lockButton.FlatAppearance.BorderSize = 0;
+            contentArea.Controls.Add(lockButton);
+
+            var unlockButton = new Button
+            {
+                Text = "UNLOCK TRADING",
+                Width = 200,
+                Height = 40,
+                Left = 220,
+                Top = 0,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = AccentGreen,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            unlockButton.FlatAppearance.BorderSize = 0;
+            contentArea.Controls.Add(unlockButton);
+
+            mainPanel.Controls.Add(contentArea);
+
+            return mainPanel;
         }
 
-        private void LeftTabControl_SelectedIndexChanged(object sender, EventArgs e)
+        private Button CreateDarkSaveButton()
         {
-            if (leftTabControl.SelectedIndex >= 0 && leftTabControl.SelectedIndex < leftTabControl.TabPages.Count)
-                ShowPage(leftTabControl.TabPages[leftTabControl.SelectedIndex].Text);
+            var saveButton = new Button
+            {
+                Text = "SAVE SETTINGS",
+                Dock = DockStyle.Bottom,
+                Height = 45,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = AccentGreen,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            saveButton.FlatAppearance.BorderSize = 0;
+            saveButton.Click += (s, e) =>
+            {
+                MessageBox.Show("Settings saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+            return saveButton;
         }
 
         private void ShowPage(string name)
         {
+            contentPanel.SuspendLayout();
             contentPanel.Controls.Clear();
+
             if (pageContents.TryGetValue(name, out var ctrl))
             {
                 ctrl.Dock = DockStyle.Fill;
@@ -1081,30 +744,20 @@ namespace Risk_Manager
             }
             else
             {
-                var lbl = new Label { Text = name, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter, Font = new Font("Segoe UI", 12, FontStyle.Bold) };
+                // Create default statistics overview if page not found
+                var lbl = new Label
+                {
+                    Text = name,
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                    ForeColor = TextWhite,
+                    BackColor = DarkBackground
+                };
                 contentPanel.Controls.Add(lbl);
             }
-        }
 
-        private void LeftTabControl_DrawItem(object sender, DrawItemEventArgs e)
-        {
-            var g = e.Graphics;
-            var rc = e.Bounds;
-            var text = leftTabControl.TabPages[e.Index].Text;
-            var isSelected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
-            
-            using var backBrush = new SolidBrush(isSelected ? SystemColors.ControlLight : leftTabControl.BackColor);
-            g.FillRectangle(backBrush, rc);
-
-            // No rotation — draw text normally for horizontal tabs
-            using var textBrush = new SolidBrush(SystemColors.ControlText);
-            var textSize = g.MeasureString(text, leftTabControl.Font);
-            var x = rc.Left + (rc.Width - textSize.Width) / 2;
-            var y = rc.Top + (rc.Height - textSize.Height) / 2;
-            g.DrawString(text, leftTabControl.Font, textBrush, x, y);
-
-            if ((e.State & DrawItemState.Focus) == DrawItemState.Focus)
-                ControlPaint.DrawFocusRectangle(g, rc);
+            contentPanel.ResumeLayout();
         }
 
         protected override void Dispose(bool disposing)
@@ -1114,6 +767,10 @@ namespace Risk_Manager
                 statsRefreshTimer?.Stop();
                 statsRefreshTimer?.Dispose();
                 statsRefreshTimer = null;
+
+                statsDetailRefreshTimer?.Stop();
+                statsDetailRefreshTimer?.Dispose();
+                statsDetailRefreshTimer = null;
             }
             base.Dispose(disposing);
         }

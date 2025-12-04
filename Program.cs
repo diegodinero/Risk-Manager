@@ -14,10 +14,11 @@ namespace Risk_Manager
 
             var form = new Form
             {
-                Text = "RiskManagerControl Test",
+                Text = "QuantGuard v1.1.0 - Risk Manager",
                 StartPosition = FormStartPosition.CenterScreen,
                 Width = 1000,
-                Height = 700
+                Height = 700,
+                BackColor = System.Drawing.Color.FromArgb(45, 62, 80) // Match the dark theme
             };
 
             var control = new RiskManagerControl
