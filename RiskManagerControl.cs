@@ -36,13 +36,54 @@ namespace Risk_Manager
             Dock = DockStyle.Fill;
             BackColor = Color.SteelBlue;
 
+            // Top panel for account selector
+            var topPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 40,
+                BackColor = Color.SteelBlue,
+                Padding = new Padding(8)
+            };
+
+            var accountLabel = new Label
+            {
+                Text = "Select Account:",
+                AutoSize = true,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Dock = DockStyle.Left,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Width = 100
+            };
+            topPanel.Controls.Add(accountLabel);
+
+            var accountSelector = new ComboBox
+            {
+                Dock = DockStyle.Fill,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9),
+                BackColor = Color.White,
+                ForeColor = Color.Black
+            };
+            accountSelector.SelectedIndexChanged += (s, e) =>
+            {
+                if (accountSelector.SelectedItem is Account account)
+                {
+                    selectedAccount = account;
+                    // Refresh Stats tab if visible
+                    if (statsDetailGrid != null)
+                        RefreshAccountStats();
+                }
+            };
+            topPanel.Controls.Add(accountSelector);
+
             // Left panel (fixed width) — prevent auto-sizing
             leftPanel = new Panel
             {
                 Dock = DockStyle.Left,
                 Width = LeftPanelWidth,
                 MinimumSize = new Size(LeftPanelWidth, 0),
-                AutoSize = false,  // Prevent panel from resizing when tab content changes
+                AutoSize = false,
                 BackColor = SystemColors.Control
             };
 
@@ -63,7 +104,7 @@ namespace Risk_Manager
             contentPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                AutoSize = false,  // Prevent content panel from resizing
+                AutoSize = false,
                 BackColor = Color.SteelBlue
             };
 
@@ -86,10 +127,59 @@ namespace Risk_Manager
             leftPanel.Controls.Add(leftTabControl);
             Controls.Add(contentPanel);
             Controls.Add(leftPanel);
+            Controls.Add(topPanel);  // Add top panel last so it renders first
+
+            // Populate account dropdown
+            RefreshAccountDropdown(accountSelector);
+
+            // Refresh dropdown periodically as accounts connect/disconnect
+            var dropdownRefreshTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+            dropdownRefreshTimer.Tick += (s, e) => RefreshAccountDropdown(accountSelector);
+            dropdownRefreshTimer.Start();
 
             // Show first page
             if (TabNames.Length > 0)
                 ShowPage(TabNames[0]);
+        }
+
+        private void RefreshAccountDropdown(ComboBox accountSelector)
+        {
+            var core = Core.Instance;
+            var connectedAccounts = core?.Accounts?
+                .Where(a => a != null && a.Connection != null)
+                .ToList() ?? new List<Account>();
+
+            // Preserve current selection if it still exists
+            var currentSelection = accountSelector.SelectedItem as Account;
+
+            accountSelector.Items.Clear();
+            foreach (var account in connectedAccounts)
+            {
+                var displayName = $"{account.Connection?.Name ?? "Unknown"} - {account.Name ?? account.Id ?? "Unnamed"}";
+                accountSelector.Items.Add(account);
+                // Store display name as tag for rendering (optional)
+                if (accountSelector.Items.Count > 0)
+                {
+                    var index = accountSelector.Items.Count - 1;
+                    // We'll override ToString or use a wrapper
+                }
+            }
+
+            // Restore selection or select first
+            if (currentSelection != null && accountSelector.Items.Contains(currentSelection))
+            {
+                accountSelector.SelectedItem = currentSelection;
+            }
+            else if (accountSelector.Items.Count > 0)
+            {
+                accountSelector.SelectedIndex = 0;
+                selectedAccount = accountSelector.SelectedItem as Account;
+            }
+            else
+            {
+                accountSelector.SelectedIndex = -1;
+                selectedAccount = null;
+            }
         }
 
         private Control CreateAccountsSummaryPanel()
