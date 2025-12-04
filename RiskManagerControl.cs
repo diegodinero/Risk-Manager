@@ -20,7 +20,7 @@ namespace Risk_Manager
         private Account selectedAccount;
         private DataGridView statsDetailGrid;
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
-        private string selectedNavItem = "Block Symbols";
+        private string selectedNavItem = null; // No nav item selected when Statistics Overview is shown
         private readonly List<Button> navButtons = new();
         private Label settingsStatusBadge;
         private Label tradingStatusBadge;
@@ -45,6 +45,7 @@ namespace Risk_Manager
         };
 
         private const int LeftPanelWidth = 200;
+        private const string StatisticsOverviewPage = "Statistics Overview";
 
         public RiskManagerControl()
         {
@@ -67,22 +68,22 @@ namespace Risk_Manager
                 Padding = new Padding(20)
             };
 
-            // Create pages and contents
+            // Create pages and contents for navigation items
             foreach (var name in NavItems)
             {
                 Control placeholder = CreatePlaceholderPanel(name);
                 pageContents[name] = placeholder;
             }
 
-            // Add Statistics Overview as default content
-            pageContents["Statistics Overview"] = CreateStatisticsOverviewPanel();
+            // Add Statistics Overview as the default landing page (separate from navigation items)
+            pageContents[StatisticsOverviewPage] = CreateStatisticsOverviewPanel();
 
             Controls.Add(contentPanel);
             Controls.Add(leftPanel);
             Controls.Add(topPanel);
 
-            // Show Statistics Overview by default
-            ShowPage("Statistics Overview");
+            // Show Statistics Overview by default (no nav item is selected initially)
+            ShowPage(StatisticsOverviewPage);
         }
 
         private Panel CreateTopPanel()
@@ -124,17 +125,18 @@ namespace Risk_Manager
             tradingStatusBadge = CreateStatusBadge("Trading Unlocked", AccentGreen);
             badgesPanel.Controls.Add(tradingStatusBadge);
 
-            // Position the badges panel
-            badgesPanel.Location = new Point(topPanel.Width - badgesPanel.PreferredSize.Width - 20, 15);
+            // Position the badges panel initially and on resize
+            PositionBadgesPanel(topPanel, badgesPanel);
             topPanel.Controls.Add(badgesPanel);
 
-            // Handle resize to keep badges aligned
-            topPanel.Resize += (s, e) =>
-            {
-                badgesPanel.Location = new Point(topPanel.Width - badgesPanel.PreferredSize.Width - 20, 15);
-            };
+            topPanel.Resize += (s, e) => PositionBadgesPanel(topPanel, badgesPanel);
 
             return topPanel;
+        }
+
+        private static void PositionBadgesPanel(Panel topPanel, FlowLayoutPanel badgesPanel)
+        {
+            badgesPanel.Location = new Point(topPanel.Width - badgesPanel.PreferredSize.Width - 20, 15);
         }
 
         private Label CreateStatusBadge(string text, Color badgeColor)
@@ -226,7 +228,8 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 1, 0, 1),
-                Padding = new Padding(10, 0, 0, 0)
+                Padding = new Padding(10, 0, 0, 0),
+                Tag = text // Store original item name for reliable comparison
             };
 
             button.FlatAppearance.BorderSize = 0;
@@ -247,8 +250,8 @@ namespace Risk_Manager
         {
             foreach (var btn in navButtons)
             {
-                var itemText = btn.Text.TrimStart();
-                btn.BackColor = itemText == selectedNavItem ? SelectedColor : DarkerBackground;
+                var itemName = btn.Tag as string;
+                btn.BackColor = itemName == selectedNavItem ? SelectedColor : DarkerBackground;
             }
         }
 
@@ -568,6 +571,7 @@ namespace Risk_Manager
             };
             symbolsGrid.Columns.Add(blockColumn);
 
+            // Sample symbols for demonstration - in production, load from Core.Instance.Symbols or similar data source
             var sampleSymbols = new[] { "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "NFLX" };
             foreach (var symbol in sampleSymbols)
             {
@@ -744,7 +748,7 @@ namespace Risk_Manager
             }
             else
             {
-                // Create default statistics overview if page not found
+                // Fallback: show page name as a placeholder when page content is not found
                 var lbl = new Label
                 {
                     Text = name,
