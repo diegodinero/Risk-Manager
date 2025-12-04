@@ -31,23 +31,24 @@ namespace Risk_Manager
         public RiskManagerControl()
         {
             Dock = DockStyle.Fill;
-            BackColor = Color.LimeGreen;
+            BackColor = Color.SteelBlue;
 
-            // Left panel (fixed width) instead of SplitContainer to avoid SplitterDistance issues
+            // Left panel (fixed width) — prevent auto-sizing
             leftPanel = new Panel
             {
                 Dock = DockStyle.Left,
                 Width = LeftPanelWidth,
                 MinimumSize = new Size(LeftPanelWidth, 0),
+                AutoSize = false,  // Prevent panel from resizing when tab content changes
                 BackColor = SystemColors.Control
             };
 
             leftTabControl = new TabControl
             {
                 Dock = DockStyle.Fill,
-                Alignment = TabAlignment.Top,  // Change from TabAlignment.Left to TabAlignment.Top
+                Alignment = TabAlignment.Top,
                 SizeMode = TabSizeMode.Fixed,
-                ItemSize = new Size(100, 23),  // Width, Height (adjust as needed for horizontal tabs)
+                ItemSize = new Size(100, 23),
                 DrawMode = TabDrawMode.OwnerDrawFixed,
                 Multiline = true,
                 Font = new Font("Segoe UI", 9F, FontStyle.Regular),
@@ -59,7 +60,8 @@ namespace Risk_Manager
             contentPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.LimeGreen
+                AutoSize = false,  // Prevent content panel from resizing
+                BackColor = Color.SteelBlue
             };
 
             // Create pages and contents
@@ -93,7 +95,7 @@ namespace Risk_Manager
                 AllowUserToDeleteRows = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                BackgroundColor = Color.LimeGreen
+                BackgroundColor = Color.SteelBlue
             };
 
             statsGrid.Columns.Add("Provider", "Provider");
@@ -111,7 +113,7 @@ namespace Risk_Manager
             statsRefreshTimer.Tick += (s, e) => RefreshStats();
             statsRefreshTimer.Start();
 
-            var panel = new Panel { Dock = DockStyle.Fill, BackColor = Color.LimeGreen };
+            var panel = new Panel { Dock = DockStyle.Fill, BackColor = Color.SteelBlue };
             panel.Controls.Add(statsGrid);
             return panel;
         }
@@ -131,7 +133,7 @@ namespace Risk_Manager
                 {
                     statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "1000.00", "12.34", "5.67", "18.01", "1", "Connected");
                     statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "2500.50", "-8.20", "-2.00", "-10.20", "2", "Connected");
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn3", "ACC789", "500.00", "0.00", "0.00", "0.00", "0", "Disconnected");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn3", "ACC789", "500.00", "0.00", "0.00", "0", "Disconnected");
                     return;
                 }
 
@@ -200,7 +202,7 @@ namespace Risk_Manager
 
         private Control CreatePlaceholderPanel(string title)
         {
-            var pnl = new Panel { BackColor = Color.LimeGreen };
+            var pnl = new Panel { BackColor = Color.SteelBlue };
             var lbl = new Label
             {
                 Text = $"{title} (placeholder)",

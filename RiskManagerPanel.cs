@@ -20,13 +20,18 @@ namespace Risk_Manager
                 Group = PluginGroup.Portfolio,
                 ShortName = "RMMUI",
                 SortIndex = 34,
+                // Request a host window (with chrome) instead of an embedded panel
                 WindowParameters = new NativeWindowParameters(NativeWindowParameters.Panel)
                 {
-                    BrowserUsageType = BrowserUsageType.None
+                    BrowserUsageType = BrowserUsageType.None,
+                    WindowStyle = NativeWindowStyle.ThreeDBorderWindow
                 },
                 CustomProperties = new System.Collections.Generic.Dictionary<string, object>
                 {
-                    { PluginInfo.Const.ALLOW_MANUAL_CREATION, true }
+                    { PluginInfo.Const.ALLOW_MANUAL_CREATION, true },
+                    // Request larger default window (adjust Width/Height as needed)
+                    { "DefaultWidth", 1200 },
+                    { "DefaultHeight", 800 }
                 }
             };
         }
@@ -95,11 +100,8 @@ namespace Risk_Manager
 
                                 try
                                 {
-                                    // Create WindowsFormsHost and set the WinForms control as its Child
                                     var host = new WindowsFormsHost();
                                     host.Child = control;
-
-                                    // Assign the host (WPF element) to native window content
                                     contentProp.SetValue(nativeWindow, host);
                                     System.IO.File.AppendAllText(logPath, "Attached via NativeWindow.Content = WindowsFormsHost(Child = control)" + Environment.NewLine);
                                     return true;
@@ -114,7 +116,6 @@ namespace Risk_Manager
                                 System.IO.File.AppendAllText(logPath, "NativeWindow.Content property not writable or not found." + Environment.NewLine);
                             }
 
-                            // Try AddChild if available and can accept a WPF element - but prefer WindowsFormsHost approach
                             var addChild = nwType.GetMethod("AddChild", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                             if (addChild != null)
                             {
@@ -144,7 +145,7 @@ namespace Risk_Manager
                     System.IO.File.AppendAllText(logPath, $"NativeWindow attach attempt error: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
                 }
 
-                // Fallbacks: try plugin methods/properties that accept object (safe attempts)
+                // Fallbacks: try plugin methods/properties that accept object
                 var candidateMethodNames = new[]
                 {
                     "SetContent", "SetControl", "AddControl", "AddPanel", "CreatePanel",
@@ -168,7 +169,6 @@ namespace Risk_Manager
                         if (parameters.Length == 1 &&
                             (parameters[0].ParameterType.IsAssignableFrom(typeof(object))))
                         {
-                            // wrap control in WindowsFormsHost when assigning to object parameter (if possible)
                             try
                             {
                                 var host = new WindowsFormsHost();
@@ -180,7 +180,6 @@ namespace Risk_Manager
                             catch (Exception ex)
                             {
                                 System.IO.File.AppendAllText(logPath, $"Method {name} invocation failed with WindowsFormsHost: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
-                                // try passing raw control as object as last resort
                                 try
                                 {
                                     mi.Invoke(this, new object[] { control });
@@ -217,7 +216,6 @@ namespace Risk_Manager
                     }
                 }
 
-                // Try plugin writable properties (Content/Control/Panel/View) on base type
                 var candidatePropNames = new[] { "Content", "Control", "Panel", "View", "ContentControl" };
                 foreach (var pname in candidatePropNames)
                 {
