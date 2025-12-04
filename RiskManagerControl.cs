@@ -446,6 +446,238 @@ namespace Risk_Manager
             return mainPanel;
         }
 
+        private Control CreateAllowedTradingTimesPanel()
+        {
+            var mainPanel = new Panel { BackColor = Color.SteelBlue, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "Allowed Trading Sessions",
+                Dock = DockStyle.Top,
+                Height = 28,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Padding = new Padding(8, 0, 0, 0),
+                BackColor = Color.SteelBlue,
+                ForeColor = Color.White
+            };
+            mainPanel.Controls.Add(titleLabel);
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Select which sessions the trader is allowed to participate in (times in EST), or specify a custom timeframe:",
+                Dock = DockStyle.Top,
+                Height = 50,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(8, 4, 8, 4),
+                BackColor = Color.SteelBlue,
+                ForeColor = Color.White,
+                AutoSize = false
+            };
+            mainPanel.Controls.Add(subtitleLabel);
+
+            // Scrollable panel for checkboxes
+            var scrollPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = SystemColors.Window,
+                Padding = new Padding(8)
+            };
+            mainPanel.Controls.Add(scrollPanel);
+
+            // Session definitions
+            var sessions = new[]
+            {
+                ("NY Session", "8 AM - 5 PM EST"),
+                ("London Session", "3 AM - 12 PM EST"),
+                ("Asia Session", "7 PM - 4 AM EST")
+            };
+
+            var sessionCheckboxes = new Dictionary<string, CheckBox>();
+            int y = 0;
+
+            foreach (var (sessionName, timeRange) in sessions)
+            {
+                // Session checkbox with time range label
+                var sessionPanel = new Panel
+                {
+                    Left = 0,
+                    Top = y,
+                    Width = scrollPanel.Width - 20,
+                    Height = 32,
+                    AutoSize = false
+                };
+
+                var checkbox = new CheckBox
+                {
+                    Text = sessionName,
+                    Left = 0,
+                    Top = 0,
+                    Width = 150,
+                    Height = 24,
+                    Checked = true, // Default all sessions to enabled
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    AutoSize = false
+                };
+
+                var timeLabel = new Label
+                {
+                    Text = timeRange,
+                    Left = 155,
+                    Top = 4,
+                    Width = 200,
+                    Height = 16,
+                    Font = new Font("Segoe UI", 8, FontStyle.Italic),
+                    ForeColor = Color.Gray,
+                    AutoSize = false
+                };
+
+                sessionPanel.Controls.Add(checkbox);
+                sessionPanel.Controls.Add(timeLabel);
+                scrollPanel.Controls.Add(sessionPanel);
+                sessionCheckboxes[sessionName] = checkbox;
+                y += 36;
+            }
+
+            // Custom Session section
+            var customSessionPanel = new Panel
+            {
+                Left = 0,
+                Top = y,
+                Width = scrollPanel.Width - 20,
+                Height = 80,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            var customCheckbox = new CheckBox
+            {
+                Text = "Enable Custom Session",
+                Left = 8,
+                Top = 8,
+                Width = 200,
+                Height = 20,
+                Checked = false,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                AutoSize = false
+            };
+
+            var startTimeLabel = new Label
+            {
+                Text = "Start Time:",
+                Left = 8,
+                Top = 32,
+                Width = 70,
+                Height = 20,
+                Font = new Font("Segoe UI", 9),
+                AutoSize = false
+            };
+
+            var startTimeInput = new TextBox
+            {
+                Left = 85,
+                Top = 32,
+                Width = 100,
+                Height = 20,
+                Text = "09:00",
+                Enabled = false,
+                Font = new Font("Segoe UI", 9)
+            };
+
+            var endTimeLabel = new Label
+            {
+                Text = "End Time:",
+                Left = 200,
+                Top = 32,
+                Width = 70,
+                Height = 20,
+                Font = new Font("Segoe UI", 9),
+                AutoSize = false
+            };
+
+            var endTimeInput = new TextBox
+            {
+                Left = 277,
+                Top = 32,
+                Width = 100,
+                Height = 20,
+                Text = "17:00",
+                Enabled = false,
+                Font = new Font("Segoe UI", 9)
+            };
+
+            // Enable/disable time inputs based on custom checkbox
+            customCheckbox.CheckedChanged += (s, e) =>
+            {
+                startTimeInput.Enabled = customCheckbox.Checked;
+                endTimeInput.Enabled = customCheckbox.Checked;
+            };
+
+            customSessionPanel.Controls.Add(customCheckbox);
+            customSessionPanel.Controls.Add(startTimeLabel);
+            customSessionPanel.Controls.Add(startTimeInput);
+            customSessionPanel.Controls.Add(endTimeLabel);
+            customSessionPanel.Controls.Add(endTimeInput);
+            scrollPanel.Controls.Add(customSessionPanel);
+
+            // SAVE SETTINGS button at bottom
+            var saveButton = new Button
+            {
+                Text = "SAVE SETTINGS",
+                Dock = DockStyle.Bottom,
+                Height = 36,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = SystemColors.Control,
+                Cursor = Cursors.Hand
+            };
+            saveButton.Click += (s, e) =>
+            {
+                // Collect enabled sessions
+                var enabledSessions = new List<string>();
+                foreach (var kvp in sessionCheckboxes)
+                {
+                    if (kvp.Value.Checked)
+                        enabledSessions.Add(kvp.Key);
+                }
+
+                // Collect custom session if enabled
+                var customSessionInfo = "";
+                if (customCheckbox.Checked)
+                {
+                    customSessionInfo = $"Custom: {startTimeInput.Text} - {endTimeInput.Text}";
+                }
+
+                // Save to file or plugin storage
+                try
+                {
+                    var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                    var settingsPath = System.IO.Path.Combine(desktop, "AllowedTradingTimes_Settings.txt");
+                    var lines = new List<string>();
+                    foreach (var session in enabledSessions)
+                    {
+                        lines.Add($"Session={session}");
+                    }
+                    if (!string.IsNullOrEmpty(customSessionInfo))
+                    {
+                        lines.Add(customSessionInfo);
+                    }
+                    System.IO.File.WriteAllLines(settingsPath, lines);
+                    MessageBox.Show($"Allowed Trading Times settings saved! ({enabledSessions.Count} sessions enabled)", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to save settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+            mainPanel.Controls.Add(saveButton);
+
+            return mainPanel;
+        }
+
         private Control CreatePlaceholderPanel(string title)
         {
             // Handle Feature Toggles specially
@@ -458,6 +690,12 @@ namespace Risk_Manager
             if (string.Equals(title, "Block Symbols", StringComparison.OrdinalIgnoreCase))
             {
                 return CreateBlockSymbolsPanel();
+            }
+
+            // Handle Allowed Trading Times specially
+            if (string.Equals(title, "Allowed Trading Times", StringComparison.OrdinalIgnoreCase))
+            {
+                return CreateAllowedTradingTimesPanel();
             }
 
             // Default placeholder for other tabs
