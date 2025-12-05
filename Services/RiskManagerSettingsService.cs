@@ -56,6 +56,38 @@ namespace Risk_Manager.Services
         }
 
         /// <summary>
+        /// Gets or creates account settings within an existing context.
+        /// This helper method reduces code duplication across setter methods.
+        /// </summary>
+        private static AccountSettings GetOrCreateAccountSettingsInternal(
+            RiskManagerDbContext context, 
+            string accountNumber,
+            Func<IQueryable<AccountSettings>, IQueryable<AccountSettings>>? includeFunc = null)
+        {
+            var query = context.AccountSettings.AsQueryable();
+            if (includeFunc != null)
+            {
+                query = includeFunc(query);
+            }
+            
+            var settings = query.FirstOrDefault(s => s.AccountNumber == accountNumber);
+
+            if (settings == null)
+            {
+                settings = new AccountSettings
+                {
+                    AccountNumber = accountNumber,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                context.AccountSettings.Add(settings);
+                context.SaveChanges();
+            }
+
+            return settings;
+        }
+
+        /// <summary>
         /// Gets the settings for an account, using cache when available.
         /// </summary>
         public AccountSettings? GetSettings(string accountNumber)
@@ -204,21 +236,10 @@ namespace Risk_Manager.Services
             lock (_dbLock)
             {
                 using var context = CreateContext();
-                var settings = context.AccountSettings
-                    .Include(s => s.BlockedSymbols)
-                    .FirstOrDefault(s => s.AccountNumber == accountNumber);
-
-                if (settings == null)
-                {
-                    settings = new AccountSettings
-                    {
-                        AccountNumber = accountNumber,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
-                    context.AccountSettings.Add(settings);
-                    context.SaveChanges();
-                }
+                var settings = GetOrCreateAccountSettingsInternal(
+                    context, 
+                    accountNumber, 
+                    q => q.Include(s => s.BlockedSymbols));
 
                 // Clear existing and add new
                 context.BlockedSymbols.RemoveRange(settings.BlockedSymbols);
@@ -250,21 +271,10 @@ namespace Risk_Manager.Services
             lock (_dbLock)
             {
                 using var context = CreateContext();
-                var settings = context.AccountSettings
-                    .Include(s => s.SymbolContractLimits)
-                    .FirstOrDefault(s => s.AccountNumber == accountNumber);
-
-                if (settings == null)
-                {
-                    settings = new AccountSettings
-                    {
-                        AccountNumber = accountNumber,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
-                    context.AccountSettings.Add(settings);
-                    context.SaveChanges();
-                }
+                var settings = GetOrCreateAccountSettingsInternal(
+                    context, 
+                    accountNumber, 
+                    q => q.Include(s => s.SymbolContractLimits));
 
                 // Clear existing and add new
                 context.SymbolContractLimits.RemoveRange(settings.SymbolContractLimits);
@@ -297,21 +307,10 @@ namespace Risk_Manager.Services
             lock (_dbLock)
             {
                 using var context = CreateContext();
-                var settings = context.AccountSettings
-                    .Include(s => s.TradingTimeRestrictions)
-                    .FirstOrDefault(s => s.AccountNumber == accountNumber);
-
-                if (settings == null)
-                {
-                    settings = new AccountSettings
-                    {
-                        AccountNumber = accountNumber,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
-                    context.AccountSettings.Add(settings);
-                    context.SaveChanges();
-                }
+                var settings = GetOrCreateAccountSettingsInternal(
+                    context, 
+                    accountNumber, 
+                    q => q.Include(s => s.TradingTimeRestrictions));
 
                 // Clear existing and add new
                 context.TradingTimeRestrictions.RemoveRange(settings.TradingTimeRestrictions);
@@ -347,21 +346,10 @@ namespace Risk_Manager.Services
             lock (_dbLock)
             {
                 using var context = CreateContext();
-                var settings = context.AccountSettings
-                    .Include(s => s.TradingLock)
-                    .FirstOrDefault(s => s.AccountNumber == accountNumber);
-
-                if (settings == null)
-                {
-                    settings = new AccountSettings
-                    {
-                        AccountNumber = accountNumber,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
-                    context.AccountSettings.Add(settings);
-                    context.SaveChanges();
-                }
+                var settings = GetOrCreateAccountSettingsInternal(
+                    context, 
+                    accountNumber, 
+                    q => q.Include(s => s.TradingLock));
 
                 if (settings.TradingLock == null)
                 {
@@ -395,21 +383,10 @@ namespace Risk_Manager.Services
             lock (_dbLock)
             {
                 using var context = CreateContext();
-                var settings = context.AccountSettings
-                    .Include(s => s.SettingsLock)
-                    .FirstOrDefault(s => s.AccountNumber == accountNumber);
-
-                if (settings == null)
-                {
-                    settings = new AccountSettings
-                    {
-                        AccountNumber = accountNumber,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
-                    context.AccountSettings.Add(settings);
-                    context.SaveChanges();
-                }
+                var settings = GetOrCreateAccountSettingsInternal(
+                    context, 
+                    accountNumber, 
+                    q => q.Include(s => s.SettingsLock));
 
                 if (settings.SettingsLock == null)
                 {
@@ -444,8 +421,9 @@ namespace Risk_Manager.Services
             if (settings?.BlockedSymbols == null)
                 return false;
 
-            return settings.BlockedSymbols.Any(b => 
-                string.Equals(b.Symbol, symbol.Trim(), StringComparison.OrdinalIgnoreCase));
+            // Normalize the input symbol to match storage format (uppercase)
+            var normalizedSymbol = symbol.Trim().ToUpperInvariant();
+            return settings.BlockedSymbols.Any(b => b.Symbol == normalizedSymbol);
         }
 
         /// <summary>
@@ -461,9 +439,12 @@ namespace Risk_Manager.Services
             if (settings == null)
                 return null;
 
+            // Normalize the input symbol to match storage format (uppercase)
+            var normalizedSymbol = symbol?.Trim().ToUpperInvariant();
+            
             // Check for symbol-specific limit first
             var symbolLimit = settings.SymbolContractLimits?
-                .FirstOrDefault(l => string.Equals(l.Symbol, symbol?.Trim(), StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(l => l.Symbol == normalizedSymbol);
 
             if (symbolLimit != null)
                 return symbolLimit.ContractLimit;
@@ -490,6 +471,8 @@ namespace Risk_Manager.Services
             if (settings?.TradingTimeRestrictions == null || !settings.TradingTimeRestrictions.Any())
                 return true;
 
+            // Using local time intentionally since trading hours are defined in local time 
+            // (e.g., "NY Session 8 AM - 5 PM EST")
             var now = DateTime.Now;
             var currentDayOfWeek = now.DayOfWeek;
             var currentTime = now.TimeOfDay;
