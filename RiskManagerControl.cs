@@ -356,7 +356,6 @@ namespace Risk_Manager
                 BackColor = DarkBackground,
                 ForeColor = TextWhite
             };
-            mainPanel.Controls.Add(titleLabel);
 
             statsGrid = new DataGridView
             {
@@ -414,7 +413,10 @@ namespace Risk_Manager
             statsRefreshTimer.Tick += (s, e) => RefreshAccountsSummary();
             statsRefreshTimer.Start();
 
+            // Add controls in correct order: Fill control first, then Top controls
+            // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(statsGrid);
+            mainPanel.Controls.Add(titleLabel);
             return mainPanel;
         }
 
@@ -514,7 +516,6 @@ namespace Risk_Manager
                 BackColor = DarkBackground,
                 ForeColor = TextWhite
             };
-            mainPanel.Controls.Add(titleLabel);
 
             // Stats display grid
             statsDetailGrid = new DataGridView
@@ -550,7 +551,10 @@ namespace Risk_Manager
             statsDetailRefreshTimer.Tick += (s, e) => RefreshAccountStats();
             statsDetailRefreshTimer.Start();
 
+            // Add controls in correct order: Fill control first, then Top controls
+            // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(statsDetailGrid);
+            mainPanel.Controls.Add(titleLabel);
             return mainPanel;
         }
 
@@ -862,7 +866,34 @@ namespace Risk_Manager
             }
 
             // Default dark placeholder for other tabs
-            var mainPanel = CreateDarkThemedPanel(title, "Configure your settings below.");
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = title,
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Configure your settings below.",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
 
             var contentArea = new Panel
             {
@@ -883,13 +914,44 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(placeholderLabel);
 
+            // Add controls in correct order: Fill first, then Top
+            // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
             return mainPanel;
         }
 
         private Control CreateBlockSymbolsDarkPanel()
         {
-            var mainPanel = CreateDarkThemedPanel("Block Symbols", "Select the symbols you want to block trading on:");
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "Block Symbols",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Select the symbols you want to block trading on:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
 
             var contentArea = new Panel
             {
@@ -952,11 +1014,16 @@ namespace Risk_Manager
             }
 
             contentArea.Controls.Add(symbolsGrid);
-            mainPanel.Controls.Add(contentArea);
 
             // Save button with dark theme
             var saveButton = CreateDarkSaveButton();
+
+            // Add controls in correct order: Bottom first, Fill second, Top last
+            // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(saveButton);
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
         }
@@ -977,7 +1044,6 @@ namespace Risk_Manager
                 BackColor = DarkBackground,
                 ForeColor = TextWhite
             };
-            mainPanel.Controls.Add(titleLabel);
 
             // Subtitle
             var subtitleLabel = new Label
@@ -992,12 +1058,11 @@ namespace Risk_Manager
                 ForeColor = TextGray,
                 AutoSize = false
             };
-            mainPanel.Controls.Add(subtitleLabel);
 
-            // Content area - THIS IS THE KEY FIX
+            // Content area with proper scrolling
             var contentArea = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,  // Fill remaining space AFTER title and subtitle
+                Dock = DockStyle.Fill,
                 BackColor = CardBackground,
                 Padding = new Padding(15),
                 AutoScroll = true,
@@ -1017,28 +1082,58 @@ namespace Risk_Manager
                 var checkbox = new CheckBox
                 {
                     Text = $"{sessionName} ({timeRange})",
-                    Width = 350,
-                    Height = 30,
+                    AutoSize = true,
                     Checked = true,
                     Font = new Font("Segoe UI", 10, FontStyle.Regular),
                     ForeColor = TextWhite,
                     BackColor = CardBackground,
-                    AutoSize = false
+                    Margin = new Padding(0, 5, 0, 5)
                 };
                 contentArea.Controls.Add(checkbox);
             }
 
-            mainPanel.Controls.Add(contentArea);
-
             var saveButton = CreateDarkSaveButton();
+
+            // Add controls in correct order: Bottom first, Fill second, Top last
+            // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(saveButton);
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
         }
 
         private Control CreateLockSettingsDarkPanel()
         {
-            var mainPanel = CreateDarkThemedPanel("Lock Settings", "Prevent changes to settings.");
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "Lock Settings",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Prevent changes to settings.",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
 
             var contentArea = new Panel
             {
@@ -1061,17 +1156,48 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(lockCheckbox);
 
-            mainPanel.Controls.Add(contentArea);
-
             var saveButton = CreateDarkSaveButton();
+
+            // Add controls in correct order: Bottom first, Fill second, Top last
+            // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(saveButton);
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
         }
 
         private Control CreateManualLockDarkPanel()
         {
-            var mainPanel = CreateDarkThemedPanel("Manual Lock", "Manually lock or unlock trading.");
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "Manual Lock",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Manually lock or unlock trading.",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
 
             var contentArea = new Panel
             {
@@ -1112,7 +1238,11 @@ namespace Risk_Manager
             unlockButton.FlatAppearance.BorderSize = 0;
             contentArea.Controls.Add(unlockButton);
 
+            // Add controls in correct order: Fill first, then Top (no Bottom for this panel)
+            // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
         }
