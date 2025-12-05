@@ -39,10 +39,11 @@ namespace Risk_Manager
 
         // Navigation items - includes Stats and Accounts Summary
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
+        // Using standard Unicode geometric shapes for better WinForms compatibility
         private static readonly string[] NavItems = new[]
         {
-            "📊 Accounts Summary", "📈 Stats", "⚙️ Feature Toggles", "📍 Positions", "🛡️ Limits", "🔤 Symbols", "⏰ Allowed Trading Times",
-            "🔴 Weekly Loss", "🟢 Weekly Profit Target", "🔒 Lock Settings", "🔐 Manual Lock"
+            "\u25A0 Accounts Summary", "\u25B2 Stats", "\u2699 Feature Toggles", "\u25CF Positions", "\u25C6 Limits", "\u2261 Symbols", "\u25D4 Allowed Trading Times",
+            "\u25BC Weekly Loss", "\u25B2 Weekly Profit Target", "\u25A3 Lock Settings", "\u25A4 Manual Lock"
         };
 
         private const int LeftPanelWidth = 200;
@@ -1357,13 +1358,13 @@ namespace Risk_Manager
 
             var features = new[]
             {
-                "✅ Enable All Features",
-                "📍 Positions",
-                "🛡️ Limits",
-                "🔤 Symbols",
-                "⏰ Allowed Trading Times",
-                "🔴 Weekly Loss",
-                "🟢 Weekly Profit Target"
+                "\u2713 Enable All Features",
+                "\u25CF Positions",
+                "\u25C6 Limits",
+                "\u2261 Symbols",
+                "\u25D4 Allowed Trading Times",
+                "\u25BC Weekly Loss",
+                "\u25B2 Weekly Profit Target"
             };
 
             foreach (var feature in features)
@@ -1403,7 +1404,7 @@ namespace Risk_Manager
             // Title
             var titleLabel = new Label
             {
-                Text = "📍 Positions",
+                Text = "\u25CF Positions",
                 Dock = DockStyle.Top,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -1437,11 +1438,11 @@ namespace Risk_Manager
             };
 
             // Position Loss Limit section
-            var lossSection = CreatePositionSection("🔴 Position Loss Limit", "USD per position:", 10);
+            var lossSection = CreatePositionSection("\u25BC Position Loss Limit", "USD per position:", 10);
             contentArea.Controls.Add(lossSection);
 
             // Position Profit Target section
-            var profitSection = CreatePositionSection("🟢 Position Profit Target", "USD per position:", 120);
+            var profitSection = CreatePositionSection("\u25B2 Position Profit Target", "USD per position:", 120);
             contentArea.Controls.Add(profitSection);
 
             var saveButton = CreateDarkSaveButton();
@@ -1527,7 +1528,7 @@ namespace Risk_Manager
             // Title
             var titleLabel = new Label
             {
-                Text = "🛡️ Limits",
+                Text = "\u25C6 Limits",
                 Dock = DockStyle.Top,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -1561,11 +1562,11 @@ namespace Risk_Manager
             };
 
             // Daily Loss Limit section
-            var lossSection = CreateLimitSection("🔴 Daily Loss Limit", 10);
+            var lossSection = CreateLimitSection("\u25BC Daily Loss Limit", 10);
             contentArea.Controls.Add(lossSection);
 
             // Daily Profit Target section
-            var profitSection = CreateLimitSection("🟢 Daily Profit Target", 120);
+            var profitSection = CreateLimitSection("\u25B2 Daily Profit Target", 120);
             contentArea.Controls.Add(profitSection);
 
             var saveButton = CreateDarkSaveButton();
@@ -1651,7 +1652,7 @@ namespace Risk_Manager
             // Title
             var titleLabel = new Label
             {
-                Text = "🔤 Symbols",
+                Text = "\u2261 Symbols",
                 Dock = DockStyle.Top,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -1720,7 +1721,7 @@ namespace Risk_Manager
             // Section header with toggle
             var sectionHeader = new CheckBox
             {
-                Text = "🚫 Symbol Blacklist",
+                Text = "\u2298 Symbol Blacklist",
                 Left = 0,
                 Top = 0,
                 Width = 300,
@@ -1783,7 +1784,7 @@ namespace Risk_Manager
             // Section header with toggle
             var sectionHeader = new CheckBox
             {
-                Text = "📈 Symbol Contract Limits",
+                Text = "\u25B2 Symbol Contract Limits",
                 Left = 0,
                 Top = 0,
                 Width = 300,
