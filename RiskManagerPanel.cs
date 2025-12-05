@@ -24,7 +24,11 @@ namespace Risk_Manager
                 WindowParameters = new NativeWindowParameters(NativeWindowParameters.Panel)
                 {
                     BrowserUsageType = BrowserUsageType.None,
-                    WindowStyle = NativeWindowStyle.ThreeDBorderWindow
+                    WindowStyle = NativeWindowStyle.SingleBorderWindow,
+                    ResizeMode = ResizeMode.CanResizeWithGrip,
+                    ShowInTaskbar = true,
+                    AllowMaximize = true,
+                    AllowMinimize = true
                 },
                 CustomProperties = new System.Collections.Generic.Dictionary<string, object>
                 {
