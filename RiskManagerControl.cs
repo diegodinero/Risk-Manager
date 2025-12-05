@@ -38,11 +38,12 @@ namespace Risk_Manager
         private static readonly Color SelectedColor = Color.FromArgb(75, 92, 110);      // Selected state
 
         // Navigation items - includes Stats and Accounts Summary
+        // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
+        // Using standard Unicode geometric shapes for better WinForms compatibility
         private static readonly string[] NavItems = new[]
         {
-            "Accounts Summary", "Stats", "Feature Toggles", "Block Symbols", "Allowed Trading Times", "Daily Loss", "Daily Profit Target",
-            "Position Size", "Position Win", "Position Loss", "Weekly Loss",
-            "Weekly Profit Target", "Lock Settings", "Manual Lock"
+            "\u25A0 Accounts Summary", "\u25B2 Stats", "\u2699 Feature Toggles", "\u25CF Positions", "\u25C6 Limits", "\u2261 Symbols", "\u25D4 Allowed Trading Times",
+            "\u25BC Weekly Loss", "\u25B2 Weekly Profit Target", "\u25A3 Lock Settings", "\u25A4 Manual Lock"
         };
 
         private const int LeftPanelWidth = 200;
@@ -81,6 +82,12 @@ namespace Risk_Manager
                     placeholder = CreateAccountStatsPanel();
                 else if (string.Equals(name, "Feature Toggles", StringComparison.OrdinalIgnoreCase))
                     placeholder = CreateFeatureTogglesPanel();
+                else if (string.Equals(name, "Positions", StringComparison.OrdinalIgnoreCase))
+                    placeholder = CreatePositionsPanel();
+                else if (string.Equals(name, "Limits", StringComparison.OrdinalIgnoreCase))
+                    placeholder = CreateLimitsPanel();
+                else if (string.Equals(name, "Symbols", StringComparison.OrdinalIgnoreCase))
+                    placeholder = CreateSymbolsPanel();
                 else
                     placeholder = CreatePlaceholderPanel(name);
                 pageContents[name] = placeholder;
@@ -1351,16 +1358,13 @@ namespace Risk_Manager
 
             var features = new[]
             {
-                "Enable All Features",
-                "Block Symbols",
-                "Allowed Sessions",
-                "Daily Loss",
-                "Daily Profit",
-                "Position Size",
-                "Position Win",
-                "Position Loss",
-                "Weekly Loss",
-                "Weekly Profit"
+                "\u2713 Enable All Features",
+                "\u25CF Positions",
+                "\u25C6 Limits",
+                "\u2261 Symbols",
+                "\u25D4 Allowed Trading Times",
+                "\u25BC Weekly Loss",
+                "\u25B2 Weekly Profit Target"
             };
 
             foreach (var feature in features)
@@ -1388,6 +1392,472 @@ namespace Risk_Manager
             mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
+        }
+
+        /// <summary>
+        /// Creates the consolidated "Positions" panel combining Position Loss Limit and Position Profit Target.
+        /// </summary>
+        private Control CreatePositionsPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "\u25CF Positions",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Configure position limits and targets:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            // Content area
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                AutoScroll = true
+            };
+
+            // Position Loss Limit section
+            var lossSection = CreatePositionSection("\u25BC Position Loss Limit", "USD per position:", 10);
+            contentArea.Controls.Add(lossSection);
+
+            // Position Profit Target section
+            var profitSection = CreatePositionSection("\u25B2 Position Profit Target", "USD per position:", 120);
+            contentArea.Controls.Add(profitSection);
+
+            var saveButton = CreateDarkSaveButton();
+
+            // Add controls in correct order: Bottom first, Fill second, Top last
+            mainPanel.Controls.Add(saveButton);
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
+
+            return mainPanel;
+        }
+
+        /// <summary>
+        /// Helper method to create a position section with toggle and USD input.
+        /// </summary>
+        private Panel CreatePositionSection(string sectionTitle, string inputLabel, int topPosition)
+        {
+            var sectionPanel = new Panel
+            {
+                Left = 0,
+                Top = topPosition,
+                Width = 500,
+                Height = 100,
+                BackColor = CardBackground
+            };
+
+            // Section header with toggle
+            var sectionHeader = new CheckBox
+            {
+                Text = sectionTitle,
+                Left = 0,
+                Top = 0,
+                Width = 300,
+                Height = 30,
+                Checked = false,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground
+            };
+            sectionPanel.Controls.Add(sectionHeader);
+
+            // Input label
+            var label = new Label
+            {
+                Text = inputLabel,
+                Left = 0,
+                Top = 40,
+                Width = 120,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            sectionPanel.Controls.Add(label);
+
+            // Input textbox
+            var input = new TextBox
+            {
+                Left = 130,
+                Top = 40,
+                Width = 150,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Text = "0"
+            };
+            sectionPanel.Controls.Add(input);
+
+            return sectionPanel;
+        }
+
+        /// <summary>
+        /// Creates the consolidated "Limits" panel combining Daily Loss Limit and Daily Profit Target.
+        /// </summary>
+        private Control CreateLimitsPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "\u25C6 Limits",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Configure daily trading limits:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            // Content area
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                AutoScroll = true
+            };
+
+            // Daily Loss Limit section
+            var lossSection = CreateLimitSection("\u25BC Daily Loss Limit", 10);
+            contentArea.Controls.Add(lossSection);
+
+            // Daily Profit Target section
+            var profitSection = CreateLimitSection("\u25B2 Daily Profit Target", 120);
+            contentArea.Controls.Add(profitSection);
+
+            var saveButton = CreateDarkSaveButton();
+
+            // Add controls in correct order: Bottom first, Fill second, Top last
+            mainPanel.Controls.Add(saveButton);
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
+
+            return mainPanel;
+        }
+
+        /// <summary>
+        /// Helper method to create a limit section with toggle and USD input.
+        /// </summary>
+        private Panel CreateLimitSection(string sectionTitle, int topPosition)
+        {
+            var sectionPanel = new Panel
+            {
+                Left = 0,
+                Top = topPosition,
+                Width = 500,
+                Height = 100,
+                BackColor = CardBackground
+            };
+
+            // Section header with toggle
+            var sectionHeader = new CheckBox
+            {
+                Text = sectionTitle,
+                Left = 0,
+                Top = 0,
+                Width = 300,
+                Height = 30,
+                Checked = false,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground
+            };
+            sectionPanel.Controls.Add(sectionHeader);
+
+            // Input textbox
+            var input = new TextBox
+            {
+                Left = 0,
+                Top = 40,
+                Width = 150,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Text = "0"
+            };
+            sectionPanel.Controls.Add(input);
+
+            // USD label
+            var usdLabel = new Label
+            {
+                Text = "USD",
+                Left = 160,
+                Top = 40,
+                Width = 50,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            sectionPanel.Controls.Add(usdLabel);
+
+            return sectionPanel;
+        }
+
+        /// <summary>
+        /// Creates the consolidated "Symbols" panel combining Symbol Blacklist and Symbol Contract Limits.
+        /// </summary>
+        private Control CreateSymbolsPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "\u2261 Symbols",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Configure symbol blacklist and contract limits:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            // Content area
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                AutoScroll = true
+            };
+
+            // Symbol Blacklist section
+            var blacklistSection = CreateSymbolBlacklistSection(10);
+            contentArea.Controls.Add(blacklistSection);
+
+            // Symbol Contract Limits section
+            var contractSection = CreateSymbolContractLimitsSection(150);
+            contentArea.Controls.Add(contractSection);
+
+            var saveButton = CreateDarkSaveButton();
+
+            // Add controls in correct order: Bottom first, Fill second, Top last
+            mainPanel.Controls.Add(saveButton);
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
+
+            return mainPanel;
+        }
+
+        /// <summary>
+        /// Helper method to create the Symbol Blacklist section.
+        /// </summary>
+        private Panel CreateSymbolBlacklistSection(int topPosition)
+        {
+            var sectionPanel = new Panel
+            {
+                Left = 0,
+                Top = topPosition,
+                Width = 500,
+                Height = 130,
+                BackColor = CardBackground
+            };
+
+            // Section header with toggle
+            var sectionHeader = new CheckBox
+            {
+                Text = "\u2298 Symbol Blacklist",
+                Left = 0,
+                Top = 0,
+                Width = 300,
+                Height = 30,
+                Checked = false,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground
+            };
+            sectionPanel.Controls.Add(sectionHeader);
+
+            // Description label
+            var descLabel = new Label
+            {
+                Text = "Enter symbols to block (comma separated):",
+                Left = 0,
+                Top = 35,
+                Width = 300,
+                Height = 20,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextGray,
+                BackColor = CardBackground
+            };
+            sectionPanel.Controls.Add(descLabel);
+
+            // Symbols input textbox
+            var symbolsInput = new TextBox
+            {
+                Left = 0,
+                Top = 60,
+                Width = 400,
+                Height = 60,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Text = ""
+            };
+            sectionPanel.Controls.Add(symbolsInput);
+
+            return sectionPanel;
+        }
+
+        /// <summary>
+        /// Helper method to create the Symbol Contract Limits section.
+        /// </summary>
+        private Panel CreateSymbolContractLimitsSection(int topPosition)
+        {
+            var sectionPanel = new Panel
+            {
+                Left = 0,
+                Top = topPosition,
+                Width = 500,
+                Height = 200,
+                BackColor = CardBackground
+            };
+
+            // Section header with toggle
+            var sectionHeader = new CheckBox
+            {
+                Text = "\u25B2 Symbol Contract Limits",
+                Left = 0,
+                Top = 0,
+                Width = 300,
+                Height = 30,
+                Checked = false,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground
+            };
+            sectionPanel.Controls.Add(sectionHeader);
+
+            // Default contract limit label
+            var defaultLabel = new Label
+            {
+                Text = "Default contract limit:",
+                Left = 0,
+                Top = 40,
+                Width = 150,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            sectionPanel.Controls.Add(defaultLabel);
+
+            // Default contract limit input
+            var defaultInput = new TextBox
+            {
+                Left = 160,
+                Top = 40,
+                Width = 100,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Text = "10"
+            };
+            sectionPanel.Controls.Add(defaultInput);
+
+            // Symbol-specific limits label
+            var specificLabel = new Label
+            {
+                Text = "Symbol-specific limits (Symbol:Limit, comma separated):",
+                Left = 0,
+                Top = 75,
+                Width = 400,
+                Height = 20,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextGray,
+                BackColor = CardBackground
+            };
+            sectionPanel.Controls.Add(specificLabel);
+
+            // Symbol-specific limits input
+            var specificInput = new TextBox
+            {
+                Left = 0,
+                Top = 100,
+                Width = 400,
+                Height = 60,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Text = ""
+            };
+            sectionPanel.Controls.Add(specificInput);
+
+            return sectionPanel;
         }
 
         private void ShowPage(string name)
