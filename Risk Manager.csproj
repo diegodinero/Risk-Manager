@@ -10,6 +10,7 @@
     <AlgoType>Indicator</AlgoType>
     <AssemblyName>Risk_Manager</AssemblyName>
     <RootNamespace>Risk_Manager</RootNamespace>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <!-- LOCK: Prevent GUI from modifying these properties -->
     <_ProjectFileVersion>17.8.0</_ProjectFileVersion>
   </PropertyGroup>
@@ -37,5 +38,14 @@
       <HintPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.9\bin\TradingPlatform.PresentationLayer.Plugins.dll</HintPath>
       <Private>False</Private>
     </Reference>
+  </ItemGroup>
+
+  <!-- EntityFramework Core with SQLite for local persistence -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 </Project>
