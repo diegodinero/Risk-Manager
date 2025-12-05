@@ -1358,15 +1358,12 @@ namespace Risk_Manager
             var features = new[]
             {
                 "Enable All Features",
-                "Symbol Blacklist",
-                "Symbol Contract Limits",
-                "Allowed Sessions",
-                "Daily Loss Limit",
-                "Daily Profit Target",
-                "Position Loss Limit",
-                "Position Profit Target",
+                "Positions",
+                "Limits",
+                "Symbols",
+                "Allowed Trading Times",
                 "Weekly Loss",
-                "Weekly Profit"
+                "Weekly Profit Target"
             };
 
             foreach (var feature in features)
