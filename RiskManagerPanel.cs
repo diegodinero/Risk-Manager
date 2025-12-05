@@ -25,7 +25,7 @@ namespace Risk_Manager
                 {
                     BrowserUsageType = BrowserUsageType.None,
                     WindowStyle = NativeWindowStyle.SingleBorderWindow,
-                    ResizeMode = ResizeMode.CanResize
+                    ResizeMode = NativeResizeMode.CanResizeWithGrip
                 },
                 CustomProperties = new System.Collections.Generic.Dictionary<string, object>
                 {

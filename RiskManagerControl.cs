@@ -963,14 +963,46 @@ namespace Risk_Manager
 
         private Control CreateAllowedTradingTimesDarkPanel()
         {
-            var mainPanel = CreateDarkThemedPanel("Allowed Trading Times", "Select which sessions the trader is allowed to participate in:");
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
-            var contentArea = new Panel
+            // Title
+            var titleLabel = new Label
             {
-                Dock = DockStyle.Fill,
+                Text = "Allowed Trading Times",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
+            mainPanel.Controls.Add(titleLabel);
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Select which sessions the trader is allowed to participate in:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+            mainPanel.Controls.Add(subtitleLabel);
+
+            // Content area - THIS IS THE KEY FIX
+            var contentArea = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,  // Fill remaining space AFTER title and subtitle
                 BackColor = CardBackground,
                 Padding = new Padding(15),
-                AutoScroll = true
+                AutoScroll = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false
             };
 
             var sessions = new[]
@@ -980,23 +1012,20 @@ namespace Risk_Manager
                 ("Asia Session", "7 PM - 4 AM EST")
             };
 
-            int y = 0;
             foreach (var (sessionName, timeRange) in sessions)
             {
                 var checkbox = new CheckBox
                 {
                     Text = $"{sessionName} ({timeRange})",
-                    Left = 0,
-                    Top = y,
                     Width = 350,
                     Height = 30,
                     Checked = true,
                     Font = new Font("Segoe UI", 10, FontStyle.Regular),
                     ForeColor = TextWhite,
-                    BackColor = CardBackground
+                    BackColor = CardBackground,
+                    AutoSize = false
                 };
                 contentArea.Controls.Add(checkbox);
-                y += 35;
             }
 
             mainPanel.Controls.Add(contentArea);
