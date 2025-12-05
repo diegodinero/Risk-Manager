@@ -25,10 +25,8 @@ namespace Risk_Manager
                 WindowParameters = new NativeWindowParameters(NativeWindowParameters.Panel)
                 {
                     BrowserUsageType = BrowserUsageType.None,
-
-                    // With the following line:
                     WindowStyle = NativeWindowStyle.SingleBorderWindow,
-                    
+                    ResizeMode = ResizeMode.CanResize
                 },
                 CustomProperties = new Dictionary<string, object>
                 {
