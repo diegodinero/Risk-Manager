@@ -16,14 +16,14 @@
 
   <!-- DEBUG configuration -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <OutputPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.9\..\..\Settings\Scripts\Indicators\Risk Manager</OutputPath>
+    <OutputPath>C:\Users\LaDarrious\Desktop\Quantower\Settings\Scripts\plug-ins\Risk Manager</OutputPath>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
 
   <!-- RELEASE configuration -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.9\..\..\Settings\Scripts\Indicators\Risk Manager</OutputPath>
+    <OutputPath>C:\Users\LaDarrious\Desktop\Quantower\Settings\Scripts\plug-ins\Risk Manager</OutputPath>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
 
