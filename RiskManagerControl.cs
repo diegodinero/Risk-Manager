@@ -40,7 +40,7 @@ namespace Risk_Manager
         // Navigation items - includes Stats and Accounts Summary
         private static readonly string[] NavItems = new[]
         {
-            "Accounts Summary", "Stats", "Block Symbols", "Allowed Trading Times", "Daily Loss", "Daily Profit Target",
+            "Accounts Summary", "Stats", "Feature Toggles", "Block Symbols", "Allowed Trading Times", "Daily Loss", "Daily Profit Target",
             "Position Size", "Position Win", "Position Loss", "Weekly Loss",
             "Weekly Profit Target", "Lock Settings", "Manual Lock"
         };
@@ -79,6 +79,8 @@ namespace Risk_Manager
                     placeholder = CreateAccountsSummaryPanel();
                 else if (string.Equals(name, "Stats", StringComparison.OrdinalIgnoreCase))
                     placeholder = CreateAccountStatsPanel();
+                else if (string.Equals(name, "Feature Toggles", StringComparison.OrdinalIgnoreCase))
+                    placeholder = CreateFeatureTogglesPanel();
                 else
                     placeholder = CreatePlaceholderPanel(name);
                 pageContents[name] = placeholder;
@@ -897,6 +899,12 @@ namespace Risk_Manager
                 return CreateManualLockDarkPanel();
             }
 
+            // Handle Feature Toggles specially
+            if (string.Equals(title, "Feature Toggles", StringComparison.OrdinalIgnoreCase))
+            {
+                return CreateFeatureTogglesPanel();
+            }
+
             // Default dark placeholder for other tabs
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
@@ -953,7 +961,6 @@ namespace Risk_Manager
             mainPanel.Controls.Add(titleLabel);
             return mainPanel;
         }
-
         private Control CreateBlockSymbolsDarkPanel()
         {
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
@@ -1298,6 +1305,89 @@ namespace Risk_Manager
                 MessageBox.Show("Settings saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
             return saveButton;
+        }
+
+        private Control CreateFeatureTogglesPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "Feature Toggles",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Enable or disable features for your trading experience:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            // Content area with features
+            var contentArea = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                AutoScroll = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false
+            };
+
+            var features = new[]
+            {
+                "Enable All Features",
+                "Block Symbols",
+                "Allowed Sessions",
+                "Daily Loss",
+                "Daily Profit",
+                "Position Size",
+                "Position Win",
+                "Position Loss",
+                "Weekly Loss",
+                "Weekly Profit"
+            };
+
+            foreach (var feature in features)
+            {
+                var checkbox = new CheckBox
+                {
+                    Text = feature,
+                    AutoSize = true,
+                    Checked = true,
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    BackColor = CardBackground,
+                    Margin = new Padding(0, 8, 0, 8)
+                };
+                contentArea.Controls.Add(checkbox);
+            }
+
+            var saveButton = CreateDarkSaveButton();
+
+            // Add controls in correct order: Bottom first, Fill second, Top last
+            // In WinForms, docking is processed in reverse Z-order
+            mainPanel.Controls.Add(saveButton);
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
+
+            return mainPanel;
         }
 
         private void ShowPage(string name)
