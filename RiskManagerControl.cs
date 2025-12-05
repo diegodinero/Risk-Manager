@@ -209,6 +209,38 @@ namespace Risk_Manager
             tradingStatusBadge = CreateStatusBadge("Trading Unlocked", AccentGreen);
             badgesPanel.Controls.Add(tradingStatusBadge);
 
+            // Close button (X)
+            var closeButton = new Button
+            {
+                Text = "✕",
+                Width = 32,
+                Height = 32,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                BackColor = AccentAmber,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(5, 0, 0, 0),
+                Padding = new Padding(0)
+            };
+            closeButton.FlatAppearance.BorderSize = 0;
+            closeButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 140, 0);
+            closeButton.Click += (s, e) =>
+            {
+                // Request parent to remove this control
+                if (this.Parent != null)
+                {
+                    this.Parent.Controls.Remove(this);
+                }
+
+                var form = this.FindForm();
+                if (form != null)
+                {
+                    form.Close();
+                }
+            };
+            badgesPanel.Controls.Add(closeButton);
+
             // Position the badges panel initially and on resize
             PositionBadgesPanel(topPanel, badgesPanel);
             topPanel.Controls.Add(badgesPanel);
