@@ -29,11 +29,33 @@ namespace Risk_Manager.Services
         private readonly TimeSpan _cacheExpiration = TimeSpan.FromSeconds(30);
         private readonly object _dbLock = new();
         private bool _disposed;
+        private bool _isInitialized;
+        private string? _initializationError;
 
         private RiskManagerSettingsService()
         {
-            EnsureDatabaseCreated();
+            try
+            {
+                EnsureDatabaseCreated();
+                _isInitialized = true;
+            }
+            catch (Exception ex)
+            {
+                _initializationError = ex.Message;
+                _isInitialized = false;
+                System.Diagnostics.Debug.WriteLine($"RiskManagerSettingsService initialization failed: {ex}");
+            }
         }
+
+        /// <summary>
+        /// Gets whether the service was successfully initialized.
+        /// </summary>
+        public bool IsInitialized => _isInitialized;
+
+        /// <summary>
+        /// Gets the initialization error message if any.
+        /// </summary>
+        public string? InitializationError => _initializationError;
 
         /// <summary>
         /// Ensures the database and tables are created.
@@ -92,7 +114,7 @@ namespace Risk_Manager.Services
         /// </summary>
         public AccountSettings? GetSettings(string accountNumber)
         {
-            if (string.IsNullOrEmpty(accountNumber))
+            if (string.IsNullOrEmpty(accountNumber) || !_isInitialized)
                 return null;
 
             // Check cache first
@@ -102,15 +124,17 @@ namespace Risk_Manager.Services
             }
 
             // Load from database
-            lock (_dbLock)
+            try
             {
-                using var context = CreateContext();
-                var settings = context.AccountSettings
-                    .Include(s => s.BlockedSymbols)
-                    .Include(s => s.SymbolContractLimits)
-                    .Include(s => s.TradingTimeRestrictions)
-                    .Include(s => s.TradingLock)
-                    .Include(s => s.SettingsLock)
+                lock (_dbLock)
+                {
+                    using var context = CreateContext();
+                    var settings = context.AccountSettings
+                        .Include(s => s.BlockedSymbols)
+                        .Include(s => s.SymbolContractLimits)
+                        .Include(s => s.TradingTimeRestrictions)
+                        .Include(s => s.TradingLock)
+                        .Include(s => s.SettingsLock)
                     .AsNoTracking()
                     .FirstOrDefault(s => s.AccountNumber == accountNumber);
 
@@ -125,6 +149,12 @@ namespace Risk_Manager.Services
                 }
 
                 return settings;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSettings failed: {ex}");
+                return null;
             }
         }
 
