@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
+using Risk_Manager.Data;
 using DockStyle = System.Windows.Forms.DockStyle;
 
 namespace Risk_Manager
@@ -1308,7 +1309,52 @@ namespace Risk_Manager
             saveButton.FlatAppearance.BorderSize = 0;
             saveButton.Click += (s, e) =>
             {
-                MessageBox.Show("Settings saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                try
+                {
+                    // Get account number for saving
+                    var accountNumber = selectedAccount?.Id ?? selectedAccount?.Name ?? "DEFAULT";
+                    
+                    // Access the settings service and create/update settings for this account
+                    var service = RiskManagerSettingsService.Instance;
+                    
+                    if (!service.IsInitialized)
+                    {
+                        MessageBox.Show(
+                            $"Database initialization failed: {service.InitializationError}\n\nSettings will not be persisted.",
+                            "Database Error", 
+                            MessageBoxButtons.OK, 
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
+                    
+                    // Ensure account exists in database
+                    var settings = service.GetOrCreateSettings(accountNumber);
+                    
+                    if (settings != null)
+                    {
+                        MessageBox.Show(
+                            $"Settings saved successfully for account: {accountNumber}\n\nDatabase location: %LocalAppData%\\RiskManager\\riskmanager.db",
+                            "Success", 
+                            MessageBoxButtons.OK, 
+                            MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            "Failed to save settings. Please try again.",
+                            "Error", 
+                            MessageBoxButtons.OK, 
+                            MessageBoxIcon.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        $"Error saving settings: {ex.Message}",
+                        "Error", 
+                        MessageBoxButtons.OK, 
+                        MessageBoxIcon.Error);
+                }
             };
             return saveButton;
         }
