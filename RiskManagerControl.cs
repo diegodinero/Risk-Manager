@@ -27,6 +27,19 @@ namespace Risk_Manager
         private Label tradingStatusBadge;
         private ComboBox accountSelector;
 
+        // Settings input control references for persistence
+        private TextBox dailyLossLimitInput;
+        private CheckBox dailyLossLimitEnabled;
+        private TextBox dailyProfitTargetInput;
+        private CheckBox dailyProfitTargetEnabled;
+        private TextBox blockedSymbolsInput;
+        private CheckBox blockedSymbolsEnabled;
+        private TextBox defaultContractLimitInput;
+        private TextBox symbolContractLimitsInput;
+        private CheckBox symbolContractLimitsEnabled;
+        private CheckBox tradingLockCheckBox;
+        private CheckBox settingsLockCheckBox;
+
         // Dark theme colors
         private static readonly Color DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
         private static readonly Color DarkerBackground = Color.FromArgb(35, 52, 70);    // Slightly darker for sidebar
@@ -1201,6 +1214,7 @@ namespace Risk_Manager
                 BackColor = CardBackground
             };
             contentArea.Controls.Add(lockCheckbox);
+            settingsLockCheckBox = lockCheckbox;
 
             var saveButton = CreateDarkSaveButton();
 
@@ -1327,25 +1341,108 @@ namespace Risk_Manager
                         return;
                     }
                     
-                    // Ensure account exists and save settings
+                    // Ensure account exists
                     var settings = service.GetOrCreateSettings(accountNumber);
-                    
-                    if (settings != null)
+                    if (settings == null)
                     {
                         MessageBox.Show(
-                            $"Settings saved successfully for account: {accountNumber}\n\nSettings folder: {service.SettingsFolder}",
-                            "Success", 
-                            MessageBoxButtons.OK, 
-                            MessageBoxIcon.Information);
-                    }
-                    else
-                    {
-                        MessageBox.Show(
-                            "Failed to save settings. Please try again.",
+                            "Failed to create settings. Please try again.",
                             "Error", 
                             MessageBoxButtons.OK, 
                             MessageBoxIcon.Error);
+                        return;
                     }
+
+                    // Save Daily Loss Limit
+                    if (dailyLossLimitEnabled?.Checked == true && dailyLossLimitInput != null)
+                    {
+                        if (decimal.TryParse(dailyLossLimitInput.Text, out var lossLimit))
+                        {
+                            service.UpdateDailyLossLimit(accountNumber, lossLimit);
+                        }
+                    }
+                    else
+                    {
+                        service.UpdateDailyLossLimit(accountNumber, null);
+                    }
+
+                    // Save Daily Profit Target
+                    if (dailyProfitTargetEnabled?.Checked == true && dailyProfitTargetInput != null)
+                    {
+                        if (decimal.TryParse(dailyProfitTargetInput.Text, out var profitTarget))
+                        {
+                            service.UpdateDailyProfitTarget(accountNumber, profitTarget);
+                        }
+                    }
+                    else
+                    {
+                        service.UpdateDailyProfitTarget(accountNumber, null);
+                    }
+
+                    // Save Blocked Symbols
+                    if (blockedSymbolsEnabled?.Checked == true && blockedSymbolsInput != null && !string.IsNullOrWhiteSpace(blockedSymbolsInput.Text))
+                    {
+                        var symbols = blockedSymbolsInput.Text
+                            .Split(new[] { ',', ' ', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => s.Trim())
+                            .Where(s => !string.IsNullOrEmpty(s));
+                        service.SetBlockedSymbols(accountNumber, symbols);
+                    }
+                    else
+                    {
+                        service.SetBlockedSymbols(accountNumber, Array.Empty<string>());
+                    }
+
+                    // Save Default Contract Limit
+                    if (symbolContractLimitsEnabled?.Checked == true && defaultContractLimitInput != null)
+                    {
+                        if (int.TryParse(defaultContractLimitInput.Text, out var defaultLimit))
+                        {
+                            service.UpdateDefaultContractLimit(accountNumber, defaultLimit);
+                        }
+                    }
+                    else
+                    {
+                        service.UpdateDefaultContractLimit(accountNumber, null);
+                    }
+
+                    // Save Symbol-Specific Contract Limits
+                    if (symbolContractLimitsEnabled?.Checked == true && symbolContractLimitsInput != null && !string.IsNullOrWhiteSpace(symbolContractLimitsInput.Text))
+                    {
+                        var limits = new Dictionary<string, int>();
+                        var entries = symbolContractLimitsInput.Text.Split(new[] { ',', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var entry in entries)
+                        {
+                            var parts = entry.Split(':');
+                            if (parts.Length == 2 && int.TryParse(parts[1].Trim(), out var limit))
+                            {
+                                limits[parts[0].Trim()] = limit;
+                            }
+                        }
+                        service.SetSymbolContractLimits(accountNumber, limits);
+                    }
+                    else
+                    {
+                        service.SetSymbolContractLimits(accountNumber, new Dictionary<string, int>());
+                    }
+
+                    // Save Trading Lock
+                    if (tradingLockCheckBox != null)
+                    {
+                        service.SetTradingLock(accountNumber, tradingLockCheckBox.Checked);
+                    }
+
+                    // Save Settings Lock
+                    if (settingsLockCheckBox != null)
+                    {
+                        service.SetSettingsLock(accountNumber, settingsLockCheckBox.Checked);
+                    }
+                    
+                    MessageBox.Show(
+                        $"Settings saved successfully for account: {accountNumber}\n\nSettings folder: {service.SettingsFolder}",
+                        "Success", 
+                        MessageBoxButtons.OK, 
+                        MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
@@ -1607,11 +1704,11 @@ namespace Risk_Manager
             };
 
             // Daily Loss Limit section
-            var lossSection = CreateLimitSection("Daily Loss Limit", 10);
+            var lossSection = CreateLimitSection("Daily Loss Limit", 10, out dailyLossLimitEnabled, out dailyLossLimitInput);
             contentArea.Controls.Add(lossSection);
 
             // Daily Profit Target section
-            var profitSection = CreateLimitSection("Daily Profit Target", 120);
+            var profitSection = CreateLimitSection("Daily Profit Target", 120, out dailyProfitTargetEnabled, out dailyProfitTargetInput);
             contentArea.Controls.Add(profitSection);
 
             var saveButton = CreateDarkSaveButton();
@@ -1628,7 +1725,7 @@ namespace Risk_Manager
         /// <summary>
         /// Helper method to create a limit section with toggle and USD input.
         /// </summary>
-        private Panel CreateLimitSection(string sectionTitle, int topPosition)
+        private Panel CreateLimitSection(string sectionTitle, int topPosition, out CheckBox enabledCheckbox, out TextBox valueInput)
         {
             var sectionPanel = new Panel
             {
@@ -1653,6 +1750,7 @@ namespace Risk_Manager
                 BackColor = CardBackground
             };
             sectionPanel.Controls.Add(sectionHeader);
+            enabledCheckbox = sectionHeader;
 
             // Input textbox
             var input = new TextBox
@@ -1668,6 +1766,7 @@ namespace Risk_Manager
                 Text = "0"
             };
             sectionPanel.Controls.Add(input);
+            valueInput = input;
 
             // USD label
             var usdLabel = new Label
@@ -1731,11 +1830,11 @@ namespace Risk_Manager
             };
 
             // Symbol Blacklist section
-            var blacklistSection = CreateSymbolBlacklistSection(10);
+            var blacklistSection = CreateSymbolBlacklistSection(10, out blockedSymbolsEnabled, out blockedSymbolsInput);
             contentArea.Controls.Add(blacklistSection);
 
             // Symbol Contract Limits section
-            var contractSection = CreateSymbolContractLimitsSection(150);
+            var contractSection = CreateSymbolContractLimitsSection(150, out symbolContractLimitsEnabled, out defaultContractLimitInput, out symbolContractLimitsInput);
             contentArea.Controls.Add(contractSection);
 
             var saveButton = CreateDarkSaveButton();
@@ -1752,7 +1851,7 @@ namespace Risk_Manager
         /// <summary>
         /// Helper method to create the Symbol Blacklist section.
         /// </summary>
-        private Panel CreateSymbolBlacklistSection(int topPosition)
+        private Panel CreateSymbolBlacklistSection(int topPosition, out CheckBox enabledCheckbox, out TextBox symbolsTextBox)
         {
             var sectionPanel = new Panel
             {
@@ -1777,6 +1876,7 @@ namespace Risk_Manager
                 BackColor = CardBackground
             };
             sectionPanel.Controls.Add(sectionHeader);
+            enabledCheckbox = sectionHeader;
 
             // Description label
             var descLabel = new Label
@@ -1808,6 +1908,7 @@ namespace Risk_Manager
                 Text = ""
             };
             sectionPanel.Controls.Add(symbolsInput);
+            symbolsTextBox = symbolsInput;
 
             return sectionPanel;
         }
@@ -1815,7 +1916,7 @@ namespace Risk_Manager
         /// <summary>
         /// Helper method to create the Symbol Contract Limits section.
         /// </summary>
-        private Panel CreateSymbolContractLimitsSection(int topPosition)
+        private Panel CreateSymbolContractLimitsSection(int topPosition, out CheckBox enabledCheckbox, out TextBox defaultLimitInput, out TextBox specificLimitsInput)
         {
             var sectionPanel = new Panel
             {
@@ -1840,6 +1941,7 @@ namespace Risk_Manager
                 BackColor = CardBackground
             };
             sectionPanel.Controls.Add(sectionHeader);
+            enabledCheckbox = sectionHeader;
 
             // Default contract limit label
             var defaultLabel = new Label
@@ -1870,6 +1972,7 @@ namespace Risk_Manager
                 Text = "10"
             };
             sectionPanel.Controls.Add(defaultInput);
+            defaultLimitInput = defaultInput;
 
             // Symbol-specific limits label
             var specificLabel = new Label
@@ -1901,6 +2004,7 @@ namespace Risk_Manager
                 Text = ""
             };
             sectionPanel.Controls.Add(specificInput);
+            specificLimitsInput = specificInput;
 
             return sectionPanel;
         }
