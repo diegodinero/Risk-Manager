@@ -1320,20 +1320,20 @@ namespace Risk_Manager
                     if (!service.IsInitialized)
                     {
                         MessageBox.Show(
-                            $"Database initialization failed: {service.InitializationError}\n\nSettings will not be persisted.",
-                            "Database Error", 
+                            $"Settings initialization failed: {service.InitializationError}\n\nSettings will not be persisted.",
+                            "Error", 
                             MessageBoxButtons.OK, 
                             MessageBoxIcon.Warning);
                         return;
                     }
                     
-                    // Ensure account exists in database
+                    // Ensure account exists and save settings
                     var settings = service.GetOrCreateSettings(accountNumber);
                     
                     if (settings != null)
                     {
                         MessageBox.Show(
-                            $"Settings saved successfully for account: {accountNumber}\n\nDatabase location: %LocalAppData%\\RiskManager\\riskmanager.db",
+                            $"Settings saved successfully for account: {accountNumber}\n\nSettings folder: {service.SettingsFolder}",
                             "Success", 
                             MessageBoxButtons.OK, 
                             MessageBoxIcon.Information);

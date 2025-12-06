@@ -39,11 +39,6 @@
     </Reference>
   </ItemGroup>
 
-  <!-- SQLite for local persistence (lightweight, no EF Core dependencies) -->
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
-  </ItemGroup>
-
   <!-- Enable cross-platform builds -->
   <PropertyGroup>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>

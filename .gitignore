@@ -362,7 +362,8 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-# SQLite database files
+# Risk Manager settings files
 *.db
 *.db-shm
 *.db-wal
+RiskManager/
