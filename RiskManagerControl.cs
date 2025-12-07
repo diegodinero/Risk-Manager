@@ -431,17 +431,6 @@ namespace Risk_Manager
 
         private Button CreateNavButton(string text)
         {
-            // Create a panel to host the emoji-enabled label
-            var panel = new Panel
-            {
-                Width = LeftPanelWidth - 4,
-                Height = 36,
-                BackColor = text == selectedNavItem ? SelectedColor : DarkerBackground,
-                Cursor = Cursors.Hand,
-                Margin = new Padding(0, 1, 0, 1),
-                Tag = text // Store original item name for reliable comparison
-            };
-
             // Create WPF TextBlock for emoji rendering
             var textBlock = new WpfTextBlock
             {
@@ -465,29 +454,7 @@ namespace Risk_Manager
                 Child = textBlock
             };
 
-            panel.Controls.Add(host);
-
-            // Handle hover effects
-            panel.MouseEnter += (s, e) => { if (text != selectedNavItem) panel.BackColor = HoverColor; host.BackColor = panel.BackColor; };
-            panel.MouseLeave += (s, e) => { if (text != selectedNavItem) panel.BackColor = DarkerBackground; host.BackColor = panel.BackColor; };
-            panel.MouseDown += (s, e) => { panel.BackColor = SelectedColor; host.BackColor = panel.BackColor; };
-
-            panel.Click += (s, e) =>
-            {
-                selectedNavItem = text;
-                UpdateNavButtonStates();
-                ShowPage(text);
-            };
-
-            // Also handle clicks on the ElementHost
-            host.Click += (s, e) =>
-            {
-                selectedNavItem = text;
-                UpdateNavButtonStates();
-                ShowPage(text);
-            };
-
-            // Convert Panel to Button for compatibility with existing code
+            // Create button to host the ElementHost
             var button = new Button
             {
                 Width = LeftPanelWidth - 4,
@@ -496,7 +463,7 @@ namespace Risk_Manager
                 BackColor = text == selectedNavItem ? SelectedColor : DarkerBackground,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 1, 0, 1),
-                Tag = text
+                Tag = new { Text = text, Host = host } // Store both text and host for updates
             };
 
             button.FlatAppearance.BorderSize = 0;
@@ -519,8 +486,18 @@ namespace Risk_Manager
         {
             foreach (var btn in navButtons)
             {
-                var itemName = btn.Tag as string;
-                btn.BackColor = itemName == selectedNavItem ? SelectedColor : DarkerBackground;
+                if (btn.Tag is { } tagObj)
+                {
+                    dynamic tag = tagObj;
+                    string itemName = tag.Text;
+                    ElementHost host = tag.Host;
+                    
+                    var isSelected = itemName == selectedNavItem;
+                    var color = isSelected ? SelectedColor : DarkerBackground;
+                    
+                    btn.BackColor = color;
+                    host.BackColor = color;
+                }
             }
         }
 
