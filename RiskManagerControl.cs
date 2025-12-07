@@ -88,18 +88,18 @@ namespace Risk_Manager
             foreach (var name in NavItems)
             {
                 Control placeholder;
-                // Match navigation items with emoji prefixes
-                if (name.Contains("Template Details"))
+                // Match navigation items with emoji prefixes using specific patterns
+                if (name.EndsWith("Template Details"))
                     placeholder = CreateAccountsSummaryPanel();
-                else if (name.Contains("Limits"))
+                else if (name.EndsWith("Limits"))
                     placeholder = CreateLimitsPanel();
-                else if (name.Contains("Positions"))
+                else if (name.EndsWith("Positions"))
                     placeholder = CreatePositionsPanel();
-                else if (name.Contains("Symbols"))
+                else if (name.EndsWith("Symbols"))
                     placeholder = CreateSymbolsPanel();
-                else if (name.Contains("Advanced"))
+                else if (name.EndsWith("Advanced"))
                     placeholder = CreateFeatureTogglesPanel();
-                else if (name.Contains("Auto Lock"))
+                else if (name.EndsWith("Auto Lock"))
                     placeholder = CreateAutoLockPanel();
                 else
                     placeholder = CreatePlaceholderPanel(name);
