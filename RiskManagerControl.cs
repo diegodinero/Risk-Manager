@@ -105,9 +105,9 @@ namespace Risk_Manager
                 else if (name.EndsWith("Allowed Trading Times"))
                     placeholder = CreateAllowedTradingTimesDarkPanel();
                 else if (name.EndsWith("Weekly Loss"))
-                    placeholder = CreateWeeklyLossDarkPanel();
+                    placeholder = CreatePlaceholderPanel(name);
                 else if (name.EndsWith("Weekly Profit Target"))
-                    placeholder = CreateWeeklyProfitTargetDarkPanel();
+                    placeholder = CreatePlaceholderPanel(name);
                 else if (name.EndsWith("Lock Settings"))
                     placeholder = CreateLockSettingsDarkPanel();
                 else if (name.EndsWith("Manual Lock"))
