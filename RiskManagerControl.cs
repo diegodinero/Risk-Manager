@@ -10,7 +10,7 @@ using TradingPlatform.PresentationLayer.Renderers.Chart;
 using Risk_Manager.Data;
 using DockStyle = System.Windows.Forms.DockStyle;
 using WinFormsTextBox = System.Windows.Forms.TextBox;
-using WpfTextBlock = System.Windows.Controls.TextBlock;
+using EmojiTextBlock = Emoji.Wpf.TextBlock;
 
 namespace Risk_Manager
 {
@@ -334,17 +334,23 @@ namespace Risk_Manager
         /// </summary>
         private Control CreateEmojiLabel(string text, Font font, Color foreColor, Color backColor, DockStyle dock = DockStyle.None, int height = 0, Padding padding = default, ContentAlignment alignment = ContentAlignment.MiddleLeft)
         {
-            var textBlock = new WpfTextBlock
+            // Use Emoji.Wpf.TextBlock which handles emoji rendering automatically
+            var textBlock = new EmojiTextBlock
             {
                 Text = text,
                 Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(backColor.A, backColor.R, backColor.G, backColor.B)),
                 Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(foreColor.A, foreColor.R, foreColor.G, foreColor.B)),
                 FontFamily = new System.Windows.Media.FontFamily(font.FontFamily.Name),
                 FontSize = font.Size * 96.0 / 72.0, // Convert from points to pixels
-                FontWeight = font.Bold ? System.Windows.Media.FontWeights.Bold : System.Windows.Media.FontWeights.Normal,
                 Padding = new System.Windows.Thickness(padding.Left, padding.Top, padding.Right, padding.Bottom),
                 TextWrapping = System.Windows.TextWrapping.NoWrap
             };
+
+            // Apply font weight if bold
+            if (font.Bold)
+            {
+                textBlock.FontWeight = System.Windows.FontWeight.FromOpenTypeWeight(700); // Bold
+            }
 
             // Set text alignment
             switch (alignment)
@@ -385,9 +391,6 @@ namespace Risk_Manager
                     textBlock.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
                     break;
             }
-
-            // Enable emoji rendering using Emoji.Wpf
-            Emoji.Wpf.TextBlock.SetColorBlend(textBlock, true);
 
             var host = new ElementHost
             {
@@ -438,8 +441,8 @@ namespace Risk_Manager
 
         private Button CreateNavButton(string text)
         {
-            // Create WPF TextBlock for emoji rendering
-            var textBlock = new WpfTextBlock
+            // Use Emoji.Wpf.TextBlock for proper emoji rendering
+            var textBlock = new EmojiTextBlock
             {
                 Text = "  " + text,
                 Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Transparent),
@@ -449,9 +452,6 @@ namespace Risk_Manager
                 VerticalAlignment = System.Windows.VerticalAlignment.Center,
                 Padding = new System.Windows.Thickness(10, 0, 0, 0)
             };
-
-            // Apply emoji rendering using Emoji.Wpf
-            Emoji.Wpf.TextBlock.SetColorBlend(textBlock, true);
 
             // Host the WPF control in WinForms
             var host = new ElementHost
