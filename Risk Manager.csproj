@@ -38,6 +38,9 @@
       <Private>False</Private>
     </Reference>
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Emoji.Wpf" Version="0.3.4" />
+  </ItemGroup>
 
   <!-- Enable cross-platform builds -->
   <PropertyGroup>
