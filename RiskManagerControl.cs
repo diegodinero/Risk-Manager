@@ -55,7 +55,8 @@ namespace Risk_Manager
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
         private static readonly string[] NavItems = new[]
         {
-            "📋 Template Details", "📊 Limits", "📈 Positions", "🛡️ Symbols", "⚙️ Advanced", "🔒 Auto Lock"
+            "📊 Accounts Summary", "📈 Stats", "⚙️ Feature Toggles", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
+            "📉 Weekly Loss", "📈 Weekly Profit Target", "🔒 Lock Settings", "🔒 Manual Lock"
         };
 
         private const int LeftPanelWidth = 200;
@@ -88,19 +89,29 @@ namespace Risk_Manager
             foreach (var name in NavItems)
             {
                 Control placeholder;
-                // Match navigation items with emoji prefixes using specific patterns
-                if (name.EndsWith("Template Details"))
+                // Match navigation items with emoji prefixes
+                if (name.EndsWith("Accounts Summary"))
                     placeholder = CreateAccountsSummaryPanel();
-                else if (name.EndsWith("Limits"))
-                    placeholder = CreateLimitsPanel();
+                else if (name.EndsWith("Stats"))
+                    placeholder = CreateAccountStatsPanel();
+                else if (name.EndsWith("Feature Toggles"))
+                    placeholder = CreateFeatureTogglesPanel();
                 else if (name.EndsWith("Positions"))
                     placeholder = CreatePositionsPanel();
+                else if (name.EndsWith("Limits"))
+                    placeholder = CreateLimitsPanel();
                 else if (name.EndsWith("Symbols"))
                     placeholder = CreateSymbolsPanel();
-                else if (name.EndsWith("Advanced"))
-                    placeholder = CreateFeatureTogglesPanel();
-                else if (name.EndsWith("Auto Lock"))
-                    placeholder = CreateAutoLockPanel();
+                else if (name.EndsWith("Allowed Trading Times"))
+                    placeholder = CreateAllowedTradingTimesDarkPanel();
+                else if (name.EndsWith("Weekly Loss"))
+                    placeholder = CreateWeeklyLossDarkPanel();
+                else if (name.EndsWith("Weekly Profit Target"))
+                    placeholder = CreateWeeklyProfitTargetDarkPanel();
+                else if (name.EndsWith("Lock Settings"))
+                    placeholder = CreateLockSettingsDarkPanel();
+                else if (name.EndsWith("Manual Lock"))
+                    placeholder = CreateManualLockDarkPanel();
                 else
                     placeholder = CreatePlaceholderPanel(name);
                 pageContents[name] = placeholder;
@@ -118,10 +129,10 @@ namespace Risk_Manager
             dropdownRefreshTimer.Tick += (s, e) => RefreshAccountDropdown();
             dropdownRefreshTimer.Start();
 
-            // Show Template Details by default
-            selectedNavItem = "📋 Template Details";
+            // Show Accounts Summary by default
+            selectedNavItem = "📊 Accounts Summary";
             UpdateNavButtonStates();
-            ShowPage("📋 Template Details");
+            ShowPage("📊 Accounts Summary");
         }
 
         private void RefreshAccountDropdown()
@@ -368,12 +379,36 @@ namespace Risk_Manager
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 1, 0, 1),
                 Padding = new Padding(10, 0, 0, 0),
-                Tag = text
+                Tag = text,
+                UseCompatibleTextRendering = false // Use GDI+ for better emoji rendering
             };
 
             button.FlatAppearance.BorderSize = 0;
             button.FlatAppearance.MouseOverBackColor = HoverColor;
             button.FlatAppearance.MouseDownBackColor = SelectedColor;
+
+            // Custom paint for colored emoji rendering using GDI+
+            button.Paint += (s, e) =>
+            {
+                var btn = (Button)s;
+                e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                // Draw background
+                e.Graphics.Clear(btn.BackColor);
+                
+                // Use Graphics.DrawString for colored emoji support (GDI+)
+                using (var brush = new SolidBrush(btn.ForeColor))
+                {
+                    var sf = new StringFormat
+                    {
+                        LineAlignment = StringAlignment.Center,
+                        Alignment = StringAlignment.Near
+                    };
+                    e.Graphics.DrawString(btn.Text, btn.Font, brush, 
+                        new RectangleF(btn.Padding.Left, 0, btn.Width, btn.Height), sf);
+                }
+            };
 
             button.Click += (s, e) =>
             {
@@ -391,25 +426,58 @@ namespace Risk_Manager
             {
                 var itemName = btn.Tag as string;
                 btn.BackColor = itemName == selectedNavItem ? SelectedColor : DarkerBackground;
+                btn.Invalidate(); // Force repaint for custom rendering
             }
+        }
+
+        /// <summary>
+        /// Creates a label with colored emoji support using custom painting
+        /// </summary>
+        private Label CreateEmojiLabel(string text, int fontSize, FontStyle fontStyle = FontStyle.Regular)
+        {
+            var label = new Label
+            {
+                Text = text,
+                Font = new Font("Segoe UI Emoji", fontSize, fontStyle),
+                ForeColor = TextWhite,
+                BackColor = Color.Transparent,
+                AutoSize = false
+            };
+
+            // Custom paint for colored emoji rendering
+            label.Paint += (s, e) =>
+            {
+                var lbl = (Label)s;
+                e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                // Draw text with GDI+ for colored emoji support
+                using (var brush = new SolidBrush(lbl.ForeColor))
+                {
+                    var sf = new StringFormat
+                    {
+                        LineAlignment = StringAlignment.Center,
+                        Alignment = StringAlignment.Near
+                    };
+                    e.Graphics.DrawString(lbl.Text, lbl.Font, brush, 
+                        new RectangleF(lbl.Padding.Left, 0, lbl.Width, lbl.Height), sf);
+                }
+            };
+
+            return label;
         }
 
         private Control CreateAccountsSummaryPanel()
         {
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
-            // Title with emoji rendering
-            var titleLabel = new Label
-            {
-                Text = "📋 Template Details",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
-                Padding = new Padding(10, 0, 0, 0),
-                BackColor = DarkBackground,
-                ForeColor = TextWhite
-            };
+            // Title with colored emoji rendering
+            var titleLabel = CreateEmojiLabel("📊 Accounts Summary", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
 
             statsGrid = new DataGridView
             {
@@ -1092,17 +1160,12 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = new Label
-            {
-                Text = "🕐 Trading Time Restrictions",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
-                Padding = new Padding(10, 0, 0, 0),
-                BackColor = DarkBackground,
-                ForeColor = TextWhite
-            };
+            var titleLabel = CreateEmojiLabel("🕐 Trading Time Restrictions", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1168,17 +1231,12 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = new Label
-            {
-                Text = "⚙️ Settings Lock",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
-                Padding = new Padding(10, 0, 0, 0),
-                BackColor = DarkBackground,
-                ForeColor = TextWhite
-            };
+            var titleLabel = CreateEmojiLabel("⚙️ Settings Lock", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1233,17 +1291,12 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title
-            var titleLabel = new Label
-            {
-                Text = "🔒 Trading Lock",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
-                Padding = new Padding(10, 0, 0, 0),
-                BackColor = DarkBackground,
-                ForeColor = TextWhite
-            };
+            var titleLabel = CreateEmojiLabel("🔒 Trading Lock", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1312,17 +1365,12 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = new Label
-            {
-                Text = "🔒 Auto Lock Schedule",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
-                Padding = new Padding(10, 0, 0, 0),
-                BackColor = DarkBackground,
-                ForeColor = TextWhite
-            };
+            var titleLabel = CreateEmojiLabel("🔒 Auto Lock Schedule", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1524,17 +1572,12 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = new Label
-            {
-                Text = "⚙️ Advanced",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
-                Padding = new Padding(10, 0, 0, 0),
-                BackColor = DarkBackground,
-                ForeColor = TextWhite
-            };
+            var titleLabel = CreateEmojiLabel("⚙️ Advanced", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1607,17 +1650,12 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = new Label
-            {
-                Text = "📈 Positions",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
-                Padding = new Padding(10, 0, 0, 0),
-                BackColor = DarkBackground,
-                ForeColor = TextWhite
-            };
+            var titleLabel = CreateEmojiLabel("📈 Positions", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1731,17 +1769,12 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = new Label
-            {
-                Text = "📊 Limits",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
-                Padding = new Padding(10, 0, 0, 0),
-                BackColor = DarkBackground,
-                ForeColor = TextWhite
-            };
+            var titleLabel = CreateEmojiLabel("📊 Limits", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1857,17 +1890,12 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = new Label
-            {
-                Text = "🛡️ Symbols",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
-                Padding = new Padding(10, 0, 0, 0),
-                BackColor = DarkBackground,
-                ForeColor = TextWhite
-            };
+            var titleLabel = CreateEmojiLabel("🛡️ Symbols", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
 
             // Subtitle
             var subtitleLabel = new Label
