@@ -4,25 +4,15 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
-using System.Windows.Forms.Integration;
 using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
 using Risk_Manager.Data;
 using DockStyle = System.Windows.Forms.DockStyle;
-using WinFormsTextBox = System.Windows.Forms.TextBox;
-using EmojiTextBlock = Emoji.Wpf.TextBlock;
 
 namespace Risk_Manager
 {
     public class RiskManagerControl : UserControl
     {
-        // Helper class for navigation button state
-        private class NavButtonState
-        {
-            public string Text { get; set; }
-            public ElementHost Host { get; set; }
-        }
-
         private readonly Panel contentPanel;
         private readonly Panel leftPanel;
         private readonly Dictionary<string, Control> pageContents = new();
@@ -38,14 +28,14 @@ namespace Risk_Manager
         private ComboBox accountSelector;
 
         // Settings input control references for persistence
-        private WinFormsTextBox dailyLossLimitInput;
+        private TextBox dailyLossLimitInput;
         private CheckBox dailyLossLimitEnabled;
-        private WinFormsTextBox dailyProfitTargetInput;
+        private TextBox dailyProfitTargetInput;
         private CheckBox dailyProfitTargetEnabled;
-        private WinFormsTextBox blockedSymbolsInput;
+        private TextBox blockedSymbolsInput;
         private CheckBox blockedSymbolsEnabled;
-        private WinFormsTextBox defaultContractLimitInput;
-        private WinFormsTextBox symbolContractLimitsInput;
+        private TextBox defaultContractLimitInput;
+        private TextBox symbolContractLimitsInput;
         private CheckBox symbolContractLimitsEnabled;
         private CheckBox tradingLockCheckBox;
         private CheckBox settingsLockCheckBox;
@@ -329,82 +319,6 @@ namespace Risk_Manager
             return path;
         }
 
-        /// <summary>
-        /// Creates a WPF TextBlock that properly renders emojis, hosted in an ElementHost control
-        /// </summary>
-        private Control CreateEmojiLabel(string text, Font font, Color foreColor, Color backColor, DockStyle dock = DockStyle.None, int height = 0, Padding padding = default, ContentAlignment alignment = ContentAlignment.MiddleLeft)
-        {
-            // Use Emoji.Wpf.TextBlock which handles emoji rendering automatically
-            var textBlock = new EmojiTextBlock
-            {
-                Text = text,
-                Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(backColor.A, backColor.R, backColor.G, backColor.B)),
-                Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(foreColor.A, foreColor.R, foreColor.G, foreColor.B)),
-                FontFamily = new System.Windows.Media.FontFamily(font.FontFamily.Name),
-                FontSize = font.Size * 96.0 / 72.0, // Convert from points to pixels
-                Padding = new System.Windows.Thickness(padding.Left, padding.Top, padding.Right, padding.Bottom),
-                TextWrapping = System.Windows.TextWrapping.NoWrap
-            };
-
-            // Apply font weight if bold
-            if (font.Bold)
-            {
-                textBlock.FontWeight = System.Windows.FontWeight.FromOpenTypeWeight(700); // Bold
-            }
-
-            // Set text alignment
-            switch (alignment)
-            {
-                case ContentAlignment.MiddleLeft:
-                case ContentAlignment.TopLeft:
-                case ContentAlignment.BottomLeft:
-                    textBlock.TextAlignment = System.Windows.TextAlignment.Left;
-                    break;
-                case ContentAlignment.MiddleCenter:
-                case ContentAlignment.TopCenter:
-                case ContentAlignment.BottomCenter:
-                    textBlock.TextAlignment = System.Windows.TextAlignment.Center;
-                    break;
-                case ContentAlignment.MiddleRight:
-                case ContentAlignment.TopRight:
-                case ContentAlignment.BottomRight:
-                    textBlock.TextAlignment = System.Windows.TextAlignment.Right;
-                    break;
-            }
-
-            // Set vertical alignment
-            switch (alignment)
-            {
-                case ContentAlignment.TopLeft:
-                case ContentAlignment.TopCenter:
-                case ContentAlignment.TopRight:
-                    textBlock.VerticalAlignment = System.Windows.VerticalAlignment.Top;
-                    break;
-                case ContentAlignment.MiddleLeft:
-                case ContentAlignment.MiddleCenter:
-                case ContentAlignment.MiddleRight:
-                    textBlock.VerticalAlignment = System.Windows.VerticalAlignment.Center;
-                    break;
-                case ContentAlignment.BottomLeft:
-                case ContentAlignment.BottomCenter:
-                case ContentAlignment.BottomRight:
-                    textBlock.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
-                    break;
-            }
-
-            var host = new ElementHost
-            {
-                Dock = dock,
-                BackColor = backColor,
-                Child = textBlock
-            };
-
-            if (height > 0)
-                host.Height = height;
-
-            return host;
-        }
-
         private Panel CreateLeftSidebar()
         {
             var sidebarPanel = new Panel
@@ -441,43 +355,25 @@ namespace Risk_Manager
 
         private Button CreateNavButton(string text)
         {
-            // Use Emoji.Wpf.TextBlock for proper emoji rendering
-            var textBlock = new EmojiTextBlock
-            {
-                Text = "  " + text,
-                Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Transparent),
-                Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(TextWhite.A, TextWhite.R, TextWhite.G, TextWhite.B)),
-                FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
-                FontSize = 9.5 * 96.0 / 72.0,
-                VerticalAlignment = System.Windows.VerticalAlignment.Center,
-                Padding = new System.Windows.Thickness(10, 0, 0, 0)
-            };
-
-            // Host the WPF control in WinForms
-            var host = new ElementHost
-            {
-                Dock = DockStyle.Fill,
-                BackColor = text == selectedNavItem ? SelectedColor : DarkerBackground,
-                Child = textBlock
-            };
-
-            // Create button to host the ElementHost
             var button = new Button
             {
+                Text = "  " + text,
                 Width = LeftPanelWidth - 4,
                 Height = 36,
                 FlatStyle = FlatStyle.Flat,
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = TextWhite,
                 BackColor = text == selectedNavItem ? SelectedColor : DarkerBackground,
+                Font = new Font("Segoe UI Emoji", 9.5f, FontStyle.Regular),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 1, 0, 1),
-                Tag = new NavButtonState { Text = text, Host = host } // Store both text and host for updates
+                Padding = new Padding(10, 0, 0, 0),
+                Tag = text
             };
 
             button.FlatAppearance.BorderSize = 0;
             button.FlatAppearance.MouseOverBackColor = HoverColor;
             button.FlatAppearance.MouseDownBackColor = SelectedColor;
-
-            button.Controls.Add(host);
 
             button.Click += (s, e) =>
             {
@@ -493,14 +389,8 @@ namespace Risk_Manager
         {
             foreach (var btn in navButtons)
             {
-                if (btn.Tag is NavButtonState state)
-                {
-                    var isSelected = state.Text == selectedNavItem;
-                    var color = isSelected ? SelectedColor : DarkerBackground;
-                    
-                    btn.BackColor = color;
-                    state.Host.BackColor = color;
-                }
+                var itemName = btn.Tag as string;
+                btn.BackColor = itemName == selectedNavItem ? SelectedColor : DarkerBackground;
             }
         }
 
@@ -509,16 +399,17 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel(
-                "📋 Template Details",
-                new Font("Segoe UI", 14, FontStyle.Bold),
-                TextWhite,
-                DarkBackground,
-                DockStyle.Top,
-                40,
-                new Padding(10, 0, 0, 0),
-                ContentAlignment.MiddleLeft
-            );
+            var titleLabel = new Label
+            {
+                Text = "📋 Template Details",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
 
             statsGrid = new DataGridView
             {
@@ -1201,16 +1092,17 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel(
-                "🕐 Trading Time Restrictions",
-                new Font("Segoe UI", 14, FontStyle.Bold),
-                TextWhite,
-                DarkBackground,
-                DockStyle.Top,
-                40,
-                new Padding(10, 0, 0, 0),
-                ContentAlignment.MiddleLeft
-            );
+            var titleLabel = new Label
+            {
+                Text = "🕐 Trading Time Restrictions",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1276,16 +1168,17 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel(
-                "⚙️ Settings Lock",
-                new Font("Segoe UI", 14, FontStyle.Bold),
-                TextWhite,
-                DarkBackground,
-                DockStyle.Top,
-                40,
-                new Padding(10, 0, 0, 0),
-                ContentAlignment.MiddleLeft
-            );
+            var titleLabel = new Label
+            {
+                Text = "⚙️ Settings Lock",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1340,16 +1233,17 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title
-            var titleLabel = CreateEmojiLabel(
-                "🔒 Trading Lock",
-                new Font("Segoe UI", 14, FontStyle.Bold),
-                TextWhite,
-                DarkBackground,
-                DockStyle.Top,
-                40,
-                new Padding(10, 0, 0, 0),
-                ContentAlignment.MiddleLeft
-            );
+            var titleLabel = new Label
+            {
+                Text = "🔒 Trading Lock",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1418,16 +1312,17 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel(
-                "🔒 Auto Lock Schedule",
-                new Font("Segoe UI", 14, FontStyle.Bold),
-                TextWhite,
-                DarkBackground,
-                DockStyle.Top,
-                40,
-                new Padding(10, 0, 0, 0),
-                ContentAlignment.MiddleLeft
-            );
+            var titleLabel = new Label
+            {
+                Text = "🔒 Auto Lock Schedule",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1629,16 +1524,17 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel(
-                "⚙️ Advanced",
-                new Font("Segoe UI", 14, FontStyle.Bold),
-                TextWhite,
-                DarkBackground,
-                DockStyle.Top,
-                40,
-                new Padding(10, 0, 0, 0),
-                ContentAlignment.MiddleLeft
-            );
+            var titleLabel = new Label
+            {
+                Text = "⚙️ Advanced",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1711,16 +1607,17 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel(
-                "📈 Positions",
-                new Font("Segoe UI", 14, FontStyle.Bold),
-                TextWhite,
-                DarkBackground,
-                DockStyle.Top,
-                40,
-                new Padding(10, 0, 0, 0),
-                ContentAlignment.MiddleLeft
-            );
+            var titleLabel = new Label
+            {
+                Text = "📈 Positions",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1809,7 +1706,7 @@ namespace Risk_Manager
             sectionPanel.Controls.Add(label);
 
             // Input textbox
-            var input = new WinFormsTextBox
+            var input = new TextBox
             {
                 Left = 130,
                 Top = 40,
@@ -1834,16 +1731,17 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel(
-                "📊 Limits",
-                new Font("Segoe UI", 14, FontStyle.Bold),
-                TextWhite,
-                DarkBackground,
-                DockStyle.Top,
-                40,
-                new Padding(10, 0, 0, 0),
-                ContentAlignment.MiddleLeft
-            );
+            var titleLabel = new Label
+            {
+                Text = "📊 Limits",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
 
             // Subtitle
             var subtitleLabel = new Label
@@ -1890,7 +1788,7 @@ namespace Risk_Manager
         /// <summary>
         /// Helper method to create a limit section with toggle and USD input.
         /// </summary>
-        private Panel CreateLimitSection(string sectionTitle, int topPosition, out CheckBox enabledCheckbox, out WinFormsTextBox valueInput)
+        private Panel CreateLimitSection(string sectionTitle, int topPosition, out CheckBox enabledCheckbox, out TextBox valueInput)
         {
             var sectionPanel = new Panel
             {
@@ -1918,7 +1816,7 @@ namespace Risk_Manager
             enabledCheckbox = sectionHeader;
 
             // Input textbox
-            var input = new WinFormsTextBox
+            var input = new TextBox
             {
                 Left = 0,
                 Top = 40,
@@ -1959,16 +1857,17 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel(
-                "🛡️ Symbols",
-                new Font("Segoe UI", 14, FontStyle.Bold),
-                TextWhite,
-                DarkBackground,
-                DockStyle.Top,
-                40,
-                new Padding(10, 0, 0, 0),
-                ContentAlignment.MiddleLeft
-            );
+            var titleLabel = new Label
+            {
+                Text = "🛡️ Symbols",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
 
             // Subtitle
             var subtitleLabel = new Label
@@ -2015,7 +1914,7 @@ namespace Risk_Manager
         /// <summary>
         /// Helper method to create the Symbol Blacklist section.
         /// </summary>
-        private Panel CreateSymbolBlacklistSection(int topPosition, out CheckBox enabledCheckbox, out WinFormsTextBox symbolsTextBox)
+        private Panel CreateSymbolBlacklistSection(int topPosition, out CheckBox enabledCheckbox, out TextBox symbolsTextBox)
         {
             var sectionPanel = new Panel
             {
@@ -2057,7 +1956,7 @@ namespace Risk_Manager
             sectionPanel.Controls.Add(descLabel);
 
             // Symbols input textbox
-            var symbolsInput = new WinFormsTextBox
+            var symbolsInput = new TextBox
             {
                 Left = 0,
                 Top = 60,
@@ -2080,7 +1979,7 @@ namespace Risk_Manager
         /// <summary>
         /// Helper method to create the Symbol Contract Limits section.
         /// </summary>
-        private Panel CreateSymbolContractLimitsSection(int topPosition, out CheckBox enabledCheckbox, out WinFormsTextBox defaultLimitInput, out WinFormsTextBox specificLimitsInput)
+        private Panel CreateSymbolContractLimitsSection(int topPosition, out CheckBox enabledCheckbox, out TextBox defaultLimitInput, out TextBox specificLimitsInput)
         {
             var sectionPanel = new Panel
             {
@@ -2123,7 +2022,7 @@ namespace Risk_Manager
             sectionPanel.Controls.Add(defaultLabel);
 
             // Default contract limit input
-            var defaultInput = new WinFormsTextBox
+            var defaultInput = new TextBox
             {
                 Left = 160,
                 Top = 40,
@@ -2153,7 +2052,7 @@ namespace Risk_Manager
             sectionPanel.Controls.Add(specificLabel);
 
             // Symbol-specific limits input
-            var specificInput = new WinFormsTextBox
+            var specificInput = new TextBox
             {
                 Left = 0,
                 Top = 100,
