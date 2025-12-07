@@ -16,6 +16,13 @@ namespace Risk_Manager
 {
     public class RiskManagerControl : UserControl
     {
+        // Helper class for navigation button state
+        private class NavButtonState
+        {
+            public string Text { get; set; }
+            public ElementHost Host { get; set; }
+        }
+
         private readonly Panel contentPanel;
         private readonly Panel leftPanel;
         private readonly Dictionary<string, Control> pageContents = new();
@@ -463,7 +470,7 @@ namespace Risk_Manager
                 BackColor = text == selectedNavItem ? SelectedColor : DarkerBackground,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 1, 0, 1),
-                Tag = new { Text = text, Host = host } // Store both text and host for updates
+                Tag = new NavButtonState { Text = text, Host = host } // Store both text and host for updates
             };
 
             button.FlatAppearance.BorderSize = 0;
@@ -486,17 +493,13 @@ namespace Risk_Manager
         {
             foreach (var btn in navButtons)
             {
-                if (btn.Tag is { } tagObj)
+                if (btn.Tag is NavButtonState state)
                 {
-                    dynamic tag = tagObj;
-                    string itemName = tag.Text;
-                    ElementHost host = tag.Host;
-                    
-                    var isSelected = itemName == selectedNavItem;
+                    var isSelected = state.Text == selectedNavItem;
                     var color = isSelected ? SelectedColor : DarkerBackground;
                     
                     btn.BackColor = color;
-                    host.BackColor = color;
+                    state.Host.BackColor = color;
                 }
             }
         }
