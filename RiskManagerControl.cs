@@ -55,8 +55,7 @@ namespace Risk_Manager
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
         private static readonly string[] NavItems = new[]
         {
-            "Accounts Summary", "Stats", "Feature Toggles", "Positions", "Limits", "Symbols", "Allowed Trading Times",
-            "Weekly Loss", "Weekly Profit Target", "Lock Settings", "Manual Lock"
+            "📋 Template Details", "📊 Limits", "📈 Positions", "🛡️ Symbols", "⚙️ Advanced", "🔒 Auto Lock"
         };
 
         private const int LeftPanelWidth = 200;
@@ -89,18 +88,19 @@ namespace Risk_Manager
             foreach (var name in NavItems)
             {
                 Control placeholder;
-                if (string.Equals(name, "Accounts Summary", StringComparison.OrdinalIgnoreCase))
+                // Match navigation items with emoji prefixes
+                if (name.Contains("Template Details"))
                     placeholder = CreateAccountsSummaryPanel();
-                else if (string.Equals(name, "Stats", StringComparison.OrdinalIgnoreCase))
-                    placeholder = CreateAccountStatsPanel();
-                else if (string.Equals(name, "Feature Toggles", StringComparison.OrdinalIgnoreCase))
-                    placeholder = CreateFeatureTogglesPanel();
-                else if (string.Equals(name, "Positions", StringComparison.OrdinalIgnoreCase))
-                    placeholder = CreatePositionsPanel();
-                else if (string.Equals(name, "Limits", StringComparison.OrdinalIgnoreCase))
+                else if (name.Contains("Limits"))
                     placeholder = CreateLimitsPanel();
-                else if (string.Equals(name, "Symbols", StringComparison.OrdinalIgnoreCase))
+                else if (name.Contains("Positions"))
+                    placeholder = CreatePositionsPanel();
+                else if (name.Contains("Symbols"))
                     placeholder = CreateSymbolsPanel();
+                else if (name.Contains("Advanced"))
+                    placeholder = CreateFeatureTogglesPanel();
+                else if (name.Contains("Auto Lock"))
+                    placeholder = CreateAutoLockPanel();
                 else
                     placeholder = CreatePlaceholderPanel(name);
                 pageContents[name] = placeholder;
@@ -118,10 +118,10 @@ namespace Risk_Manager
             dropdownRefreshTimer.Tick += (s, e) => RefreshAccountDropdown();
             dropdownRefreshTimer.Start();
 
-            // Show Accounts Summary by default
-            selectedNavItem = "Accounts Summary";
+            // Show Template Details by default
+            selectedNavItem = "📋 Template Details";
             UpdateNavButtonStates();
-            ShowPage("Accounts Summary");
+            ShowPage("📋 Template Details");
         }
 
         private void RefreshAccountDropdown()
@@ -401,7 +401,7 @@ namespace Risk_Manager
             // Title
             var titleLabel = new Label
             {
-                Text = "Accounts Summary",
+                Text = "📋 Template Details",
                 Dock = DockStyle.Top,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -1094,7 +1094,7 @@ namespace Risk_Manager
             // Title
             var titleLabel = new Label
             {
-                Text = "Allowed Trading Times",
+                Text = "🕐 Trading Time Restrictions",
                 Dock = DockStyle.Top,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -1170,7 +1170,7 @@ namespace Risk_Manager
             // Title
             var titleLabel = new Label
             {
-                Text = "Lock Settings",
+                Text = "⚙️ Settings Lock",
                 Dock = DockStyle.Top,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -1235,7 +1235,7 @@ namespace Risk_Manager
             // Title
             var titleLabel = new Label
             {
-                Text = "Manual Lock",
+                Text = "🔒 Trading Lock",
                 Dock = DockStyle.Top,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -1300,6 +1300,69 @@ namespace Risk_Manager
 
             // Add controls in correct order: Fill first, then Top (no Bottom for this panel)
             // In WinForms, docking is processed in reverse Z-order
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
+
+            return mainPanel;
+        }
+
+        private Control CreateAutoLockPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = "🔒 Auto Lock Schedule",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Configure automatic locking based on schedule:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(15)
+            };
+
+            var enableCheckbox = new CheckBox
+            {
+                Text = "Enable Auto Lock Schedule",
+                Left = 0,
+                Top = 0,
+                Width = 250,
+                Height = 30,
+                Checked = false,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground
+            };
+            contentArea.Controls.Add(enableCheckbox);
+
+            var saveButton = CreateDarkSaveButton();
+
+            // Add controls in correct order: Bottom first, Fill second, Top last
+            mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(titleLabel);
@@ -1463,7 +1526,7 @@ namespace Risk_Manager
             // Title
             var titleLabel = new Label
             {
-                Text = "Feature Toggles",
+                Text = "⚙️ Advanced",
                 Dock = DockStyle.Top,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -1546,7 +1609,7 @@ namespace Risk_Manager
             // Title
             var titleLabel = new Label
             {
-                Text = "Positions",
+                Text = "📈 Positions",
                 Dock = DockStyle.Top,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -1670,7 +1733,7 @@ namespace Risk_Manager
             // Title
             var titleLabel = new Label
             {
-                Text = "Limits",
+                Text = "📊 Limits",
                 Dock = DockStyle.Top,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -1704,11 +1767,11 @@ namespace Risk_Manager
             };
 
             // Daily Loss Limit section
-            var lossSection = CreateLimitSection("Daily Loss Limit", 10, out dailyLossLimitEnabled, out dailyLossLimitInput);
+            var lossSection = CreateLimitSection("📉 Daily Loss Limit", 10, out dailyLossLimitEnabled, out dailyLossLimitInput);
             contentArea.Controls.Add(lossSection);
 
             // Daily Profit Target section
-            var profitSection = CreateLimitSection("Daily Profit Target", 120, out dailyProfitTargetEnabled, out dailyProfitTargetInput);
+            var profitSection = CreateLimitSection("📈 Daily Profit Target", 120, out dailyProfitTargetEnabled, out dailyProfitTargetInput);
             contentArea.Controls.Add(profitSection);
 
             var saveButton = CreateDarkSaveButton();
@@ -1796,7 +1859,7 @@ namespace Risk_Manager
             // Title
             var titleLabel = new Label
             {
-                Text = "Symbols",
+                Text = "🛡️ Symbols",
                 Dock = DockStyle.Top,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -1865,7 +1928,7 @@ namespace Risk_Manager
             // Section header with toggle
             var sectionHeader = new CheckBox
             {
-                Text = "Symbol Blacklist",
+                Text = "🛡️ Symbol Blacklist",
                 Left = 0,
                 Top = 0,
                 Width = 300,
@@ -1930,7 +1993,7 @@ namespace Risk_Manager
             // Section header with toggle
             var sectionHeader = new CheckBox
             {
-                Text = "Symbol Contract Limits",
+                Text = "🛡️ Symbol Contract Limits",
                 Left = 0,
                 Top = 0,
                 Width = 300,
