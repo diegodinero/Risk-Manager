@@ -244,3 +244,4 @@ namespace Risk_Manager
         public override Symbol CurrentSymbol => null;
     }
 }
+
