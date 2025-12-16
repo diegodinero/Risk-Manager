@@ -105,9 +105,9 @@ namespace Risk_Manager
                 else if (name.EndsWith("Allowed Trading Times"))
                     placeholder = CreateAllowedTradingTimesDarkPanel();
                 else if (name.EndsWith("Weekly Loss"))
-                    placeholder = CreatePlaceholderPanel(name);
+                    placeholder = CreateWeeklyLossDarkPanel();
                 else if (name.EndsWith("Weekly Profit Target"))
-                    placeholder = CreatePlaceholderPanel(name);
+                    placeholder = CreateWeeklyProfitTargetDarkPanel();
                 else if (name.EndsWith("Lock Settings"))
                     placeholder = CreateLockSettingsDarkPanel();
                 else if (name.EndsWith("Manual Lock"))
@@ -993,6 +993,18 @@ namespace Risk_Manager
                 return CreateFeatureTogglesPanel();
             }
 
+            // Handle Weekly Loss specially
+            if (string.Equals(title, "Weekly Loss", StringComparison.OrdinalIgnoreCase))
+            {
+                return CreateWeeklyLossDarkPanel();
+            }
+
+            // Handle Weekly Profit Target specially
+            if (string.Equals(title, "Weekly Profit Target", StringComparison.OrdinalIgnoreCase))
+            {
+                return CreateWeeklyProfitTargetDarkPanel();
+            }
+
             // Default dark placeholder for other tabs
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
@@ -1049,6 +1061,7 @@ namespace Risk_Manager
             mainPanel.Controls.Add(titleLabel);
             return mainPanel;
         }
+
         private Control CreateBlockSymbolsDarkPanel()
         {
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
@@ -2201,6 +2214,194 @@ namespace Risk_Manager
                 statsDetailRefreshTimer = null;
             }
             base.Dispose(disposing);
+        }
+
+        private Control CreateWeeklyLossDarkPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title with emoji
+            var titleLabel = new Label
+            {
+                Text = "📊 Weekly Loss",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Set the maximum loss allowed per week.",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(15)
+            };
+
+            // Enable checkbox
+            var enableCheckbox = new CheckBox
+            {
+                Text = "Enable Weekly Loss Limit",
+                Left = 0,
+                Top = 0,
+                Width = 300,
+                Height = 30,
+                Checked = false,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                AutoSize = false
+            };
+            contentArea.Controls.Add(enableCheckbox);
+
+            // USD per week label and textbox
+            var usdLabel = new Label
+            {
+                Text = "USD per week:",
+                Left = 0,
+                Top = 40,
+                Width = 150,
+                Height = 24,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                AutoSize = false
+            };
+            contentArea.Controls.Add(usdLabel);
+
+            var usdInput = new TextBox
+            {
+                Left = 160,
+                Top = 40,
+                Width = 150,
+                Height = 24,
+                Text = "1000",
+                Font = new Font("Segoe UI", 9),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            contentArea.Controls.Add(usdInput);
+
+            var saveButton = CreateDarkSaveButton();
+
+            // Add controls in correct order: Bottom first, Fill second, Top last
+            mainPanel.Controls.Add(saveButton);
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
+
+            return mainPanel;
+        }
+
+        private Control CreateWeeklyProfitTargetDarkPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title with emoji
+            var titleLabel = new Label
+            {
+                Text = "🎯 Weekly Profit Target",
+                Dock = DockStyle.Top,
+                Height = 40,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                Padding = new Padding(10, 0, 0, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite
+            };
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Set the profit target for each week.",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(15)
+            };
+
+            // Enable checkbox
+            var enableCheckbox = new CheckBox
+            {
+                Text = "Enable Weekly Profit Target",
+                Left = 0,
+                Top = 0,
+                Width = 300,
+                Height = 30,
+                Checked = false,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                AutoSize = false
+            };
+            contentArea.Controls.Add(enableCheckbox);
+
+            // USD per week label and textbox
+            var usdLabel = new Label
+            {
+                Text = "USD per week:",
+                Left = 0,
+                Top = 40,
+                Width = 150,
+                Height = 24,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                AutoSize = false
+            };
+            contentArea.Controls.Add(usdLabel);
+
+            var usdInput = new TextBox
+            {
+                Left = 160,
+                Top = 40,
+                Width = 150,
+                Height = 24,
+                Text = "2000",
+                Font = new Font("Segoe UI", 9),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            contentArea.Controls.Add(usdInput);
+
+            var saveButton = CreateDarkSaveButton();
+
+            // Add controls in correct order: Bottom first, Fill second, Top last
+            mainPanel.Controls.Add(saveButton);
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
+
+            return mainPanel;
         }
     }
 }
