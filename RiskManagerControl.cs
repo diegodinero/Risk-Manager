@@ -264,6 +264,23 @@ namespace Risk_Manager
             accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
             topPanel.Controls.Add(accountSelector);
 
+            // Emergency Flatten button next to Account Selector
+            var emergencyFlattenButton = new Button
+            {
+                Text = "⚠️ EMERGENCY FLATTEN ⚠️",
+                Location = new Point(340, 37),
+                Width = 250,
+                Height = 26,
+                Font = new Font("Arial", 10, FontStyle.Bold),
+                BackColor = Color.Red,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            emergencyFlattenButton.FlatAppearance.BorderSize = 0;
+            emergencyFlattenButton.Click += EmergencyFlattenButton_Click;
+            topPanel.Controls.Add(emergencyFlattenButton);
+
             // Status badges container (right-aligned)
             var badgesPanel = new FlowLayoutPanel
             {
@@ -1751,6 +1768,29 @@ namespace Risk_Manager
             mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
+        }
+
+        private void EmergencyFlattenButton_Click(object sender, EventArgs e)
+        {
+            FlattenAllTrades();
+            MessageBox.Show("Emergency Flatten Triggered!", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// Flattens all open trades across all accounts.
+        /// This is a placeholder method that should be implemented to close all open positions.
+        /// </summary>
+        /// <remarks>
+        /// When implemented, this method should:
+        /// - Iterate through all open positions across all accounts
+        /// - Close each position at market price
+        /// - Handle any errors gracefully and report them to the user
+        /// - Log all actions for audit purposes
+        /// </remarks>
+        public void FlattenAllTrades()
+        {
+            // Placeholder for logic implementation
+            // TODO: Implement trade flattening logic
         }
 
         private Control CreateAutoLockPanel()
