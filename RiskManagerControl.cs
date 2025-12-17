@@ -690,7 +690,10 @@ namespace Risk_Manager
                 statsDetailGrid.SuspendLayout();
                 statsDetailGrid.Rows.Clear();
 
-                if (selectedAccount == null)
+                // Fix: If selectedAccount is null, try to use the account from the dropdown selector
+                var accountToDisplay = selectedAccount ?? (accountSelector?.SelectedItem as Account);
+                
+                if (accountToDisplay == null)
                 {
                     statsDetailGrid.Rows.Add("Status", "No account selected");
                     return;
@@ -701,9 +704,9 @@ namespace Risk_Manager
                 // Daily Net (sum of Daily Profit and Daily Loss)
                 double dailyProfit = 0, dailyLoss = 0, weeklyProfit = 0, weeklyLoss = 0, drawdown = 0;
 
-                if (selectedAccount.AdditionalInfo != null)
+                if (accountToDisplay.AdditionalInfo != null)
                 {
-                    foreach (var info in selectedAccount.AdditionalInfo)
+                    foreach (var info in accountToDisplay.AdditionalInfo)
                     {
                         if (info?.Id == null) continue;
                         var id = info.Id;
@@ -734,8 +737,30 @@ namespace Risk_Manager
                 double dailyNet = dailyProfit + dailyLoss;
                 double weeklyNet = weeklyProfit + weeklyLoss;
 
-                statsDetailGrid.Rows.Add("Account", selectedAccount.Name ?? selectedAccount.Id ?? "Unknown");
-                statsDetailGrid.Rows.Add("Balance", selectedAccount.Balance.ToString("N2"));
+                // Determine account lock status
+                string lockStatus = "Unlocked"; // Default status
+                if (accountToDisplay.AdditionalInfo != null)
+                {
+                    var lockInfo = accountToDisplay.AdditionalInfo.FirstOrDefault(x =>
+                        string.Equals(x.Id, "IsLocked", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(x.Id, "Locked", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(x.Id, "AccountLocked", StringComparison.OrdinalIgnoreCase));
+                    
+                    if (lockInfo != null)
+                    {
+                        if (lockInfo.Value is bool isLocked)
+                        {
+                            lockStatus = isLocked ? "Locked" : "Unlocked";
+                        }
+                        else if (lockInfo.Value is string strValue)
+                        {
+                            lockStatus = strValue;
+                        }
+                    }
+                }
+
+                statsDetailGrid.Rows.Add("Account", accountToDisplay.Name ?? accountToDisplay.Id ?? "Unknown");
+                statsDetailGrid.Rows.Add("Balance", accountToDisplay.Balance.ToString("N2"));
                 statsDetailGrid.Rows.Add("Daily Net", dailyNet.ToString("N2"));
                 statsDetailGrid.Rows.Add("Daily Profit", dailyProfit.ToString("N2"));
                 statsDetailGrid.Rows.Add("Daily Loss", dailyLoss.ToString("N2"));
@@ -743,6 +768,7 @@ namespace Risk_Manager
                 statsDetailGrid.Rows.Add("Weekly Profit", weeklyProfit.ToString("N2"));
                 statsDetailGrid.Rows.Add("Weekly Loss", weeklyLoss.ToString("N2"));
                 statsDetailGrid.Rows.Add("Drawdown", drawdown.ToString("N2"));
+                statsDetailGrid.Rows.Add("Account Status", lockStatus);
             }
             catch
             {
