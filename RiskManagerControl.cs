@@ -619,12 +619,11 @@ namespace Risk_Manager
                     {
                         // Try to determine if it's a demo or live account
                         var connName = account.Connection.Name?.ToLower() ?? "";
-                        if (connName.Contains("demo") || connName.Contains("simulation"))
+                        if (connName.Contains("demo") || connName.Contains("simulation") || connName.Contains("paper"))
                             accountType = "Demo";
                         else if (connName.Contains("live") || connName.Contains("real"))
                             accountType = "Live";
-                        else
-                            accountType = "Live"; // Default to Live if not explicitly demo
+                        // Keep as "Unknown" if we can't determine the type
                     }
 
                     double openPnL = 0;
