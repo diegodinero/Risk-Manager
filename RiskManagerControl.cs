@@ -21,6 +21,8 @@ namespace Risk_Manager
         private Account selectedAccount;
         private DataGridView statsDetailGrid;
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
+        private DataGridView typeSummaryGrid;
+        private System.Windows.Forms.Timer typeSummaryRefreshTimer;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
         private Label settingsStatusBadge;
@@ -55,7 +57,7 @@ namespace Risk_Manager
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
         private static readonly string[] NavItems = new[]
         {
-            "📊 Accounts Summary", "📈 Stats", "⚙️ Feature Toggles", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
+            "📊 Accounts Summary", "📈 Stats", "📋 Type", "⚙️ Feature Toggles", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
             "📉 Weekly Loss", "📈 Weekly Profit Target", "🔒 Lock Settings", "🔒 Manual Lock"
         };
 
@@ -94,6 +96,8 @@ namespace Risk_Manager
                     placeholder = CreateAccountsSummaryPanel();
                 else if (name.EndsWith("Stats"))
                     placeholder = CreateAccountStatsPanel();
+                else if (name.EndsWith("Type"))
+                    placeholder = CreateTypeSummaryPanel();
                 else if (name.EndsWith("Feature Toggles"))
                     placeholder = CreateFeatureTogglesPanel();
                 else if (name.EndsWith("Positions"))
@@ -907,6 +911,227 @@ namespace Risk_Manager
             {
                 statsDetailGrid.ResumeLayout();
             }
+        }
+
+        private Control CreateTypeSummaryPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title with colored emoji rendering
+            var titleLabel = CreateEmojiLabel("📋 Type Summary", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
+
+            typeSummaryGrid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                BackgroundColor = CardBackground,
+                GridColor = DarkerBackground,
+                BorderStyle = BorderStyle.None,
+                RowHeadersVisible = false,
+                EnableHeadersVisualStyles = false
+            };
+
+            // Style the grid for dark theme
+            typeSummaryGrid.DefaultCellStyle.BackColor = CardBackground;
+            typeSummaryGrid.DefaultCellStyle.ForeColor = TextWhite;
+            typeSummaryGrid.DefaultCellStyle.SelectionBackColor = SelectedColor;
+            typeSummaryGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
+            typeSummaryGrid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
+            typeSummaryGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
+            typeSummaryGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+            // Add columns as requested
+            typeSummaryGrid.Columns.Add("Summary", "Summary");
+            typeSummaryGrid.Columns.Add("Count", "Count");
+            typeSummaryGrid.Columns.Add("Equity", "Equity");
+            typeSummaryGrid.Columns.Add("OpenPnL", "Open P&L");
+            typeSummaryGrid.Columns.Add("ClosedPnL", "Closed P&L");
+            typeSummaryGrid.Columns.Add("TotalPnL", "Total P&L");
+            typeSummaryGrid.Columns.Add("Drawdown", "Drawdown");
+
+            RefreshTypeSummary();
+            typeSummaryRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            typeSummaryRefreshTimer.Tick += (s, e) => RefreshTypeSummary();
+            typeSummaryRefreshTimer.Start();
+
+            // Add controls in correct order: Fill control first, then Top controls
+            mainPanel.Controls.Add(typeSummaryGrid);
+            mainPanel.Controls.Add(titleLabel);
+            return mainPanel;
+        }
+
+        private void RefreshTypeSummary()
+        {
+            if (InvokeRequired) { BeginInvoke(new Action(RefreshTypeSummary)); return; }
+            if (typeSummaryGrid == null) return;
+
+            try
+            {
+                typeSummaryGrid.SuspendLayout();
+                typeSummaryGrid.Rows.Clear();
+
+                var core = Core.Instance;
+                if (core == null || core.Accounts == null || !core.Accounts.Any())
+                {
+                    // Demo data
+                    typeSummaryGrid.Rows.Add("Live", "1", "1000.00", "12.34", "50.00", "62.34", "0.00");
+                    typeSummaryGrid.Rows.Add("Demo", "1", "2500.50", "-8.20", "25.00", "16.80", "0.00");
+                    typeSummaryGrid.Rows.Add("Total", "2", "3500.50", "4.14", "75.00", "79.14", "0.00");
+                    return;
+                }
+
+                // Dictionary to store aggregated data by type
+                var typeData = new Dictionary<string, TypeSummaryData>();
+
+                foreach (var account in core.Accounts)
+                {
+                    if (account == null) continue;
+
+                    // Get account type (same logic as Accounts Summary)
+                    var accountType = "Unknown";
+                    if (account.Connection != null)
+                    {
+                        var connName = account.Connection.Name?.ToLower() ?? "";
+                        if (connName.Contains("demo") || connName.Contains("simulation") || connName.Contains("paper"))
+                            accountType = "Demo";
+                        else if (connName.Contains("live") || connName.Contains("real"))
+                            accountType = "Live";
+                    }
+
+                    // Check AdditionalInfo for type override
+                    if (account.AdditionalInfo != null)
+                    {
+                        foreach (var info in account.AdditionalInfo)
+                        {
+                            if (info?.Id == null) continue;
+                            var id = info.Id;
+                            if (string.Equals(id, "Account Type", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "AccountType", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "Type", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is string at) accountType = at;
+                            }
+                        }
+                    }
+
+                    // Initialize type data if not exists
+                    if (!typeData.ContainsKey(accountType))
+                    {
+                        typeData[accountType] = new TypeSummaryData();
+                    }
+
+                    var data = typeData[accountType];
+                    data.Count++;
+                    data.Equity += account.Balance;
+
+                    // Calculate Open P&L from positions
+                    if (core.Positions != null)
+                    {
+                        foreach (var pos in core.Positions)
+                        {
+                            if (pos == null) continue;
+                            if (pos.Account == account && pos.Quantity != 0)
+                            {
+                                var pnlItem = pos.NetPnL ?? pos.GrossPnL;
+                                if (pnlItem != null) data.OpenPnL += pnlItem.Value;
+                            }
+                        }
+                    }
+
+                    // Get Closed P&L and Drawdown from AdditionalInfo
+                    if (account.AdditionalInfo != null)
+                    {
+                        foreach (var info in account.AdditionalInfo)
+                        {
+                            if (info?.Id == null) continue;
+                            var id = info.Id;
+
+                            // Closed P&L
+                            if (string.Equals(id, "Closed P&L", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "ClosedPnL", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "Realized P&L", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double cv) data.ClosedPnL += cv;
+                            }
+
+                            // Drawdown
+                            if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "MaxDrawdown", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double dd) data.Drawdown += dd;
+                            }
+                        }
+                    }
+                }
+
+                // Calculate totals
+                var totalData = new TypeSummaryData();
+                foreach (var kvp in typeData)
+                {
+                    totalData.Count += kvp.Value.Count;
+                    totalData.Equity += kvp.Value.Equity;
+                    totalData.OpenPnL += kvp.Value.OpenPnL;
+                    totalData.ClosedPnL += kvp.Value.ClosedPnL;
+                    totalData.Drawdown += kvp.Value.Drawdown;
+                }
+
+                // Add rows for each type
+                foreach (var kvp in typeData.OrderBy(x => x.Key))
+                {
+                    var type = kvp.Key;
+                    var data = kvp.Value;
+                    var totalPnL = data.OpenPnL + data.ClosedPnL;
+
+                    typeSummaryGrid.Rows.Add(
+                        type,
+                        data.Count.ToString(),
+                        data.Equity.ToString("N2"),
+                        data.OpenPnL.ToString("N2"),
+                        data.ClosedPnL.ToString("N2"),
+                        totalPnL.ToString("N2"),
+                        data.Drawdown.ToString("N2")
+                    );
+                }
+
+                // Add total row
+                var totalTotalPnL = totalData.OpenPnL + totalData.ClosedPnL;
+                typeSummaryGrid.Rows.Add(
+                    "Total",
+                    totalData.Count.ToString(),
+                    totalData.Equity.ToString("N2"),
+                    totalData.OpenPnL.ToString("N2"),
+                    totalData.ClosedPnL.ToString("N2"),
+                    totalTotalPnL.ToString("N2"),
+                    totalData.Drawdown.ToString("N2")
+                );
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
+            finally
+            {
+                typeSummaryGrid.ResumeLayout();
+            }
+        }
+
+        // Helper class to aggregate type summary data
+        private class TypeSummaryData
+        {
+            public int Count { get; set; }
+            public double Equity { get; set; }
+            public double OpenPnL { get; set; }
+            public double ClosedPnL { get; set; }
+            public double Drawdown { get; set; }
         }
 
         private Panel CreateStatisticsOverviewPanel()
@@ -2367,6 +2592,10 @@ namespace Risk_Manager
                 statsDetailRefreshTimer?.Stop();
                 statsDetailRefreshTimer?.Dispose();
                 statsDetailRefreshTimer = null;
+
+                typeSummaryRefreshTimer?.Stop();
+                typeSummaryRefreshTimer?.Dispose();
+                typeSummaryRefreshTimer = null;
             }
             base.Dispose(disposing);
         }
