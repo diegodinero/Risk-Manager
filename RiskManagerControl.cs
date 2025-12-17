@@ -742,9 +742,10 @@ namespace Risk_Manager
                 if (accountToDisplay.AdditionalInfo != null)
                 {
                     var lockInfo = accountToDisplay.AdditionalInfo.FirstOrDefault(x =>
-                        string.Equals(x.Id, "IsLocked", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(x.Id, "Locked", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(x.Id, "AccountLocked", StringComparison.OrdinalIgnoreCase));
+                        x?.Id != null && (
+                            string.Equals(x.Id, "IsLocked", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(x.Id, "Locked", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(x.Id, "AccountLocked", StringComparison.OrdinalIgnoreCase)));
                     
                     if (lockInfo != null)
                     {
@@ -752,9 +753,14 @@ namespace Risk_Manager
                         {
                             lockStatus = isLocked ? "Locked" : "Unlocked";
                         }
-                        else if (lockInfo.Value is string strValue)
+                        else if (lockInfo.Value is string strValue && !string.IsNullOrWhiteSpace(strValue))
                         {
-                            lockStatus = strValue;
+                            // Normalize string values to consistent format
+                            var normalized = strValue.Trim();
+                            lockStatus = normalized.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                                        normalized.Equals("locked", StringComparison.OrdinalIgnoreCase) ||
+                                        normalized.Equals("1", StringComparison.OrdinalIgnoreCase)
+                                ? "Locked" : "Unlocked";
                         }
                     }
                 }
