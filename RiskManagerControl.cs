@@ -158,8 +158,13 @@ namespace Risk_Manager
                 // Check if the same accounts are present
                 for (int i = 0; i < connectedAccounts.Count; i++)
                 {
-                    if (i >= accountSelector.Items.Count || 
-                        accountSelector.Items[i] != connectedAccounts[i])
+                    // Check bounds first to prevent IndexOutOfRangeException
+                    if (i >= accountSelector.Items.Count)
+                    {
+                        needsUpdate = true;
+                        break;
+                    }
+                    if (accountSelector.Items[i] != connectedAccounts[i])
                     {
                         needsUpdate = true;
                         break;
@@ -181,7 +186,8 @@ namespace Risk_Manager
             }
 
             // Restore selection or select first
-            if (currentSelection != null && connectedAccounts.Contains(currentSelection))
+            // Check if current selection exists in the new items list
+            if (currentSelection != null && accountSelector.Items.Contains(currentSelection))
             {
                 accountSelector.SelectedItem = currentSelection;
             }
