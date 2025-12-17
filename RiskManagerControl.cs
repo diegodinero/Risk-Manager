@@ -542,12 +542,19 @@ namespace Risk_Manager
             statsGrid.Columns.Add("Provider", "Provider");
             statsGrid.Columns.Add("Connection", "Connection");
             statsGrid.Columns.Add("Account", "Account");
-            statsGrid.Columns.Add("Balance", "Balance");
+            statsGrid.Columns.Add("Type", "Type");
+            statsGrid.Columns.Add("Equity", "Equity");
             statsGrid.Columns.Add("OpenPnL", "Open P&L");
+            statsGrid.Columns.Add("ClosedPnL", "Closed P&L");
             statsGrid.Columns.Add("DailyPnL", "Daily P&L");
             statsGrid.Columns.Add("GrossPnL", "Gross P&L");
+            statsGrid.Columns.Add("Drawdown", "Drawdown");
             statsGrid.Columns.Add("Positions", "Positions");
             statsGrid.Columns.Add("Status", "Status");
+            statsGrid.Columns.Add("LockStatus", "Lock Status");
+            statsGrid.Columns.Add("LossLimit", "Loss Limit");
+            statsGrid.Columns.Add("ProfitTarget", "Profit Target");
+            statsGrid.Columns.Add("TrailingBalance", "Trailing Balance");
 
             // Allow row selection to populate Stats tab
             statsGrid.SelectionChanged += (s, e) =>
@@ -591,8 +598,9 @@ namespace Risk_Manager
                 var core = Core.Instance;
                 if (core == null || core.Accounts == null || !core.Accounts.Any())
                 {
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "1000.00", "12.34", "5.67", "18.01", "1", "Connected");
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "2500.50", "-8.20", "-2.00", "-10.20", "2", "Connected");
+                    // Demo data with all new columns
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "-8.20", "25.00", "-2.00", "-10.20", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
                     return;
                 }
 
@@ -603,7 +611,21 @@ namespace Risk_Manager
                     var provider = account.Connection?.VendorName ?? account.Connection?.Name ?? "Unknown";
                     var connectionName = account.Connection?.Name ?? "Unknown";
                     var accountId = account.Id ?? account.Name ?? "Unknown";
-                    var balance = account.Balance;
+                    var equity = account.Balance;
+
+                    // Get account type from AdditionalInfo or Connection
+                    var accountType = "Unknown";
+                    if (account.Connection != null)
+                    {
+                        // Try to determine if it's a demo or live account
+                        var connName = account.Connection.Name?.ToLower() ?? "";
+                        if (connName.Contains("demo") || connName.Contains("simulation"))
+                            accountType = "Demo";
+                        else if (connName.Contains("live") || connName.Contains("real"))
+                            accountType = "Live";
+                        else
+                            accountType = "Live"; // Default to Live if not explicitly demo
+                    }
 
                     double openPnL = 0;
                     int positionsCount = 0;
@@ -621,13 +643,15 @@ namespace Risk_Manager
                         }
                     }
 
-                    double dailyPnL = 0, grossPnL = 0;
+                    double dailyPnL = 0, grossPnL = 0, closedPnL = 0, drawdown = 0;
                     if (account.AdditionalInfo != null)
                     {
                         foreach (var info in account.AdditionalInfo)
                         {
                             if (info?.Id == null) continue;
                             var id = info.Id;
+                            
+                            // Daily P&L
                             if (string.Equals(id, "Daily Net P&L", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(id, "DailyPnL", StringComparison.OrdinalIgnoreCase))
@@ -635,17 +659,81 @@ namespace Risk_Manager
                                 if (info.Value is double dv) dailyPnL = dv;
                             }
 
+                            // Gross P&L
                             if (string.Equals(id, "Gross P&L", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(id, "GrossPnL", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double gv) grossPnL = gv;
                             }
+
+                            // Closed P&L
+                            if (string.Equals(id, "Closed P&L", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "ClosedPnL", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "Realized P&L", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double cv) closedPnL = cv;
+                            }
+
+                            // Drawdown
+                            if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "MaxDrawdown", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double dd) drawdown = dd;
+                            }
+
+                            // Account Type from AdditionalInfo
+                            if (string.Equals(id, "Account Type", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "AccountType", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "Type", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is string at) accountType = at;
+                            }
                         }
                     }
 
                     var status = account.Connection == null ? "Disconnected" : account.Connection.State.ToString();
-                    statsGrid.Rows.Add(provider, connectionName, accountId, balance.ToString("N2"), openPnL.ToString("N2"), dailyPnL.ToString("N2"), grossPnL.ToString("N2"), positionsCount.ToString(), status);
+
+                    // Get lock status from settings service
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    var lockStatus = "Unlocked";
+                    decimal? lossLimit = null;
+                    decimal? profitTarget = null;
+                    if (settingsService.IsInitialized)
+                    {
+                        var isLocked = settingsService.IsTradingLocked(accountId);
+                        lockStatus = isLocked ? "Locked" : "Unlocked";
+
+                        // Get loss limit and profit target from settings
+                        var settings = settingsService.GetSettings(accountId);
+                        if (settings != null)
+                        {
+                            lossLimit = settings.DailyLossLimit;
+                            profitTarget = settings.DailyProfitTarget;
+                        }
+                    }
+
+                    // Trailing Balance - use equity as a starting point
+                    var trailingBalance = equity;
+
+                    statsGrid.Rows.Add(
+                        provider, 
+                        connectionName, 
+                        accountId, 
+                        accountType,
+                        equity.ToString("N2"), 
+                        openPnL.ToString("N2"), 
+                        closedPnL.ToString("N2"),
+                        dailyPnL.ToString("N2"), 
+                        grossPnL.ToString("N2"), 
+                        drawdown.ToString("N2"),
+                        positionsCount.ToString(), 
+                        status,
+                        lockStatus,
+                        lossLimit?.ToString("N2") ?? "-",
+                        profitTarget?.ToString("N2") ?? "-",
+                        trailingBalance.ToString("N2")
+                    );
                 }
             }
             catch
