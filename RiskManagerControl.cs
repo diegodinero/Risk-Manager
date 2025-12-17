@@ -21,6 +21,8 @@ namespace Risk_Manager
         private Account selectedAccount;
         private DataGridView statsDetailGrid;
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
+        private DataGridView typeSummaryGrid;
+        private System.Windows.Forms.Timer typeSummaryRefreshTimer;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
         private Label settingsStatusBadge;
@@ -55,7 +57,7 @@ namespace Risk_Manager
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
         private static readonly string[] NavItems = new[]
         {
-            "📊 Accounts Summary", "📈 Stats", "⚙️ Feature Toggles", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
+            "📊 Accounts Summary", "📈 Stats", "📋 Type", "⚙️ Feature Toggles", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
             "📉 Weekly Loss", "📈 Weekly Profit Target", "🔒 Lock Settings", "🔒 Manual Lock"
         };
 
@@ -94,6 +96,8 @@ namespace Risk_Manager
                     placeholder = CreateAccountsSummaryPanel();
                 else if (name.EndsWith("Stats"))
                     placeholder = CreateAccountStatsPanel();
+                else if (name.EndsWith("Type"))
+                    placeholder = CreateTypeSummaryPanel();
                 else if (name.EndsWith("Feature Toggles"))
                     placeholder = CreateFeatureTogglesPanel();
                 else if (name.EndsWith("Positions"))
@@ -147,6 +151,38 @@ namespace Risk_Manager
             // Preserve current selection if it still exists
             var currentSelection = accountSelector.SelectedItem as Account;
 
+            // Check if the accounts list has actually changed before refreshing
+            bool needsUpdate = false;
+            if (accountSelector.Items.Count != connectedAccounts.Count)
+            {
+                needsUpdate = true;
+            }
+            else
+            {
+                // Check if the same accounts are present
+                for (int i = 0; i < connectedAccounts.Count; i++)
+                {
+                    // Check bounds first to prevent IndexOutOfRangeException
+                    if (i >= accountSelector.Items.Count)
+                    {
+                        needsUpdate = true;
+                        break;
+                    }
+                    if (accountSelector.Items[i] != connectedAccounts[i])
+                    {
+                        needsUpdate = true;
+                        break;
+                    }
+                }
+            }
+
+            // Only update if accounts have changed
+            if (!needsUpdate)
+                return;
+
+            // Temporarily disable event handling during update
+            accountSelector.SelectedIndexChanged -= AccountSelectorOnSelectedIndexChanged;
+
             accountSelector.Items.Clear();
             foreach (var account in connectedAccounts)
             {
@@ -154,6 +190,7 @@ namespace Risk_Manager
             }
 
             // Restore selection or select first
+            // Check if current selection exists in the new items list
             if (currentSelection != null && accountSelector.Items.Contains(currentSelection))
             {
                 accountSelector.SelectedItem = currentSelection;
@@ -161,12 +198,24 @@ namespace Risk_Manager
             else if (accountSelector.Items.Count > 0)
             {
                 accountSelector.SelectedIndex = 0;
-                selectedAccount = accountSelector.SelectedItem as Account;
             }
             else
             {
                 accountSelector.SelectedIndex = -1;
-                selectedAccount = null;
+            }
+
+            // Re-enable event handling
+            accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
+        }
+
+        private void AccountSelectorOnSelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (accountSelector.SelectedItem is Account account)
+            {
+                selectedAccount = account;
+                // Refresh Stats tab if visible
+                if (statsDetailGrid != null)
+                    RefreshAccountStats();
             }
         }
 
@@ -212,16 +261,7 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat
             };
-            accountSelector.SelectedIndexChanged += (s, e) =>
-            {
-                if (accountSelector.SelectedItem is Account account)
-                {
-                    selectedAccount = account;
-                    // Refresh Stats tab if visible
-                    if (statsDetailGrid != null)
-                        RefreshAccountStats();
-                }
-            };
+            accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
             topPanel.Controls.Add(accountSelector);
 
             // Status badges container (right-aligned)
@@ -506,12 +546,19 @@ namespace Risk_Manager
             statsGrid.Columns.Add("Provider", "Provider");
             statsGrid.Columns.Add("Connection", "Connection");
             statsGrid.Columns.Add("Account", "Account");
-            statsGrid.Columns.Add("Balance", "Balance");
+            statsGrid.Columns.Add("Type", "Type");
+            statsGrid.Columns.Add("Equity", "Equity");
             statsGrid.Columns.Add("OpenPnL", "Open P&L");
+            statsGrid.Columns.Add("ClosedPnL", "Closed P&L");
             statsGrid.Columns.Add("DailyPnL", "Daily P&L");
             statsGrid.Columns.Add("GrossPnL", "Gross P&L");
+            statsGrid.Columns.Add("Drawdown", "Drawdown");
             statsGrid.Columns.Add("Positions", "Positions");
             statsGrid.Columns.Add("Status", "Status");
+            statsGrid.Columns.Add("LockStatus", "Lock Status");
+            statsGrid.Columns.Add("LossLimit", "Loss Limit");
+            statsGrid.Columns.Add("ProfitTarget", "Profit Target");
+            statsGrid.Columns.Add("TrailingBalance", "Trailing Balance");
 
             // Allow row selection to populate Stats tab
             statsGrid.SelectionChanged += (s, e) =>
@@ -555,8 +602,9 @@ namespace Risk_Manager
                 var core = Core.Instance;
                 if (core == null || core.Accounts == null || !core.Accounts.Any())
                 {
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "1000.00", "12.34", "5.67", "18.01", "1", "Connected");
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "2500.50", "-8.20", "-2.00", "-10.20", "2", "Connected");
+                    // Demo data with all new columns
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "-8.20", "25.00", "-2.00", "-10.20", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
                     return;
                 }
 
@@ -567,7 +615,20 @@ namespace Risk_Manager
                     var provider = account.Connection?.VendorName ?? account.Connection?.Name ?? "Unknown";
                     var connectionName = account.Connection?.Name ?? "Unknown";
                     var accountId = account.Id ?? account.Name ?? "Unknown";
-                    var balance = account.Balance;
+                    var equity = account.Balance;
+
+                    // Get account type from AdditionalInfo or Connection
+                    var accountType = "Unknown";
+                    if (account.Connection != null)
+                    {
+                        // Try to determine if it's a demo or live account
+                        var connName = account.Connection.Name?.ToLower() ?? "";
+                        if (connName.Contains("demo") || connName.Contains("simulation") || connName.Contains("paper"))
+                            accountType = "Demo";
+                        else if (connName.Contains("live") || connName.Contains("real"))
+                            accountType = "Live";
+                        // Keep as "Unknown" if we can't determine the type
+                    }
 
                     double openPnL = 0;
                     int positionsCount = 0;
@@ -585,13 +646,15 @@ namespace Risk_Manager
                         }
                     }
 
-                    double dailyPnL = 0, grossPnL = 0;
+                    double dailyPnL = 0, grossPnL = 0, closedPnL = 0, drawdown = 0;
                     if (account.AdditionalInfo != null)
                     {
                         foreach (var info in account.AdditionalInfo)
                         {
                             if (info?.Id == null) continue;
                             var id = info.Id;
+                            
+                            // Daily P&L
                             if (string.Equals(id, "Daily Net P&L", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(id, "DailyPnL", StringComparison.OrdinalIgnoreCase))
@@ -599,17 +662,81 @@ namespace Risk_Manager
                                 if (info.Value is double dv) dailyPnL = dv;
                             }
 
+                            // Gross P&L
                             if (string.Equals(id, "Gross P&L", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(id, "GrossPnL", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double gv) grossPnL = gv;
                             }
+
+                            // Closed P&L
+                            if (string.Equals(id, "Closed P&L", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "ClosedPnL", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "Realized P&L", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double cv) closedPnL = cv;
+                            }
+
+                            // Drawdown
+                            if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "MaxDrawdown", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double dd) drawdown = dd;
+                            }
+
+                            // Account Type from AdditionalInfo
+                            if (string.Equals(id, "Account Type", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "AccountType", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "Type", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is string at) accountType = at;
+                            }
                         }
                     }
 
                     var status = account.Connection == null ? "Disconnected" : account.Connection.State.ToString();
-                    statsGrid.Rows.Add(provider, connectionName, accountId, balance.ToString("N2"), openPnL.ToString("N2"), dailyPnL.ToString("N2"), grossPnL.ToString("N2"), positionsCount.ToString(), status);
+
+                    // Get lock status from settings service
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    var lockStatus = "Unlocked";
+                    decimal? lossLimit = null;
+                    decimal? profitTarget = null;
+                    if (settingsService.IsInitialized)
+                    {
+                        var isLocked = settingsService.IsTradingLocked(accountId);
+                        lockStatus = isLocked ? "Locked" : "Unlocked";
+
+                        // Get loss limit and profit target from settings
+                        var settings = settingsService.GetSettings(accountId);
+                        if (settings != null)
+                        {
+                            lossLimit = settings.DailyLossLimit;
+                            profitTarget = settings.DailyProfitTarget;
+                        }
+                    }
+
+                    // Trailing Balance - use equity as a starting point
+                    var trailingBalance = equity;
+
+                    statsGrid.Rows.Add(
+                        provider, 
+                        connectionName, 
+                        accountId, 
+                        accountType,
+                        equity.ToString("N2"), 
+                        openPnL.ToString("N2"), 
+                        closedPnL.ToString("N2"),
+                        dailyPnL.ToString("N2"), 
+                        grossPnL.ToString("N2"), 
+                        drawdown.ToString("N2"),
+                        positionsCount.ToString(), 
+                        status,
+                        lockStatus,
+                        lossLimit?.ToString("N2") ?? "-",
+                        profitTarget?.ToString("N2") ?? "-",
+                        trailingBalance.ToString("N2")
+                    );
                 }
             }
             catch
@@ -690,59 +817,91 @@ namespace Risk_Manager
                 statsDetailGrid.SuspendLayout();
                 statsDetailGrid.Rows.Clear();
 
-                if (selectedAccount == null)
+                // Fix: Use the selected account from dropdown to ensure consistency
+                var accountToDisplay = accountSelector?.SelectedItem as Account;
+                
+                if (accountToDisplay == null)
                 {
                     statsDetailGrid.Rows.Add("Status", "No account selected");
+                    statsDetailGrid.ResumeLayout();
                     return;
                 }
 
                 var core = Core.Instance;
 
-                // Daily Net (sum of Daily Profit and Daily Loss)
-                double dailyProfit = 0, dailyLoss = 0, weeklyProfit = 0, weeklyLoss = 0, drawdown = 0;
+                // Get provider and connection info
+                var provider = accountToDisplay.Connection?.VendorName ?? accountToDisplay.Connection?.Name ?? "Unknown";
+                var connectionName = accountToDisplay.Connection?.Name ?? "Unknown";
+                var accountId = accountToDisplay.Id ?? accountToDisplay.Name ?? "Unknown";
+                var balance = accountToDisplay.Balance;
 
-                if (selectedAccount.AdditionalInfo != null)
+                // Calculate Open P&L from positions (same as Accounts Summary)
+                double openPnL = 0;
+                int positionsCount = 0;
+                if (core?.Positions != null)
                 {
-                    foreach (var info in selectedAccount.AdditionalInfo)
+                    foreach (var pos in core.Positions)
                     {
-                        if (info?.Id == null) continue;
-                        var id = info.Id;
-
-                        if (string.Equals(id, "Daily Profit", StringComparison.OrdinalIgnoreCase))
+                        if (pos == null) continue;
+                        if (pos.Account == accountToDisplay && pos.Quantity != 0)
                         {
-                            if (info.Value is double dp) dailyProfit = dp;
-                        }
-                        if (string.Equals(id, "Daily Loss", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (info.Value is double dl) dailyLoss = dl;
-                        }
-                        if (string.Equals(id, "Weekly Profit", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (info.Value is double wp) weeklyProfit = wp;
-                        }
-                        if (string.Equals(id, "Weekly Loss", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (info.Value is double wl) weeklyLoss = wl;
-                        }
-                        if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (info.Value is double dd) drawdown = dd;
+                            var pnlItem = pos.NetPnL ?? pos.GrossPnL;
+                            if (pnlItem != null) openPnL += pnlItem.Value;
+                            positionsCount++;
                         }
                     }
                 }
 
-                double dailyNet = dailyProfit + dailyLoss;
-                double weeklyNet = weeklyProfit + weeklyLoss;
+                // Get Daily P&L and Gross P&L from AdditionalInfo (same as Accounts Summary)
+                double dailyPnL = 0, grossPnL = 0;
+                if (accountToDisplay.AdditionalInfo != null)
+                {
+                    foreach (var info in accountToDisplay.AdditionalInfo)
+                    {
+                        if (info?.Id == null) continue;
+                        var id = info.Id;
+                        
+                        // Daily P&L
+                        if (string.Equals(id, "Daily Net P&L", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(id, "DailyPnL", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (info.Value is double dv) dailyPnL = dv;
+                        }
 
-                statsDetailGrid.Rows.Add("Account", selectedAccount.Name ?? selectedAccount.Id ?? "Unknown");
-                statsDetailGrid.Rows.Add("Balance", selectedAccount.Balance.ToString("N2"));
-                statsDetailGrid.Rows.Add("Daily Net", dailyNet.ToString("N2"));
-                statsDetailGrid.Rows.Add("Daily Profit", dailyProfit.ToString("N2"));
-                statsDetailGrid.Rows.Add("Daily Loss", dailyLoss.ToString("N2"));
-                statsDetailGrid.Rows.Add("Weekly Net", weeklyNet.ToString("N2"));
-                statsDetailGrid.Rows.Add("Weekly Profit", weeklyProfit.ToString("N2"));
-                statsDetailGrid.Rows.Add("Weekly Loss", weeklyLoss.ToString("N2"));
-                statsDetailGrid.Rows.Add("Drawdown", drawdown.ToString("N2"));
+                        // Gross P&L
+                        if (string.Equals(id, "Gross P&L", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(id, "GrossPnL", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (info.Value is double gv) grossPnL = gv;
+                        }
+                    }
+                }
+
+                // Get connection status
+                var connectionStatus = accountToDisplay.Connection == null ? "Disconnected" : accountToDisplay.Connection.State.ToString();
+
+                // Get trading lock status from settings service
+                var settingsService = RiskManagerSettingsService.Instance;
+                var lockStatus = "Unlocked";
+                if (settingsService.IsInitialized)
+                {
+                    var isLocked = settingsService.IsTradingLocked(accountId);
+                    lockStatus = isLocked ? "Locked" : "Unlocked";
+                }
+
+                // Display all stats matching Accounts Summary data
+                statsDetailGrid.Rows.Add("Provider", provider);
+                statsDetailGrid.Rows.Add("Connection", connectionName);
+                statsDetailGrid.Rows.Add("Account", accountId);
+                statsDetailGrid.Rows.Add("Balance", balance.ToString("N2"));
+                statsDetailGrid.Rows.Add("Open P&L", openPnL.ToString("N2"));
+                statsDetailGrid.Rows.Add("Daily P&L", dailyPnL.ToString("N2"));
+                statsDetailGrid.Rows.Add("Gross P&L", grossPnL.ToString("N2"));
+                statsDetailGrid.Rows.Add("Positions", positionsCount.ToString());
+                statsDetailGrid.Rows.Add("Connection Status", connectionStatus);
+                statsDetailGrid.Rows.Add("Trading Status", lockStatus);
             }
             catch
             {
@@ -752,6 +911,227 @@ namespace Risk_Manager
             {
                 statsDetailGrid.ResumeLayout();
             }
+        }
+
+        private Control CreateTypeSummaryPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title with colored emoji rendering
+            var titleLabel = CreateEmojiLabel("📋 Type Summary", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
+
+            typeSummaryGrid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                BackgroundColor = CardBackground,
+                GridColor = DarkerBackground,
+                BorderStyle = BorderStyle.None,
+                RowHeadersVisible = false,
+                EnableHeadersVisualStyles = false
+            };
+
+            // Style the grid for dark theme
+            typeSummaryGrid.DefaultCellStyle.BackColor = CardBackground;
+            typeSummaryGrid.DefaultCellStyle.ForeColor = TextWhite;
+            typeSummaryGrid.DefaultCellStyle.SelectionBackColor = SelectedColor;
+            typeSummaryGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
+            typeSummaryGrid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
+            typeSummaryGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
+            typeSummaryGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+            // Add columns as requested
+            typeSummaryGrid.Columns.Add("Summary", "Summary");
+            typeSummaryGrid.Columns.Add("Count", "Count");
+            typeSummaryGrid.Columns.Add("Equity", "Equity");
+            typeSummaryGrid.Columns.Add("OpenPnL", "Open P&L");
+            typeSummaryGrid.Columns.Add("ClosedPnL", "Closed P&L");
+            typeSummaryGrid.Columns.Add("TotalPnL", "Total P&L");
+            typeSummaryGrid.Columns.Add("Drawdown", "Drawdown");
+
+            RefreshTypeSummary();
+            typeSummaryRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            typeSummaryRefreshTimer.Tick += (s, e) => RefreshTypeSummary();
+            typeSummaryRefreshTimer.Start();
+
+            // Add controls in correct order: Fill control first, then Top controls
+            mainPanel.Controls.Add(typeSummaryGrid);
+            mainPanel.Controls.Add(titleLabel);
+            return mainPanel;
+        }
+
+        private void RefreshTypeSummary()
+        {
+            if (InvokeRequired) { BeginInvoke(new Action(RefreshTypeSummary)); return; }
+            if (typeSummaryGrid == null) return;
+
+            try
+            {
+                typeSummaryGrid.SuspendLayout();
+                typeSummaryGrid.Rows.Clear();
+
+                var core = Core.Instance;
+                if (core == null || core.Accounts == null || !core.Accounts.Any())
+                {
+                    // Demo data
+                    typeSummaryGrid.Rows.Add("Live", "1", "1000.00", "12.34", "50.00", "62.34", "0.00");
+                    typeSummaryGrid.Rows.Add("Demo", "1", "2500.50", "-8.20", "25.00", "16.80", "0.00");
+                    typeSummaryGrid.Rows.Add("Total", "2", "3500.50", "4.14", "75.00", "79.14", "0.00");
+                    return;
+                }
+
+                // Dictionary to store aggregated data by type
+                var typeData = new Dictionary<string, TypeSummaryData>();
+
+                foreach (var account in core.Accounts)
+                {
+                    if (account == null) continue;
+
+                    // Get account type (same logic as Accounts Summary)
+                    var accountType = "Unknown";
+                    if (account.Connection != null)
+                    {
+                        var connName = account.Connection.Name?.ToLower() ?? "";
+                        if (connName.Contains("demo") || connName.Contains("simulation") || connName.Contains("paper"))
+                            accountType = "Demo";
+                        else if (connName.Contains("live") || connName.Contains("real"))
+                            accountType = "Live";
+                    }
+
+                    // Check AdditionalInfo for type override
+                    if (account.AdditionalInfo != null)
+                    {
+                        foreach (var info in account.AdditionalInfo)
+                        {
+                            if (info?.Id == null) continue;
+                            var id = info.Id;
+                            if (string.Equals(id, "Account Type", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "AccountType", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "Type", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is string at) accountType = at;
+                            }
+                        }
+                    }
+
+                    // Initialize type data if not exists
+                    if (!typeData.ContainsKey(accountType))
+                    {
+                        typeData[accountType] = new TypeSummaryData();
+                    }
+
+                    var data = typeData[accountType];
+                    data.Count++;
+                    data.Equity += account.Balance;
+
+                    // Calculate Open P&L from positions
+                    if (core.Positions != null)
+                    {
+                        foreach (var pos in core.Positions)
+                        {
+                            if (pos == null) continue;
+                            if (pos.Account == account && pos.Quantity != 0)
+                            {
+                                var pnlItem = pos.NetPnL ?? pos.GrossPnL;
+                                if (pnlItem != null) data.OpenPnL += pnlItem.Value;
+                            }
+                        }
+                    }
+
+                    // Get Closed P&L and Drawdown from AdditionalInfo
+                    if (account.AdditionalInfo != null)
+                    {
+                        foreach (var info in account.AdditionalInfo)
+                        {
+                            if (info?.Id == null) continue;
+                            var id = info.Id;
+
+                            // Closed P&L
+                            if (string.Equals(id, "Closed P&L", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "ClosedPnL", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "Realized P&L", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double cv) data.ClosedPnL += cv;
+                            }
+
+                            // Drawdown
+                            if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "MaxDrawdown", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double dd) data.Drawdown += dd;
+                            }
+                        }
+                    }
+                }
+
+                // Calculate totals
+                var totalData = new TypeSummaryData();
+                foreach (var kvp in typeData)
+                {
+                    totalData.Count += kvp.Value.Count;
+                    totalData.Equity += kvp.Value.Equity;
+                    totalData.OpenPnL += kvp.Value.OpenPnL;
+                    totalData.ClosedPnL += kvp.Value.ClosedPnL;
+                    totalData.Drawdown += kvp.Value.Drawdown;
+                }
+
+                // Add rows for each type
+                foreach (var kvp in typeData.OrderBy(x => x.Key))
+                {
+                    var type = kvp.Key;
+                    var data = kvp.Value;
+                    var totalPnL = data.OpenPnL + data.ClosedPnL;
+
+                    typeSummaryGrid.Rows.Add(
+                        type,
+                        data.Count.ToString(),
+                        data.Equity.ToString("N2"),
+                        data.OpenPnL.ToString("N2"),
+                        data.ClosedPnL.ToString("N2"),
+                        totalPnL.ToString("N2"),
+                        data.Drawdown.ToString("N2")
+                    );
+                }
+
+                // Add total row
+                var totalTotalPnL = totalData.OpenPnL + totalData.ClosedPnL;
+                typeSummaryGrid.Rows.Add(
+                    "Total",
+                    totalData.Count.ToString(),
+                    totalData.Equity.ToString("N2"),
+                    totalData.OpenPnL.ToString("N2"),
+                    totalData.ClosedPnL.ToString("N2"),
+                    totalTotalPnL.ToString("N2"),
+                    totalData.Drawdown.ToString("N2")
+                );
+            }
+            catch
+            {
+                // ignore refresh errors
+            }
+            finally
+            {
+                typeSummaryGrid.ResumeLayout();
+            }
+        }
+
+        // Helper class to aggregate type summary data
+        private class TypeSummaryData
+        {
+            public int Count { get; set; }
+            public double Equity { get; set; }
+            public double OpenPnL { get; set; }
+            public double ClosedPnL { get; set; }
+            public double Drawdown { get; set; }
         }
 
         private Panel CreateStatisticsOverviewPanel()
@@ -2212,6 +2592,10 @@ namespace Risk_Manager
                 statsDetailRefreshTimer?.Stop();
                 statsDetailRefreshTimer?.Dispose();
                 statsDetailRefreshTimer = null;
+
+                typeSummaryRefreshTimer?.Stop();
+                typeSummaryRefreshTimer?.Dispose();
+                typeSummaryRefreshTimer = null;
             }
             base.Dispose(disposing);
         }
