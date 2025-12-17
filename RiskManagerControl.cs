@@ -147,6 +147,33 @@ namespace Risk_Manager
             // Preserve current selection if it still exists
             var currentSelection = accountSelector.SelectedItem as Account;
 
+            // Check if the accounts list has actually changed before refreshing
+            bool needsUpdate = false;
+            if (accountSelector.Items.Count != connectedAccounts.Count)
+            {
+                needsUpdate = true;
+            }
+            else
+            {
+                // Check if the same accounts are present
+                for (int i = 0; i < connectedAccounts.Count; i++)
+                {
+                    if (i >= accountSelector.Items.Count || 
+                        accountSelector.Items[i] != connectedAccounts[i])
+                    {
+                        needsUpdate = true;
+                        break;
+                    }
+                }
+            }
+
+            // Only update if accounts have changed
+            if (!needsUpdate)
+                return;
+
+            // Temporarily disable event handling during update
+            accountSelector.SelectedIndexChanged -= AccountSelectorOnSelectedIndexChanged;
+
             accountSelector.Items.Clear();
             foreach (var account in connectedAccounts)
             {
@@ -154,19 +181,31 @@ namespace Risk_Manager
             }
 
             // Restore selection or select first
-            if (currentSelection != null && accountSelector.Items.Contains(currentSelection))
+            if (currentSelection != null && connectedAccounts.Contains(currentSelection))
             {
                 accountSelector.SelectedItem = currentSelection;
             }
             else if (accountSelector.Items.Count > 0)
             {
                 accountSelector.SelectedIndex = 0;
-                selectedAccount = accountSelector.SelectedItem as Account;
             }
             else
             {
                 accountSelector.SelectedIndex = -1;
-                selectedAccount = null;
+            }
+
+            // Re-enable event handling
+            accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
+        }
+
+        private void AccountSelectorOnSelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (accountSelector.SelectedItem is Account account)
+            {
+                selectedAccount = account;
+                // Refresh Stats tab if visible
+                if (statsDetailGrid != null)
+                    RefreshAccountStats();
             }
         }
 
@@ -212,16 +251,7 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat
             };
-            accountSelector.SelectedIndexChanged += (s, e) =>
-            {
-                if (accountSelector.SelectedItem is Account account)
-                {
-                    selectedAccount = account;
-                    // Refresh Stats tab if visible
-                    if (statsDetailGrid != null)
-                        RefreshAccountStats();
-                }
-            };
+            accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
             topPanel.Controls.Add(accountSelector);
 
             // Status badges container (right-aligned)
@@ -690,8 +720,8 @@ namespace Risk_Manager
                 statsDetailGrid.SuspendLayout();
                 statsDetailGrid.Rows.Clear();
 
-                // Fix: If selectedAccount is null, try to use the account from the dropdown selector
-                var accountToDisplay = selectedAccount ?? (accountSelector?.SelectedItem as Account);
+                // Fix: Use the selected account from dropdown to ensure consistency
+                var accountToDisplay = accountSelector?.SelectedItem as Account;
                 
                 if (accountToDisplay == null)
                 {
@@ -702,80 +732,79 @@ namespace Risk_Manager
 
                 var core = Core.Instance;
 
-                // Daily Net (sum of Daily Profit and Daily Loss)
-                double dailyProfit = 0, dailyLoss = 0, weeklyProfit = 0, weeklyLoss = 0, drawdown = 0;
+                // Get provider and connection info
+                var provider = accountToDisplay.Connection?.VendorName ?? accountToDisplay.Connection?.Name ?? "Unknown";
+                var connectionName = accountToDisplay.Connection?.Name ?? "Unknown";
+                var accountId = accountToDisplay.Id ?? accountToDisplay.Name ?? "Unknown";
+                var balance = accountToDisplay.Balance;
 
+                // Calculate Open P&L from positions (same as Accounts Summary)
+                double openPnL = 0;
+                int positionsCount = 0;
+                if (core?.Positions != null)
+                {
+                    foreach (var pos in core.Positions)
+                    {
+                        if (pos == null) continue;
+                        if (pos.Account == accountToDisplay && pos.Quantity != 0)
+                        {
+                            var pnlItem = pos.NetPnL ?? pos.GrossPnL;
+                            if (pnlItem != null) openPnL += pnlItem.Value;
+                            positionsCount++;
+                        }
+                    }
+                }
+
+                // Get Daily P&L and Gross P&L from AdditionalInfo (same as Accounts Summary)
+                double dailyPnL = 0, grossPnL = 0;
                 if (accountToDisplay.AdditionalInfo != null)
                 {
                     foreach (var info in accountToDisplay.AdditionalInfo)
                     {
                         if (info?.Id == null) continue;
                         var id = info.Id;
+                        
+                        // Daily P&L
+                        if (string.Equals(id, "Daily Net P&L", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(id, "DailyPnL", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (info.Value is double dv) dailyPnL = dv;
+                        }
 
-                        if (string.Equals(id, "Daily Profit", StringComparison.OrdinalIgnoreCase))
+                        // Gross P&L
+                        if (string.Equals(id, "Gross P&L", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(id, "GrossPnL", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (info.Value is double dp) dailyProfit = dp;
-                        }
-                        if (string.Equals(id, "Daily Loss", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (info.Value is double dl) dailyLoss = dl;
-                        }
-                        if (string.Equals(id, "Weekly Profit", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (info.Value is double wp) weeklyProfit = wp;
-                        }
-                        if (string.Equals(id, "Weekly Loss", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (info.Value is double wl) weeklyLoss = wl;
-                        }
-                        if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (info.Value is double dd) drawdown = dd;
+                            if (info.Value is double gv) grossPnL = gv;
                         }
                     }
                 }
 
-                double dailyNet = dailyProfit + dailyLoss;
-                double weeklyNet = weeklyProfit + weeklyLoss;
+                // Get connection status
+                var connectionStatus = accountToDisplay.Connection == null ? "Disconnected" : accountToDisplay.Connection.State.ToString();
 
-                // Determine account lock status
-                string lockStatus = "Unlocked"; // Default status
-                if (accountToDisplay.AdditionalInfo != null)
+                // Get trading lock status from settings service
+                var settingsService = RiskManagerSettingsService.Instance;
+                var lockStatus = "Unlocked";
+                if (settingsService.IsInitialized)
                 {
-                    var lockInfo = accountToDisplay.AdditionalInfo.FirstOrDefault(x =>
-                        x?.Id != null && (
-                            string.Equals(x.Id, "IsLocked", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(x.Id, "Locked", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(x.Id, "AccountLocked", StringComparison.OrdinalIgnoreCase)));
-                    
-                    if (lockInfo != null)
-                    {
-                        if (lockInfo.Value is bool isLocked)
-                        {
-                            lockStatus = isLocked ? "Locked" : "Unlocked";
-                        }
-                        else if (lockInfo.Value is string strValue && !string.IsNullOrWhiteSpace(strValue))
-                        {
-                            // Normalize string values to consistent format
-                            var normalized = strValue.Trim();
-                            lockStatus = normalized.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-                                        normalized.Equals("locked", StringComparison.OrdinalIgnoreCase) ||
-                                        normalized.Equals("1", StringComparison.OrdinalIgnoreCase)
-                                ? "Locked" : "Unlocked";
-                        }
-                    }
+                    var isLocked = settingsService.IsTradingLocked(accountId);
+                    lockStatus = isLocked ? "Locked" : "Unlocked";
                 }
 
-                statsDetailGrid.Rows.Add("Account", accountToDisplay.Name ?? accountToDisplay.Id ?? "Unknown");
-                statsDetailGrid.Rows.Add("Balance", accountToDisplay.Balance.ToString("N2"));
-                statsDetailGrid.Rows.Add("Daily Net", dailyNet.ToString("N2"));
-                statsDetailGrid.Rows.Add("Daily Profit", dailyProfit.ToString("N2"));
-                statsDetailGrid.Rows.Add("Daily Loss", dailyLoss.ToString("N2"));
-                statsDetailGrid.Rows.Add("Weekly Net", weeklyNet.ToString("N2"));
-                statsDetailGrid.Rows.Add("Weekly Profit", weeklyProfit.ToString("N2"));
-                statsDetailGrid.Rows.Add("Weekly Loss", weeklyLoss.ToString("N2"));
-                statsDetailGrid.Rows.Add("Drawdown", drawdown.ToString("N2"));
-                statsDetailGrid.Rows.Add("Account Status", lockStatus);
+                // Display all stats matching Accounts Summary data
+                statsDetailGrid.Rows.Add("Provider", provider);
+                statsDetailGrid.Rows.Add("Connection", connectionName);
+                statsDetailGrid.Rows.Add("Account", accountId);
+                statsDetailGrid.Rows.Add("Balance", balance.ToString("N2"));
+                statsDetailGrid.Rows.Add("Open P&L", openPnL.ToString("N2"));
+                statsDetailGrid.Rows.Add("Daily P&L", dailyPnL.ToString("N2"));
+                statsDetailGrid.Rows.Add("Gross P&L", grossPnL.ToString("N2"));
+                statsDetailGrid.Rows.Add("Positions", positionsCount.ToString());
+                statsDetailGrid.Rows.Add("Connection Status", connectionStatus);
+                statsDetailGrid.Rows.Add("Trading Status", lockStatus);
             }
             catch
             {
