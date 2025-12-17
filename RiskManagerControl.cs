@@ -264,6 +264,23 @@ namespace Risk_Manager
             accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
             topPanel.Controls.Add(accountSelector);
 
+            // Emergency Flatten button next to Account Selector
+            var emergencyFlattenButton = new Button
+            {
+                Text = "⚠️ EMERGENCY FLATTEN ⚠️",
+                Location = new Point(340, 37),
+                Width = 250,
+                Height = 26,
+                Font = new Font("Arial", 10, FontStyle.Bold),
+                BackColor = Color.Red,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            emergencyFlattenButton.FlatAppearance.BorderSize = 0;
+            emergencyFlattenButton.Click += EmergencyFlattenButton_Click;
+            topPanel.Controls.Add(emergencyFlattenButton);
+
             // Status badges container (right-aligned)
             var badgesPanel = new FlowLayoutPanel
             {
@@ -1743,24 +1760,6 @@ namespace Risk_Manager
             };
             unlockButton.FlatAppearance.BorderSize = 0;
             contentArea.Controls.Add(unlockButton);
-
-            // Emergency Flatten button
-            var emergencyFlattenButton = new Button
-            {
-                Text = "EMERGENCY FLATTEN",
-                Width = 300,
-                Height = 50,
-                Left = 0,
-                Top = 60,
-                Font = new Font("Arial", 14, FontStyle.Bold),
-                BackColor = Color.Red,
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
-            emergencyFlattenButton.FlatAppearance.BorderSize = 0;
-            emergencyFlattenButton.Click += EmergencyFlattenButton_Click;
-            contentArea.Controls.Add(emergencyFlattenButton);
 
             // Add controls in correct order: Fill first, then Top (no Bottom for this panel)
             // In WinForms, docking is processed in reverse Z-order
