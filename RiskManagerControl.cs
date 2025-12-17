@@ -696,6 +696,7 @@ namespace Risk_Manager
                 if (accountToDisplay == null)
                 {
                     statsDetailGrid.Rows.Add("Status", "No account selected");
+                    statsDetailGrid.ResumeLayout();
                     return;
                 }
 
