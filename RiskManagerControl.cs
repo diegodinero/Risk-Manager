@@ -1773,13 +1773,35 @@ namespace Risk_Manager
 
         private void EmergencyFlattenButton_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Emergency Flatten Triggered!", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            FlattenAllTrades();
+            var result = MessageBox.Show(
+                "Are you sure you want to flatten all trades? This action cannot be undone.",
+                "Emergency Flatten Confirmation",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2);
+
+            if (result == DialogResult.Yes)
+            {
+                FlattenAllTrades();
+                MessageBox.Show("Emergency Flatten Triggered!", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
+        /// <summary>
+        /// Flattens all open trades across all accounts.
+        /// This is a placeholder method that should be implemented to close all open positions.
+        /// </summary>
+        /// <remarks>
+        /// When implemented, this method should:
+        /// - Iterate through all open positions across all accounts
+        /// - Close each position at market price
+        /// - Handle any errors gracefully and report them to the user
+        /// - Log all actions for audit purposes
+        /// </remarks>
         public void FlattenAllTrades()
         {
             // Placeholder for logic implementation
+            // TODO: Implement trade flattening logic
         }
 
         private Control CreateAutoLockPanel()
