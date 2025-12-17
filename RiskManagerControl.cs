@@ -1747,7 +1747,7 @@ namespace Risk_Manager
             // Emergency Flatten button
             var emergencyFlattenButton = new Button
             {
-                Text = "⚠️ EMERGENCY FLATTEN ⚠️",
+                Text = "EMERGENCY FLATTEN",
                 Width = 300,
                 Height = 50,
                 Left = 0,
@@ -1773,18 +1773,8 @@ namespace Risk_Manager
 
         private void EmergencyFlattenButton_Click(object sender, EventArgs e)
         {
-            var result = MessageBox.Show(
-                "Are you sure you want to flatten all trades? This action cannot be undone.",
-                "Emergency Flatten Confirmation",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning,
-                MessageBoxDefaultButton.Button2);
-
-            if (result == DialogResult.Yes)
-            {
-                FlattenAllTrades();
-                MessageBox.Show("Emergency Flatten Triggered!", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
+            FlattenAllTrades();
+            MessageBox.Show("Emergency Flatten Triggered!", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
