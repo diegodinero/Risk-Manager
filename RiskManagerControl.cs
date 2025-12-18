@@ -364,15 +364,18 @@ namespace Risk_Manager
             // Make rounded corners effect by using custom paint
             badge.Paint += (s, e) =>
             {
-                using var path = GetRoundedRectPath(new Rectangle(0, 0, badge.Width, badge.Height), 4);
+                var lbl = (Label)s;
+                using var path = GetRoundedRectPath(new Rectangle(0, 0, lbl.Width, lbl.Height), 4);
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                using var brush = new SolidBrush(badgeColor);
+                // Use the label's current BackColor instead of the captured badgeColor variable
+                using var brush = new SolidBrush(lbl.BackColor);
                 e.Graphics.FillPath(brush, path);
                 using var textBrush = new SolidBrush(TextWhite);
-                var textSize = e.Graphics.MeasureString(text, badge.Font);
-                var textX = (badge.Width - textSize.Width) / 2;
-                var textY = (badge.Height - textSize.Height) / 2;
-                e.Graphics.DrawString(text, badge.Font, textBrush, textX, textY);
+                // Use the label's current Text instead of the captured text variable
+                var textSize = e.Graphics.MeasureString(lbl.Text, lbl.Font);
+                var textX = (lbl.Width - textSize.Width) / 2;
+                var textY = (lbl.Height - textSize.Height) / 2;
+                e.Graphics.DrawString(lbl.Text, lbl.Font, textBrush, textX, textY);
             };
 
             return badge;
