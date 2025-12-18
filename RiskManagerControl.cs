@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
+using System.Media;
 using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
@@ -1772,8 +1773,33 @@ namespace Risk_Manager
 
         private void EmergencyFlattenButton_Click(object sender, EventArgs e)
         {
+            PlayAlertSound();
             FlattenAllTrades();
             MessageBox.Show("Emergency Flatten Triggered!", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// Plays the alert sound from embedded resources when the Emergency Flatten button is pushed.
+        /// </summary>
+        private void PlayAlertSound()
+        {
+            try
+            {
+                // Get the sound from embedded resources
+                var soundStream = Properties.Resources.dark_impact;
+                if (soundStream != null)
+                {
+                    using (var soundPlayer = new SoundPlayer(soundStream))
+                    {
+                        soundPlayer.Play();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't interrupt the emergency flatten operation
+                System.Diagnostics.Debug.WriteLine($"Error playing alert sound: {ex.Message}");
+            }
         }
 
         /// <summary>
