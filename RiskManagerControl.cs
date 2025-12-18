@@ -1774,8 +1774,8 @@ namespace Risk_Manager
         private void EmergencyFlattenButton_Click(object sender, EventArgs e)
         {
             FlattenAllTrades();
-            MessageBox.Show("Emergency Flatten Triggered!", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
             PlayAlertSound();
+            MessageBox.Show("Emergency Flatten Triggered!", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
