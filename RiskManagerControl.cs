@@ -574,6 +574,7 @@ namespace Risk_Manager
             statsGrid.Columns.Add("ClosedPnL", "Closed P&L");
             statsGrid.Columns.Add("DailyPnL", "Daily P&L");
             statsGrid.Columns.Add("GrossPnL", "Gross P&L");
+            statsGrid.Columns.Add("NetPnL", "Net P&L");
             statsGrid.Columns.Add("Drawdown", "Drawdown");
             statsGrid.Columns.Add("Positions", "Positions");
             statsGrid.Columns.Add("Status", "Status");
@@ -624,9 +625,9 @@ namespace Risk_Manager
                 var core = Core.Instance;
                 if (core == null || core.Accounts == null || !core.Accounts.Any())
                 {
-                    // Demo data with all new columns
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
+                    // Demo data with all new columns (added Net P&L column)
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
                     return;
                 }
 
@@ -741,6 +742,9 @@ namespace Risk_Manager
                     // Trailing Balance - use equity as a starting point
                     var trailingBalance = equity;
 
+                    // Net P&L equals Gross P&L per requirements
+                    var netPnL = grossPnL;
+
                     statsGrid.Rows.Add(
                         provider, 
                         connectionName, 
@@ -751,6 +755,7 @@ namespace Risk_Manager
                         FormatNumeric(closedPnL),
                         FormatNumeric(dailyPnL), 
                         FormatNumeric(grossPnL), 
+                        FormatNumeric(netPnL),
                         FormatNumeric(drawdown),
                         positionsCount.ToString(), 
                         status,
@@ -761,9 +766,23 @@ namespace Risk_Manager
                     );
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore refresh errors
+                // Log error for debugging but don't crash the UI
+                System.Diagnostics.Debug.WriteLine($"RefreshAccountsSummary error: {ex.Message}");
+                
+                // Show error in grid if it's empty
+                if (statsGrid.Rows.Count == 0)
+                {
+                    try
+                    {
+                        statsGrid.Rows.Add("Error", "API Connection Failed", ex.Message, "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-");
+                    }
+                    catch
+                    {
+                        // If even adding error row fails, just ignore
+                    }
+                }
             }
             finally
             {
@@ -923,11 +942,26 @@ namespace Risk_Manager
                 statsDetailGrid.Rows.Add("Gross P&L", FormatNumeric(grossPnL));
                 statsDetailGrid.Rows.Add("Positions", positionsCount.ToString());
                 statsDetailGrid.Rows.Add("Connection Status", connectionStatus);
-                statsDetailGrid.Rows.Add("Trading Status", lockStatus);
+                statsDetailGrid.Rows.Add("Trading Lock Status", lockStatus);
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore refresh errors
+                // Log error for debugging but don't crash the UI
+                System.Diagnostics.Debug.WriteLine($"RefreshAccountStats error: {ex.Message}");
+                
+                // Show error message in grid
+                if (statsDetailGrid.Rows.Count == 0)
+                {
+                    try
+                    {
+                        statsDetailGrid.Rows.Add("Error", "API Connection Failed");
+                        statsDetailGrid.Rows.Add("Details", ex.Message);
+                    }
+                    catch
+                    {
+                        // If even adding error row fails, just ignore
+                    }
+                }
             }
             finally
             {
@@ -1136,9 +1170,23 @@ namespace Risk_Manager
                     FormatNumeric(totalData.Drawdown)
                 );
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore refresh errors
+                // Log error for debugging but don't crash the UI
+                System.Diagnostics.Debug.WriteLine($"RefreshTypeSummary error: {ex.Message}");
+                
+                // Show error in grid if it's empty
+                if (typeSummaryGrid.Rows.Count == 0)
+                {
+                    try
+                    {
+                        typeSummaryGrid.Rows.Add("Error", "-", "-", "-", "-", "API Connection Failed", ex.Message);
+                    }
+                    catch
+                    {
+                        // If even adding error row fails, just ignore
+                    }
+                }
             }
             finally
             {
