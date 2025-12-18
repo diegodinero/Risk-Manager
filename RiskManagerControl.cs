@@ -1815,8 +1815,7 @@ namespace Risk_Manager
                 MessageBox.Show("The account has been locked successfully.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 
                 // Find the status label and update it
-                var contentPanel = (sender as Button)?.Parent;
-                var statusLabel = contentPanel?.Controls.Cast<Control>().FirstOrDefault(c => c.Tag?.ToString() == "TradingStatus") as Label;
+                var statusLabel = GetTradingStatusLabel(sender as Button);
                 if (statusLabel != null)
                 {
                     UpdateAccountStatus(statusLabel);
@@ -1849,12 +1848,11 @@ namespace Risk_Manager
                     return;
                 }
 
-                settingsService.SetTradingLock(accountNumber, false);
+                settingsService.SetTradingLock(accountNumber, false, "Manual unlock");
                 MessageBox.Show("The account has been unlocked successfully.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 
                 // Find the status label and update it
-                var contentPanel = (sender as Button)?.Parent;
-                var statusLabel = contentPanel?.Controls.Cast<Control>().FirstOrDefault(c => c.Tag?.ToString() == "TradingStatus") as Label;
+                var statusLabel = GetTradingStatusLabel(sender as Button);
                 if (statusLabel != null)
                 {
                     UpdateAccountStatus(statusLabel);
@@ -1908,6 +1906,12 @@ namespace Risk_Manager
             }
         }
 
+        private Label GetTradingStatusLabel(Button button)
+        {
+            var contentPanel = button?.Parent;
+            return contentPanel?.Controls.Cast<Control>().FirstOrDefault(c => c.Tag?.ToString() == "TradingStatus") as Label;
+        }
+
         private void UpdateTradingStatusBadge()
         {
             try
@@ -1941,9 +1945,10 @@ namespace Risk_Manager
                     tradingStatusBadge.Invalidate();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Silently fail badge update
+                // Log error but don't interrupt UI flow
+                System.Diagnostics.Debug.WriteLine($"Error updating trading status badge: {ex.Message}");
             }
         }
 
