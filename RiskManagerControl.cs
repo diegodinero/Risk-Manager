@@ -1745,6 +1745,7 @@ namespace Risk_Manager
                 Cursor = Cursors.Hand
             };
             lockButton.FlatAppearance.BorderSize = 0;
+            lockButton.Click += BtnLock_Click;
             contentArea.Controls.Add(lockButton);
 
             var unlockButton = new Button
@@ -1761,7 +1762,27 @@ namespace Risk_Manager
                 Cursor = Cursors.Hand
             };
             unlockButton.FlatAppearance.BorderSize = 0;
+            unlockButton.Click += BtnUnlock_Click;
             contentArea.Controls.Add(unlockButton);
+
+            // Status label
+            var lblTradingStatus = new Label
+            {
+                Text = "Trading Unlocked",
+                Left = 440,
+                Top = 10,
+                Width = 150,
+                Height = 30,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = AccentGreen,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Tag = "TradingStatus" // Tag for identification
+            };
+            contentArea.Controls.Add(lblTradingStatus);
+
+            // Update status on panel creation
+            UpdateAccountStatus(lblTradingStatus);
 
             // Add controls in correct order: Fill first, then Top (no Bottom for this panel)
             // In WinForms, docking is processed in reverse Z-order
@@ -1770,6 +1791,160 @@ namespace Risk_Manager
             mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
+        }
+
+        private void BtnLock_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var accountNumber = selectedAccount?.Id ?? selectedAccount?.Name;
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    MessageBox.Show($"Settings service is not initialized: {settingsService.InitializationError}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                settingsService.SetTradingLock(accountNumber, true, "Manual lock");
+                MessageBox.Show("The account has been locked successfully.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                
+                // Find the status label and update it
+                var contentPanel = (sender as Button)?.Parent;
+                var statusLabel = contentPanel?.Controls.Cast<Control>().FirstOrDefault(c => c.Tag?.ToString() == "TradingStatus") as Label;
+                if (statusLabel != null)
+                {
+                    UpdateAccountStatus(statusLabel);
+                }
+
+                // Update the trading status badge
+                UpdateTradingStatusBadge();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error locking the account: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnUnlock_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var accountNumber = selectedAccount?.Id ?? selectedAccount?.Name;
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    MessageBox.Show($"Settings service is not initialized: {settingsService.InitializationError}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                settingsService.SetTradingLock(accountNumber, false);
+                MessageBox.Show("The account has been unlocked successfully.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                
+                // Find the status label and update it
+                var contentPanel = (sender as Button)?.Parent;
+                var statusLabel = contentPanel?.Controls.Cast<Control>().FirstOrDefault(c => c.Tag?.ToString() == "TradingStatus") as Label;
+                if (statusLabel != null)
+                {
+                    UpdateAccountStatus(statusLabel);
+                }
+
+                // Update the trading status badge
+                UpdateTradingStatusBadge();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error unlocking the account: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void UpdateAccountStatus(Label lblTradingStatus)
+        {
+            try
+            {
+                var accountNumber = selectedAccount?.Id ?? selectedAccount?.Name;
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    lblTradingStatus.Text = "No Account Selected";
+                    lblTradingStatus.ForeColor = TextGray;
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    lblTradingStatus.Text = "Status Unknown";
+                    lblTradingStatus.ForeColor = TextGray;
+                    return;
+                }
+
+                bool isLocked = settingsService.IsTradingLocked(accountNumber);
+
+                if (isLocked)
+                {
+                    lblTradingStatus.Text = "Trading Locked";
+                    lblTradingStatus.ForeColor = Color.Red;
+                }
+                else
+                {
+                    lblTradingStatus.Text = "Trading Unlocked";
+                    lblTradingStatus.ForeColor = AccentGreen;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error updating account status: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void UpdateTradingStatusBadge()
+        {
+            try
+            {
+                var accountNumber = selectedAccount?.Id ?? selectedAccount?.Name;
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    return;
+                }
+
+                bool isLocked = settingsService.IsTradingLocked(accountNumber);
+
+                if (tradingStatusBadge != null)
+                {
+                    if (isLocked)
+                    {
+                        tradingStatusBadge.Text = "  Trading Locked  ";
+                        tradingStatusBadge.BackColor = Color.Red;
+                    }
+                    else
+                    {
+                        tradingStatusBadge.Text = "  Trading Unlocked  ";
+                        tradingStatusBadge.BackColor = AccentGreen;
+                    }
+                    tradingStatusBadge.Invalidate();
+                }
+            }
+            catch
+            {
+                // Silently fail badge update
+            }
         }
 
         private void EmergencyFlattenButton_Click(object sender, EventArgs e)
