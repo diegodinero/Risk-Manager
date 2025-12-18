@@ -625,7 +625,7 @@ namespace Risk_Manager
                 var core = Core.Instance;
                 if (core == null || core.Accounts == null || !core.Accounts.Any())
                 {
-                    // Demo data with all new columns (including Net P&L)
+                    // Demo data with all columns: Provider, Connection, Account, Type, Equity, Open P&L, Closed P&L, Daily P&L, Gross P&L, Net P&L, Drawdown, Positions, Status, Lock Status, Loss Limit, Profit Target, Trailing Balance
                     statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
                     statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
                     return;
@@ -743,6 +743,8 @@ namespace Risk_Manager
                     var trailingBalance = equity;
 
                     // Net P&L equals Gross P&L as per requirements
+                    // This is because Net P&L represents the total profit/loss after all deductions,
+                    // which in this context is equivalent to Gross P&L since we're displaying the same value
                     var netPnL = grossPnL;
 
                     statsGrid.Rows.Add(
