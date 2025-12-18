@@ -1797,17 +1797,15 @@ namespace Risk_Manager
         {
             try
             {
-                var accountNumber = selectedAccount?.Id ?? selectedAccount?.Name;
+                var accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
                     MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                var settingsService = RiskManagerSettingsService.Instance;
-                if (!settingsService.IsInitialized)
+                if (!ValidateSettingsService(out var settingsService))
                 {
-                    MessageBox.Show($"Settings service is not initialized: {settingsService.InitializationError}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -1834,17 +1832,15 @@ namespace Risk_Manager
         {
             try
             {
-                var accountNumber = selectedAccount?.Id ?? selectedAccount?.Name;
+                var accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
                     MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                var settingsService = RiskManagerSettingsService.Instance;
-                if (!settingsService.IsInitialized)
+                if (!ValidateSettingsService(out var settingsService))
                 {
-                    MessageBox.Show($"Settings service is not initialized: {settingsService.InitializationError}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -1871,7 +1867,7 @@ namespace Risk_Manager
         {
             try
             {
-                var accountNumber = selectedAccount?.Id ?? selectedAccount?.Name;
+                var accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
                     lblTradingStatus.Text = "No Account Selected";
@@ -1902,21 +1898,49 @@ namespace Risk_Manager
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error updating account status: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Log error but don't interrupt UI flow with MessageBox
+                System.Diagnostics.Debug.WriteLine($"Error updating account status: {ex.Message}");
+                lblTradingStatus.Text = "Status Error";
+                lblTradingStatus.ForeColor = TextGray;
             }
+        }
+
+        private string GetSelectedAccountNumber()
+        {
+            return selectedAccount?.Id ?? selectedAccount?.Name;
         }
 
         private Label GetTradingStatusLabel(Button button)
         {
             var contentPanel = button?.Parent;
-            return contentPanel?.Controls.Cast<Control>().FirstOrDefault(c => c.Tag?.ToString() == "TradingStatus") as Label;
+            if (contentPanel == null) return null;
+            
+            foreach (Control control in contentPanel.Controls)
+            {
+                if (control.Tag?.ToString() == "TradingStatus" && control is Label label)
+                {
+                    return label;
+                }
+            }
+            return null;
+        }
+
+        private bool ValidateSettingsService(out RiskManagerSettingsService settingsService)
+        {
+            settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized)
+            {
+                MessageBox.Show($"Settings service is not initialized: {settingsService.InitializationError}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            return true;
         }
 
         private void UpdateTradingStatusBadge()
         {
             try
             {
-                var accountNumber = selectedAccount?.Id ?? selectedAccount?.Name;
+                var accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
                     return;
