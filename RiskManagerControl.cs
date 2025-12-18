@@ -2078,7 +2078,7 @@ namespace Risk_Manager
                     return;
                 }
 
-                bool isLocked = settingsService.IsSettingsLocked(accountNumber);
+                bool isLocked = settingsService.AreSettingsLocked(accountNumber);
 
                 if (isLocked)
                 {
