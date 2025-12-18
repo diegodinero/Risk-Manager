@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
+using System.Media;
 using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
@@ -41,6 +42,7 @@ namespace Risk_Manager
         private CheckBox symbolContractLimitsEnabled;
         private CheckBox tradingLockCheckBox;
         private CheckBox settingsLockCheckBox;
+        private SoundPlayer alertSoundPlayer;
 
         // Dark theme colors
         private static readonly Color DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
@@ -1773,7 +1775,35 @@ namespace Risk_Manager
         private void EmergencyFlattenButton_Click(object sender, EventArgs e)
         {
             FlattenAllTrades();
+            PlayAlertSound();
             MessageBox.Show("Emergency Flatten Triggered!", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// Plays the alert sound from embedded resources when the Emergency Flatten button is pushed.
+        /// </summary>
+        private void PlayAlertSound()
+        {
+            try
+            {
+                // Get the sound stream from embedded resources
+                var audioStream = Properties.Resources.dark_impact;
+                if (audioStream != null)
+                {
+                    // Dispose existing player if any
+                    alertSoundPlayer?.Dispose();
+                    
+                    // Create and store the player as a field to prevent premature garbage collection
+                    alertSoundPlayer = new SoundPlayer(audioStream);
+                    // Play asynchronously - sound plays in background without blocking
+                    alertSoundPlayer.Play();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't interrupt the emergency flatten operation
+                System.Diagnostics.Debug.WriteLine($"Error playing alert sound: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -2636,6 +2666,9 @@ namespace Risk_Manager
                 typeSummaryRefreshTimer?.Stop();
                 typeSummaryRefreshTimer?.Dispose();
                 typeSummaryRefreshTimer = null;
+
+                alertSoundPlayer?.Dispose();
+                alertSoundPlayer = null;
             }
             base.Dispose(disposing);
         }
