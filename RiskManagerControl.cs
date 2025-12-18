@@ -42,6 +42,7 @@ namespace Risk_Manager
         private CheckBox symbolContractLimitsEnabled;
         private CheckBox tradingLockCheckBox;
         private CheckBox settingsLockCheckBox;
+        private SoundPlayer alertSoundPlayer;
 
         // Dark theme colors
         private static readonly Color DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
@@ -1789,9 +1790,13 @@ namespace Risk_Manager
                 var audioStream = Properties.Resources.dark_impact;
                 if (audioStream != null)
                 {
-                    var soundPlayer = new SoundPlayer(audioStream);
+                    // Dispose existing player if any
+                    alertSoundPlayer?.Dispose();
+                    
+                    // Create and store the player as a field to prevent premature garbage collection
+                    alertSoundPlayer = new SoundPlayer(audioStream);
                     // Play asynchronously - sound plays in background without blocking
-                    soundPlayer.Play();
+                    alertSoundPlayer.Play();
                 }
             }
             catch (Exception ex)
@@ -2661,6 +2666,9 @@ namespace Risk_Manager
                 typeSummaryRefreshTimer?.Stop();
                 typeSummaryRefreshTimer?.Dispose();
                 typeSummaryRefreshTimer = null;
+
+                alertSoundPlayer?.Dispose();
+                alertSoundPlayer = null;
             }
             base.Dispose(disposing);
         }
