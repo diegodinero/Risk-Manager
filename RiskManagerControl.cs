@@ -1689,6 +1689,40 @@ namespace Risk_Manager
             contentArea.Controls.Add(lockCheckbox);
             settingsLockCheckBox = lockCheckbox;
 
+            // Status label to show lock state with color
+            var lblSettingsStatus = new Label
+            {
+                Text = "Settings Unlocked",
+                Left = 270,
+                Top = 5,
+                Width = 150,
+                Height = 30,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = AccentGreen,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Tag = "SettingsStatus" // Tag for identification
+            };
+            contentArea.Controls.Add(lblSettingsStatus);
+
+            // Add event handler to update status when checkbox changes
+            lockCheckbox.CheckedChanged += (s, e) =>
+            {
+                if (lockCheckbox.Checked)
+                {
+                    lblSettingsStatus.Text = "Settings Locked";
+                    lblSettingsStatus.ForeColor = Color.Red;
+                }
+                else
+                {
+                    lblSettingsStatus.Text = "Settings Unlocked";
+                    lblSettingsStatus.ForeColor = AccentGreen;
+                }
+                
+                // Update the top settings status badge
+                UpdateSettingsStatusBadge(lockCheckbox.Checked);
+            };
+
             var saveButton = CreateDarkSaveButton();
 
             // Add controls in correct order: Bottom first, Fill second, Top last
@@ -1980,6 +2014,32 @@ namespace Risk_Manager
             {
                 // Log error but don't interrupt UI flow
                 System.Diagnostics.Debug.WriteLine($"Error updating trading status badge: {ex.Message}");
+            }
+        }
+
+        private void UpdateSettingsStatusBadge(bool isLocked)
+        {
+            try
+            {
+                if (settingsStatusBadge != null)
+                {
+                    if (isLocked)
+                    {
+                        settingsStatusBadge.Text = "  Settings Locked  ";
+                        settingsStatusBadge.BackColor = Color.Red;
+                    }
+                    else
+                    {
+                        settingsStatusBadge.Text = "  Settings Unlocked  ";
+                        settingsStatusBadge.BackColor = AccentGreen;
+                    }
+                    settingsStatusBadge.Invalidate();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't interrupt UI flow
+                System.Diagnostics.Debug.WriteLine($"Error updating settings status badge: {ex.Message}");
             }
         }
 
