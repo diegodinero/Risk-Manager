@@ -776,7 +776,16 @@ namespace Risk_Manager
                 {
                     try
                     {
-                        statsGrid.Rows.Add("Error", "API Connection Failed", ex.Message, "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-");
+                        // Create error row with proper column count
+                        var errorValues = new object[statsGrid.Columns.Count];
+                        errorValues[0] = "Error";
+                        errorValues[1] = "API Connection Failed";
+                        errorValues[2] = ex.Message;
+                        for (int i = 3; i < errorValues.Length; i++)
+                        {
+                            errorValues[i] = "-";
+                        }
+                        statsGrid.Rows.Add(errorValues);
                     }
                     catch
                     {
@@ -1180,7 +1189,15 @@ namespace Risk_Manager
                 {
                     try
                     {
-                        typeSummaryGrid.Rows.Add("Error", "-", "-", "-", "-", "API Connection Failed", ex.Message);
+                        // Create error row with proper column count
+                        var errorValues = new object[typeSummaryGrid.Columns.Count];
+                        errorValues[0] = "Error";
+                        for (int i = 1; i < errorValues.Length - 1; i++)
+                        {
+                            errorValues[i] = "-";
+                        }
+                        errorValues[errorValues.Length - 1] = $"API Connection Failed: {ex.Message}";
+                        typeSummaryGrid.Rows.Add(errorValues);
                     }
                     catch
                     {
