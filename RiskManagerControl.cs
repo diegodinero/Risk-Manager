@@ -626,7 +626,7 @@ namespace Risk_Manager
                 {
                     // Demo data with all new columns
                     statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "-8.20", "25.00", "-2.00", "-10.20", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
                     return;
                 }
 
@@ -746,18 +746,18 @@ namespace Risk_Manager
                         connectionName, 
                         accountId, 
                         accountType,
-                        equity.ToString("N2"), 
-                        openPnL.ToString("N2"), 
-                        closedPnL.ToString("N2"),
-                        dailyPnL.ToString("N2"), 
-                        grossPnL.ToString("N2"), 
-                        drawdown.ToString("N2"),
+                        FormatNumeric(equity), 
+                        FormatNumeric(openPnL), 
+                        FormatNumeric(closedPnL),
+                        FormatNumeric(dailyPnL), 
+                        FormatNumeric(grossPnL), 
+                        FormatNumeric(drawdown),
                         positionsCount.ToString(), 
                         status,
                         lockStatus,
-                        lossLimit?.ToString("N2") ?? "-",
-                        profitTarget?.ToString("N2") ?? "-",
-                        trailingBalance.ToString("N2")
+                        FormatNumeric(lossLimit),
+                        FormatNumeric(profitTarget),
+                        FormatNumeric(trailingBalance)
                     );
                 }
             }
@@ -917,10 +917,10 @@ namespace Risk_Manager
                 statsDetailGrid.Rows.Add("Provider", provider);
                 statsDetailGrid.Rows.Add("Connection", connectionName);
                 statsDetailGrid.Rows.Add("Account", accountId);
-                statsDetailGrid.Rows.Add("Balance", balance.ToString("N2"));
-                statsDetailGrid.Rows.Add("Open P&L", openPnL.ToString("N2"));
-                statsDetailGrid.Rows.Add("Daily P&L", dailyPnL.ToString("N2"));
-                statsDetailGrid.Rows.Add("Gross P&L", grossPnL.ToString("N2"));
+                statsDetailGrid.Rows.Add("Balance", FormatNumeric(balance));
+                statsDetailGrid.Rows.Add("Open P&L", FormatNumeric(openPnL));
+                statsDetailGrid.Rows.Add("Daily P&L", FormatNumeric(dailyPnL));
+                statsDetailGrid.Rows.Add("Gross P&L", FormatNumeric(grossPnL));
                 statsDetailGrid.Rows.Add("Positions", positionsCount.ToString());
                 statsDetailGrid.Rows.Add("Connection Status", connectionStatus);
                 statsDetailGrid.Rows.Add("Trading Status", lockStatus);
@@ -1006,7 +1006,7 @@ namespace Risk_Manager
                 {
                     // Demo data
                     typeSummaryGrid.Rows.Add("Live", "1", "1000.00", "12.34", "50.00", "62.34", "0.00");
-                    typeSummaryGrid.Rows.Add("Demo", "1", "2500.50", "-8.20", "25.00", "16.80", "0.00");
+                    typeSummaryGrid.Rows.Add("Demo", "1", "2500.50", "(8.20)", "25.00", "16.80", "0.00");
                     typeSummaryGrid.Rows.Add("Total", "2", "3500.50", "4.14", "75.00", "79.14", "0.00");
                     return;
                 }
@@ -1116,11 +1116,11 @@ namespace Risk_Manager
                     typeSummaryGrid.Rows.Add(
                         type,
                         data.Count.ToString(),
-                        data.Equity.ToString("N2"),
-                        data.OpenPnL.ToString("N2"),
-                        data.ClosedPnL.ToString("N2"),
-                        totalPnL.ToString("N2"),
-                        data.Drawdown.ToString("N2")
+                        FormatNumeric(data.Equity),
+                        FormatNumeric(data.OpenPnL),
+                        FormatNumeric(data.ClosedPnL),
+                        FormatNumeric(totalPnL),
+                        FormatNumeric(data.Drawdown)
                     );
                 }
 
@@ -1129,11 +1129,11 @@ namespace Risk_Manager
                 typeSummaryGrid.Rows.Add(
                     "Total",
                     totalData.Count.ToString(),
-                    totalData.Equity.ToString("N2"),
-                    totalData.OpenPnL.ToString("N2"),
-                    totalData.ClosedPnL.ToString("N2"),
-                    totalTotalPnL.ToString("N2"),
-                    totalData.Drawdown.ToString("N2")
+                    FormatNumeric(totalData.Equity),
+                    FormatNumeric(totalData.OpenPnL),
+                    FormatNumeric(totalData.ClosedPnL),
+                    FormatNumeric(totalTotalPnL),
+                    FormatNumeric(totalData.Drawdown)
                 );
             }
             catch
@@ -1302,13 +1302,13 @@ namespace Risk_Manager
 
                 var values = new Dictionary<string, string>
                 {
-                    { "Daily Net", $"${dailyNet:N2}" },
-                    { "Daily Profit", $"${dailyProfit:N2}" },
-                    { "Daily Loss", $"${dailyLoss:N2}" },
-                    { "Weekly Net", $"${weeklyNet:N2}" },
-                    { "Weekly Profit", $"${weeklyProfit:N2}" },
-                    { "Weekly Loss", $"${weeklyLoss:N2}" },
-                    { "Drawdown", $"${drawdown:N2}" }
+                    { "Daily Net", $"${FormatNumeric(dailyNet)}" },
+                    { "Daily Profit", $"${FormatNumeric(dailyProfit)}" },
+                    { "Daily Loss", $"${FormatNumeric(dailyLoss)}" },
+                    { "Weekly Net", $"${FormatNumeric(weeklyNet)}" },
+                    { "Weekly Profit", $"${FormatNumeric(weeklyProfit)}" },
+                    { "Weekly Loss", $"${FormatNumeric(weeklyLoss)}" },
+                    { "Drawdown", $"${FormatNumeric(drawdown)}" }
                 };
 
                 foreach (Control ctrl in statsContainer.Controls)
@@ -1689,6 +1689,28 @@ namespace Risk_Manager
             contentArea.Controls.Add(lockCheckbox);
             settingsLockCheckBox = lockCheckbox;
 
+            // Status label to show lock state with color
+            var lblSettingsStatus = new Label
+            {
+                Text = "Settings Unlocked",
+                Left = 270,
+                Top = 5,
+                Width = 150,
+                Height = 30,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = AccentGreen,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Tag = "SettingsStatus" // Tag for identification
+            };
+            contentArea.Controls.Add(lblSettingsStatus);
+
+            // Initialize status from settings service
+            UpdateSettingsLockStatus(lblSettingsStatus);
+
+            // Store reference to status label for use in save button
+            lockCheckbox.Tag = lblSettingsStatus;
+
             var saveButton = CreateDarkSaveButton();
 
             // Add controls in correct order: Bottom first, Fill second, Top last
@@ -1917,6 +1939,33 @@ namespace Risk_Manager
             return selectedAccount?.Id ?? selectedAccount?.Name;
         }
 
+        /// <summary>
+        /// Formats a numeric value for display, using parentheses for negative values.
+        /// </summary>
+        private string FormatNumeric(double value, int decimals = 2)
+        {
+            if (value < 0)
+            {
+                return $"({Math.Abs(value).ToString($"N{decimals}")})";
+            }
+            return value.ToString($"N{decimals}");
+        }
+
+        /// <summary>
+        /// Formats a nullable decimal value for display, using parentheses for negative values.
+        /// </summary>
+        private string FormatNumeric(decimal? value, int decimals = 2)
+        {
+            if (!value.HasValue)
+                return "-";
+            
+            if (value.Value < 0)
+            {
+                return $"({Math.Abs(value.Value).ToString($"N{decimals}")})";
+            }
+            return value.Value.ToString($"N{decimals}");
+        }
+
         private Label GetTradingStatusLabel(Button button)
         {
             var contentPanel = button?.Parent;
@@ -1980,6 +2029,76 @@ namespace Risk_Manager
             {
                 // Log error but don't interrupt UI flow
                 System.Diagnostics.Debug.WriteLine($"Error updating trading status badge: {ex.Message}");
+            }
+        }
+
+        private void UpdateSettingsStatusBadge(bool isLocked)
+        {
+            try
+            {
+                if (settingsStatusBadge != null)
+                {
+                    if (isLocked)
+                    {
+                        settingsStatusBadge.Text = "  Settings Locked  ";
+                        settingsStatusBadge.BackColor = Color.Red;
+                    }
+                    else
+                    {
+                        settingsStatusBadge.Text = "  Settings Unlocked  ";
+                        settingsStatusBadge.BackColor = AccentGreen;
+                    }
+                    settingsStatusBadge.Invalidate();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't interrupt UI flow
+                System.Diagnostics.Debug.WriteLine($"Error updating settings status badge: {ex.Message}");
+            }
+        }
+
+        private void UpdateSettingsLockStatus(Label lblSettingsStatus)
+        {
+            try
+            {
+                var accountNumber = GetSelectedAccountNumber();
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    lblSettingsStatus.Text = "No Account Selected";
+                    lblSettingsStatus.ForeColor = TextGray;
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    lblSettingsStatus.Text = "Status Unknown";
+                    lblSettingsStatus.ForeColor = TextGray;
+                    return;
+                }
+
+                bool isLocked = settingsService.AreSettingsLocked(accountNumber);
+
+                if (isLocked)
+                {
+                    lblSettingsStatus.Text = "Settings Locked";
+                    lblSettingsStatus.ForeColor = Color.Red;
+                }
+                else
+                {
+                    lblSettingsStatus.Text = "Settings Unlocked";
+                    lblSettingsStatus.ForeColor = AccentGreen;
+                }
+
+                // Update top badge as well
+                UpdateSettingsStatusBadge(isLocked);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating settings lock status: {ex.Message}");
+                lblSettingsStatus.Text = "Status Error";
+                lblSettingsStatus.ForeColor = TextGray;
             }
         }
 
@@ -2232,6 +2351,12 @@ namespace Risk_Manager
                     if (settingsLockCheckBox != null)
                     {
                         service.SetSettingsLock(accountNumber, settingsLockCheckBox.Checked);
+                        
+                        // Update the status label if it exists
+                        if (settingsLockCheckBox.Tag is Label statusLabel)
+                        {
+                            UpdateSettingsLockStatus(statusLabel);
+                        }
                     }
                     
                     MessageBox.Show(
