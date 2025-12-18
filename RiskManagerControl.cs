@@ -1785,13 +1785,14 @@ namespace Risk_Manager
         {
             try
             {
-                // Get the sound from embedded resources
-                var soundStream = Properties.Resources.dark_impact;
-                if (soundStream != null)
+                // Get the sound stream from embedded resources
+                var audioStream = Properties.Resources.dark_impact;
+                if (audioStream != null)
                 {
-                    using (var soundPlayer = new SoundPlayer(soundStream))
+                    using (var soundPlayer = new SoundPlayer(audioStream))
                     {
-                        soundPlayer.Play();
+                        // Use PlaySync to ensure sound completes before disposal
+                        soundPlayer.PlaySync();
                     }
                 }
             }
