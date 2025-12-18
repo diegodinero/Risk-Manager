@@ -1789,11 +1789,9 @@ namespace Risk_Manager
                 var audioStream = Properties.Resources.dark_impact;
                 if (audioStream != null)
                 {
-                    using (var soundPlayer = new SoundPlayer(audioStream))
-                    {
-                        // Use PlaySync to ensure sound completes before disposal
-                        soundPlayer.PlaySync();
-                    }
+                    var soundPlayer = new SoundPlayer(audioStream);
+                    // Play asynchronously - sound plays in background without blocking
+                    soundPlayer.Play();
                 }
             }
             catch (Exception ex)
