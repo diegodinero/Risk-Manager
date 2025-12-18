@@ -1905,6 +1905,10 @@ namespace Risk_Manager
             }
         }
 
+        /// <summary>
+        /// Gets the account number for the currently selected account.
+        /// Falls back to Name if Id is not available for compatibility with different account types.
+        /// </summary>
         private string GetSelectedAccountNumber()
         {
             return selectedAccount?.Id ?? selectedAccount?.Name;
