@@ -1819,8 +1819,19 @@ namespace Risk_Manager
         /// </remarks>
         public void FlattenAllTrades()
         {
-            // Placeholder for logic implementation
-            // TODO: Implement trade flattening logic
+            try
+            {
+                var core = Core.Instance;
+                if (core != null)
+                {
+                    core.AdvancedTradingOperations.Flatten();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"FlattenAllTrades error: {ex.Message}");
+                MessageBox.Show($"Error flattening trades: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private Control CreateAutoLockPanel()
