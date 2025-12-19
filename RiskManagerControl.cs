@@ -2203,18 +2203,62 @@ namespace Risk_Manager
 
         /// <summary>
         /// Gets the account number for the currently selected account.
-        /// Falls back to Name if Id is not available for compatibility with different account types.
+        /// Creates a unique identifier using multiple properties to handle cases where Id/Name are the same.
         /// </summary>
         private string GetSelectedAccountNumber()
         {
-            var accountId = selectedAccount?.Id;
-            var accountName = selectedAccount?.Name;
-            var result = accountId ?? accountName;
+            if (selectedAccount == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is NULL");
+                return null;
+            }
             
-            // Debug logging to track account number retrieval
-            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount={(selectedAccount == null ? "NULL" : "not null")}, Id='{accountId}', Name='{accountName}', Result='{result}'");
+            var accountId = selectedAccount.Id;
+            var accountName = selectedAccount.Name;
+            var connectionName = selectedAccount.Connection?.Name;
             
-            return result;
+            // If Id is unique (not null/empty), use it
+            if (!string.IsNullOrEmpty(accountId))
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Id='{accountId}'");
+                return accountId;
+            }
+            
+            // If Name is unique and available, use it  
+            if (!string.IsNullOrEmpty(accountName))
+            {
+                // Since multiple accounts may have the same Name, append connection name for uniqueness
+                if (!string.IsNullOrEmpty(connectionName))
+                {
+                    var uniqueId = $"{accountName}_{connectionName}";
+                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Name+Connection='{uniqueId}' (Name='{accountName}', Connection='{connectionName}')");
+                    return uniqueId;
+                }
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Name='{accountName}'");
+                return accountName;
+            }
+            
+            // Last resort: use connection name if available
+            if (!string.IsNullOrEmpty(connectionName))
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection='{connectionName}'");
+                return connectionName;
+            }
+            
+            // If all else fails, try to find the account index in the dropdown
+            if (accountSelector != null)
+            {
+                int index = accountSelector.Items.IndexOf(selectedAccount);
+                if (index >= 0)
+                {
+                    var indexBasedId = $"Account_{index}";
+                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using index-based ID='{indexBasedId}'");
+                    return indexBasedId;
+                }
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Could not generate unique ID, returning 'UNKNOWN'");
+            return "UNKNOWN";
         }
 
         /// <summary>
