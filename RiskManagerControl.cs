@@ -853,6 +853,8 @@ namespace Risk_Manager
                     return;
                 }
 
+                // Track account index for generating unique identifiers
+                int accountIndex = 0;
                 foreach (var account in core.Accounts)
                 {
                     if (account == null) continue;
@@ -951,24 +953,30 @@ namespace Risk_Manager
 
                     var status = account.Connection == null ? "Disconnected" : account.Connection.State.ToString();
 
-                    // Get lock status from settings service
+                    // Generate unique account identifier using same logic as GetSelectedAccountNumber()
+                    // This ensures we look up settings using the same key that was used to save them
+                    var uniqueAccountId = GetUniqueAccountIdentifier(account, accountIndex);
+
+                    // Get lock status and limits from settings service
                     var settingsService = RiskManagerSettingsService.Instance;
                     var lockStatus = "Unlocked";
                     decimal? lossLimit = null;
                     decimal? profitTarget = null;
                     if (settingsService.IsInitialized)
                     {
-                        var isLocked = settingsService.IsTradingLocked(accountId);
+                        var isLocked = settingsService.IsTradingLocked(uniqueAccountId);
                         lockStatus = isLocked ? "Locked" : "Unlocked";
 
-                        // Get loss limit and profit target from settings
-                        var settings = settingsService.GetSettings(accountId);
+                        // Get loss limit and profit target from settings using unique identifier
+                        var settings = settingsService.GetSettings(uniqueAccountId);
                         if (settings != null)
                         {
                             lossLimit = settings.DailyLossLimit;
                             profitTarget = settings.DailyProfitTarget;
                         }
                     }
+
+                    accountIndex++;
 
                     // Calculate Drawdown as Equity - Trailing Drawdown
                     var drawdown = equity - trailingDrawdown;
@@ -2283,6 +2291,68 @@ namespace Risk_Manager
             }
             
             System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Could not generate unique ID, returning 'UNKNOWN'");
+            return "UNKNOWN";
+        }
+
+        /// <summary>
+        /// Gets a unique identifier for any account object using the same logic as GetSelectedAccountNumber.
+        /// This ensures consistency when saving and loading settings for the same account.
+        /// </summary>
+        /// <param name="account">The account to generate an identifier for</param>
+        /// <param name="accountIndex">The index of the account in the accounts list</param>
+        /// <returns>A unique identifier string for the account</returns>
+        private string GetUniqueAccountIdentifier(object account, int accountIndex)
+        {
+            if (account == null)
+                return $"Account_{accountIndex}";
+            
+            // Get account properties using reflection-like access
+            var accountType = account.GetType();
+            var idProperty = accountType.GetProperty("Id");
+            var nameProperty = accountType.GetProperty("Name");
+            var connectionProperty = accountType.GetProperty("Connection");
+            
+            var accountId = idProperty?.GetValue(account) as string;
+            var accountName = nameProperty?.GetValue(account) as string;
+            string connectionName = null;
+            
+            if (connectionProperty != null)
+            {
+                var connection = connectionProperty.GetValue(account);
+                if (connection != null)
+                {
+                    var connNameProperty = connection.GetType().GetProperty("Name");
+                    connectionName = connNameProperty?.GetValue(connection) as string;
+                }
+            }
+            
+            // Use same logic as GetSelectedAccountNumber()
+            // Strategy 1: Connection.Name + Name (most unique)
+            if (!string.IsNullOrEmpty(connectionName))
+            {
+                if (!string.IsNullOrEmpty(accountName))
+                    return $"{connectionName}_{accountName}";
+                if (!string.IsNullOrEmpty(accountId))
+                    return $"{connectionName}_{accountId}";
+                return connectionName;
+            }
+            
+            // Strategy 2: Index-based (reliable fallback)
+            if (accountIndex >= 0)
+            {
+                if (!string.IsNullOrEmpty(accountName))
+                    return $"Account_{accountIndex}_{accountName}";
+                if (!string.IsNullOrEmpty(accountId))
+                    return $"Account_{accountIndex}_{accountId}";
+                return $"Account_{accountIndex}";
+            }
+            
+            // Strategy 3: Fallback to Id or Name alone
+            if (!string.IsNullOrEmpty(accountId))
+                return accountId;
+            if (!string.IsNullOrEmpty(accountName))
+                return accountName;
+            
             return "UNKNOWN";
         }
 
