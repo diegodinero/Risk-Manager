@@ -20,6 +20,8 @@ namespace Risk_Manager
         private DataGridView statsGrid;
         private System.Windows.Forms.Timer statsRefreshTimer;
         private Account selectedAccount;
+        private int selectedAccountIndex = -1; // Track the index of selected account
+        private string displayedAccountNumber; // Cache the account number shown in UI
         private DataGridView statsDetailGrid;
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
         private DataGridView typeSummaryGrid;
@@ -29,6 +31,7 @@ namespace Risk_Manager
         private Label settingsStatusBadge;
         private Label tradingStatusBadge;
         private ComboBox accountSelector;
+        private Label accountNumberDisplay; // Display current account number in UI
 
         // Settings input control references for persistence
         private TextBox dailyLossLimitInput;
@@ -42,7 +45,31 @@ namespace Risk_Manager
         private CheckBox symbolContractLimitsEnabled;
         private CheckBox tradingLockCheckBox;
         private CheckBox settingsLockCheckBox;
+        
+        // Weekly limits
+        private TextBox weeklyLossLimitInput;
+        private CheckBox weeklyLossLimitEnabled;
+        private TextBox weeklyProfitTargetInput;
+        private CheckBox weeklyProfitTargetEnabled;
+        
+        // Position limits
+        private TextBox positionLossLimitInput;
+        private CheckBox positionLossLimitEnabled;
+        private TextBox positionProfitTargetInput;
+        private CheckBox positionProfitTargetEnabled;
+        
+        // Allowed trading times
+        private List<CheckBox> tradingTimeCheckboxes = new();
+        
+        // Feature toggle master switch
+        private CheckBox featureToggleEnabledCheckbox;
+        
         private SoundPlayer alertSoundPlayer;
+
+        // Default values for settings
+        private const decimal DEFAULT_WEEKLY_LOSS_LIMIT = 1000m;
+        private const decimal DEFAULT_WEEKLY_PROFIT_TARGET = 2000m;
+        private const int DEFAULT_CONTRACT_LIMIT = 10;
 
         // Dark theme colors
         private static readonly Color DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
@@ -152,6 +179,7 @@ namespace Risk_Manager
 
             // Preserve current selection if it still exists
             var currentSelection = accountSelector.SelectedItem as Account;
+            var currentIndex = accountSelector.SelectedIndex;
 
             // Check if the accounts list has actually changed before refreshing
             bool needsUpdate = false;
@@ -196,18 +224,34 @@ namespace Risk_Manager
             if (currentSelection != null && accountSelector.Items.Contains(currentSelection))
             {
                 accountSelector.SelectedItem = currentSelection;
+                selectedAccountIndex = accountSelector.SelectedIndex; // Update stored index
             }
             else if (accountSelector.Items.Count > 0)
             {
                 accountSelector.SelectedIndex = 0;
+                selectedAccountIndex = 0; // Update stored index
             }
             else
             {
                 accountSelector.SelectedIndex = -1;
+                selectedAccountIndex = -1; // Update stored index
             }
 
             // Re-enable event handling
             accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
+            
+            // If we just selected the first account and there was no previous selection,
+            // manually trigger LoadAccountSettings since the event might not fire
+            if (currentSelection == null && accountSelector.Items.Count > 0 && accountSelector.SelectedIndex == 0)
+            {
+                if (accountSelector.SelectedItem is Account account)
+                {
+                    selectedAccount = account;
+                    selectedAccountIndex = 0; // Ensure index is set
+                    UpdateAccountNumberDisplay(); // Update display
+                    LoadAccountSettings();
+                }
+            }
         }
 
         private void AccountSelectorOnSelectedIndexChanged(object sender, EventArgs e)
@@ -215,10 +259,189 @@ namespace Risk_Manager
             if (accountSelector.SelectedItem is Account account)
             {
                 selectedAccount = account;
+                selectedAccountIndex = accountSelector.SelectedIndex; // Store the index
+                
+                // Debug logging to help identify account selection issues
+                var accountId = account.Id ?? "NULL";
+                var accountName = account.Name ?? "NULL";
+                System.Diagnostics.Debug.WriteLine($"Account selected at index {selectedAccountIndex}: Id='{accountId}', Name='{accountName}'");
+                
+                // Update the account number display
+                UpdateAccountNumberDisplay();
+                
                 // Refresh Stats tab if visible
                 if (statsDetailGrid != null)
                     RefreshAccountStats();
+                
+                // Load settings for the selected account
+                LoadAccountSettings();
             }
+        }
+
+        /// <summary>
+        /// Loads settings for the currently selected account and updates all UI controls.
+        /// </summary>
+        private void LoadAccountSettings()
+        {
+            try
+            {
+                var accountNumber = GetSelectedAccountNumber();
+                
+                // Debug logging
+                System.Diagnostics.Debug.WriteLine($"LoadAccountSettings called for account: '{accountNumber}'");
+                
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    System.Diagnostics.Debug.WriteLine("LoadAccountSettings: No account selected, clearing inputs");
+                    ClearSettingsInputs();
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    System.Diagnostics.Debug.WriteLine("LoadAccountSettings: Settings service not initialized");
+                    return;
+                }
+
+                var settings = settingsService.GetSettings(accountNumber);
+                
+                // If no settings exist yet, use defaults
+                if (settings == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"LoadAccountSettings: No settings found for account '{accountNumber}', using defaults");
+                    // Clear all inputs to defaults
+                    ClearSettingsInputs();
+                    return;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"LoadAccountSettings: Loading settings for account '{accountNumber}'");
+
+                // Load Feature Toggle Enabled
+                if (featureToggleEnabledCheckbox != null)
+                {
+                    featureToggleEnabledCheckbox.Checked = settings.FeatureToggleEnabled;
+                }
+
+                // Load Daily Limits
+                if (dailyLossLimitEnabled != null && dailyLossLimitInput != null)
+                {
+                    dailyLossLimitEnabled.Checked = settings.DailyLossLimit.HasValue;
+                    dailyLossLimitInput.Text = settings.DailyLossLimit?.ToString() ?? "0";
+                }
+
+                if (dailyProfitTargetEnabled != null && dailyProfitTargetInput != null)
+                {
+                    dailyProfitTargetEnabled.Checked = settings.DailyProfitTarget.HasValue;
+                    dailyProfitTargetInput.Text = settings.DailyProfitTarget?.ToString() ?? "0";
+                }
+
+                // Load Position Limits
+                if (positionLossLimitEnabled != null && positionLossLimitInput != null)
+                {
+                    positionLossLimitEnabled.Checked = settings.PositionLossLimit.HasValue;
+                    positionLossLimitInput.Text = settings.PositionLossLimit?.ToString() ?? "0";
+                }
+
+                if (positionProfitTargetEnabled != null && positionProfitTargetInput != null)
+                {
+                    positionProfitTargetEnabled.Checked = settings.PositionProfitTarget.HasValue;
+                    positionProfitTargetInput.Text = settings.PositionProfitTarget?.ToString() ?? "0";
+                }
+
+                // Load Weekly Limits
+                if (weeklyLossLimitEnabled != null && weeklyLossLimitInput != null)
+                {
+                    weeklyLossLimitEnabled.Checked = settings.WeeklyLossLimit.HasValue;
+                    weeklyLossLimitInput.Text = settings.WeeklyLossLimit?.ToString() ?? DEFAULT_WEEKLY_LOSS_LIMIT.ToString();
+                }
+
+                if (weeklyProfitTargetEnabled != null && weeklyProfitTargetInput != null)
+                {
+                    weeklyProfitTargetEnabled.Checked = settings.WeeklyProfitTarget.HasValue;
+                    weeklyProfitTargetInput.Text = settings.WeeklyProfitTarget?.ToString() ?? DEFAULT_WEEKLY_PROFIT_TARGET.ToString();
+                }
+
+                // Load Symbol Blacklist
+                if (blockedSymbolsEnabled != null && blockedSymbolsInput != null)
+                {
+                    blockedSymbolsEnabled.Checked = settings.BlockedSymbols != null && settings.BlockedSymbols.Any();
+                    blockedSymbolsInput.Text = settings.BlockedSymbols != null ? string.Join(", ", settings.BlockedSymbols) : "";
+                }
+
+                // Load Contract Limits
+                if (symbolContractLimitsEnabled != null && defaultContractLimitInput != null)
+                {
+                    symbolContractLimitsEnabled.Checked = settings.DefaultContractLimit.HasValue || 
+                                                          (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any());
+                    defaultContractLimitInput.Text = settings.DefaultContractLimit?.ToString() ?? DEFAULT_CONTRACT_LIMIT.ToString();
+                }
+
+                if (symbolContractLimitsInput != null && settings.SymbolContractLimits != null)
+                {
+                    var limitEntries = settings.SymbolContractLimits
+                        .Select(kvp => $"{kvp.Key}:{kvp.Value}");
+                    symbolContractLimitsInput.Text = string.Join(", ", limitEntries);
+                }
+
+                // Load Locks
+                if (tradingLockCheckBox != null)
+                {
+                    tradingLockCheckBox.Checked = settings.TradingLock?.IsLocked ?? false;
+                }
+
+                if (settingsLockCheckBox != null)
+                {
+                    settingsLockCheckBox.Checked = settings.SettingsLock?.IsLocked ?? false;
+                }
+
+                // Update status displays
+                UpdateTradingStatusBadge();
+                if (settingsLockCheckBox?.Tag is Label statusLabel)
+                {
+                    UpdateSettingsLockStatus(statusLabel);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading account settings: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Clears all settings inputs to default values.
+        /// </summary>
+        private void ClearSettingsInputs()
+        {
+            if (dailyLossLimitEnabled != null) dailyLossLimitEnabled.Checked = false;
+            if (dailyLossLimitInput != null) dailyLossLimitInput.Text = "0";
+            
+            if (dailyProfitTargetEnabled != null) dailyProfitTargetEnabled.Checked = false;
+            if (dailyProfitTargetInput != null) dailyProfitTargetInput.Text = "0";
+            
+            if (positionLossLimitEnabled != null) positionLossLimitEnabled.Checked = false;
+            if (positionLossLimitInput != null) positionLossLimitInput.Text = "0";
+            
+            if (positionProfitTargetEnabled != null) positionProfitTargetEnabled.Checked = false;
+            if (positionProfitTargetInput != null) positionProfitTargetInput.Text = "0";
+            
+            if (weeklyLossLimitEnabled != null) weeklyLossLimitEnabled.Checked = false;
+            if (weeklyLossLimitInput != null) weeklyLossLimitInput.Text = DEFAULT_WEEKLY_LOSS_LIMIT.ToString();
+            
+            if (weeklyProfitTargetEnabled != null) weeklyProfitTargetEnabled.Checked = false;
+            if (weeklyProfitTargetInput != null) weeklyProfitTargetInput.Text = DEFAULT_WEEKLY_PROFIT_TARGET.ToString();
+            
+            if (blockedSymbolsEnabled != null) blockedSymbolsEnabled.Checked = false;
+            if (blockedSymbolsInput != null) blockedSymbolsInput.Text = "";
+            
+            if (symbolContractLimitsEnabled != null) symbolContractLimitsEnabled.Checked = false;
+            if (defaultContractLimitInput != null) defaultContractLimitInput.Text = DEFAULT_CONTRACT_LIMIT.ToString();
+            if (symbolContractLimitsInput != null) symbolContractLimitsInput.Text = "";
+            
+            if (tradingLockCheckBox != null) tradingLockCheckBox.Checked = false;
+            if (settingsLockCheckBox != null) settingsLockCheckBox.Checked = false;
+            
+            if (featureToggleEnabledCheckbox != null) featureToggleEnabledCheckbox.Checked = true;
         }
 
         private Panel CreateTopPanel()
@@ -630,6 +853,8 @@ namespace Risk_Manager
                     return;
                 }
 
+                // Track account index for generating unique identifiers
+                int accountIndex = 0;
                 foreach (var account in core.Accounts)
                 {
                     if (account == null) continue;
@@ -728,24 +953,30 @@ namespace Risk_Manager
 
                     var status = account.Connection == null ? "Disconnected" : account.Connection.State.ToString();
 
-                    // Get lock status from settings service
+                    // Generate unique account identifier using same logic as GetSelectedAccountNumber()
+                    // This ensures we look up settings using the same key that was used to save them
+                    var uniqueAccountId = GetUniqueAccountIdentifier(account, accountIndex);
+
+                    // Get lock status and limits from settings service
                     var settingsService = RiskManagerSettingsService.Instance;
                     var lockStatus = "Unlocked";
                     decimal? lossLimit = null;
                     decimal? profitTarget = null;
                     if (settingsService.IsInitialized)
                     {
-                        var isLocked = settingsService.IsTradingLocked(accountId);
+                        var isLocked = settingsService.IsTradingLocked(uniqueAccountId);
                         lockStatus = isLocked ? "Locked" : "Unlocked";
 
-                        // Get loss limit and profit target from settings
-                        var settings = settingsService.GetSettings(accountId);
+                        // Get loss limit and profit target from settings using unique identifier
+                        var settings = settingsService.GetSettings(uniqueAccountId);
                         if (settings != null)
                         {
                             lossLimit = settings.DailyLossLimit;
                             profitTarget = settings.DailyProfitTarget;
                         }
                     }
+
+                    accountIndex++;
 
                     // Calculate Drawdown as Equity - Trailing Drawdown
                     var drawdown = equity - trailingDrawdown;
@@ -1993,11 +2224,136 @@ namespace Risk_Manager
 
         /// <summary>
         /// Gets the account number for the currently selected account.
-        /// Falls back to Name if Id is not available for compatibility with different account types.
+        /// Creates a unique identifier using multiple properties to handle cases where Id/Name are the same.
         /// </summary>
         private string GetSelectedAccountNumber()
         {
-            return selectedAccount?.Id ?? selectedAccount?.Name;
+            if (selectedAccount == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is NULL");
+                return null;
+            }
+            
+            var accountId = selectedAccount.Id;
+            var accountName = selectedAccount.Name;
+            var connectionName = selectedAccount.Connection?.Name;
+            
+            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: accountId='{accountId}', accountName='{accountName}', connectionName='{connectionName}', index={selectedAccountIndex}");
+            
+            // Strategy 1: Use Connection.Name + Name for best uniqueness
+            // Connection names are usually unique per connection/account
+            if (!string.IsNullOrEmpty(connectionName))
+            {
+                if (!string.IsNullOrEmpty(accountName))
+                {
+                    var uniqueId = $"{connectionName}_{accountName}";
+                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection+Name='{uniqueId}'");
+                    return uniqueId;
+                }
+                if (!string.IsNullOrEmpty(accountId))
+                {
+                    var uniqueId = $"{connectionName}_{accountId}";
+                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection+Id='{uniqueId}'");
+                    return uniqueId;
+                }
+                // Connection name alone
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection='{connectionName}'");
+                return connectionName;
+            }
+            
+            // Strategy 2: Use the stored index from dropdown (most reliable when Connection is not available)
+            if (selectedAccountIndex >= 0)
+            {
+                // Create identifier with index and any available property
+                string indexBasedId;
+                if (!string.IsNullOrEmpty(accountName))
+                    indexBasedId = $"Account_{selectedAccountIndex}_{accountName}";
+                else if (!string.IsNullOrEmpty(accountId))
+                    indexBasedId = $"Account_{selectedAccountIndex}_{accountId}";
+                else
+                    indexBasedId = $"Account_{selectedAccountIndex}";
+                
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using stored index-based ID='{indexBasedId}'");
+                return indexBasedId;
+            }
+            
+            // Strategy 3: Fallback to Id or Name alone (least reliable)
+            if (!string.IsNullOrEmpty(accountId))
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Fallback to Id='{accountId}'");
+                return accountId;
+            }
+            
+            if (!string.IsNullOrEmpty(accountName))
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Fallback to Name='{accountName}'");
+                return accountName;
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Could not generate unique ID, returning 'UNKNOWN'");
+            return "UNKNOWN";
+        }
+
+        /// <summary>
+        /// Gets a unique identifier for any account object using the same logic as GetSelectedAccountNumber.
+        /// This ensures consistency when saving and loading settings for the same account.
+        /// </summary>
+        /// <param name="account">The account to generate an identifier for</param>
+        /// <param name="accountIndex">The index of the account in the accounts list</param>
+        /// <returns>A unique identifier string for the account</returns>
+        private string GetUniqueAccountIdentifier(object account, int accountIndex)
+        {
+            if (account == null)
+                return $"Account_{accountIndex}";
+            
+            // Get account properties using reflection-like access
+            var accountType = account.GetType();
+            var idProperty = accountType.GetProperty("Id");
+            var nameProperty = accountType.GetProperty("Name");
+            var connectionProperty = accountType.GetProperty("Connection");
+            
+            var accountId = idProperty?.GetValue(account) as string;
+            var accountName = nameProperty?.GetValue(account) as string;
+            string connectionName = null;
+            
+            if (connectionProperty != null)
+            {
+                var connection = connectionProperty.GetValue(account);
+                if (connection != null)
+                {
+                    var connNameProperty = connection.GetType().GetProperty("Name");
+                    connectionName = connNameProperty?.GetValue(connection) as string;
+                }
+            }
+            
+            // Use same logic as GetSelectedAccountNumber()
+            // Strategy 1: Connection.Name + Name (most unique)
+            if (!string.IsNullOrEmpty(connectionName))
+            {
+                if (!string.IsNullOrEmpty(accountName))
+                    return $"{connectionName}_{accountName}";
+                if (!string.IsNullOrEmpty(accountId))
+                    return $"{connectionName}_{accountId}";
+                return connectionName;
+            }
+            
+            // Strategy 2: Index-based (reliable fallback)
+            if (accountIndex >= 0)
+            {
+                if (!string.IsNullOrEmpty(accountName))
+                    return $"Account_{accountIndex}_{accountName}";
+                if (!string.IsNullOrEmpty(accountId))
+                    return $"Account_{accountIndex}_{accountId}";
+                return $"Account_{accountIndex}";
+            }
+            
+            // Strategy 3: Fallback to Id or Name alone
+            if (!string.IsNullOrEmpty(accountId))
+                return accountId;
+            if (!string.IsNullOrEmpty(accountName))
+                return accountName;
+            
+            return "UNKNOWN";
         }
 
         /// <summary>
@@ -2163,6 +2519,38 @@ namespace Risk_Manager
             }
         }
 
+        private void UpdateAccountNumberDisplay()
+        {
+            try
+            {
+                if (accountNumberDisplay == null)
+                    return;
+                
+                var accountNumber = GetSelectedAccountNumber();
+                
+                // Cache the account number so save operation uses exactly what's displayed
+                displayedAccountNumber = accountNumber;
+                
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    accountNumberDisplay.Text = "Account: Not Selected";
+                    accountNumberDisplay.ForeColor = Color.Orange;
+                }
+                else
+                {
+                    accountNumberDisplay.Text = $"Account: {accountNumber}";
+                    accountNumberDisplay.ForeColor = AccentBlue;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"UpdateAccountNumberDisplay: Displaying and caching account='{accountNumber}'");
+                accountNumberDisplay.Invalidate();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating account number display: {ex.Message}");
+            }
+        }
+
         private void EmergencyFlattenButton_Click(object sender, EventArgs e)
         {
             FlattenAllTrades();
@@ -2301,8 +2689,22 @@ namespace Risk_Manager
             {
                 try
                 {
-                    // Get account number for saving
-                    var accountNumber = selectedAccount?.Id ?? selectedAccount?.Name ?? "DEFAULT";
+                    // Use the cached account number that's displayed in the UI
+                    // This ensures we save to exactly what the user sees
+                    var accountNumber = displayedAccountNumber;
+                    
+                    // Debug logging
+                    System.Diagnostics.Debug.WriteLine($"Save button clicked for account: '{accountNumber}' (using displayed value)");
+                    
+                    if (string.IsNullOrEmpty(accountNumber))
+                    {
+                        MessageBox.Show(
+                            "Please select an account first.",
+                            "No Account Selected", 
+                            MessageBoxButtons.OK, 
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
                     
                     // Access the settings service and create/update settings for this account
                     var service = RiskManagerSettingsService.Instance;
@@ -2334,7 +2736,19 @@ namespace Risk_Manager
                     {
                         if (decimal.TryParse(dailyLossLimitInput.Text, out var lossLimit))
                         {
+                            if (lossLimit < 0)
+                            {
+                                MessageBox.Show("Daily loss limit cannot be negative.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
                             service.UpdateDailyLossLimit(accountNumber, lossLimit);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Daily loss limit must be a valid number.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
                     else
@@ -2347,12 +2761,130 @@ namespace Risk_Manager
                     {
                         if (decimal.TryParse(dailyProfitTargetInput.Text, out var profitTarget))
                         {
+                            if (profitTarget < 0)
+                            {
+                                MessageBox.Show("Daily profit target cannot be negative.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
                             service.UpdateDailyProfitTarget(accountNumber, profitTarget);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Daily profit target must be a valid number.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
                     else
                     {
                         service.UpdateDailyProfitTarget(accountNumber, null);
+                    }
+
+                    // Save Position Loss Limit
+                    if (positionLossLimitEnabled?.Checked == true && positionLossLimitInput != null)
+                    {
+                        if (decimal.TryParse(positionLossLimitInput.Text, out var posLossLimit))
+                        {
+                            if (posLossLimit < 0)
+                            {
+                                MessageBox.Show("Position loss limit cannot be negative.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                            service.UpdatePositionLossLimit(accountNumber, posLossLimit);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Position loss limit must be a valid number.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        service.UpdatePositionLossLimit(accountNumber, null);
+                    }
+
+                    // Save Position Profit Target
+                    if (positionProfitTargetEnabled?.Checked == true && positionProfitTargetInput != null)
+                    {
+                        if (decimal.TryParse(positionProfitTargetInput.Text, out var posProfitTarget))
+                        {
+                            if (posProfitTarget < 0)
+                            {
+                                MessageBox.Show("Position profit target cannot be negative.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                            service.UpdatePositionProfitTarget(accountNumber, posProfitTarget);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Position profit target must be a valid number.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        service.UpdatePositionProfitTarget(accountNumber, null);
+                    }
+
+                    // Save Weekly Loss Limit
+                    if (weeklyLossLimitEnabled?.Checked == true && weeklyLossLimitInput != null)
+                    {
+                        if (decimal.TryParse(weeklyLossLimitInput.Text, out var weeklyLossLimit))
+                        {
+                            if (weeklyLossLimit < 0)
+                            {
+                                MessageBox.Show("Weekly loss limit cannot be negative.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                            service.UpdateWeeklyLossLimit(accountNumber, weeklyLossLimit);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Weekly loss limit must be a valid number.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        service.UpdateWeeklyLossLimit(accountNumber, null);
+                    }
+
+                    // Save Weekly Profit Target
+                    if (weeklyProfitTargetEnabled?.Checked == true && weeklyProfitTargetInput != null)
+                    {
+                        if (decimal.TryParse(weeklyProfitTargetInput.Text, out var weeklyProfitTarget))
+                        {
+                            if (weeklyProfitTarget < 0)
+                            {
+                                MessageBox.Show("Weekly profit target cannot be negative.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                            service.UpdateWeeklyProfitTarget(accountNumber, weeklyProfitTarget);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Weekly profit target must be a valid number.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        service.UpdateWeeklyProfitTarget(accountNumber, null);
+                    }
+
+                    // Save Feature Toggle Enabled
+                    if (featureToggleEnabledCheckbox != null)
+                    {
+                        service.UpdateFeatureToggleEnabled(accountNumber, featureToggleEnabledCheckbox.Checked);
                     }
 
                     // Save Blocked Symbols
@@ -2374,7 +2906,19 @@ namespace Risk_Manager
                     {
                         if (int.TryParse(defaultContractLimitInput.Text, out var defaultLimit))
                         {
+                            if (defaultLimit <= 0)
+                            {
+                                MessageBox.Show("Default contract limit must be a positive number.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
                             service.UpdateDefaultContractLimit(accountNumber, defaultLimit);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Default contract limit must be a valid integer.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
                     else
@@ -2390,10 +2934,36 @@ namespace Risk_Manager
                         foreach (var entry in entries)
                         {
                             var parts = entry.Split(':');
-                            if (parts.Length == 2 && int.TryParse(parts[1].Trim(), out var limit))
+                            if (parts.Length != 2)
                             {
-                                limits[parts[0].Trim()] = limit;
+                                MessageBox.Show($"Invalid format for symbol contract limit: '{entry.Trim()}'. Expected format: 'SYMBOL:LIMIT'", 
+                                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
                             }
+                            
+                            var symbol = parts[0].Trim();
+                            if (string.IsNullOrEmpty(symbol))
+                            {
+                                MessageBox.Show("Symbol name cannot be empty in contract limits.", 
+                                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                            
+                            if (!int.TryParse(parts[1].Trim(), out var limit))
+                            {
+                                MessageBox.Show($"Invalid contract limit value for symbol '{symbol}': '{parts[1].Trim()}'. Must be a valid integer.", 
+                                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                            
+                            if (limit <= 0)
+                            {
+                                MessageBox.Show($"Contract limit for symbol '{symbol}' must be a positive number.", 
+                                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                            
+                            limits[symbol] = limit;
                         }
                         service.SetSymbolContractLimits(accountNumber, limits);
                     }
@@ -2486,8 +3056,9 @@ namespace Risk_Manager
                 "Weekly Profit Target"
             };
 
-            foreach (var feature in features)
+            for (int i = 0; i < features.Length; i++)
             {
+                var feature = features[i];
                 var checkbox = new CheckBox
                 {
                     Text = feature,
@@ -2499,6 +3070,12 @@ namespace Risk_Manager
                     Margin = new Padding(0, 8, 0, 8)
                 };
                 contentArea.Controls.Add(checkbox);
+                
+                // Store reference to the master toggle checkbox
+                if (i == 0 && feature == "Enable All Features")
+                {
+                    featureToggleEnabledCheckbox = checkbox;
+                }
             }
 
             var saveButton = CreateDarkSaveButton();
@@ -2552,11 +3129,13 @@ namespace Risk_Manager
             };
 
             // Position Loss Limit section
-            var lossSection = CreatePositionSection("Position Loss Limit", "USD per position:", 10);
+            var lossSection = CreatePositionSection("Position Loss Limit", "USD per position:", 10, 
+                out positionLossLimitEnabled, out positionLossLimitInput);
             contentArea.Controls.Add(lossSection);
 
             // Position Profit Target section
-            var profitSection = CreatePositionSection("Position Profit Target", "USD per position:", 120);
+            var profitSection = CreatePositionSection("Position Profit Target", "USD per position:", 120,
+                out positionProfitTargetEnabled, out positionProfitTargetInput);
             contentArea.Controls.Add(profitSection);
 
             var saveButton = CreateDarkSaveButton();
@@ -2573,7 +3152,8 @@ namespace Risk_Manager
         /// <summary>
         /// Helper method to create a position section with toggle and USD input.
         /// </summary>
-        private Panel CreatePositionSection(string sectionTitle, string inputLabel, int topPosition)
+        private Panel CreatePositionSection(string sectionTitle, string inputLabel, int topPosition, 
+            out CheckBox enabledCheckbox, out TextBox valueInput)
         {
             var sectionPanel = new Panel
             {
@@ -2598,6 +3178,7 @@ namespace Risk_Manager
                 BackColor = CardBackground
             };
             sectionPanel.Controls.Add(sectionHeader);
+            enabledCheckbox = sectionHeader;
 
             // Input label
             var label = new Label
@@ -2628,6 +3209,7 @@ namespace Risk_Manager
                 Text = "0"
             };
             sectionPanel.Controls.Add(input);
+            valueInput = input;
 
             return sectionPanel;
         }
@@ -2661,6 +3243,24 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display - shows which account settings will be saved to
+            accountNumberDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = AccentBlue,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            
+            // Update the display with current account
+            UpdateAccountNumberDisplay();
+
             // Content area
             var contentArea = new Panel
             {
@@ -2683,6 +3283,7 @@ namespace Risk_Manager
             // Add controls in correct order: Bottom first, Fill second, Top last
             mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(accountNumberDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(titleLabel);
 
@@ -2991,7 +3592,7 @@ namespace Risk_Manager
                 BackColor = DarkerBackground,
                 ForeColor = TextWhite,
                 BorderStyle = BorderStyle.FixedSingle,
-                Text = "10"
+                Text = DEFAULT_CONTRACT_LIMIT.ToString()
             };
             sectionPanel.Controls.Add(defaultInput);
             defaultLimitInput = defaultInput;
@@ -3134,6 +3735,7 @@ namespace Risk_Manager
                 AutoSize = false
             };
             contentArea.Controls.Add(enableCheckbox);
+            weeklyLossLimitEnabled = enableCheckbox;
 
             // USD per week label and textbox
             var usdLabel = new Label
@@ -3156,13 +3758,14 @@ namespace Risk_Manager
                 Top = 40,
                 Width = 150,
                 Height = 24,
-                Text = "1000",
+                Text = DEFAULT_WEEKLY_LOSS_LIMIT.ToString(),
                 Font = new Font("Segoe UI", 9),
                 BackColor = CardBackground,
                 ForeColor = TextWhite,
                 BorderStyle = BorderStyle.FixedSingle
             };
             contentArea.Controls.Add(usdInput);
+            weeklyLossLimitInput = usdInput;
 
             var saveButton = CreateDarkSaveButton();
 
@@ -3228,6 +3831,7 @@ namespace Risk_Manager
                 AutoSize = false
             };
             contentArea.Controls.Add(enableCheckbox);
+            weeklyProfitTargetEnabled = enableCheckbox;
 
             // USD per week label and textbox
             var usdLabel = new Label
@@ -3250,13 +3854,14 @@ namespace Risk_Manager
                 Top = 40,
                 Width = 150,
                 Height = 24,
-                Text = "2000",
+                Text = DEFAULT_WEEKLY_PROFIT_TARGET.ToString(),
                 Font = new Font("Segoe UI", 9),
                 BackColor = CardBackground,
                 ForeColor = TextWhite,
                 BorderStyle = BorderStyle.FixedSingle
             };
             contentArea.Controls.Add(usdInput);
+            weeklyProfitTargetInput = usdInput;
 
             var saveButton = CreateDarkSaveButton();
 

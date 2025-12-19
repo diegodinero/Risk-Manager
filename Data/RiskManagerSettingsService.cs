@@ -100,6 +100,7 @@ namespace Risk_Manager.Data
             // Check cache first
             if (_cache.TryGetValue(accountNumber, out var cached) && !cached.IsExpired)
             {
+                System.Diagnostics.Debug.WriteLine($"GetSettings: Retrieved from cache for account '{accountNumber}'");
                 return cached.Settings;
             }
 
@@ -108,8 +109,13 @@ namespace Risk_Manager.Data
                 lock (_fileLock)
                 {
                     var filePath = GetSettingsFilePath(accountNumber);
+                    System.Diagnostics.Debug.WriteLine($"GetSettings: Loading settings for account '{accountNumber}' from file: {filePath}");
+                    
                     if (!File.Exists(filePath))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"GetSettings: No settings file found for account '{accountNumber}'");
                         return null;
+                    }
 
                     var json = File.ReadAllText(filePath);
                     var settings = JsonSerializer.Deserialize<AccountSettings>(json, _jsonOptions);
@@ -117,13 +123,14 @@ namespace Risk_Manager.Data
                     if (settings != null)
                     {
                         _cache[accountNumber] = new CachedAccountSettings(settings, _cacheExpiration);
+                        System.Diagnostics.Debug.WriteLine($"GetSettings: Successfully loaded settings for account '{accountNumber}'");
                     }
                     return settings;
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSettings failed: {ex}");
+                System.Diagnostics.Debug.WriteLine($"GetSettings failed for account '{accountNumber}': {ex}");
                 return null;
             }
         }
@@ -171,13 +178,19 @@ namespace Risk_Manager.Data
                     settings.UpdatedAt = DateTime.UtcNow;
                     var filePath = GetSettingsFilePath(settings.AccountNumber);
                     var json = JsonSerializer.Serialize(settings, _jsonOptions);
+                    
+                    // Debug logging
+                    System.Diagnostics.Debug.WriteLine($"Saving settings for account '{settings.AccountNumber}' to file: {filePath}");
+                    
                     File.WriteAllText(filePath, json);
                     _cache[settings.AccountNumber] = new CachedAccountSettings(settings, _cacheExpiration);
+                    
+                    System.Diagnostics.Debug.WriteLine($"Settings saved successfully for account '{settings.AccountNumber}'");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SaveSettings failed: {ex}");
+                System.Diagnostics.Debug.WriteLine($"SaveSettings failed for account '{settings?.AccountNumber}': {ex}");
             }
         }
 
@@ -187,6 +200,12 @@ namespace Risk_Manager.Data
 
         public void UpdateDailyLossLimit(string accountNumber, decimal? limit)
         {
+            // Validate that limit is not negative
+            if (limit.HasValue && limit.Value < 0)
+            {
+                throw new ArgumentException("Daily loss limit cannot be negative.", nameof(limit));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
@@ -197,6 +216,12 @@ namespace Risk_Manager.Data
 
         public void UpdateDailyProfitTarget(string accountNumber, decimal? target)
         {
+            // Validate that target is not negative
+            if (target.HasValue && target.Value < 0)
+            {
+                throw new ArgumentException("Daily profit target cannot be negative.", nameof(target));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
@@ -207,6 +232,12 @@ namespace Risk_Manager.Data
 
         public void UpdatePositionLossLimit(string accountNumber, decimal? limit)
         {
+            // Validate that limit is not negative
+            if (limit.HasValue && limit.Value < 0)
+            {
+                throw new ArgumentException("Position loss limit cannot be negative.", nameof(limit));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
@@ -217,6 +248,12 @@ namespace Risk_Manager.Data
 
         public void UpdatePositionProfitTarget(string accountNumber, decimal? target)
         {
+            // Validate that target is not negative
+            if (target.HasValue && target.Value < 0)
+            {
+                throw new ArgumentException("Position profit target cannot be negative.", nameof(target));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
@@ -227,10 +264,58 @@ namespace Risk_Manager.Data
 
         public void UpdateDefaultContractLimit(string accountNumber, int? limit)
         {
+            // Validate that limit is positive
+            if (limit.HasValue && limit.Value <= 0)
+            {
+                throw new ArgumentException("Default contract limit must be positive.", nameof(limit));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
                 settings.DefaultContractLimit = limit;
+                SaveSettings(settings);
+            }
+        }
+
+        public void UpdateWeeklyLossLimit(string accountNumber, decimal? limit)
+        {
+            // Validate that limit is not negative
+            if (limit.HasValue && limit.Value < 0)
+            {
+                throw new ArgumentException("Weekly loss limit cannot be negative.", nameof(limit));
+            }
+            
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.WeeklyLossLimit = limit;
+                SaveSettings(settings);
+            }
+        }
+
+        public void UpdateWeeklyProfitTarget(string accountNumber, decimal? target)
+        {
+            // Validate that target is not negative
+            if (target.HasValue && target.Value < 0)
+            {
+                throw new ArgumentException("Weekly profit target cannot be negative.", nameof(target));
+            }
+            
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.WeeklyProfitTarget = target;
+                SaveSettings(settings);
+            }
+        }
+
+        public void UpdateFeatureToggleEnabled(string accountNumber, bool enabled)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.FeatureToggleEnabled = enabled;
                 SaveSettings(settings);
             }
         }
@@ -272,6 +357,14 @@ namespace Risk_Manager.Data
 
         public void SetSymbolContractLimits(string accountNumber, IDictionary<string, int> symbolLimits)
         {
+            // Validate that all contract limits are positive
+            var invalidLimits = symbolLimits.Where(kvp => kvp.Value <= 0).ToList();
+            if (invalidLimits.Any())
+            {
+                var invalidSymbols = string.Join(", ", invalidLimits.Select(kvp => $"{kvp.Key}:{kvp.Value}"));
+                throw new ArgumentException($"Symbol contract limits must be positive. Invalid entries: {invalidSymbols}", nameof(symbolLimits));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
@@ -445,17 +538,35 @@ namespace Risk_Manager.Data
     public class AccountSettings
     {
         public string AccountNumber { get; set; } = string.Empty;
+        
+        // Feature Toggle Master Switch
+        public bool FeatureToggleEnabled { get; set; } = true;
+        
+        // Daily Limits
         public decimal? DailyLossLimit { get; set; }
         public decimal? DailyProfitTarget { get; set; }
+        
+        // Position Limits
         public decimal? PositionLossLimit { get; set; }
         public decimal? PositionProfitTarget { get; set; }
+        
+        // Weekly Limits
+        public decimal? WeeklyLossLimit { get; set; }
+        public decimal? WeeklyProfitTarget { get; set; }
+        
+        // Contract Limits
         public int? DefaultContractLimit { get; set; }
+        
+        // Timestamps
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
+        // Collections
         public List<string> BlockedSymbols { get; set; } = new();
         public Dictionary<string, int> SymbolContractLimits { get; set; } = new();
         public List<TradingTimeRestriction> TradingTimeRestrictions { get; set; } = new();
+        
+        // Locks
         public LockInfo? TradingLock { get; set; }
         public LockInfo? SettingsLock { get; set; }
     }
