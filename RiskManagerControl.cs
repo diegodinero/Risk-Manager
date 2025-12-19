@@ -30,6 +30,7 @@ namespace Risk_Manager
         private Label settingsStatusBadge;
         private Label tradingStatusBadge;
         private ComboBox accountSelector;
+        private Label accountNumberDisplay; // Display current account number in UI
 
         // Settings input control references for persistence
         private TextBox dailyLossLimitInput;
@@ -246,6 +247,7 @@ namespace Risk_Manager
                 {
                     selectedAccount = account;
                     selectedAccountIndex = 0; // Ensure index is set
+                    UpdateAccountNumberDisplay(); // Update display
                     LoadAccountSettings();
                 }
             }
@@ -262,6 +264,9 @@ namespace Risk_Manager
                 var accountId = account.Id ?? "NULL";
                 var accountName = account.Name ?? "NULL";
                 System.Diagnostics.Debug.WriteLine($"Account selected at index {selectedAccountIndex}: Id='{accountId}', Name='{accountName}'");
+                
+                // Update the account number display
+                UpdateAccountNumberDisplay();
                 
                 // Refresh Stats tab if visible
                 if (statsDetailGrid != null)
@@ -2443,6 +2448,33 @@ namespace Risk_Manager
             }
         }
 
+        private void UpdateAccountNumberDisplay()
+        {
+            try
+            {
+                if (accountNumberDisplay == null)
+                    return;
+                
+                var accountNumber = GetSelectedAccountNumber();
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    accountNumberDisplay.Text = "Account: Not Selected";
+                    accountNumberDisplay.ForeColor = Color.Orange;
+                }
+                else
+                {
+                    accountNumberDisplay.Text = $"Account: {accountNumber}";
+                    accountNumberDisplay.ForeColor = AccentBlue;
+                }
+                
+                accountNumberDisplay.Invalidate();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating account number display: {ex.Message}");
+            }
+        }
+
         private void EmergencyFlattenButton_Click(object sender, EventArgs e)
         {
             FlattenAllTrades();
@@ -3134,6 +3166,24 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display - shows which account settings will be saved to
+            accountNumberDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = AccentBlue,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            
+            // Update the display with current account
+            UpdateAccountNumberDisplay();
+
             // Content area
             var contentArea = new Panel
             {
@@ -3156,6 +3206,7 @@ namespace Risk_Manager
             // Add controls in correct order: Bottom first, Fill second, Top last
             mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(accountNumberDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(titleLabel);
 
