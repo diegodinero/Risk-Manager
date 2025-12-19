@@ -232,6 +232,17 @@ namespace Risk_Manager
 
             // Re-enable event handling
             accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
+            
+            // If we just selected the first account and there was no previous selection,
+            // manually trigger LoadAccountSettings since the event might not fire
+            if (currentSelection == null && accountSelector.Items.Count > 0 && accountSelector.SelectedIndex == 0)
+            {
+                if (accountSelector.SelectedItem is Account account)
+                {
+                    selectedAccount = account;
+                    LoadAccountSettings();
+                }
+            }
         }
 
         private void AccountSelectorOnSelectedIndexChanged(object sender, EventArgs e)
@@ -239,6 +250,12 @@ namespace Risk_Manager
             if (accountSelector.SelectedItem is Account account)
             {
                 selectedAccount = account;
+                
+                // Debug logging to help identify account selection issues
+                var accountId = account.Id ?? "NULL";
+                var accountName = account.Name ?? "NULL";
+                System.Diagnostics.Debug.WriteLine($"Account selected: Id='{accountId}', Name='{accountName}'");
+                
                 // Refresh Stats tab if visible
                 if (statsDetailGrid != null)
                     RefreshAccountStats();
@@ -256,14 +273,21 @@ namespace Risk_Manager
             try
             {
                 var accountNumber = GetSelectedAccountNumber();
+                
+                // Debug logging
+                System.Diagnostics.Debug.WriteLine($"LoadAccountSettings called for account: '{accountNumber}'");
+                
                 if (string.IsNullOrEmpty(accountNumber))
                 {
+                    System.Diagnostics.Debug.WriteLine("LoadAccountSettings: No account selected, clearing inputs");
+                    ClearSettingsInputs();
                     return;
                 }
 
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (!settingsService.IsInitialized)
                 {
+                    System.Diagnostics.Debug.WriteLine("LoadAccountSettings: Settings service not initialized");
                     return;
                 }
 
@@ -272,10 +296,13 @@ namespace Risk_Manager
                 // If no settings exist yet, use defaults
                 if (settings == null)
                 {
+                    System.Diagnostics.Debug.WriteLine($"LoadAccountSettings: No settings found for account '{accountNumber}', using defaults");
                     // Clear all inputs to defaults
                     ClearSettingsInputs();
                     return;
                 }
+                
+                System.Diagnostics.Debug.WriteLine($"LoadAccountSettings: Loading settings for account '{accountNumber}'");
 
                 // Load Feature Toggle Enabled
                 if (featureToggleEnabledCheckbox != null)
@@ -2486,6 +2513,10 @@ namespace Risk_Manager
                 {
                     // Get account number for saving
                     var accountNumber = GetSelectedAccountNumber();
+                    
+                    // Debug logging
+                    System.Diagnostics.Debug.WriteLine($"Save button clicked for account: '{accountNumber}'");
+                    
                     if (string.IsNullOrEmpty(accountNumber))
                     {
                         MessageBox.Show(

@@ -100,6 +100,7 @@ namespace Risk_Manager.Data
             // Check cache first
             if (_cache.TryGetValue(accountNumber, out var cached) && !cached.IsExpired)
             {
+                System.Diagnostics.Debug.WriteLine($"GetSettings: Retrieved from cache for account '{accountNumber}'");
                 return cached.Settings;
             }
 
@@ -108,8 +109,13 @@ namespace Risk_Manager.Data
                 lock (_fileLock)
                 {
                     var filePath = GetSettingsFilePath(accountNumber);
+                    System.Diagnostics.Debug.WriteLine($"GetSettings: Loading settings for account '{accountNumber}' from file: {filePath}");
+                    
                     if (!File.Exists(filePath))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"GetSettings: No settings file found for account '{accountNumber}'");
                         return null;
+                    }
 
                     var json = File.ReadAllText(filePath);
                     var settings = JsonSerializer.Deserialize<AccountSettings>(json, _jsonOptions);
@@ -117,13 +123,14 @@ namespace Risk_Manager.Data
                     if (settings != null)
                     {
                         _cache[accountNumber] = new CachedAccountSettings(settings, _cacheExpiration);
+                        System.Diagnostics.Debug.WriteLine($"GetSettings: Successfully loaded settings for account '{accountNumber}'");
                     }
                     return settings;
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSettings failed: {ex}");
+                System.Diagnostics.Debug.WriteLine($"GetSettings failed for account '{accountNumber}': {ex}");
                 return null;
             }
         }
@@ -171,13 +178,19 @@ namespace Risk_Manager.Data
                     settings.UpdatedAt = DateTime.UtcNow;
                     var filePath = GetSettingsFilePath(settings.AccountNumber);
                     var json = JsonSerializer.Serialize(settings, _jsonOptions);
+                    
+                    // Debug logging
+                    System.Diagnostics.Debug.WriteLine($"Saving settings for account '{settings.AccountNumber}' to file: {filePath}");
+                    
                     File.WriteAllText(filePath, json);
                     _cache[settings.AccountNumber] = new CachedAccountSettings(settings, _cacheExpiration);
+                    
+                    System.Diagnostics.Debug.WriteLine($"Settings saved successfully for account '{settings.AccountNumber}'");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SaveSettings failed: {ex}");
+                System.Diagnostics.Debug.WriteLine($"SaveSettings failed for account '{settings?.AccountNumber}': {ex}");
             }
         }
 
