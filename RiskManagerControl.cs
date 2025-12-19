@@ -42,6 +42,25 @@ namespace Risk_Manager
         private CheckBox symbolContractLimitsEnabled;
         private CheckBox tradingLockCheckBox;
         private CheckBox settingsLockCheckBox;
+        
+        // Weekly limits
+        private TextBox weeklyLossLimitInput;
+        private CheckBox weeklyLossLimitEnabled;
+        private TextBox weeklyProfitTargetInput;
+        private CheckBox weeklyProfitTargetEnabled;
+        
+        // Position limits
+        private TextBox positionLossLimitInput;
+        private CheckBox positionLossLimitEnabled;
+        private TextBox positionProfitTargetInput;
+        private CheckBox positionProfitTargetEnabled;
+        
+        // Allowed trading times
+        private List<CheckBox> tradingTimeCheckboxes = new();
+        
+        // Feature toggle master switch
+        private CheckBox featureToggleEnabledCheckbox;
+        
         private SoundPlayer alertSoundPlayer;
 
         // Dark theme colors
@@ -218,7 +237,166 @@ namespace Risk_Manager
                 // Refresh Stats tab if visible
                 if (statsDetailGrid != null)
                     RefreshAccountStats();
+                
+                // Load settings for the selected account
+                LoadAccountSettings();
             }
+        }
+
+        /// <summary>
+        /// Loads settings for the currently selected account and updates all UI controls.
+        /// </summary>
+        private void LoadAccountSettings()
+        {
+            try
+            {
+                var accountNumber = GetSelectedAccountNumber();
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    return;
+                }
+
+                var settings = settingsService.GetSettings(accountNumber);
+                
+                // If no settings exist yet, use defaults
+                if (settings == null)
+                {
+                    // Clear all inputs to defaults
+                    ClearSettingsInputs();
+                    return;
+                }
+
+                // Load Feature Toggle Enabled
+                if (featureToggleEnabledCheckbox != null)
+                {
+                    featureToggleEnabledCheckbox.Checked = settings.FeatureToggleEnabled;
+                }
+
+                // Load Daily Limits
+                if (dailyLossLimitEnabled != null && dailyLossLimitInput != null)
+                {
+                    dailyLossLimitEnabled.Checked = settings.DailyLossLimit.HasValue;
+                    dailyLossLimitInput.Text = settings.DailyLossLimit?.ToString() ?? "0";
+                }
+
+                if (dailyProfitTargetEnabled != null && dailyProfitTargetInput != null)
+                {
+                    dailyProfitTargetEnabled.Checked = settings.DailyProfitTarget.HasValue;
+                    dailyProfitTargetInput.Text = settings.DailyProfitTarget?.ToString() ?? "0";
+                }
+
+                // Load Position Limits
+                if (positionLossLimitEnabled != null && positionLossLimitInput != null)
+                {
+                    positionLossLimitEnabled.Checked = settings.PositionLossLimit.HasValue;
+                    positionLossLimitInput.Text = settings.PositionLossLimit?.ToString() ?? "0";
+                }
+
+                if (positionProfitTargetEnabled != null && positionProfitTargetInput != null)
+                {
+                    positionProfitTargetEnabled.Checked = settings.PositionProfitTarget.HasValue;
+                    positionProfitTargetInput.Text = settings.PositionProfitTarget?.ToString() ?? "0";
+                }
+
+                // Load Weekly Limits
+                if (weeklyLossLimitEnabled != null && weeklyLossLimitInput != null)
+                {
+                    weeklyLossLimitEnabled.Checked = settings.WeeklyLossLimit.HasValue;
+                    weeklyLossLimitInput.Text = settings.WeeklyLossLimit?.ToString() ?? "1000";
+                }
+
+                if (weeklyProfitTargetEnabled != null && weeklyProfitTargetInput != null)
+                {
+                    weeklyProfitTargetEnabled.Checked = settings.WeeklyProfitTarget.HasValue;
+                    weeklyProfitTargetInput.Text = settings.WeeklyProfitTarget?.ToString() ?? "2000";
+                }
+
+                // Load Symbol Blacklist
+                if (blockedSymbolsEnabled != null && blockedSymbolsInput != null)
+                {
+                    blockedSymbolsEnabled.Checked = settings.BlockedSymbols != null && settings.BlockedSymbols.Any();
+                    blockedSymbolsInput.Text = settings.BlockedSymbols != null ? string.Join(", ", settings.BlockedSymbols) : "";
+                }
+
+                // Load Contract Limits
+                if (symbolContractLimitsEnabled != null && defaultContractLimitInput != null)
+                {
+                    symbolContractLimitsEnabled.Checked = settings.DefaultContractLimit.HasValue || 
+                                                          (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any());
+                    defaultContractLimitInput.Text = settings.DefaultContractLimit?.ToString() ?? "10";
+                }
+
+                if (symbolContractLimitsInput != null && settings.SymbolContractLimits != null)
+                {
+                    var limitEntries = settings.SymbolContractLimits
+                        .Select(kvp => $"{kvp.Key}:{kvp.Value}");
+                    symbolContractLimitsInput.Text = string.Join(", ", limitEntries);
+                }
+
+                // Load Locks
+                if (tradingLockCheckBox != null)
+                {
+                    tradingLockCheckBox.Checked = settings.TradingLock?.IsLocked ?? false;
+                }
+
+                if (settingsLockCheckBox != null)
+                {
+                    settingsLockCheckBox.Checked = settings.SettingsLock?.IsLocked ?? false;
+                }
+
+                // Update status displays
+                UpdateTradingStatusBadge();
+                if (settingsLockCheckBox?.Tag is Label statusLabel)
+                {
+                    UpdateSettingsLockStatus(statusLabel);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading account settings: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Clears all settings inputs to default values.
+        /// </summary>
+        private void ClearSettingsInputs()
+        {
+            if (dailyLossLimitEnabled != null) dailyLossLimitEnabled.Checked = false;
+            if (dailyLossLimitInput != null) dailyLossLimitInput.Text = "0";
+            
+            if (dailyProfitTargetEnabled != null) dailyProfitTargetEnabled.Checked = false;
+            if (dailyProfitTargetInput != null) dailyProfitTargetInput.Text = "0";
+            
+            if (positionLossLimitEnabled != null) positionLossLimitEnabled.Checked = false;
+            if (positionLossLimitInput != null) positionLossLimitInput.Text = "0";
+            
+            if (positionProfitTargetEnabled != null) positionProfitTargetEnabled.Checked = false;
+            if (positionProfitTargetInput != null) positionProfitTargetInput.Text = "0";
+            
+            if (weeklyLossLimitEnabled != null) weeklyLossLimitEnabled.Checked = false;
+            if (weeklyLossLimitInput != null) weeklyLossLimitInput.Text = "1000";
+            
+            if (weeklyProfitTargetEnabled != null) weeklyProfitTargetEnabled.Checked = false;
+            if (weeklyProfitTargetInput != null) weeklyProfitTargetInput.Text = "2000";
+            
+            if (blockedSymbolsEnabled != null) blockedSymbolsEnabled.Checked = false;
+            if (blockedSymbolsInput != null) blockedSymbolsInput.Text = "";
+            
+            if (symbolContractLimitsEnabled != null) symbolContractLimitsEnabled.Checked = false;
+            if (defaultContractLimitInput != null) defaultContractLimitInput.Text = "10";
+            if (symbolContractLimitsInput != null) symbolContractLimitsInput.Text = "";
+            
+            if (tradingLockCheckBox != null) tradingLockCheckBox.Checked = false;
+            if (settingsLockCheckBox != null) settingsLockCheckBox.Checked = false;
+            
+            if (featureToggleEnabledCheckbox != null) featureToggleEnabledCheckbox.Checked = true;
         }
 
         private Panel CreateTopPanel()
@@ -2355,6 +2533,64 @@ namespace Risk_Manager
                         service.UpdateDailyProfitTarget(accountNumber, null);
                     }
 
+                    // Save Position Loss Limit
+                    if (positionLossLimitEnabled?.Checked == true && positionLossLimitInput != null)
+                    {
+                        if (decimal.TryParse(positionLossLimitInput.Text, out var posLossLimit))
+                        {
+                            service.UpdatePositionLossLimit(accountNumber, posLossLimit);
+                        }
+                    }
+                    else
+                    {
+                        service.UpdatePositionLossLimit(accountNumber, null);
+                    }
+
+                    // Save Position Profit Target
+                    if (positionProfitTargetEnabled?.Checked == true && positionProfitTargetInput != null)
+                    {
+                        if (decimal.TryParse(positionProfitTargetInput.Text, out var posProfitTarget))
+                        {
+                            service.UpdatePositionProfitTarget(accountNumber, posProfitTarget);
+                        }
+                    }
+                    else
+                    {
+                        service.UpdatePositionProfitTarget(accountNumber, null);
+                    }
+
+                    // Save Weekly Loss Limit
+                    if (weeklyLossLimitEnabled?.Checked == true && weeklyLossLimitInput != null)
+                    {
+                        if (decimal.TryParse(weeklyLossLimitInput.Text, out var weeklyLossLimit))
+                        {
+                            service.UpdateWeeklyLossLimit(accountNumber, weeklyLossLimit);
+                        }
+                    }
+                    else
+                    {
+                        service.UpdateWeeklyLossLimit(accountNumber, null);
+                    }
+
+                    // Save Weekly Profit Target
+                    if (weeklyProfitTargetEnabled?.Checked == true && weeklyProfitTargetInput != null)
+                    {
+                        if (decimal.TryParse(weeklyProfitTargetInput.Text, out var weeklyProfitTarget))
+                        {
+                            service.UpdateWeeklyProfitTarget(accountNumber, weeklyProfitTarget);
+                        }
+                    }
+                    else
+                    {
+                        service.UpdateWeeklyProfitTarget(accountNumber, null);
+                    }
+
+                    // Save Feature Toggle Enabled
+                    if (featureToggleEnabledCheckbox != null)
+                    {
+                        service.UpdateFeatureToggleEnabled(accountNumber, featureToggleEnabledCheckbox.Checked);
+                    }
+
                     // Save Blocked Symbols
                     if (blockedSymbolsEnabled?.Checked == true && blockedSymbolsInput != null && !string.IsNullOrWhiteSpace(blockedSymbolsInput.Text))
                     {
@@ -2486,8 +2722,9 @@ namespace Risk_Manager
                 "Weekly Profit Target"
             };
 
-            foreach (var feature in features)
+            for (int i = 0; i < features.Length; i++)
             {
+                var feature = features[i];
                 var checkbox = new CheckBox
                 {
                     Text = feature,
@@ -2499,6 +2736,12 @@ namespace Risk_Manager
                     Margin = new Padding(0, 8, 0, 8)
                 };
                 contentArea.Controls.Add(checkbox);
+                
+                // Store reference to the master toggle checkbox
+                if (i == 0 && feature == "Enable All Features")
+                {
+                    featureToggleEnabledCheckbox = checkbox;
+                }
             }
 
             var saveButton = CreateDarkSaveButton();
@@ -2552,11 +2795,13 @@ namespace Risk_Manager
             };
 
             // Position Loss Limit section
-            var lossSection = CreatePositionSection("Position Loss Limit", "USD per position:", 10);
+            var lossSection = CreatePositionSection("Position Loss Limit", "USD per position:", 10, 
+                out positionLossLimitEnabled, out positionLossLimitInput);
             contentArea.Controls.Add(lossSection);
 
             // Position Profit Target section
-            var profitSection = CreatePositionSection("Position Profit Target", "USD per position:", 120);
+            var profitSection = CreatePositionSection("Position Profit Target", "USD per position:", 120,
+                out positionProfitTargetEnabled, out positionProfitTargetInput);
             contentArea.Controls.Add(profitSection);
 
             var saveButton = CreateDarkSaveButton();
@@ -2573,7 +2818,8 @@ namespace Risk_Manager
         /// <summary>
         /// Helper method to create a position section with toggle and USD input.
         /// </summary>
-        private Panel CreatePositionSection(string sectionTitle, string inputLabel, int topPosition)
+        private Panel CreatePositionSection(string sectionTitle, string inputLabel, int topPosition, 
+            out CheckBox enabledCheckbox, out TextBox valueInput)
         {
             var sectionPanel = new Panel
             {
@@ -2598,6 +2844,7 @@ namespace Risk_Manager
                 BackColor = CardBackground
             };
             sectionPanel.Controls.Add(sectionHeader);
+            enabledCheckbox = sectionHeader;
 
             // Input label
             var label = new Label
@@ -2628,6 +2875,7 @@ namespace Risk_Manager
                 Text = "0"
             };
             sectionPanel.Controls.Add(input);
+            valueInput = input;
 
             return sectionPanel;
         }
@@ -3134,6 +3382,7 @@ namespace Risk_Manager
                 AutoSize = false
             };
             contentArea.Controls.Add(enableCheckbox);
+            weeklyLossLimitEnabled = enableCheckbox;
 
             // USD per week label and textbox
             var usdLabel = new Label
@@ -3163,6 +3412,7 @@ namespace Risk_Manager
                 BorderStyle = BorderStyle.FixedSingle
             };
             contentArea.Controls.Add(usdInput);
+            weeklyLossLimitInput = usdInput;
 
             var saveButton = CreateDarkSaveButton();
 
@@ -3228,6 +3478,7 @@ namespace Risk_Manager
                 AutoSize = false
             };
             contentArea.Controls.Add(enableCheckbox);
+            weeklyProfitTargetEnabled = enableCheckbox;
 
             // USD per week label and textbox
             var usdLabel = new Label
@@ -3257,6 +3508,7 @@ namespace Risk_Manager
                 BorderStyle = BorderStyle.FixedSingle
             };
             contentArea.Controls.Add(usdInput);
+            weeklyProfitTargetInput = usdInput;
 
             var saveButton = CreateDarkSaveButton();
 

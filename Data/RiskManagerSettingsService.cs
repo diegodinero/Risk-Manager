@@ -235,6 +235,36 @@ namespace Risk_Manager.Data
             }
         }
 
+        public void UpdateWeeklyLossLimit(string accountNumber, decimal? limit)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.WeeklyLossLimit = limit;
+                SaveSettings(settings);
+            }
+        }
+
+        public void UpdateWeeklyProfitTarget(string accountNumber, decimal? target)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.WeeklyProfitTarget = target;
+                SaveSettings(settings);
+            }
+        }
+
+        public void UpdateFeatureToggleEnabled(string accountNumber, bool enabled)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.FeatureToggleEnabled = enabled;
+                SaveSettings(settings);
+            }
+        }
+
         #endregion
 
         #region Blocked Symbols
@@ -445,17 +475,35 @@ namespace Risk_Manager.Data
     public class AccountSettings
     {
         public string AccountNumber { get; set; } = string.Empty;
+        
+        // Feature Toggle Master Switch
+        public bool FeatureToggleEnabled { get; set; } = true;
+        
+        // Daily Limits
         public decimal? DailyLossLimit { get; set; }
         public decimal? DailyProfitTarget { get; set; }
+        
+        // Position Limits
         public decimal? PositionLossLimit { get; set; }
         public decimal? PositionProfitTarget { get; set; }
+        
+        // Weekly Limits
+        public decimal? WeeklyLossLimit { get; set; }
+        public decimal? WeeklyProfitTarget { get; set; }
+        
+        // Contract Limits
         public int? DefaultContractLimit { get; set; }
+        
+        // Timestamps
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
+        // Collections
         public List<string> BlockedSymbols { get; set; } = new();
         public Dictionary<string, int> SymbolContractLimits { get; set; } = new();
         public List<TradingTimeRestriction> TradingTimeRestrictions { get; set; } = new();
+        
+        // Locks
         public LockInfo? TradingLock { get; set; }
         public LockInfo? SettingsLock { get; set; }
     }
