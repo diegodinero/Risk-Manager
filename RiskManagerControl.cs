@@ -2207,7 +2207,14 @@ namespace Risk_Manager
         /// </summary>
         private string GetSelectedAccountNumber()
         {
-            return selectedAccount?.Id ?? selectedAccount?.Name;
+            var accountId = selectedAccount?.Id;
+            var accountName = selectedAccount?.Name;
+            var result = accountId ?? accountName;
+            
+            // Debug logging to track account number retrieval
+            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount={(selectedAccount == null ? "NULL" : "not null")}, Id='{accountId}', Name='{accountName}', Result='{result}'");
+            
+            return result;
         }
 
         /// <summary>
