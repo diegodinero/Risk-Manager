@@ -187,6 +187,12 @@ namespace Risk_Manager.Data
 
         public void UpdateDailyLossLimit(string accountNumber, decimal? limit)
         {
+            // Validate that limit is not negative
+            if (limit.HasValue && limit.Value < 0)
+            {
+                throw new ArgumentException("Daily loss limit cannot be negative.", nameof(limit));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
@@ -197,6 +203,12 @@ namespace Risk_Manager.Data
 
         public void UpdateDailyProfitTarget(string accountNumber, decimal? target)
         {
+            // Validate that target is not negative
+            if (target.HasValue && target.Value < 0)
+            {
+                throw new ArgumentException("Daily profit target cannot be negative.", nameof(target));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
@@ -207,6 +219,12 @@ namespace Risk_Manager.Data
 
         public void UpdatePositionLossLimit(string accountNumber, decimal? limit)
         {
+            // Validate that limit is not negative
+            if (limit.HasValue && limit.Value < 0)
+            {
+                throw new ArgumentException("Position loss limit cannot be negative.", nameof(limit));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
@@ -217,6 +235,12 @@ namespace Risk_Manager.Data
 
         public void UpdatePositionProfitTarget(string accountNumber, decimal? target)
         {
+            // Validate that target is not negative
+            if (target.HasValue && target.Value < 0)
+            {
+                throw new ArgumentException("Position profit target cannot be negative.", nameof(target));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
@@ -227,6 +251,12 @@ namespace Risk_Manager.Data
 
         public void UpdateDefaultContractLimit(string accountNumber, int? limit)
         {
+            // Validate that limit is positive
+            if (limit.HasValue && limit.Value <= 0)
+            {
+                throw new ArgumentException("Default contract limit must be positive.", nameof(limit));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
@@ -237,6 +267,12 @@ namespace Risk_Manager.Data
 
         public void UpdateWeeklyLossLimit(string accountNumber, decimal? limit)
         {
+            // Validate that limit is not negative
+            if (limit.HasValue && limit.Value < 0)
+            {
+                throw new ArgumentException("Weekly loss limit cannot be negative.", nameof(limit));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
@@ -247,6 +283,12 @@ namespace Risk_Manager.Data
 
         public void UpdateWeeklyProfitTarget(string accountNumber, decimal? target)
         {
+            // Validate that target is not negative
+            if (target.HasValue && target.Value < 0)
+            {
+                throw new ArgumentException("Weekly profit target cannot be negative.", nameof(target));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
