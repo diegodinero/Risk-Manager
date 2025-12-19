@@ -574,13 +574,13 @@ namespace Risk_Manager
             statsGrid.Columns.Add("ClosedPnL", "Closed P&L");
             statsGrid.Columns.Add("DailyPnL", "Daily P&L");
             statsGrid.Columns.Add("GrossPnL", "Gross P&L");
-            statsGrid.Columns.Add("Drawdown", "Drawdown");
+            statsGrid.Columns.Add("TrailingDrawdown", "Trailing Drawdown");
             statsGrid.Columns.Add("Positions", "Positions");
             statsGrid.Columns.Add("Status", "Status");
             statsGrid.Columns.Add("LockStatus", "Lock Status");
             statsGrid.Columns.Add("LossLimit", "Loss Limit");
             statsGrid.Columns.Add("ProfitTarget", "Profit Target");
-            statsGrid.Columns.Add("TrailingBalance", "Trailing Balance");
+            statsGrid.Columns.Add("Drawdown", "Drawdown");
 
             // Allow row selection to populate Stats tab
             statsGrid.SelectionChanged += (s, e) =>
@@ -624,7 +624,7 @@ namespace Risk_Manager
                 var core = Core.Instance;
                 if (core == null || core.Accounts == null || !core.Accounts.Any())
                 {
-                    // Demo data with all new columns
+                    // Demo data - last column is Drawdown (Equity - Trailing Drawdown)
                     statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
                     statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
                     return;
@@ -652,7 +652,7 @@ namespace Risk_Manager
                         // Keep as "Unknown" if we can't determine the type
                     }
 
-                    double openPnL = 0;
+                    // Count positions
                     int positionsCount = 0;
                     if (core.Positions != null)
                     {
@@ -661,14 +661,13 @@ namespace Risk_Manager
                             if (pos == null) continue;
                             if (pos.Account == account && pos.Quantity != 0)
                             {
-                                var pnlItem = pos.NetPnL ?? pos.GrossPnL;
-                                if (pnlItem != null) openPnL += pnlItem.Value;
                                 positionsCount++;
                             }
                         }
                     }
 
-                    double dailyPnL = 0, grossPnL = 0, closedPnL = 0, drawdown = 0;
+                    // Extract all P&L values from AdditionalInfo
+                    double openPnL = 0, dailyPnL = 0, grossPnL = 0, closedPnL = 0, trailingDrawdown = 0;
                     if (account.AdditionalInfo != null)
                     {
                         foreach (var info in account.AdditionalInfo)
@@ -676,35 +675,45 @@ namespace Risk_Manager
                             if (info?.Id == null) continue;
                             var id = info.Id;
                             
-                            // Daily P&L
-                            if (string.Equals(id, "Daily Net P&L", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "DailyPnL", StringComparison.OrdinalIgnoreCase))
+#if DEBUG
+                            // Debug: Log all AdditionalInfo IDs to help identify field names
+                            System.Diagnostics.Debug.WriteLine($"AdditionalInfo ID: '{id}', Value: {info.Value}, Type: {info.Value?.GetType().Name}");
+#endif
+                            
+                            // Open P&L - from OpenPnl field
+                            if (string.Equals(id, "OpenPnl", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double ov) openPnL = ov;
+                            }
+
+                            // Daily P&L - from TotalPnL field
+                            if (string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double dv) dailyPnL = dv;
                             }
 
-                            // Gross P&L
-                            if (string.Equals(id, "Gross P&L", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "GrossPnL", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase))
+                            // Gross P&L - from NetPnL field
+                            if (string.Equals(id, "NetPnL", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double gv) grossPnL = gv;
                             }
 
-                            // Closed P&L
-                            if (string.Equals(id, "Closed P&L", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "ClosedPnL", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Realized P&L", StringComparison.OrdinalIgnoreCase))
+                            // Closed P&L - from ClosedPnl field
+                            if (string.Equals(id, "ClosedPnl", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double cv) closedPnL = cv;
                             }
 
-                            // Drawdown
-                            if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "MaxDrawdown", StringComparison.OrdinalIgnoreCase))
+                            // Trailing Drawdown - from AutoLiquidateThresholdCurrentValue field
+                            if (string.Equals(id, "AutoLiquidateThresholdCurrentValue", StringComparison.OrdinalIgnoreCase))
                             {
-                                if (info.Value is double dd) drawdown = dd;
+                                if (info.Value is double td)
+                                {
+                                    trailingDrawdown = td;
+#if DEBUG
+                                    System.Diagnostics.Debug.WriteLine($"Trailing Drawdown found: {trailingDrawdown} from field '{id}'");
+#endif
+                                }
                             }
 
                             // Account Type from AdditionalInfo
@@ -738,8 +747,8 @@ namespace Risk_Manager
                         }
                     }
 
-                    // Trailing Balance - use equity as a starting point
-                    var trailingBalance = equity;
+                    // Calculate Drawdown as Equity - Trailing Drawdown
+                    var drawdown = equity - trailingDrawdown;
 
                     statsGrid.Rows.Add(
                         provider, 
@@ -751,19 +760,42 @@ namespace Risk_Manager
                         FormatNumeric(closedPnL),
                         FormatNumeric(dailyPnL), 
                         FormatNumeric(grossPnL), 
-                        FormatNumeric(drawdown),
+                        FormatNumeric(trailingDrawdown),
                         positionsCount.ToString(), 
                         status,
                         lockStatus,
                         FormatNumeric(lossLimit),
                         FormatNumeric(profitTarget),
-                        FormatNumeric(trailingBalance)
+                        FormatNumeric(drawdown)
                     );
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore refresh errors
+                // Log error for debugging but don't crash the UI
+                System.Diagnostics.Debug.WriteLine($"RefreshAccountsSummary error: {ex.Message}");
+                
+                // Show error in grid if it's empty
+                if (statsGrid.Rows.Count == 0)
+                {
+                    try
+                    {
+                        // Create error row with proper column count
+                        var errorValues = new object[statsGrid.Columns.Count];
+                        errorValues[0] = "Error";
+                        errorValues[1] = "API Connection Failed";
+                        errorValues[2] = ex.Message;
+                        for (int i = 3; i < errorValues.Length; i++)
+                        {
+                            errorValues[i] = "-";
+                        }
+                        statsGrid.Rows.Add(errorValues);
+                    }
+                    catch
+                    {
+                        // If even adding error row fails, just ignore
+                    }
+                }
             }
             finally
             {
@@ -857,8 +889,7 @@ namespace Risk_Manager
                 var accountId = accountToDisplay.Id ?? accountToDisplay.Name ?? "Unknown";
                 var balance = accountToDisplay.Balance;
 
-                // Calculate Open P&L from positions (same as Accounts Summary)
-                double openPnL = 0;
+                // Count positions
                 int positionsCount = 0;
                 if (core?.Positions != null)
                 {
@@ -867,15 +898,13 @@ namespace Risk_Manager
                         if (pos == null) continue;
                         if (pos.Account == accountToDisplay && pos.Quantity != 0)
                         {
-                            var pnlItem = pos.NetPnL ?? pos.GrossPnL;
-                            if (pnlItem != null) openPnL += pnlItem.Value;
                             positionsCount++;
                         }
                     }
                 }
 
-                // Get Daily P&L and Gross P&L from AdditionalInfo (same as Accounts Summary)
-                double dailyPnL = 0, grossPnL = 0;
+                // Get all P&L values from AdditionalInfo (same as Accounts Summary)
+                double openPnL = 0, dailyPnL = 0, grossPnL = 0;
                 if (accountToDisplay.AdditionalInfo != null)
                 {
                     foreach (var info in accountToDisplay.AdditionalInfo)
@@ -883,18 +912,20 @@ namespace Risk_Manager
                         if (info?.Id == null) continue;
                         var id = info.Id;
                         
-                        // Daily P&L
-                        if (string.Equals(id, "Daily Net P&L", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(id, "DailyPnL", StringComparison.OrdinalIgnoreCase))
+                        // Open P&L - from OpenPnl field
+                        if (string.Equals(id, "OpenPnl", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (info.Value is double ov) openPnL = ov;
+                        }
+
+                        // Daily P&L - from TotalPnL field
+                        if (string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase))
                         {
                             if (info.Value is double dv) dailyPnL = dv;
                         }
 
-                        // Gross P&L
-                        if (string.Equals(id, "Gross P&L", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(id, "GrossPnL", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase))
+                        // Gross P&L - from NetPnL field
+                        if (string.Equals(id, "NetPnL", StringComparison.OrdinalIgnoreCase))
                         {
                             if (info.Value is double gv) grossPnL = gv;
                         }
@@ -923,11 +954,26 @@ namespace Risk_Manager
                 statsDetailGrid.Rows.Add("Gross P&L", FormatNumeric(grossPnL));
                 statsDetailGrid.Rows.Add("Positions", positionsCount.ToString());
                 statsDetailGrid.Rows.Add("Connection Status", connectionStatus);
-                statsDetailGrid.Rows.Add("Trading Status", lockStatus);
+                statsDetailGrid.Rows.Add("Trading Lock Status", lockStatus);
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore refresh errors
+                // Log error for debugging but don't crash the UI
+                System.Diagnostics.Debug.WriteLine($"RefreshAccountStats error: {ex.Message}");
+                
+                // Show error message in grid
+                if (statsDetailGrid.Rows.Count == 0)
+                {
+                    try
+                    {
+                        statsDetailGrid.Rows.Add("Error", "API Connection Failed");
+                        statsDetailGrid.Rows.Add("Details", ex.Message);
+                    }
+                    catch
+                    {
+                        // If even adding error row fails, just ignore
+                    }
+                }
             }
             finally
             {
@@ -1055,21 +1101,7 @@ namespace Risk_Manager
                     data.Count++;
                     data.Equity += account.Balance;
 
-                    // Calculate Open P&L from positions
-                    if (core.Positions != null)
-                    {
-                        foreach (var pos in core.Positions)
-                        {
-                            if (pos == null) continue;
-                            if (pos.Account == account && pos.Quantity != 0)
-                            {
-                                var pnlItem = pos.NetPnL ?? pos.GrossPnL;
-                                if (pnlItem != null) data.OpenPnL += pnlItem.Value;
-                            }
-                        }
-                    }
-
-                    // Get Closed P&L and Drawdown from AdditionalInfo
+                    // Get Open P&L, Closed P&L and Drawdown from AdditionalInfo
                     if (account.AdditionalInfo != null)
                     {
                         foreach (var info in account.AdditionalInfo)
@@ -1077,19 +1109,22 @@ namespace Risk_Manager
                             if (info?.Id == null) continue;
                             var id = info.Id;
 
-                            // Closed P&L
-                            if (string.Equals(id, "Closed P&L", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "ClosedPnL", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Realized P&L", StringComparison.OrdinalIgnoreCase))
+                            // Open P&L - from OpenPnl field
+                            if (string.Equals(id, "OpenPnl", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double ov) data.OpenPnL += ov;
+                            }
+
+                            // Closed P&L - from ClosedPnl field
+                            if (string.Equals(id, "ClosedPnl", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double cv) data.ClosedPnL += cv;
                             }
 
-                            // Drawdown
-                            if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "MaxDrawdown", StringComparison.OrdinalIgnoreCase))
+                            // Trailing Drawdown - from AutoLiquidateThresholdCurrentValue field
+                            if (string.Equals(id, "AutoLiquidateThresholdCurrentValue", StringComparison.OrdinalIgnoreCase))
                             {
-                                if (info.Value is double dd) data.Drawdown += dd;
+                                if (info.Value is double td) data.TrailingDrawdown += td;
                             }
                         }
                     }
@@ -1103,7 +1138,7 @@ namespace Risk_Manager
                     totalData.Equity += kvp.Value.Equity;
                     totalData.OpenPnL += kvp.Value.OpenPnL;
                     totalData.ClosedPnL += kvp.Value.ClosedPnL;
-                    totalData.Drawdown += kvp.Value.Drawdown;
+                    totalData.TrailingDrawdown += kvp.Value.TrailingDrawdown;
                 }
 
                 // Add rows for each type
@@ -1112,6 +1147,8 @@ namespace Risk_Manager
                     var type = kvp.Key;
                     var data = kvp.Value;
                     var totalPnL = data.OpenPnL + data.ClosedPnL;
+                    // Calculate Drawdown as Equity - Trailing Drawdown
+                    var drawdown = data.Equity - data.TrailingDrawdown;
 
                     typeSummaryGrid.Rows.Add(
                         type,
@@ -1120,12 +1157,14 @@ namespace Risk_Manager
                         FormatNumeric(data.OpenPnL),
                         FormatNumeric(data.ClosedPnL),
                         FormatNumeric(totalPnL),
-                        FormatNumeric(data.Drawdown)
+                        FormatNumeric(drawdown)
                     );
                 }
 
                 // Add total row
                 var totalTotalPnL = totalData.OpenPnL + totalData.ClosedPnL;
+                // Calculate total Drawdown as Equity - Trailing Drawdown
+                var totalDrawdown = totalData.Equity - totalData.TrailingDrawdown;
                 typeSummaryGrid.Rows.Add(
                     "Total",
                     totalData.Count.ToString(),
@@ -1133,12 +1172,34 @@ namespace Risk_Manager
                     FormatNumeric(totalData.OpenPnL),
                     FormatNumeric(totalData.ClosedPnL),
                     FormatNumeric(totalTotalPnL),
-                    FormatNumeric(totalData.Drawdown)
+                    FormatNumeric(totalDrawdown)
                 );
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore refresh errors
+                // Log error for debugging but don't crash the UI
+                System.Diagnostics.Debug.WriteLine($"RefreshTypeSummary error: {ex.Message}");
+                
+                // Show error in grid if it's empty
+                if (typeSummaryGrid.Rows.Count == 0)
+                {
+                    try
+                    {
+                        // Create error row with proper column count
+                        var errorValues = new object[typeSummaryGrid.Columns.Count];
+                        errorValues[0] = "Error";
+                        for (int i = 1; i < errorValues.Length - 1; i++)
+                        {
+                            errorValues[i] = "-";
+                        }
+                        errorValues[errorValues.Length - 1] = $"API Connection Failed: {ex.Message}";
+                        typeSummaryGrid.Rows.Add(errorValues);
+                    }
+                    catch
+                    {
+                        // If even adding error row fails, just ignore
+                    }
+                }
             }
             finally
             {
@@ -1153,7 +1214,7 @@ namespace Risk_Manager
             public double Equity { get; set; }
             public double OpenPnL { get; set; }
             public double ClosedPnL { get; set; }
-            public double Drawdown { get; set; }
+            public double TrailingDrawdown { get; set; }
         }
 
         private Panel CreateStatisticsOverviewPanel()
