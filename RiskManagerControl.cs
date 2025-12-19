@@ -63,6 +63,11 @@ namespace Risk_Manager
         
         private SoundPlayer alertSoundPlayer;
 
+        // Default values for settings
+        private const decimal DEFAULT_WEEKLY_LOSS_LIMIT = 1000m;
+        private const decimal DEFAULT_WEEKLY_PROFIT_TARGET = 2000m;
+        private const int DEFAULT_CONTRACT_LIMIT = 10;
+
         // Dark theme colors
         private static readonly Color DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
         private static readonly Color DarkerBackground = Color.FromArgb(35, 52, 70);    // Slightly darker for sidebar
@@ -308,13 +313,13 @@ namespace Risk_Manager
                 if (weeklyLossLimitEnabled != null && weeklyLossLimitInput != null)
                 {
                     weeklyLossLimitEnabled.Checked = settings.WeeklyLossLimit.HasValue;
-                    weeklyLossLimitInput.Text = settings.WeeklyLossLimit?.ToString() ?? "1000";
+                    weeklyLossLimitInput.Text = settings.WeeklyLossLimit?.ToString() ?? DEFAULT_WEEKLY_LOSS_LIMIT.ToString();
                 }
 
                 if (weeklyProfitTargetEnabled != null && weeklyProfitTargetInput != null)
                 {
                     weeklyProfitTargetEnabled.Checked = settings.WeeklyProfitTarget.HasValue;
-                    weeklyProfitTargetInput.Text = settings.WeeklyProfitTarget?.ToString() ?? "2000";
+                    weeklyProfitTargetInput.Text = settings.WeeklyProfitTarget?.ToString() ?? DEFAULT_WEEKLY_PROFIT_TARGET.ToString();
                 }
 
                 // Load Symbol Blacklist
@@ -329,7 +334,7 @@ namespace Risk_Manager
                 {
                     symbolContractLimitsEnabled.Checked = settings.DefaultContractLimit.HasValue || 
                                                           (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any());
-                    defaultContractLimitInput.Text = settings.DefaultContractLimit?.ToString() ?? "10";
+                    defaultContractLimitInput.Text = settings.DefaultContractLimit?.ToString() ?? DEFAULT_CONTRACT_LIMIT.ToString();
                 }
 
                 if (symbolContractLimitsInput != null && settings.SymbolContractLimits != null)
@@ -381,16 +386,16 @@ namespace Risk_Manager
             if (positionProfitTargetInput != null) positionProfitTargetInput.Text = "0";
             
             if (weeklyLossLimitEnabled != null) weeklyLossLimitEnabled.Checked = false;
-            if (weeklyLossLimitInput != null) weeklyLossLimitInput.Text = "1000";
+            if (weeklyLossLimitInput != null) weeklyLossLimitInput.Text = DEFAULT_WEEKLY_LOSS_LIMIT.ToString();
             
             if (weeklyProfitTargetEnabled != null) weeklyProfitTargetEnabled.Checked = false;
-            if (weeklyProfitTargetInput != null) weeklyProfitTargetInput.Text = "2000";
+            if (weeklyProfitTargetInput != null) weeklyProfitTargetInput.Text = DEFAULT_WEEKLY_PROFIT_TARGET.ToString();
             
             if (blockedSymbolsEnabled != null) blockedSymbolsEnabled.Checked = false;
             if (blockedSymbolsInput != null) blockedSymbolsInput.Text = "";
             
             if (symbolContractLimitsEnabled != null) symbolContractLimitsEnabled.Checked = false;
-            if (defaultContractLimitInput != null) defaultContractLimitInput.Text = "10";
+            if (defaultContractLimitInput != null) defaultContractLimitInput.Text = DEFAULT_CONTRACT_LIMIT.ToString();
             if (symbolContractLimitsInput != null) symbolContractLimitsInput.Text = "";
             
             if (tradingLockCheckBox != null) tradingLockCheckBox.Checked = false;
@@ -2512,7 +2517,19 @@ namespace Risk_Manager
                     {
                         if (decimal.TryParse(dailyLossLimitInput.Text, out var lossLimit))
                         {
+                            if (lossLimit < 0)
+                            {
+                                MessageBox.Show("Daily loss limit cannot be negative.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
                             service.UpdateDailyLossLimit(accountNumber, lossLimit);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Daily loss limit must be a valid number.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
                     else
@@ -2525,7 +2542,19 @@ namespace Risk_Manager
                     {
                         if (decimal.TryParse(dailyProfitTargetInput.Text, out var profitTarget))
                         {
+                            if (profitTarget < 0)
+                            {
+                                MessageBox.Show("Daily profit target cannot be negative.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
                             service.UpdateDailyProfitTarget(accountNumber, profitTarget);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Daily profit target must be a valid number.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
                     else
@@ -2538,7 +2567,19 @@ namespace Risk_Manager
                     {
                         if (decimal.TryParse(positionLossLimitInput.Text, out var posLossLimit))
                         {
+                            if (posLossLimit < 0)
+                            {
+                                MessageBox.Show("Position loss limit cannot be negative.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
                             service.UpdatePositionLossLimit(accountNumber, posLossLimit);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Position loss limit must be a valid number.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
                     else
@@ -2551,7 +2592,19 @@ namespace Risk_Manager
                     {
                         if (decimal.TryParse(positionProfitTargetInput.Text, out var posProfitTarget))
                         {
+                            if (posProfitTarget < 0)
+                            {
+                                MessageBox.Show("Position profit target cannot be negative.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
                             service.UpdatePositionProfitTarget(accountNumber, posProfitTarget);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Position profit target must be a valid number.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
                     else
@@ -2564,7 +2617,19 @@ namespace Risk_Manager
                     {
                         if (decimal.TryParse(weeklyLossLimitInput.Text, out var weeklyLossLimit))
                         {
+                            if (weeklyLossLimit < 0)
+                            {
+                                MessageBox.Show("Weekly loss limit cannot be negative.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
                             service.UpdateWeeklyLossLimit(accountNumber, weeklyLossLimit);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Weekly loss limit must be a valid number.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
                     else
@@ -2577,7 +2642,19 @@ namespace Risk_Manager
                     {
                         if (decimal.TryParse(weeklyProfitTargetInput.Text, out var weeklyProfitTarget))
                         {
+                            if (weeklyProfitTarget < 0)
+                            {
+                                MessageBox.Show("Weekly profit target cannot be negative.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
                             service.UpdateWeeklyProfitTarget(accountNumber, weeklyProfitTarget);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Weekly profit target must be a valid number.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
                     else
@@ -2610,7 +2687,19 @@ namespace Risk_Manager
                     {
                         if (int.TryParse(defaultContractLimitInput.Text, out var defaultLimit))
                         {
+                            if (defaultLimit <= 0)
+                            {
+                                MessageBox.Show("Default contract limit must be a positive number.", "Validation Error", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
                             service.UpdateDefaultContractLimit(accountNumber, defaultLimit);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Default contract limit must be a valid integer.", "Validation Error", 
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
                         }
                     }
                     else
@@ -3239,7 +3328,7 @@ namespace Risk_Manager
                 BackColor = DarkerBackground,
                 ForeColor = TextWhite,
                 BorderStyle = BorderStyle.FixedSingle,
-                Text = "10"
+                Text = DEFAULT_CONTRACT_LIMIT.ToString()
             };
             sectionPanel.Controls.Add(defaultInput);
             defaultLimitInput = defaultInput;
@@ -3405,7 +3494,7 @@ namespace Risk_Manager
                 Top = 40,
                 Width = 150,
                 Height = 24,
-                Text = "1000",
+                Text = DEFAULT_WEEKLY_LOSS_LIMIT.ToString(),
                 Font = new Font("Segoe UI", 9),
                 BackColor = CardBackground,
                 ForeColor = TextWhite,
@@ -3501,7 +3590,7 @@ namespace Risk_Manager
                 Top = 40,
                 Width = 150,
                 Height = 24,
-                Text = "2000",
+                Text = DEFAULT_WEEKLY_PROFIT_TARGET.ToString(),
                 Font = new Font("Segoe UI", 9),
                 BackColor = CardBackground,
                 ForeColor = TextWhite,
