@@ -20,6 +20,7 @@ namespace Risk_Manager
         private DataGridView statsGrid;
         private System.Windows.Forms.Timer statsRefreshTimer;
         private Account selectedAccount;
+        private int selectedAccountIndex = -1; // Track the index of selected account
         private DataGridView statsDetailGrid;
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
         private DataGridView typeSummaryGrid;
@@ -176,6 +177,7 @@ namespace Risk_Manager
 
             // Preserve current selection if it still exists
             var currentSelection = accountSelector.SelectedItem as Account;
+            var currentIndex = accountSelector.SelectedIndex;
 
             // Check if the accounts list has actually changed before refreshing
             bool needsUpdate = false;
@@ -220,14 +222,17 @@ namespace Risk_Manager
             if (currentSelection != null && accountSelector.Items.Contains(currentSelection))
             {
                 accountSelector.SelectedItem = currentSelection;
+                selectedAccountIndex = accountSelector.SelectedIndex; // Update stored index
             }
             else if (accountSelector.Items.Count > 0)
             {
                 accountSelector.SelectedIndex = 0;
+                selectedAccountIndex = 0; // Update stored index
             }
             else
             {
                 accountSelector.SelectedIndex = -1;
+                selectedAccountIndex = -1; // Update stored index
             }
 
             // Re-enable event handling
@@ -240,6 +245,7 @@ namespace Risk_Manager
                 if (accountSelector.SelectedItem is Account account)
                 {
                     selectedAccount = account;
+                    selectedAccountIndex = 0; // Ensure index is set
                     LoadAccountSettings();
                 }
             }
@@ -250,11 +256,12 @@ namespace Risk_Manager
             if (accountSelector.SelectedItem is Account account)
             {
                 selectedAccount = account;
+                selectedAccountIndex = accountSelector.SelectedIndex; // Store the index
                 
                 // Debug logging to help identify account selection issues
                 var accountId = account.Id ?? "NULL";
                 var accountName = account.Name ?? "NULL";
-                System.Diagnostics.Debug.WriteLine($"Account selected: Id='{accountId}', Name='{accountName}'");
+                System.Diagnostics.Debug.WriteLine($"Account selected at index {selectedAccountIndex}: Id='{accountId}', Name='{accountName}'");
                 
                 // Refresh Stats tab if visible
                 if (statsDetailGrid != null)
@@ -2217,7 +2224,7 @@ namespace Risk_Manager
             var accountName = selectedAccount.Name;
             var connectionName = selectedAccount.Connection?.Name;
             
-            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: accountId='{accountId}', accountName='{accountName}', connectionName='{connectionName}'");
+            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: accountId='{accountId}', accountName='{accountName}', connectionName='{connectionName}', index={selectedAccountIndex}");
             
             // Strategy 1: Use Connection.Name + Name for best uniqueness
             // Connection names are usually unique per connection/account
@@ -2240,24 +2247,20 @@ namespace Risk_Manager
                 return connectionName;
             }
             
-            // Strategy 2: Use index from dropdown (most reliable when Connection is not available)
-            if (accountSelector != null)
+            // Strategy 2: Use the stored index from dropdown (most reliable when Connection is not available)
+            if (selectedAccountIndex >= 0)
             {
-                int index = accountSelector.Items.IndexOf(selectedAccount);
-                if (index >= 0)
-                {
-                    // Create identifier with index and any available property
-                    string indexBasedId;
-                    if (!string.IsNullOrEmpty(accountName))
-                        indexBasedId = $"Account_{index}_{accountName}";
-                    else if (!string.IsNullOrEmpty(accountId))
-                        indexBasedId = $"Account_{index}_{accountId}";
-                    else
-                        indexBasedId = $"Account_{index}";
-                    
-                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using index-based ID='{indexBasedId}'");
-                    return indexBasedId;
-                }
+                // Create identifier with index and any available property
+                string indexBasedId;
+                if (!string.IsNullOrEmpty(accountName))
+                    indexBasedId = $"Account_{selectedAccountIndex}_{accountName}";
+                else if (!string.IsNullOrEmpty(accountId))
+                    indexBasedId = $"Account_{selectedAccountIndex}_{accountId}";
+                else
+                    indexBasedId = $"Account_{selectedAccountIndex}";
+                
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using stored index-based ID='{indexBasedId}'");
+                return indexBasedId;
             }
             
             // Strategy 3: Fallback to Id or Name alone (least reliable)
