@@ -2217,44 +2217,60 @@ namespace Risk_Manager
             var accountName = selectedAccount.Name;
             var connectionName = selectedAccount.Connection?.Name;
             
-            // If Id is unique (not null/empty), use it
-            if (!string.IsNullOrEmpty(accountId))
-            {
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Id='{accountId}'");
-                return accountId;
-            }
+            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: accountId='{accountId}', accountName='{accountName}', connectionName='{connectionName}'");
             
-            // If Name is unique and available, use it  
-            if (!string.IsNullOrEmpty(accountName))
-            {
-                // Since multiple accounts may have the same Name, append connection name for uniqueness
-                if (!string.IsNullOrEmpty(connectionName))
-                {
-                    var uniqueId = $"{accountName}_{connectionName}";
-                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Name+Connection='{uniqueId}' (Name='{accountName}', Connection='{connectionName}')");
-                    return uniqueId;
-                }
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Name='{accountName}'");
-                return accountName;
-            }
-            
-            // Last resort: use connection name if available
+            // Strategy 1: Use Connection.Name + Name for best uniqueness
+            // Connection names are usually unique per connection/account
             if (!string.IsNullOrEmpty(connectionName))
             {
+                if (!string.IsNullOrEmpty(accountName))
+                {
+                    var uniqueId = $"{connectionName}_{accountName}";
+                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection+Name='{uniqueId}'");
+                    return uniqueId;
+                }
+                if (!string.IsNullOrEmpty(accountId))
+                {
+                    var uniqueId = $"{connectionName}_{accountId}";
+                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection+Id='{uniqueId}'");
+                    return uniqueId;
+                }
+                // Connection name alone
                 System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection='{connectionName}'");
                 return connectionName;
             }
             
-            // If all else fails, try to find the account index in the dropdown
+            // Strategy 2: Use index from dropdown (most reliable when Connection is not available)
             if (accountSelector != null)
             {
                 int index = accountSelector.Items.IndexOf(selectedAccount);
                 if (index >= 0)
                 {
-                    var indexBasedId = $"Account_{index}";
+                    // Create identifier with index and any available property
+                    string indexBasedId;
+                    if (!string.IsNullOrEmpty(accountName))
+                        indexBasedId = $"Account_{index}_{accountName}";
+                    else if (!string.IsNullOrEmpty(accountId))
+                        indexBasedId = $"Account_{index}_{accountId}";
+                    else
+                        indexBasedId = $"Account_{index}";
+                    
                     System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using index-based ID='{indexBasedId}'");
                     return indexBasedId;
                 }
+            }
+            
+            // Strategy 3: Fallback to Id or Name alone (least reliable)
+            if (!string.IsNullOrEmpty(accountId))
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Fallback to Id='{accountId}'");
+                return accountId;
+            }
+            
+            if (!string.IsNullOrEmpty(accountName))
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Fallback to Name='{accountName}'");
+                return accountName;
             }
             
             System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Could not generate unique ID, returning 'UNKNOWN'");
