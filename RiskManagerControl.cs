@@ -677,6 +677,9 @@ namespace Risk_Manager
                             if (info?.Id == null) continue;
                             var id = info.Id;
                             
+                            // Debug: Log all AdditionalInfo IDs to help identify field names
+                            System.Diagnostics.Debug.WriteLine($"AdditionalInfo ID: '{id}', Value: {info.Value}, Type: {info.Value?.GetType().Name}");
+                            
                             // Daily P&L
                             if (string.Equals(id, "Daily Net P&L", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase) ||
@@ -685,10 +688,12 @@ namespace Risk_Manager
                                 if (info.Value is double dv) dailyPnL = dv;
                             }
 
-                            // Gross P&L
+                            // Gross P&L / Net P&L
                             if (string.Equals(id, "Gross P&L", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(id, "GrossPnL", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase))
+                                string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "Net P&L", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "NetPnL", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double gv) grossPnL = gv;
                             }
@@ -701,11 +706,18 @@ namespace Risk_Manager
                                 if (info.Value is double cv) closedPnL = cv;
                             }
 
-                            // Drawdown
+                            // Drawdown - try multiple field name variations
                             if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "MaxDrawdown", StringComparison.OrdinalIgnoreCase))
+                                string.Equals(id, "MaxDrawdown", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "Max Drawdown", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "DrawDown", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "DD", StringComparison.OrdinalIgnoreCase))
                             {
-                                if (info.Value is double dd) drawdown = dd;
+                                if (info.Value is double dd)
+                                {
+                                    drawdown = dd;
+                                    System.Diagnostics.Debug.WriteLine($"Drawdown found: {drawdown} from field '{id}'");
+                                }
                             }
 
                             // Account Type from AdditionalInfo
@@ -919,10 +931,12 @@ namespace Risk_Manager
                             if (info.Value is double dv) dailyPnL = dv;
                         }
 
-                        // Gross P&L
+                        // Gross P&L / Net P&L
                         if (string.Equals(id, "Gross P&L", StringComparison.OrdinalIgnoreCase) ||
                             string.Equals(id, "GrossPnL", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase))
+                            string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(id, "Net P&L", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(id, "NetPnL", StringComparison.OrdinalIgnoreCase))
                         {
                             if (info.Value is double gv) grossPnL = gv;
                         }
@@ -1128,9 +1142,12 @@ namespace Risk_Manager
                                 if (info.Value is double cv) data.ClosedPnL += cv;
                             }
 
-                            // Drawdown
+                            // Drawdown - try multiple field name variations
                             if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "MaxDrawdown", StringComparison.OrdinalIgnoreCase))
+                                string.Equals(id, "MaxDrawdown", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "Max Drawdown", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "DrawDown", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, "DD", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double dd) data.Drawdown += dd;
                             }
