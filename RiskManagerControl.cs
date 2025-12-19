@@ -574,13 +574,13 @@ namespace Risk_Manager
             statsGrid.Columns.Add("ClosedPnL", "Closed P&L");
             statsGrid.Columns.Add("DailyPnL", "Daily P&L");
             statsGrid.Columns.Add("GrossPnL", "Gross P&L");
-            statsGrid.Columns.Add("Drawdown", "Drawdown");
+            statsGrid.Columns.Add("TrailingDrawdown", "Trailing Drawdown");
             statsGrid.Columns.Add("Positions", "Positions");
             statsGrid.Columns.Add("Status", "Status");
             statsGrid.Columns.Add("LockStatus", "Lock Status");
             statsGrid.Columns.Add("LossLimit", "Loss Limit");
             statsGrid.Columns.Add("ProfitTarget", "Profit Target");
-            statsGrid.Columns.Add("TrailingBalance", "Trailing Balance");
+            statsGrid.Columns.Add("Drawdown", "Drawdown");
 
             // Allow row selection to populate Stats tab
             statsGrid.SelectionChanged += (s, e) =>
@@ -624,7 +624,7 @@ namespace Risk_Manager
                 var core = Core.Instance;
                 if (core == null || core.Accounts == null || !core.Accounts.Any())
                 {
-                    // Demo data
+                    // Demo data - last column is Drawdown (Equity - Trailing Drawdown)
                     statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
                     statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
                     return;
@@ -667,7 +667,7 @@ namespace Risk_Manager
                     }
 
                     // Extract all P&L values from AdditionalInfo
-                    double openPnL = 0, dailyPnL = 0, grossPnL = 0, closedPnL = 0, drawdown = 0;
+                    double openPnL = 0, dailyPnL = 0, grossPnL = 0, closedPnL = 0, trailingDrawdown = 0;
                     if (account.AdditionalInfo != null)
                     {
                         foreach (var info in account.AdditionalInfo)
@@ -704,14 +704,14 @@ namespace Risk_Manager
                                 if (info.Value is double cv) closedPnL = cv;
                             }
 
-                            // Drawdown - from AutoLiquidateThresholdCurrentValue field
+                            // Trailing Drawdown - from AutoLiquidateThresholdCurrentValue field
                             if (string.Equals(id, "AutoLiquidateThresholdCurrentValue", StringComparison.OrdinalIgnoreCase))
                             {
-                                if (info.Value is double dd)
+                                if (info.Value is double td)
                                 {
-                                    drawdown = dd;
+                                    trailingDrawdown = td;
 #if DEBUG
-                                    System.Diagnostics.Debug.WriteLine($"Drawdown found: {drawdown} from field '{id}'");
+                                    System.Diagnostics.Debug.WriteLine($"Trailing Drawdown found: {trailingDrawdown} from field '{id}'");
 #endif
                                 }
                             }
@@ -747,8 +747,8 @@ namespace Risk_Manager
                         }
                     }
 
-                    // Trailing Balance - use equity as a starting point
-                    var trailingBalance = equity;
+                    // Calculate Drawdown as Equity - Trailing Drawdown
+                    var drawdown = equity - trailingDrawdown;
 
                     statsGrid.Rows.Add(
                         provider, 
@@ -760,13 +760,13 @@ namespace Risk_Manager
                         FormatNumeric(closedPnL),
                         FormatNumeric(dailyPnL), 
                         FormatNumeric(grossPnL), 
-                        FormatNumeric(drawdown),
+                        FormatNumeric(trailingDrawdown),
                         positionsCount.ToString(), 
                         status,
                         lockStatus,
                         FormatNumeric(lossLimit),
                         FormatNumeric(profitTarget),
-                        FormatNumeric(trailingBalance)
+                        FormatNumeric(drawdown)
                     );
                 }
             }
@@ -1121,10 +1121,10 @@ namespace Risk_Manager
                                 if (info.Value is double cv) data.ClosedPnL += cv;
                             }
 
-                            // Drawdown - from AutoLiquidateThresholdCurrentValue field
+                            // Trailing Drawdown - from AutoLiquidateThresholdCurrentValue field
                             if (string.Equals(id, "AutoLiquidateThresholdCurrentValue", StringComparison.OrdinalIgnoreCase))
                             {
-                                if (info.Value is double dd) data.Drawdown += dd;
+                                if (info.Value is double td) data.TrailingDrawdown += td;
                             }
                         }
                     }
@@ -1138,7 +1138,7 @@ namespace Risk_Manager
                     totalData.Equity += kvp.Value.Equity;
                     totalData.OpenPnL += kvp.Value.OpenPnL;
                     totalData.ClosedPnL += kvp.Value.ClosedPnL;
-                    totalData.Drawdown += kvp.Value.Drawdown;
+                    totalData.TrailingDrawdown += kvp.Value.TrailingDrawdown;
                 }
 
                 // Add rows for each type
@@ -1147,6 +1147,8 @@ namespace Risk_Manager
                     var type = kvp.Key;
                     var data = kvp.Value;
                     var totalPnL = data.OpenPnL + data.ClosedPnL;
+                    // Calculate Drawdown as Equity - Trailing Drawdown
+                    var drawdown = data.Equity - data.TrailingDrawdown;
 
                     typeSummaryGrid.Rows.Add(
                         type,
@@ -1155,12 +1157,14 @@ namespace Risk_Manager
                         FormatNumeric(data.OpenPnL),
                         FormatNumeric(data.ClosedPnL),
                         FormatNumeric(totalPnL),
-                        FormatNumeric(data.Drawdown)
+                        FormatNumeric(drawdown)
                     );
                 }
 
                 // Add total row
                 var totalTotalPnL = totalData.OpenPnL + totalData.ClosedPnL;
+                // Calculate total Drawdown as Equity - Trailing Drawdown
+                var totalDrawdown = totalData.Equity - totalData.TrailingDrawdown;
                 typeSummaryGrid.Rows.Add(
                     "Total",
                     totalData.Count.ToString(),
@@ -1168,7 +1172,7 @@ namespace Risk_Manager
                     FormatNumeric(totalData.OpenPnL),
                     FormatNumeric(totalData.ClosedPnL),
                     FormatNumeric(totalTotalPnL),
-                    FormatNumeric(totalData.Drawdown)
+                    FormatNumeric(totalDrawdown)
                 );
             }
             catch (Exception ex)
@@ -1210,7 +1214,7 @@ namespace Risk_Manager
             public double Equity { get; set; }
             public double OpenPnL { get; set; }
             public double ClosedPnL { get; set; }
-            public double Drawdown { get; set; }
+            public double TrailingDrawdown { get; set; }
         }
 
         private Panel CreateStatisticsOverviewPanel()
