@@ -677,8 +677,10 @@ namespace Risk_Manager
                             if (info?.Id == null) continue;
                             var id = info.Id;
                             
+#if DEBUG
                             // Debug: Log all AdditionalInfo IDs to help identify field names
                             System.Diagnostics.Debug.WriteLine($"AdditionalInfo ID: '{id}', Value: {info.Value}, Type: {info.Value?.GetType().Name}");
+#endif
                             
                             // Daily P&L
                             if (string.Equals(id, "Daily Net P&L", StringComparison.OrdinalIgnoreCase) ||
@@ -716,7 +718,9 @@ namespace Risk_Manager
                                 if (info.Value is double dd)
                                 {
                                     drawdown = dd;
+#if DEBUG
                                     System.Diagnostics.Debug.WriteLine($"Drawdown found: {drawdown} from field '{id}'");
+#endif
                                 }
                             }
 
