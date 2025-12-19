@@ -574,7 +574,6 @@ namespace Risk_Manager
             statsGrid.Columns.Add("ClosedPnL", "Closed P&L");
             statsGrid.Columns.Add("DailyPnL", "Daily P&L");
             statsGrid.Columns.Add("GrossPnL", "Gross P&L");
-            statsGrid.Columns.Add("NetPnL", "Net P&L");
             statsGrid.Columns.Add("Drawdown", "Drawdown");
             statsGrid.Columns.Add("Positions", "Positions");
             statsGrid.Columns.Add("Status", "Status");
@@ -625,9 +624,9 @@ namespace Risk_Manager
                 var core = Core.Instance;
                 if (core == null || core.Accounts == null || !core.Accounts.Any())
                 {
-                    // Demo data with all new columns (added Net P&L column)
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
+                    // Demo data
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
                     return;
                 }
 
@@ -653,7 +652,7 @@ namespace Risk_Manager
                         // Keep as "Unknown" if we can't determine the type
                     }
 
-                    double openPnL = 0;
+                    // Count positions
                     int positionsCount = 0;
                     if (core.Positions != null)
                     {
@@ -662,14 +661,13 @@ namespace Risk_Manager
                             if (pos == null) continue;
                             if (pos.Account == account && pos.Quantity != 0)
                             {
-                                var pnlItem = pos.NetPnL ?? pos.GrossPnL;
-                                if (pnlItem != null) openPnL += pnlItem.Value;
                                 positionsCount++;
                             }
                         }
                     }
 
-                    double dailyPnL = 0, grossPnL = 0, closedPnL = 0, drawdown = 0;
+                    // Extract all P&L values from AdditionalInfo
+                    double openPnL = 0, dailyPnL = 0, grossPnL = 0, closedPnL = 0, drawdown = 0;
                     if (account.AdditionalInfo != null)
                     {
                         foreach (var info in account.AdditionalInfo)
@@ -682,38 +680,32 @@ namespace Risk_Manager
                             System.Diagnostics.Debug.WriteLine($"AdditionalInfo ID: '{id}', Value: {info.Value}, Type: {info.Value?.GetType().Name}");
 #endif
                             
-                            // Daily P&L
-                            if (string.Equals(id, "Daily Net P&L", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "DailyPnL", StringComparison.OrdinalIgnoreCase))
+                            // Open P&L - from OpenPnl field
+                            if (string.Equals(id, "OpenPnl", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double ov) openPnL = ov;
+                            }
+
+                            // Daily P&L - from TotalPnL field
+                            if (string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double dv) dailyPnL = dv;
                             }
 
-                            // Gross P&L / Net P&L
-                            if (string.Equals(id, "Gross P&L", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "GrossPnL", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Net P&L", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "NetPnL", StringComparison.OrdinalIgnoreCase))
+                            // Gross P&L - from NetPnL field
+                            if (string.Equals(id, "NetPnL", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double gv) grossPnL = gv;
                             }
 
-                            // Closed P&L
-                            if (string.Equals(id, "Closed P&L", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "ClosedPnL", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Realized P&L", StringComparison.OrdinalIgnoreCase))
+                            // Closed P&L - from ClosedPnl field
+                            if (string.Equals(id, "ClosedPnl", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double cv) closedPnL = cv;
                             }
 
-                            // Drawdown - try multiple field name variations
-                            if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "MaxDrawdown", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Max Drawdown", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "DrawDown", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "DD", StringComparison.OrdinalIgnoreCase))
+                            // Drawdown - from AutoLiquidateThresholdCurrentValue field
+                            if (string.Equals(id, "AutoLiquidateThresholdCurrentValue", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double dd)
                                 {
@@ -758,9 +750,6 @@ namespace Risk_Manager
                     // Trailing Balance - use equity as a starting point
                     var trailingBalance = equity;
 
-                    // Net P&L equals Gross P&L per requirements
-                    var netPnL = grossPnL;
-
                     statsGrid.Rows.Add(
                         provider, 
                         connectionName, 
@@ -771,7 +760,6 @@ namespace Risk_Manager
                         FormatNumeric(closedPnL),
                         FormatNumeric(dailyPnL), 
                         FormatNumeric(grossPnL), 
-                        FormatNumeric(netPnL),
                         FormatNumeric(drawdown),
                         positionsCount.ToString(), 
                         status,
@@ -901,8 +889,7 @@ namespace Risk_Manager
                 var accountId = accountToDisplay.Id ?? accountToDisplay.Name ?? "Unknown";
                 var balance = accountToDisplay.Balance;
 
-                // Calculate Open P&L from positions (same as Accounts Summary)
-                double openPnL = 0;
+                // Count positions
                 int positionsCount = 0;
                 if (core?.Positions != null)
                 {
@@ -911,15 +898,13 @@ namespace Risk_Manager
                         if (pos == null) continue;
                         if (pos.Account == accountToDisplay && pos.Quantity != 0)
                         {
-                            var pnlItem = pos.NetPnL ?? pos.GrossPnL;
-                            if (pnlItem != null) openPnL += pnlItem.Value;
                             positionsCount++;
                         }
                     }
                 }
 
-                // Get Daily P&L and Gross P&L from AdditionalInfo (same as Accounts Summary)
-                double dailyPnL = 0, grossPnL = 0;
+                // Get all P&L values from AdditionalInfo (same as Accounts Summary)
+                double openPnL = 0, dailyPnL = 0, grossPnL = 0;
                 if (accountToDisplay.AdditionalInfo != null)
                 {
                     foreach (var info in accountToDisplay.AdditionalInfo)
@@ -927,20 +912,20 @@ namespace Risk_Manager
                         if (info?.Id == null) continue;
                         var id = info.Id;
                         
-                        // Daily P&L
-                        if (string.Equals(id, "Daily Net P&L", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(id, "DailyPnL", StringComparison.OrdinalIgnoreCase))
+                        // Open P&L - from OpenPnl field
+                        if (string.Equals(id, "OpenPnl", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (info.Value is double ov) openPnL = ov;
+                        }
+
+                        // Daily P&L - from TotalPnL field
+                        if (string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase))
                         {
                             if (info.Value is double dv) dailyPnL = dv;
                         }
 
-                        // Gross P&L / Net P&L
-                        if (string.Equals(id, "Gross P&L", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(id, "GrossPnL", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(id, "Total P&L", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(id, "Net P&L", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(id, "NetPnL", StringComparison.OrdinalIgnoreCase))
+                        // Gross P&L - from NetPnL field
+                        if (string.Equals(id, "NetPnL", StringComparison.OrdinalIgnoreCase))
                         {
                             if (info.Value is double gv) grossPnL = gv;
                         }
@@ -1116,21 +1101,7 @@ namespace Risk_Manager
                     data.Count++;
                     data.Equity += account.Balance;
 
-                    // Calculate Open P&L from positions
-                    if (core.Positions != null)
-                    {
-                        foreach (var pos in core.Positions)
-                        {
-                            if (pos == null) continue;
-                            if (pos.Account == account && pos.Quantity != 0)
-                            {
-                                var pnlItem = pos.NetPnL ?? pos.GrossPnL;
-                                if (pnlItem != null) data.OpenPnL += pnlItem.Value;
-                            }
-                        }
-                    }
-
-                    // Get Closed P&L and Drawdown from AdditionalInfo
+                    // Get Open P&L, Closed P&L and Drawdown from AdditionalInfo
                     if (account.AdditionalInfo != null)
                     {
                         foreach (var info in account.AdditionalInfo)
@@ -1138,20 +1109,20 @@ namespace Risk_Manager
                             if (info?.Id == null) continue;
                             var id = info.Id;
 
-                            // Closed P&L
-                            if (string.Equals(id, "Closed P&L", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "ClosedPnL", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Realized P&L", StringComparison.OrdinalIgnoreCase))
+                            // Open P&L - from OpenPnl field
+                            if (string.Equals(id, "OpenPnl", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double ov) data.OpenPnL += ov;
+                            }
+
+                            // Closed P&L - from ClosedPnl field
+                            if (string.Equals(id, "ClosedPnl", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double cv) data.ClosedPnL += cv;
                             }
 
-                            // Drawdown - try multiple field name variations
-                            if (string.Equals(id, "Drawdown", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "MaxDrawdown", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Max Drawdown", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "DrawDown", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "DD", StringComparison.OrdinalIgnoreCase))
+                            // Drawdown - from AutoLiquidateThresholdCurrentValue field
+                            if (string.Equals(id, "AutoLiquidateThresholdCurrentValue", StringComparison.OrdinalIgnoreCase))
                             {
                                 if (info.Value is double dd) data.Drawdown += dd;
                             }
