@@ -21,6 +21,7 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer statsRefreshTimer;
         private Account selectedAccount;
         private int selectedAccountIndex = -1; // Track the index of selected account
+        private string displayedAccountNumber; // Cache the account number shown in UI
         private DataGridView statsDetailGrid;
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
         private DataGridView typeSummaryGrid;
@@ -2456,6 +2457,10 @@ namespace Risk_Manager
                     return;
                 
                 var accountNumber = GetSelectedAccountNumber();
+                
+                // Cache the account number so save operation uses exactly what's displayed
+                displayedAccountNumber = accountNumber;
+                
                 if (string.IsNullOrEmpty(accountNumber))
                 {
                     accountNumberDisplay.Text = "Account: Not Selected";
@@ -2467,6 +2472,7 @@ namespace Risk_Manager
                     accountNumberDisplay.ForeColor = AccentBlue;
                 }
                 
+                System.Diagnostics.Debug.WriteLine($"UpdateAccountNumberDisplay: Displaying and caching account='{accountNumber}'");
                 accountNumberDisplay.Invalidate();
             }
             catch (Exception ex)
@@ -2613,11 +2619,12 @@ namespace Risk_Manager
             {
                 try
                 {
-                    // Get account number for saving
-                    var accountNumber = GetSelectedAccountNumber();
+                    // Use the cached account number that's displayed in the UI
+                    // This ensures we save to exactly what the user sees
+                    var accountNumber = displayedAccountNumber;
                     
                     // Debug logging
-                    System.Diagnostics.Debug.WriteLine($"Save button clicked for account: '{accountNumber}'");
+                    System.Diagnostics.Debug.WriteLine($"Save button clicked for account: '{accountNumber}' (using displayed value)");
                     
                     if (string.IsNullOrEmpty(accountNumber))
                     {
