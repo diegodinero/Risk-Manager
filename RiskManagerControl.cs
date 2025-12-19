@@ -2715,10 +2715,36 @@ namespace Risk_Manager
                         foreach (var entry in entries)
                         {
                             var parts = entry.Split(':');
-                            if (parts.Length == 2 && int.TryParse(parts[1].Trim(), out var limit))
+                            if (parts.Length != 2)
                             {
-                                limits[parts[0].Trim()] = limit;
+                                MessageBox.Show($"Invalid format for symbol contract limit: '{entry.Trim()}'. Expected format: 'SYMBOL:LIMIT'", 
+                                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
                             }
+                            
+                            var symbol = parts[0].Trim();
+                            if (string.IsNullOrEmpty(symbol))
+                            {
+                                MessageBox.Show("Symbol name cannot be empty in contract limits.", 
+                                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                            
+                            if (!int.TryParse(parts[1].Trim(), out var limit))
+                            {
+                                MessageBox.Show($"Invalid contract limit value for symbol '{symbol}': '{parts[1].Trim()}'. Must be a valid integer.", 
+                                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                            
+                            if (limit <= 0)
+                            {
+                                MessageBox.Show($"Contract limit for symbol '{symbol}' must be a positive number.", 
+                                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                            
+                            limits[symbol] = limit;
                         }
                         service.SetSymbolContractLimits(accountNumber, limits);
                     }

@@ -344,6 +344,14 @@ namespace Risk_Manager.Data
 
         public void SetSymbolContractLimits(string accountNumber, IDictionary<string, int> symbolLimits)
         {
+            // Validate that all contract limits are positive
+            var invalidLimits = symbolLimits.Where(kvp => kvp.Value <= 0).ToList();
+            if (invalidLimits.Any())
+            {
+                var invalidSymbols = string.Join(", ", invalidLimits.Select(kvp => $"{kvp.Key}:{kvp.Value}"));
+                throw new ArgumentException($"Symbol contract limits must be positive. Invalid entries: {invalidSymbols}", nameof(symbolLimits));
+            }
+            
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
