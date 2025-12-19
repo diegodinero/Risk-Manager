@@ -2485,7 +2485,16 @@ namespace Risk_Manager
                 try
                 {
                     // Get account number for saving
-                    var accountNumber = selectedAccount?.Id ?? selectedAccount?.Name ?? "DEFAULT";
+                    var accountNumber = GetSelectedAccountNumber();
+                    if (string.IsNullOrEmpty(accountNumber))
+                    {
+                        MessageBox.Show(
+                            "Please select an account first.",
+                            "No Account Selected", 
+                            MessageBoxButtons.OK, 
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
                     
                     // Access the settings service and create/update settings for this account
                     var service = RiskManagerSettingsService.Instance;
