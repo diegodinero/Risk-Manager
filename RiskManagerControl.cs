@@ -2539,7 +2539,7 @@ namespace Risk_Manager
                 else
                 {
                     accountNumberDisplay.Text = $"Account: {accountNumber}";
-                    accountNumberDisplay.ForeColor = AccentBlue;
+                    accountNumberDisplay.ForeColor = Color.Transparent;
                 }
                 
                 System.Diagnostics.Debug.WriteLine($"UpdateAccountNumberDisplay: Displaying and caching account='{accountNumber}'");
@@ -3253,7 +3253,7 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 Padding = new Padding(10, 5, 10, 0),
                 BackColor = CardBackground,
-                ForeColor = AccentBlue,
+                ForeColor = Color.Transparent,
                 AutoSize = false,
                 BorderStyle = BorderStyle.FixedSingle
             };
