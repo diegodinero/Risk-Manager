@@ -27,6 +27,7 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
         private DataGridView typeSummaryGrid;
         private System.Windows.Forms.Timer typeSummaryRefreshTimer;
+        private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
         private Label settingsStatusBadge;
@@ -86,6 +87,11 @@ namespace Risk_Manager
         private const string ACCOUNT_TYPE_DEMO = "Demo";
         private const string ACCOUNT_TYPE_LIVE = "Live";
         private const string ACCOUNT_TYPE_UNKNOWN = "Unknown";
+        
+        // Filter mode constants for Type Summary
+        private const string FILTER_MODE_TYPE = "Type";
+        private const string FILTER_MODE_FIRM = "Firm";
+        private static readonly string[] TypeSummaryFilterOptions = new[] { FILTER_MODE_TYPE, FILTER_MODE_FIRM };
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -1321,13 +1327,52 @@ namespace Risk_Manager
         {
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
+            // Title and filter row
+            var topPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = DarkBackground,
+                Padding = new Padding(10, 5, 10, 5)
+            };
+
             // Title with colored emoji rendering
             var titleLabel = CreateEmojiLabel("📋 Type Summary", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
+            titleLabel.Dock = DockStyle.Left;
+            titleLabel.Width = 200;
             titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
             titleLabel.BackColor = DarkBackground;
+
+            // Filter label
+            var filterLabel = new Label
+            {
+                Text = "Filter by:",
+                Dock = DockStyle.Left,
+                Width = 70,
+                Font = new Font("Segoe UI", 9),
+                ForeColor = TextWhite,
+                TextAlign = ContentAlignment.MiddleLeft,
+                BackColor = DarkBackground
+            };
+
+            // Filter dropdown
+            typeSummaryFilterComboBox = new ComboBox
+            {
+                Dock = DockStyle.Left,
+                Width = 120,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat
+            };
+            typeSummaryFilterComboBox.Items.AddRange(TypeSummaryFilterOptions);
+            typeSummaryFilterComboBox.SelectedIndex = 0; // Default to "Type"
+            typeSummaryFilterComboBox.SelectedIndexChanged += (s, e) => RefreshTypeSummary();
+
+            topPanel.Controls.Add(typeSummaryFilterComboBox);
+            topPanel.Controls.Add(filterLabel);
+            topPanel.Controls.Add(titleLabel);
 
             typeSummaryGrid = new DataGridView
             {
@@ -1354,7 +1399,7 @@ namespace Risk_Manager
             typeSummaryGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
 
             // Add columns as requested
-            typeSummaryGrid.Columns.Add("Summary", "Summary");
+            typeSummaryGrid.Columns.Add("Type", "Type");
             typeSummaryGrid.Columns.Add("Count", "Count");
             typeSummaryGrid.Columns.Add("Equity", "Equity");
             typeSummaryGrid.Columns.Add("OpenPnL", "Open P&L");
@@ -1369,7 +1414,7 @@ namespace Risk_Manager
 
             // Add controls in correct order: Fill control first, then Top controls
             mainPanel.Controls.Add(typeSummaryGrid);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(topPanel);
             return mainPanel;
         }
 
@@ -1393,23 +1438,32 @@ namespace Risk_Manager
                     return;
                 }
 
-                // Dictionary to store aggregated data by type
-                var typeData = new Dictionary<string, TypeSummaryData>();
+                // Determine if we're filtering by Type or Firm
+                var filterByFirm = typeSummaryFilterComboBox?.SelectedItem?.ToString() == FILTER_MODE_FIRM;
+                
+                // Update column header based on filter mode
+                if (typeSummaryGrid.Columns.Count > 0)
+                {
+                    typeSummaryGrid.Columns[0].HeaderText = filterByFirm ? FILTER_MODE_FIRM : FILTER_MODE_TYPE;
+                }
+
+                // Dictionary to store aggregated data by type or firm
+                var aggregatedData = new Dictionary<string, TypeSummaryData>();
 
                 foreach (var account in core.Accounts)
                 {
                     if (account == null) continue;
 
-                    // Get account type using centralized method
-                    var accountType = DetermineAccountType(account);
+                    // Get the grouping key based on filter mode
+                    string groupKey = filterByFirm ? GetAccountIbId(account) : DetermineAccountType(account);
 
-                    // Initialize type data if not exists
-                    if (!typeData.ContainsKey(accountType))
+                    // Initialize data if not exists
+                    if (!aggregatedData.ContainsKey(groupKey))
                     {
-                        typeData[accountType] = new TypeSummaryData();
+                        aggregatedData[groupKey] = new TypeSummaryData();
                     }
 
-                    var data = typeData[accountType];
+                    var data = aggregatedData[groupKey];
                     data.Count++;
                     data.Equity += account.Balance;
 
@@ -1444,7 +1498,7 @@ namespace Risk_Manager
 
                 // Calculate totals
                 var totalData = new TypeSummaryData();
-                foreach (var kvp in typeData)
+                foreach (var kvp in aggregatedData)
                 {
                     totalData.Count += kvp.Value.Count;
                     totalData.Equity += kvp.Value.Equity;
@@ -1453,17 +1507,17 @@ namespace Risk_Manager
                     totalData.TrailingDrawdown += kvp.Value.TrailingDrawdown;
                 }
 
-                // Add rows for each type
-                foreach (var kvp in typeData.OrderBy(x => x.Key))
+                // Add rows for each group
+                foreach (var kvp in aggregatedData.OrderBy(x => x.Key))
                 {
-                    var type = kvp.Key;
+                    var groupName = kvp.Key;
                     var data = kvp.Value;
                     var totalPnL = data.OpenPnL + data.ClosedPnL;
                     // Calculate Drawdown as Equity - Trailing Drawdown
                     var drawdown = data.Equity - data.TrailingDrawdown;
 
                     typeSummaryGrid.Rows.Add(
-                        type,
+                        groupName,
                         data.Count.ToString(),
                         FormatNumeric(data.Equity),
                         FormatNumeric(data.OpenPnL),
@@ -2708,7 +2762,33 @@ namespace Risk_Manager
                 return ACCOUNT_TYPE_UNKNOWN;
 
             var connName = account.Connection.Name?.ToLower() ?? "";
-            var accountId = (account.Id ?? account.Name ?? "").ToLower();
+            var accountId = account.Id ?? account.Name ?? "";
+            
+            // Check account ID prefixes first (most specific matching)
+            // These mappings are based on known broker/provider account ID conventions:
+            //   - FFNX: PA (Personal Account)
+            //   - FFN: Eval (Evaluation/Funded Account)
+            //   - BX: PA (Personal Account)
+            //   - APEX: Eval (Evaluation/Funded Account)
+            
+            // FFNX prefix -> PA account
+            if (accountId.StartsWith("ffnx", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+            
+            // FFN prefix -> Eval account (must come after FFNX check)
+            if (accountId.StartsWith("ffn", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+            
+            // BX prefix -> PA account
+            if (accountId.StartsWith("bx", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+            
+            // APEX prefix -> Eval account
+            if (accountId.StartsWith("apex", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+            
+            // Convert to lowercase for remaining pattern checks
+            accountId = accountId.ToLower();
             
             // Check for specific account type patterns with word boundaries to avoid false positives
             // PA (Personal Account)
@@ -2753,6 +2833,29 @@ namespace Risk_Manager
                         if (info.Value is string at && !string.IsNullOrWhiteSpace(at))
                             return at;
                     }
+                }
+            }
+            
+            return ACCOUNT_TYPE_UNKNOWN;
+        }
+
+        /// <summary>
+        /// Extracts the IbId (firm identifier) from an account's AdditionalInfo.
+        /// </summary>
+        /// <param name="account">The account to extract IbId from</param>
+        /// <returns>IbId value or "Unknown" if not found</returns>
+        private string GetAccountIbId(Account account)
+        {
+            if (account?.AdditionalInfo == null)
+                return ACCOUNT_TYPE_UNKNOWN;
+
+            foreach (var info in account.AdditionalInfo)
+            {
+                if (info?.Id == null) continue;
+                if (string.Equals(info.Id, "IbId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (info.Value != null)
+                        return info.Value.ToString();
                 }
             }
             
