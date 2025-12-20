@@ -2190,7 +2190,28 @@ namespace Risk_Manager
                     if (lockMethod != null)
                     {
                         lockMethod.Invoke(core, new object[] { account });
-                        MessageBox.Show("The account has been locked successfully using Core API.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        
+                        // Set TradingStatus to Locked to disable buy/sell buttons
+                        try
+                        {
+                            var tradingStatusProperty = core.GetType().GetProperty("TradingStatus");
+                            if (tradingStatusProperty != null && tradingStatusProperty.CanWrite)
+                            {
+                                // Get TradingStatus enum type and the Locked value
+                                var tradingStatusType = tradingStatusProperty.PropertyType;
+                                var lockedValue = Enum.Parse(tradingStatusType, "Locked");
+                                tradingStatusProperty.SetValue(core, lockedValue);
+#if DEBUG
+                                System.Diagnostics.Debug.WriteLine($"Set Core.TradingStatus to Locked");
+#endif
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error setting TradingStatus: {ex.Message}");
+                        }
+                        
+                        MessageBox.Show("The account has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         
                         // Find the status label and update it
                         var statusLabel = GetTradingStatusLabel(sender as Button);
@@ -2240,7 +2261,28 @@ namespace Risk_Manager
                     if (unlockMethod != null)
                     {
                         unlockMethod.Invoke(core, new object[] { account });
-                        MessageBox.Show("The account has been unlocked successfully using Core API.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        
+                        // Set TradingStatus to Allowed to enable buy/sell buttons
+                        try
+                        {
+                            var tradingStatusProperty = core.GetType().GetProperty("TradingStatus");
+                            if (tradingStatusProperty != null && tradingStatusProperty.CanWrite)
+                            {
+                                // Get TradingStatus enum type and the Allowed value
+                                var tradingStatusType = tradingStatusProperty.PropertyType;
+                                var allowedValue = Enum.Parse(tradingStatusType, "Allowed");
+                                tradingStatusProperty.SetValue(core, allowedValue);
+#if DEBUG
+                                System.Diagnostics.Debug.WriteLine($"Set Core.TradingStatus to Allowed");
+#endif
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error setting TradingStatus: {ex.Message}");
+                        }
+                        
+                        MessageBox.Show("The account has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         
                         // Find the status label and update it
                         var statusLabel = GetTradingStatusLabel(sender as Button);
