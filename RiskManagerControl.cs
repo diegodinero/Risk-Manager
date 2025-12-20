@@ -76,6 +76,15 @@ namespace Risk_Manager
         private const decimal DEFAULT_WEEKLY_PROFIT_TARGET = 2000m;
         private const int DEFAULT_CONTRACT_LIMIT = 10;
 
+        // Account type constants
+        private const string ACCOUNT_TYPE_PA = "PA";
+        private const string ACCOUNT_TYPE_EVAL = "Eval";
+        private const string ACCOUNT_TYPE_CASH = "Cash";
+        private const string ACCOUNT_TYPE_PRAC = "Prac";
+        private const string ACCOUNT_TYPE_DEMO = "Demo";
+        private const string ACCOUNT_TYPE_LIVE = "Live";
+        private const string ACCOUNT_TYPE_UNKNOWN = "Unknown";
+
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
         private static readonly Regex PAPattern = new Regex(@"\bpa\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -2432,7 +2441,7 @@ namespace Risk_Manager
         private string DetermineAccountType(Account account)
         {
             if (account == null || account.Connection == null)
-                return "Unknown";
+                return ACCOUNT_TYPE_UNKNOWN;
 
             var connName = account.Connection.Name?.ToLower() ?? "";
             var accountId = (account.Id ?? account.Name ?? "").ToLower();
@@ -2441,30 +2450,30 @@ namespace Risk_Manager
             // PA (Personal Account)
             if (PAPattern.IsMatch(connName) || PAPattern.IsMatch(accountId) ||
                 connName.Contains("personal"))
-                return "PA";
+                return ACCOUNT_TYPE_PA;
             
             // Eval (Evaluation)
             if (EvalPattern.IsMatch(connName) || EvalPattern.IsMatch(accountId) ||
                 connName.Contains("evaluation"))
-                return "Eval";
+                return ACCOUNT_TYPE_EVAL;
             
             // Cash
             if (CashPattern.IsMatch(connName) || CashPattern.IsMatch(accountId))
-                return "Cash";
+                return ACCOUNT_TYPE_CASH;
             
             // Prac (Practice)
             if (PracPattern.IsMatch(connName) || PracPattern.IsMatch(accountId) ||
                 connName.Contains("practice"))
-                return "Prac";
+                return ACCOUNT_TYPE_PRAC;
             
             // Demo/Simulation patterns
             if (connName.Contains("demo") || connName.Contains("simulation") || 
                 connName.Contains("paper") || accountId.Contains("demo"))
-                return "Demo";
+                return ACCOUNT_TYPE_DEMO;
             
             // Live/Real patterns
             if (connName.Contains("live") || connName.Contains("real"))
-                return "Live";
+                return ACCOUNT_TYPE_LIVE;
             
             // Check AdditionalInfo for explicit type override
             if (account.AdditionalInfo != null)
@@ -2483,7 +2492,7 @@ namespace Risk_Manager
                 }
             }
             
-            return "Unknown";
+            return ACCOUNT_TYPE_UNKNOWN;
         }
 
         /// <summary>
@@ -2501,23 +2510,33 @@ namespace Risk_Manager
                     return;
 
                 // Define which account types should be locked
-                var shouldBeLocked = accountType == "Prac" || accountType == "Live";
+                var shouldBeLocked = accountType == ACCOUNT_TYPE_PRAC || accountType == ACCOUNT_TYPE_LIVE;
 
                 if (shouldBeLocked)
                 {
                     // Lock the account using Core API
-                    core.LockAccount(account);
+                    // Check if the method exists before calling (defensive programming)
+                    var lockMethod = core.GetType().GetMethod("LockAccount");
+                    if (lockMethod != null)
+                    {
+                        lockMethod.Invoke(core, new object[] { account });
 #if DEBUG
-                    System.Diagnostics.Debug.WriteLine($"Locked account {account.Id ?? account.Name} of type {accountType}");
+                        System.Diagnostics.Debug.WriteLine($"Locked account {account.Id ?? account.Name} of type {accountType}");
 #endif
+                    }
                 }
                 else
                 {
                     // Unlock the account using Core API
-                    core.UnlockAccount(account);
+                    // Check if the method exists before calling (defensive programming)
+                    var unlockMethod = core.GetType().GetMethod("UnlockAccount");
+                    if (unlockMethod != null)
+                    {
+                        unlockMethod.Invoke(core, new object[] { account });
 #if DEBUG
-                    System.Diagnostics.Debug.WriteLine($"Unlocked account {account.Id ?? account.Name} of type {accountType}");
+                        System.Diagnostics.Debug.WriteLine($"Unlocked account {account.Id ?? account.Name} of type {accountType}");
 #endif
+                    }
                 }
             }
             catch (Exception ex)
