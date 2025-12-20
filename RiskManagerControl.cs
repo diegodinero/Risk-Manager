@@ -2318,6 +2318,13 @@ namespace Risk_Manager
                     // Set TradingStatus to Locked to disable buy/sell buttons
                     SetCoreTradingStatus(core, "Locked");
                     
+                    // Update the settings service to track the lock status
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (settingsService.IsInitialized)
+                    {
+                        settingsService.SetTradingLock(accountNumber, true, "Manual lock via Lock Trading button");
+                    }
+                    
                     MessageBox.Show($"Account '{accountNumber}' has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     
                     // Find the status label and update it
@@ -2328,8 +2335,10 @@ namespace Risk_Manager
                         statusLabel.ForeColor = Color.Red;
                     }
 
-                    // Update the trading status badge
+                    // Update the trading status badge and refresh grids
                     UpdateTradingStatusBadge();
+                    RefreshAccountsSummary();
+                    RefreshAccountStats();
                 }
                 else
                 {
@@ -2378,6 +2387,13 @@ namespace Risk_Manager
                     // Set TradingStatus to Allowed to enable buy/sell buttons
                     SetCoreTradingStatus(core, "Allowed");
                     
+                    // Update the settings service to track the unlock status
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (settingsService.IsInitialized)
+                    {
+                        settingsService.SetTradingLock(accountNumber, false, "Manual unlock via Unlock Trading button");
+                    }
+                    
                     MessageBox.Show($"Account '{accountNumber}' has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     
                     // Find the status label and update it
@@ -2388,8 +2404,10 @@ namespace Risk_Manager
                         statusLabel.ForeColor = AccentGreen;
                     }
 
-                    // Update the trading status badge
+                    // Update the trading status badge and refresh grids
                     UpdateTradingStatusBadge();
+                    RefreshAccountsSummary();
+                    RefreshAccountStats();
                 }
                 else
                 {
