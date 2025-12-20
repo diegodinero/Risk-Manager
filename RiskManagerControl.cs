@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Media;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
@@ -32,6 +33,8 @@ namespace Risk_Manager
         private Label tradingStatusBadge;
         private ComboBox accountSelector;
         private Label accountNumberDisplay; // Display current account number in UI
+        private Button lockTradingButton; // Lock Trading button reference
+        private Button unlockTradingButton; // Unlock Trading button reference
 
         // Settings input control references for persistence
         private TextBox dailyLossLimitInput;
@@ -74,6 +77,22 @@ namespace Risk_Manager
         private const decimal DEFAULT_WEEKLY_LOSS_LIMIT = 1000m;
         private const decimal DEFAULT_WEEKLY_PROFIT_TARGET = 2000m;
         private const int DEFAULT_CONTRACT_LIMIT = 10;
+
+        // Account type constants
+        private const string ACCOUNT_TYPE_PA = "PA";
+        private const string ACCOUNT_TYPE_EVAL = "Eval";
+        private const string ACCOUNT_TYPE_CASH = "Cash";
+        private const string ACCOUNT_TYPE_PRAC = "Prac";
+        private const string ACCOUNT_TYPE_DEMO = "Demo";
+        private const string ACCOUNT_TYPE_LIVE = "Live";
+        private const string ACCOUNT_TYPE_UNKNOWN = "Unknown";
+
+        // Regex patterns for account type detection (compiled for performance)
+        // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
+        private static readonly Regex PAPattern = new Regex(@"\bpa\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex EvalPattern = new Regex(@"\beval\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex CashPattern = new Regex(@"\bcash\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex PracPattern = new Regex(@"\bprac\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         // Dark theme colors
         private static readonly Color DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
@@ -276,8 +295,9 @@ namespace Risk_Manager
                 var accountName = account.Name ?? "NULL";
                 System.Diagnostics.Debug.WriteLine($"Account selected at index {selectedAccountIndex}: Id='{accountId}', Name='{accountName}'");
                 
-                // Update the account number display
+                // Update the account number display for both Limits and Manual Lock tabs
                 UpdateAccountNumberDisplay();
+                UpdateAllLockAccountDisplays();
                 
                 // Refresh Stats tab if visible
                 if (statsDetailGrid != null)
@@ -940,18 +960,8 @@ namespace Risk_Manager
                     var accountId = account.Id ?? account.Name ?? "Unknown";
                     var equity = account.Balance;
 
-                    // Get account type from AdditionalInfo or Connection
-                    var accountType = "Unknown";
-                    if (account.Connection != null)
-                    {
-                        // Try to determine if it's a demo or live account
-                        var connName = account.Connection.Name?.ToLower() ?? "";
-                        if (connName.Contains("demo") || connName.Contains("simulation") || connName.Contains("paper"))
-                            accountType = "Demo";
-                        else if (connName.Contains("live") || connName.Contains("real"))
-                            accountType = "Live";
-                        // Keep as "Unknown" if we can't determine the type
-                    }
+                    // Get account type using centralized method
+                    var accountType = DetermineAccountType(account);
 
                     // Count positions
                     int positionsCount = 0;
@@ -1071,7 +1081,7 @@ namespace Risk_Manager
                         positionsCount.ToString(), 
                         status,
                         lockStatus,
-                        FormatNumeric(lossLimit),
+                        FormatLossLimit(lossLimit),
                         FormatNumeric(profitTarget),
                         FormatNumeric(drawdown)
                     );
@@ -1247,8 +1257,27 @@ namespace Risk_Manager
                 var lockStatus = "Unlocked";
                 if (settingsService.IsInitialized)
                 {
-                    var isLocked = settingsService.IsTradingLocked(accountId);
-                    lockStatus = isLocked ? "Locked" : "Unlocked";
+                    // Generate the account identifier from accountToDisplay to ensure we check the correct account
+                    // Find the account index
+                    int accountIndex = 0;
+                    if (core != null && core.Accounts != null)
+                    {
+                        foreach (var acc in core.Accounts)
+                        {
+                            if (acc == accountToDisplay)
+                            {
+                                break;
+                            }
+                            accountIndex++;
+                        }
+                    }
+                    
+                    var accountNumber = GetUniqueAccountIdentifier(accountToDisplay, accountIndex);
+                    if (!string.IsNullOrEmpty(accountNumber))
+                    {
+                        var isLocked = settingsService.IsTradingLocked(accountNumber);
+                        lockStatus = isLocked ? "Locked" : "Unlocked";
+                    }
                 }
 
                 // Display all stats matching Accounts Summary data
@@ -1371,32 +1400,8 @@ namespace Risk_Manager
                 {
                     if (account == null) continue;
 
-                    // Get account type (same logic as Accounts Summary)
-                    var accountType = "Unknown";
-                    if (account.Connection != null)
-                    {
-                        var connName = account.Connection.Name?.ToLower() ?? "";
-                        if (connName.Contains("demo") || connName.Contains("simulation") || connName.Contains("paper"))
-                            accountType = "Demo";
-                        else if (connName.Contains("live") || connName.Contains("real"))
-                            accountType = "Live";
-                    }
-
-                    // Check AdditionalInfo for type override
-                    if (account.AdditionalInfo != null)
-                    {
-                        foreach (var info in account.AdditionalInfo)
-                        {
-                            if (info?.Id == null) continue;
-                            var id = info.Id;
-                            if (string.Equals(id, "Account Type", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "AccountType", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Type", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (info.Value is string at) accountType = at;
-                            }
-                        }
-                    }
+                    // Get account type using centralized method
+                    var accountType = DetermineAccountType(account);
 
                     // Initialize type data if not exists
                     if (!typeData.ContainsKey(accountType))
@@ -2117,6 +2122,22 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display - shows which account will be locked/unlocked
+            var lockAccountDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                Tag = "LockAccountDisplay" // Tag for identification
+            };
+
             var contentArea = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -2139,6 +2160,7 @@ namespace Risk_Manager
             };
             lockButton.FlatAppearance.BorderSize = 0;
             lockButton.Click += BtnLock_Click;
+            lockTradingButton = lockButton; // Store reference
             contentArea.Controls.Add(lockButton);
 
             var unlockButton = new Button
@@ -2156,64 +2178,225 @@ namespace Risk_Manager
             };
             unlockButton.FlatAppearance.BorderSize = 0;
             unlockButton.Click += BtnUnlock_Click;
+            unlockTradingButton = unlockButton; // Store reference
             contentArea.Controls.Add(unlockButton);
 
-            // Status label
-            var lblTradingStatus = new Label
-            {
-                Text = "Trading Unlocked",
-                Left = 440,
-                Top = 10,
-                Width = 150,
-                Height = 30,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                ForeColor = AccentGreen,
-                BackColor = CardBackground,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Tag = "TradingStatus" // Tag for identification
-            };
-            contentArea.Controls.Add(lblTradingStatus);
+            // Update account display on panel creation
+            UpdateLockAccountDisplay(lockAccountDisplay);
+            
+            // Update button states based on current lock status
+            UpdateLockButtonStates();
 
-            // Update status on panel creation
-            UpdateAccountStatus(lblTradingStatus);
-
-            // Add controls in correct order: Fill first, then Top (no Bottom for this panel)
-            // In WinForms, docking is processed in reverse Z-order
+            // Add controls in correct order: Fill first, then Top
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(lockAccountDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
         }
 
+        private void UpdateAllLockAccountDisplays()
+        {
+            try
+            {
+                // Find all LockAccountDisplay labels in the control tree and update them
+                UpdateLockAccountDisplaysRecursive(this);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating lock account displays: {ex.Message}");
+            }
+        }
+
+        private void UpdateLockAccountDisplaysRecursive(Control parent)
+        {
+            if (parent == null) return;
+            
+            foreach (Control control in parent.Controls)
+            {
+                if (control is Label label && label.Tag?.ToString() == "LockAccountDisplay")
+                {
+                    UpdateLockAccountDisplay(label);
+                }
+                
+                // Recursively check child controls
+                if (control.Controls.Count > 0)
+                {
+                    UpdateLockAccountDisplaysRecursive(control);
+                }
+            }
+        }
+
+        private void UpdateLockAccountDisplay(Label lockAccountDisplay)
+        {
+            try
+            {
+                if (lockAccountDisplay == null)
+                    return;
+                
+                var accountNumber = GetSelectedAccountNumber();
+                
+                // Cache the account number so lock/unlock operations use exactly what's displayed
+                displayedAccountNumber = accountNumber;
+                
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    lockAccountDisplay.Text = "Account: Not Selected";
+                    lockAccountDisplay.ForeColor = Color.Orange;
+                }
+                else
+                {
+                    lockAccountDisplay.Text = $"Account: {accountNumber}";
+                    lockAccountDisplay.ForeColor = TextWhite;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"UpdateLockAccountDisplay: Displaying and caching account='{accountNumber}'");
+                lockAccountDisplay.Invalidate();
+                
+                // Update button states after account display changes
+                UpdateLockButtonStates();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating lock account display: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Updates the enabled/disabled state of lock and unlock buttons based on current lock status.
+        /// Grey out Lock button if already locked, grey out Unlock button if already unlocked.
+        /// </summary>
+        private void UpdateLockButtonStates()
+        {
+            try
+            {
+                if (lockTradingButton == null || unlockTradingButton == null)
+                    return;
+
+                var accountNumber = GetSelectedAccountNumber();
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    // No account selected - disable both buttons
+                    lockTradingButton.Enabled = false;
+                    unlockTradingButton.Enabled = false;
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    // Service not initialized - enable both buttons as fallback
+                    lockTradingButton.Enabled = true;
+                    unlockTradingButton.Enabled = true;
+                    return;
+                }
+
+                bool isLocked = settingsService.IsTradingLocked(accountNumber);
+
+                // If locked: disable Lock button, enable Unlock button
+                // If unlocked: enable Lock button, disable Unlock button
+                lockTradingButton.Enabled = !isLocked;
+                unlockTradingButton.Enabled = isLocked;
+                
+                System.Diagnostics.Debug.WriteLine($"UpdateLockButtonStates: account='{accountNumber}', isLocked={isLocked}, Lock.Enabled={lockTradingButton.Enabled}, Unlock.Enabled={unlockTradingButton.Enabled}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating lock button states: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Finds an account by its unique identifier.
+        /// </summary>
+        /// <param name="accountNumber">The unique account identifier to search for</param>
+        /// <returns>The matching account, or null if not found</returns>
+        private Account FindAccountByIdentifier(string accountNumber)
+        {
+            var core = Core.Instance;
+            if (core == null || core.Accounts == null)
+                return null;
+
+            int accountIndex = 0;
+            foreach (var account in core.Accounts)
+            {
+                if (account == null)
+                {
+                    accountIndex++;
+                    continue;
+                }
+                
+                var uniqueAccountId = GetUniqueAccountIdentifier(account, accountIndex);
+                if (uniqueAccountId == accountNumber)
+                {
+                    return account;
+                }
+                accountIndex++;
+            }
+
+            return null;
+        }
+
         private void BtnLock_Click(object sender, EventArgs e)
         {
             try
             {
-                var accountNumber = GetSelectedAccountNumber();
+                // Use the cached account number to find the correct account
+                var accountNumber = displayedAccountNumber;
                 if (string.IsNullOrEmpty(accountNumber))
                 {
                     MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                if (!ValidateSettingsService(out var settingsService))
+                // Find the account by the cached identifier
+                var core = Core.Instance;
+                if (core == null)
                 {
+                    MessageBox.Show("Core instance not available.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                settingsService.SetTradingLock(accountNumber, true, "Manual lock");
-                MessageBox.Show("The account has been locked successfully.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                
-                // Find the status label and update it
-                var statusLabel = GetTradingStatusLabel(sender as Button);
-                if (statusLabel != null)
+                var targetAccount = FindAccountByIdentifier(accountNumber);
+                if (targetAccount == null)
                 {
-                    UpdateAccountStatus(statusLabel);
+                    MessageBox.Show($"Could not find account: {accountNumber}", "Account Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
 
-                // Update the trading status badge
-                UpdateTradingStatusBadge();
+                // Check if the method exists before calling (defensive programming)
+                var lockMethod = core.GetType().GetMethod("LockAccount");
+                if (lockMethod != null)
+                {
+                    lockMethod.Invoke(core, new object[] { targetAccount });
+                    
+                    // Set TradingStatus to Locked to disable buy/sell buttons
+                    SetCoreTradingStatus(core, "Locked");
+                    
+                    // Update the settings service to track the lock status
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (settingsService.IsInitialized)
+                    {
+                        settingsService.SetTradingLock(accountNumber, true, "Manual lock via Lock Trading button");
+                    }
+                    
+                    // Always update the trading status badge immediately (no conditional check)
+                    UpdateTradingStatusBadgeUI(true);
+                    
+                    // Update button states - Lock button should now be disabled
+                    // Do this BEFORE refresh to avoid race conditions
+                    UpdateLockButtonStates();
+                    
+                    RefreshAccountsSummary();
+                    RefreshAccountStats();
+                    
+                    MessageBox.Show($"Account '{accountNumber}' has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show("LockAccount method not available in Core API.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             catch (Exception ex)
             {
@@ -2225,34 +2408,101 @@ namespace Risk_Manager
         {
             try
             {
-                var accountNumber = GetSelectedAccountNumber();
+                // Use the cached account number to find the correct account
+                var accountNumber = displayedAccountNumber;
                 if (string.IsNullOrEmpty(accountNumber))
                 {
                     MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                if (!ValidateSettingsService(out var settingsService))
+                // Find the account by the cached identifier
+                var core = Core.Instance;
+                if (core == null)
                 {
+                    MessageBox.Show("Core instance not available.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                settingsService.SetTradingLock(accountNumber, false, "Manual unlock");
-                MessageBox.Show("The account has been unlocked successfully.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                
-                // Find the status label and update it
-                var statusLabel = GetTradingStatusLabel(sender as Button);
-                if (statusLabel != null)
+                var targetAccount = FindAccountByIdentifier(accountNumber);
+                if (targetAccount == null)
                 {
-                    UpdateAccountStatus(statusLabel);
+                    MessageBox.Show($"Could not find account: {accountNumber}", "Account Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
 
-                // Update the trading status badge
-                UpdateTradingStatusBadge();
+                // Check if the method exists before calling (defensive programming)
+                var unlockMethod = core.GetType().GetMethod("UnLockAccount");
+                if (unlockMethod != null)
+                {
+                    unlockMethod.Invoke(core, new object[] { targetAccount });
+                    
+                    // Set TradingStatus to Allowed to enable buy/sell buttons
+                    SetCoreTradingStatus(core, "Allowed");
+                    
+                    // Update the settings service to track the unlock status
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (settingsService.IsInitialized)
+                    {
+                        settingsService.SetTradingLock(accountNumber, false, "Manual unlock via Unlock Trading button");
+                    }
+                    
+                    // Always update the trading status badge immediately (no conditional check)
+                    UpdateTradingStatusBadgeUI(false);
+                    
+                    // Update button states - Unlock button should now be disabled
+                    // Do this BEFORE refresh to avoid race conditions
+                    UpdateLockButtonStates();
+                    
+                    RefreshAccountsSummary();
+                    RefreshAccountStats();
+                    
+                    MessageBox.Show($"Account '{accountNumber}' has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show("UnLockAccount method not available in Core API.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error unlocking the account: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to set Core.TradingStatus property using reflection.
+        /// </summary>
+        /// <param name="core">The Core instance</param>
+        /// <param name="statusValue">The status value to set (e.g., "Locked" or "Allowed")</param>
+        private void SetCoreTradingStatus(object core, string statusValue)
+        {
+            try
+            {
+                var tradingStatusProperty = core.GetType().GetProperty("TradingStatus");
+                if (tradingStatusProperty != null && tradingStatusProperty.CanWrite)
+                {
+                    // Get TradingStatus enum type
+                    var tradingStatusType = tradingStatusProperty.PropertyType;
+                    
+                    // Try to parse the enum value (case-insensitive)
+                    try
+                    {
+                        var enumValue = Enum.Parse(tradingStatusType, statusValue, ignoreCase: true);
+                        tradingStatusProperty.SetValue(core, enumValue);
+#if DEBUG
+                        System.Diagnostics.Debug.WriteLine($"Set Core.TradingStatus to {statusValue}");
+#endif
+                    }
+                    catch (ArgumentException)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"'{statusValue}' value not found in TradingStatus enum");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error setting TradingStatus: {ex.Message}");
             }
         }
 
@@ -2447,6 +2697,69 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Determines the account type based on connection name, account ID, and AdditionalInfo.
+        /// Uses word boundary pattern matching to avoid false positives.
+        /// </summary>
+        /// <param name="account">The account to check</param>
+        /// <returns>Account type: PA, Eval, Cash, Prac, Demo, Live, or Unknown</returns>
+        private string DetermineAccountType(Account account)
+        {
+            if (account == null || account.Connection == null)
+                return ACCOUNT_TYPE_UNKNOWN;
+
+            var connName = account.Connection.Name?.ToLower() ?? "";
+            var accountId = (account.Id ?? account.Name ?? "").ToLower();
+            
+            // Check for specific account type patterns with word boundaries to avoid false positives
+            // PA (Personal Account)
+            if (PAPattern.IsMatch(connName) || PAPattern.IsMatch(accountId) ||
+                connName.Contains("personal"))
+                return ACCOUNT_TYPE_PA;
+            
+            // Eval (Evaluation)
+            if (EvalPattern.IsMatch(connName) || EvalPattern.IsMatch(accountId) ||
+                connName.Contains("evaluation"))
+                return ACCOUNT_TYPE_EVAL;
+            
+            // Cash
+            if (CashPattern.IsMatch(connName) || CashPattern.IsMatch(accountId))
+                return ACCOUNT_TYPE_CASH;
+            
+            // Prac (Practice)
+            if (PracPattern.IsMatch(connName) || PracPattern.IsMatch(accountId) ||
+                connName.Contains("practice"))
+                return ACCOUNT_TYPE_PRAC;
+            
+            // Demo/Simulation patterns
+            if (connName.Contains("demo") || connName.Contains("simulation") || 
+                connName.Contains("paper") || accountId.Contains("demo"))
+                return ACCOUNT_TYPE_DEMO;
+            
+            // Live/Real patterns
+            if (connName.Contains("live") || connName.Contains("real"))
+                return ACCOUNT_TYPE_LIVE;
+            
+            // Check AdditionalInfo for explicit type override
+            if (account.AdditionalInfo != null)
+            {
+                foreach (var info in account.AdditionalInfo)
+                {
+                    if (info?.Id == null) continue;
+                    var id = info.Id;
+                    if (string.Equals(id, "Account Type", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(id, "AccountType", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(id, "Type", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (info.Value is string at && !string.IsNullOrWhiteSpace(at))
+                            return at;
+                    }
+                }
+            }
+            
+            return ACCOUNT_TYPE_UNKNOWN;
+        }
+
+        /// <summary>
         /// Formats a numeric value for display, using parentheses for negative values.
         /// </summary>
         private string FormatNumeric(double value, int decimals = 2)
@@ -2471,6 +2784,20 @@ namespace Risk_Manager
                 return $"({Math.Abs(value.Value).ToString($"N{decimals}")})";
             }
             return value.Value.ToString($"N{decimals}");
+        }
+
+        /// <summary>
+        /// Formats a loss limit value for display, always using parentheses.
+        /// Loss limits are displayed in parentheses to indicate they are constraints/limits.
+        /// Uses absolute value to avoid double negatives.
+        /// </summary>
+        private string FormatLossLimit(decimal? value, int decimals = 2)
+        {
+            if (!value.HasValue)
+                return "-";
+            
+            // Use absolute value to avoid confusing double negatives like (-(-500.00))
+            return $"({Math.Abs(value.Value).ToString($"N{decimals}")})";
         }
 
         private Label GetTradingStatusLabel(Button button)
@@ -2517,6 +2844,19 @@ namespace Risk_Manager
 
                 bool isLocked = settingsService.IsTradingLocked(accountNumber);
 
+                UpdateTradingStatusBadgeUI(isLocked);
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't interrupt UI flow
+                System.Diagnostics.Debug.WriteLine($"Error updating trading status badge: {ex.Message}");
+            }
+        }
+
+        private void UpdateTradingStatusBadgeUI(bool isLocked)
+        {
+            try
+            {
                 if (tradingStatusBadge != null)
                 {
                     if (isLocked)
@@ -2529,13 +2869,12 @@ namespace Risk_Manager
                         tradingStatusBadge.Text = "  Trading Unlocked  ";
                         tradingStatusBadge.BackColor = AccentGreen;
                     }
-                    tradingStatusBadge.Invalidate();
+                    tradingStatusBadge.Refresh(); // Force immediate repaint
                 }
             }
             catch (Exception ex)
             {
-                // Log error but don't interrupt UI flow
-                System.Diagnostics.Debug.WriteLine($"Error updating trading status badge: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error updating trading status badge UI: {ex.Message}");
             }
         }
 
@@ -3663,6 +4002,7 @@ namespace Risk_Manager
             };
 
             // Account Number Display - shows which account settings will be saved to
+            // This is hidden but functionality is retained for settings persistence
             accountNumberDisplay = new Label
             {
                 Text = "Account: Not Selected",
@@ -3672,9 +4012,10 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 Padding = new Padding(10, 5, 10, 0),
                 BackColor = CardBackground,
-                ForeColor = Color.Transparent,
+                ForeColor = TextWhite,  // Set proper color in case it's made visible later
                 AutoSize = false,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                Visible = false  // Hide the control while retaining functionality
             };
             
             // Update the display with current account
