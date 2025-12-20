@@ -2367,7 +2367,7 @@ namespace Risk_Manager
                         settingsService.SetTradingLock(accountNumber, true, "Manual lock via Lock Trading button");
                     }
                     
-                    // Update the trading status badge and refresh grids immediately
+                    // Update the trading status badge and button states immediately
                     // Check if the locked account is the currently selected one
                     var currentlySelected = GetSelectedAccountNumber();
                     if (currentlySelected == accountNumber)
@@ -2376,11 +2376,12 @@ namespace Risk_Manager
                         UpdateTradingStatusBadgeUI(true);
                     }
                     
+                    // Update button states - Lock button should now be disabled
+                    // Do this BEFORE refresh to avoid race conditions
+                    UpdateLockButtonStates();
+                    
                     RefreshAccountsSummary();
                     RefreshAccountStats();
-                    
-                    // Update button states - Lock button should now be disabled
-                    UpdateLockButtonStates();
                     
                     MessageBox.Show($"Account '{accountNumber}' has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -2438,7 +2439,7 @@ namespace Risk_Manager
                         settingsService.SetTradingLock(accountNumber, false, "Manual unlock via Unlock Trading button");
                     }
                     
-                    // Update the trading status badge and refresh grids immediately
+                    // Update the trading status badge and button states immediately
                     // Check if the unlocked account is the currently selected one
                     var currentlySelected = GetSelectedAccountNumber();
                     if (currentlySelected == accountNumber)
@@ -2447,11 +2448,12 @@ namespace Risk_Manager
                         UpdateTradingStatusBadgeUI(false);
                     }
                     
+                    // Update button states - Unlock button should now be disabled
+                    // Do this BEFORE refresh to avoid race conditions
+                    UpdateLockButtonStates();
+                    
                     RefreshAccountsSummary();
                     RefreshAccountStats();
-                    
-                    // Update button states - Unlock button should now be disabled
-                    UpdateLockButtonStates();
                     
                     MessageBox.Show($"Account '{accountNumber}' has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
