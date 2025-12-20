@@ -77,7 +77,7 @@ namespace Risk_Manager
         private const int DEFAULT_CONTRACT_LIMIT = 10;
 
         // Regex patterns for account type detection (compiled for performance)
-        // Using word boundaries to avoid false positives (e.g., "spapce" won't match "pa", "evaluate" won't match "eval")
+        // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
         private static readonly Regex PAPattern = new Regex(@"\bpa\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex EvalPattern = new Regex(@"\beval\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex CashPattern = new Regex(@"\bcash\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -2507,13 +2507,15 @@ namespace Risk_Manager
         /// <summary>
         /// Formats a loss limit value for display, always using parentheses.
         /// Loss limits are displayed in parentheses to indicate they are constraints/limits.
+        /// Uses absolute value to avoid double negatives.
         /// </summary>
         private string FormatLossLimit(decimal? value, int decimals = 2)
         {
             if (!value.HasValue)
                 return "-";
             
-            return $"({value.Value.ToString($"N{decimals}")})";
+            // Use absolute value to avoid confusing double negatives like (-(-500.00))
+            return $"({Math.Abs(value.Value).ToString($"N{decimals}")})";
         }
 
         private Label GetTradingStatusLabel(Button button)
