@@ -2313,12 +2313,19 @@ namespace Risk_Manager
                         settingsService.SetTradingLock(accountNumber, true, "Manual lock via Lock Trading button");
                     }
                     
-                    MessageBox.Show($"Account '{accountNumber}' has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Update the trading status badge and refresh grids immediately
+                    // Check if the locked account is the currently selected one
+                    var currentlySelected = GetSelectedAccountNumber();
+                    if (currentlySelected == accountNumber)
+                    {
+                        // Update badge for currently selected account
+                        UpdateTradingStatusBadgeUI(true);
+                    }
                     
-                    // Update the trading status badge and refresh grids
-                    UpdateTradingStatusBadge();
                     RefreshAccountsSummary();
                     RefreshAccountStats();
+                    
+                    MessageBox.Show($"Account '{accountNumber}' has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
@@ -2374,12 +2381,19 @@ namespace Risk_Manager
                         settingsService.SetTradingLock(accountNumber, false, "Manual unlock via Unlock Trading button");
                     }
                     
-                    MessageBox.Show($"Account '{accountNumber}' has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Update the trading status badge and refresh grids immediately
+                    // Check if the unlocked account is the currently selected one
+                    var currentlySelected = GetSelectedAccountNumber();
+                    if (currentlySelected == accountNumber)
+                    {
+                        // Update badge for currently selected account
+                        UpdateTradingStatusBadgeUI(false);
+                    }
                     
-                    // Update the trading status badge and refresh grids
-                    UpdateTradingStatusBadge();
                     RefreshAccountsSummary();
                     RefreshAccountStats();
+                    
+                    MessageBox.Show($"Account '{accountNumber}' has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
@@ -2766,6 +2780,19 @@ namespace Risk_Manager
 
                 bool isLocked = settingsService.IsTradingLocked(accountNumber);
 
+                UpdateTradingStatusBadgeUI(isLocked);
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't interrupt UI flow
+                System.Diagnostics.Debug.WriteLine($"Error updating trading status badge: {ex.Message}");
+            }
+        }
+
+        private void UpdateTradingStatusBadgeUI(bool isLocked)
+        {
+            try
+            {
                 if (tradingStatusBadge != null)
                 {
                     if (isLocked)
@@ -2778,13 +2805,12 @@ namespace Risk_Manager
                         tradingStatusBadge.Text = "  Trading Unlocked  ";
                         tradingStatusBadge.BackColor = AccentGreen;
                     }
-                    tradingStatusBadge.Invalidate();
+                    tradingStatusBadge.Refresh(); // Force immediate repaint
                 }
             }
             catch (Exception ex)
             {
-                // Log error but don't interrupt UI flow
-                System.Diagnostics.Debug.WriteLine($"Error updating trading status badge: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error updating trading status badge UI: {ex.Message}");
             }
         }
 
