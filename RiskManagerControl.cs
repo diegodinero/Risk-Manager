@@ -293,8 +293,9 @@ namespace Risk_Manager
                 var accountName = account.Name ?? "NULL";
                 System.Diagnostics.Debug.WriteLine($"Account selected at index {selectedAccountIndex}: Id='{accountId}', Name='{accountName}'");
                 
-                // Update the account number display
+                // Update the account number display for both Limits and Manual Lock tabs
                 UpdateAccountNumberDisplay();
+                UpdateAllLockAccountDisplays();
                 
                 // Refresh Stats tab if visible
                 if (statsDetailGrid != null)
@@ -2100,6 +2101,22 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display - shows which account will be locked/unlocked
+            var lockAccountDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                Tag = "LockAccountDisplay" // Tag for identification
+            };
+
             var contentArea = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -2157,64 +2174,150 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(lblTradingStatus);
 
-            // Update status on panel creation
+            // Update status and account display on panel creation
+            UpdateLockAccountDisplay(lockAccountDisplay);
             UpdateAccountStatus(lblTradingStatus);
 
-            // Add controls in correct order: Fill first, then Top (no Bottom for this panel)
-            // In WinForms, docking is processed in reverse Z-order
+            // Add controls in correct order: Fill first, then Top
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(lockAccountDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
         }
 
+        private void UpdateAllLockAccountDisplays()
+        {
+            try
+            {
+                // Find all LockAccountDisplay labels in the control tree and update them
+                UpdateLockAccountDisplaysRecursive(this);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating lock account displays: {ex.Message}");
+            }
+        }
+
+        private void UpdateLockAccountDisplaysRecursive(Control parent)
+        {
+            if (parent == null) return;
+            
+            foreach (Control control in parent.Controls)
+            {
+                if (control is Label label && label.Tag?.ToString() == "LockAccountDisplay")
+                {
+                    UpdateLockAccountDisplay(label);
+                }
+                
+                // Recursively check child controls
+                if (control.Controls.Count > 0)
+                {
+                    UpdateLockAccountDisplaysRecursive(control);
+                }
+            }
+        }
+
+        private void UpdateLockAccountDisplay(Label lockAccountDisplay)
+        {
+            try
+            {
+                if (lockAccountDisplay == null)
+                    return;
+                
+                var accountNumber = GetSelectedAccountNumber();
+                
+                // Cache the account number so lock/unlock operations use exactly what's displayed
+                displayedAccountNumber = accountNumber;
+                
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    lockAccountDisplay.Text = "Account: Not Selected";
+                    lockAccountDisplay.ForeColor = Color.Orange;
+                }
+                else
+                {
+                    lockAccountDisplay.Text = $"Account: {accountNumber}";
+                    lockAccountDisplay.ForeColor = TextWhite;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"UpdateLockAccountDisplay: Displaying and caching account='{accountNumber}'");
+                lockAccountDisplay.Invalidate();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating lock account display: {ex.Message}");
+            }
+        }
+
         private void BtnLock_Click(object sender, EventArgs e)
         {
             try
             {
-                // Get the selected account object
-                var account = selectedAccount;
-                if (account == null)
+                // Use the cached account number to find the correct account
+                var accountNumber = displayedAccountNumber;
+                if (string.IsNullOrEmpty(accountNumber))
                 {
                     MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                // Use Core.Instance.LockAccount API
+                // Find the account by the displayed/cached account number
                 var core = Core.Instance;
-                if (core != null)
+                if (core == null || core.Accounts == null)
                 {
-                    // Check if the method exists before calling (defensive programming)
-                    var lockMethod = core.GetType().GetMethod("LockAccount");
-                    if (lockMethod != null)
-                    {
-                        lockMethod.Invoke(core, new object[] { account });
-                        
-                        // Set TradingStatus to Locked to disable buy/sell buttons
-                        SetCoreTradingStatus(core, "Locked");
-                        
-                        MessageBox.Show("The account has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        
-                        // Find the status label and update it
-                        var statusLabel = GetTradingStatusLabel(sender as Button);
-                        if (statusLabel != null)
-                        {
-                            statusLabel.Text = "Trading Locked";
-                            statusLabel.ForeColor = Color.Red;
-                        }
+                    MessageBox.Show("Core instance or accounts not available.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
 
-                        // Update the trading status badge
-                        UpdateTradingStatusBadge();
-                    }
-                    else
+                // Find the account that matches the cached identifier
+                Account targetAccount = null;
+                int accountIndex = 0;
+                foreach (var account in core.Accounts)
+                {
+                    if (account == null) continue;
+                    
+                    var uniqueAccountId = GetUniqueAccountIdentifier(account, accountIndex);
+                    if (uniqueAccountId == accountNumber)
                     {
-                        MessageBox.Show("LockAccount method not available in Core API.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        targetAccount = account;
+                        break;
                     }
+                    accountIndex++;
+                }
+
+                if (targetAccount == null)
+                {
+                    MessageBox.Show($"Could not find account: {accountNumber}", "Account Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Check if the method exists before calling (defensive programming)
+                var lockMethod = core.GetType().GetMethod("LockAccount");
+                if (lockMethod != null)
+                {
+                    lockMethod.Invoke(core, new object[] { targetAccount });
+                    
+                    // Set TradingStatus to Locked to disable buy/sell buttons
+                    SetCoreTradingStatus(core, "Locked");
+                    
+                    MessageBox.Show($"Account '{accountNumber}' has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    // Find the status label and update it
+                    var statusLabel = GetTradingStatusLabel(sender as Button);
+                    if (statusLabel != null)
+                    {
+                        statusLabel.Text = "Trading Locked";
+                        statusLabel.ForeColor = Color.Red;
+                    }
+
+                    // Update the trading status badge
+                    UpdateTradingStatusBadge();
                 }
                 else
                 {
-                    MessageBox.Show("Core instance not available.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("LockAccount method not available in Core API.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
@@ -2227,48 +2330,69 @@ namespace Risk_Manager
         {
             try
             {
-                // Get the selected account object
-                var account = selectedAccount;
-                if (account == null)
+                // Use the cached account number to find the correct account
+                var accountNumber = displayedAccountNumber;
+                if (string.IsNullOrEmpty(accountNumber))
                 {
                     MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                // Use Core.Instance.UnlockAccount API
+                // Find the account by the displayed/cached account number
                 var core = Core.Instance;
-                if (core != null)
+                if (core == null || core.Accounts == null)
                 {
-                    // Check if the method exists before calling (defensive programming)
-                    var unlockMethod = core.GetType().GetMethod("UnlockAccount");
-                    if (unlockMethod != null)
-                    {
-                        unlockMethod.Invoke(core, new object[] { account });
-                        
-                        // Set TradingStatus to Allowed to enable buy/sell buttons
-                        SetCoreTradingStatus(core, "Allowed");
-                        
-                        MessageBox.Show("The account has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        
-                        // Find the status label and update it
-                        var statusLabel = GetTradingStatusLabel(sender as Button);
-                        if (statusLabel != null)
-                        {
-                            statusLabel.Text = "Trading Unlocked";
-                            statusLabel.ForeColor = AccentGreen;
-                        }
+                    MessageBox.Show("Core instance or accounts not available.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
 
-                        // Update the trading status badge
-                        UpdateTradingStatusBadge();
-                    }
-                    else
+                // Find the account that matches the cached identifier
+                Account targetAccount = null;
+                int accountIndex = 0;
+                foreach (var account in core.Accounts)
+                {
+                    if (account == null) continue;
+                    
+                    var uniqueAccountId = GetUniqueAccountIdentifier(account, accountIndex);
+                    if (uniqueAccountId == accountNumber)
                     {
-                        MessageBox.Show("UnlockAccount method not available in Core API.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        targetAccount = account;
+                        break;
                     }
+                    accountIndex++;
+                }
+
+                if (targetAccount == null)
+                {
+                    MessageBox.Show($"Could not find account: {accountNumber}", "Account Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Check if the method exists before calling (defensive programming)
+                var unlockMethod = core.GetType().GetMethod("UnlockAccount");
+                if (unlockMethod != null)
+                {
+                    unlockMethod.Invoke(core, new object[] { targetAccount });
+                    
+                    // Set TradingStatus to Allowed to enable buy/sell buttons
+                    SetCoreTradingStatus(core, "Allowed");
+                    
+                    MessageBox.Show($"Account '{accountNumber}' has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    // Find the status label and update it
+                    var statusLabel = GetTradingStatusLabel(sender as Button);
+                    if (statusLabel != null)
+                    {
+                        statusLabel.Text = "Trading Unlocked";
+                        statusLabel.ForeColor = AccentGreen;
+                    }
+
+                    // Update the trading status badge
+                    UpdateTradingStatusBadge();
                 }
                 else
                 {
-                    MessageBox.Show("Core instance not available.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("UnlockAccount method not available in Core API.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
