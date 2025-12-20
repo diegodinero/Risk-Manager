@@ -2361,35 +2361,15 @@ namespace Risk_Manager
         /// <summary>
         /// Gets a simple identifier for an account (without needing the index).
         /// Used for display and operations where we don't have the index.
+        /// Delegates to GetUniqueAccountIdentifier with index=-1 for consistency.
         /// </summary>
         /// <param name="account">The account to get an identifier for</param>
         /// <returns>A unique identifier string for the account</returns>
         private string GetAccountIdentifier(Account account)
         {
-            if (account == null)
-                return "UNKNOWN";
-            
-            var accountId = account.Id;
-            var accountName = account.Name;
-            var connectionName = account.Connection?.Name;
-            
-            // Strategy 1: Connection.Name + Name (most unique)
-            if (!string.IsNullOrEmpty(connectionName))
-            {
-                if (!string.IsNullOrEmpty(accountName))
-                    return $"{connectionName}_{accountName}";
-                if (!string.IsNullOrEmpty(accountId))
-                    return $"{connectionName}_{accountId}";
-                return connectionName;
-            }
-            
-            // Strategy 2: Fallback to Id or Name alone
-            if (!string.IsNullOrEmpty(accountId))
-                return accountId;
-            if (!string.IsNullOrEmpty(accountName))
-                return accountName;
-            
-            return "UNKNOWN";
+            // Use GetUniqueAccountIdentifier with -1 index to get fallback behavior
+            // This ensures consistent logic between both methods
+            return GetUniqueAccountIdentifier(account, -1);
         }
 
         /// <summary>

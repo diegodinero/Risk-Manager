@@ -371,17 +371,22 @@ namespace Risk_Manager.Data
                     targetSettings.WeeklyLossLimit = sourceSettings.WeeklyLossLimit;
                     targetSettings.WeeklyProfitTarget = sourceSettings.WeeklyProfitTarget;
                     targetSettings.DefaultContractLimit = sourceSettings.DefaultContractLimit;
-                    targetSettings.BlockedSymbols = new List<string>(sourceSettings.BlockedSymbols);
-                    targetSettings.SymbolContractLimits = new Dictionary<string, int>(sourceSettings.SymbolContractLimits);
-                    targetSettings.TradingTimeRestrictions = sourceSettings.TradingTimeRestrictions
-                        .Select(tr => new TradingTimeRestriction
+                    targetSettings.BlockedSymbols = sourceSettings.BlockedSymbols != null 
+                        ? new List<string>(sourceSettings.BlockedSymbols) 
+                        : new List<string>();
+                    targetSettings.SymbolContractLimits = sourceSettings.SymbolContractLimits != null 
+                        ? new Dictionary<string, int>(sourceSettings.SymbolContractLimits) 
+                        : new Dictionary<string, int>();
+                    targetSettings.TradingTimeRestrictions = sourceSettings.TradingTimeRestrictions != null
+                        ? sourceSettings.TradingTimeRestrictions.Select(tr => new TradingTimeRestriction
                         {
                             DayOfWeek = tr.DayOfWeek,
                             StartTime = tr.StartTime,
                             EndTime = tr.EndTime,
                             IsAllowed = tr.IsAllowed,
                             Name = tr.Name
-                        }).ToList();
+                        }).ToList()
+                        : new List<TradingTimeRestriction>();
                     
                     // Copy lock settings
                     if (sourceSettings.TradingLock != null)
