@@ -2711,6 +2711,12 @@ namespace Risk_Manager
             var accountId = account.Id ?? account.Name ?? "";
             
             // Check account ID prefixes first (most specific matching)
+            // These mappings are based on known broker/provider account ID conventions:
+            //   - FFNX: PA (Personal Account)
+            //   - FFN: Eval (Evaluation/Funded Account)
+            //   - BX: PA (Personal Account)
+            //   - APEX: Eval (Evaluation/Funded Account)
+            
             // FFNX prefix -> PA account
             if (accountId.StartsWith("ffnx", StringComparison.OrdinalIgnoreCase))
                 return ACCOUNT_TYPE_PA;
