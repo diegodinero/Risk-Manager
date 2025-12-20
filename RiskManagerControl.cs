@@ -77,7 +77,10 @@ namespace Risk_Manager
         private const int DEFAULT_CONTRACT_LIMIT = 10;
 
         // Regex patterns for account type detection (compiled for performance)
+        // Using word boundaries to avoid false positives (e.g., "spapce" won't match "pa", "evaluate" won't match "eval")
         private static readonly Regex PAPattern = new Regex(@"\bpa\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex EvalPattern = new Regex(@"\beval\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex CashPattern = new Regex(@"\bcash\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         // Dark theme colors
         private static readonly Color DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
@@ -2418,6 +2421,7 @@ namespace Risk_Manager
 
         /// <summary>
         /// Determines the account type based on connection name, account ID, and AdditionalInfo.
+        /// Uses word boundary pattern matching to avoid false positives.
         /// </summary>
         /// <param name="account">The account to check</param>
         /// <returns>Account type: PA, Eval, Cash, Demo, Live, or Unknown</returns>
@@ -2430,18 +2434,18 @@ namespace Risk_Manager
             var accountId = (account.Id ?? account.Name ?? "").ToLower();
             
             // Check for specific account type patterns with word boundaries to avoid false positives
-            // PA (Personal Account) - check for "pa" as separate word or at word boundaries
+            // PA (Personal Account)
             if (PAPattern.IsMatch(connName) || PAPattern.IsMatch(accountId) ||
                 connName.Contains("personal"))
                 return "PA";
             
-            // Eval (Evaluation) - check for "eval" patterns
-            if (connName.Contains("eval") || accountId.Contains("eval") ||
+            // Eval (Evaluation)
+            if (EvalPattern.IsMatch(connName) || EvalPattern.IsMatch(accountId) ||
                 connName.Contains("evaluation"))
                 return "Eval";
             
-            // Cash - check for "cash" patterns
-            if (connName.Contains("cash") || accountId.Contains("cash"))
+            // Cash
+            if (CashPattern.IsMatch(connName) || CashPattern.IsMatch(accountId))
                 return "Cash";
             
             // Demo/Simulation patterns
@@ -2453,7 +2457,7 @@ namespace Risk_Manager
             if (connName.Contains("live") || connName.Contains("real"))
                 return "Live";
             
-            // Check AdditionalInfo for explicit type
+            // Check AdditionalInfo for explicit type override
             if (account.AdditionalInfo != null)
             {
                 foreach (var info in account.AdditionalInfo)
@@ -3712,7 +3716,6 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 Padding = new Padding(10, 5, 10, 0),
                 BackColor = CardBackground,
-                ForeColor = TextWhite,
                 AutoSize = false,
                 BorderStyle = BorderStyle.FixedSingle,
                 Visible = false  // Hide the control while retaining functionality
