@@ -1,7 +1,7 @@
 # Per-Account Feature Toggles - Implementation Summary
 
 ## Overview
-Successfully implemented per-account feature toggles for the Risk Manager application, allowing each trading account to have its own isolated risk management configuration.
+Successfully implemented per-account feature toggles for the Risk Manager application, allowing each trading account to have its own isolated risk management configuration. Additionally, implemented a Copy Settings feature to easily duplicate settings across multiple accounts.
 
 ## What Was Implemented
 
@@ -19,6 +19,7 @@ Added methods to `RiskManagerSettingsService`:
 - `UpdateWeeklyLossLimit(accountNumber, limit)` - Updates weekly loss limit
 - `UpdateWeeklyProfitTarget(accountNumber, target)` - Updates weekly profit target
 - `UpdateFeatureToggleEnabled(accountNumber, enabled)` - Toggles features on/off
+- **NEW:** `CopySettingsToAccounts(sourceAccountNumber, targetAccountNumbers)` - Copies all settings from one account to multiple target accounts
 
 ### 3. Validation System
 Implemented multi-layer validation:
@@ -130,6 +131,7 @@ Each account's settings are stored in a separate JSON file:
 ✅ **Validation** - Multi-layer validation with user feedback
 ✅ **Persistence** - Thread-safe JSON file storage
 ✅ **Caching** - 30-second cache to reduce I/O
+✅ **NEW: Copy Settings** - Copy all settings from one account to multiple target accounts with validation and feedback
 
 ## Validation Rules
 
@@ -189,6 +191,66 @@ These are suggestions from code review but not required for current implementati
 
 Existing accounts without settings files will automatically have settings created with default values when first accessed. No migration needed.
 
+## Copy Settings Feature
+
+### Overview
+The Copy Settings feature allows users to efficiently duplicate risk management settings from one account to multiple target accounts in a single operation. This is particularly useful when managing multiple trading accounts with similar risk parameters.
+
+### UI Components
+**Location:** Navigation menu → "📋 Copy Settings"
+
+**Components:**
+1. **Source Account Dropdown** - Select the account to copy settings from
+2. **Target Accounts Checkboxes** - Multi-select accounts to copy settings to (excludes source account)
+3. **Select All/Deselect All Buttons** - Quick selection controls
+4. **Copy Button** - Initiates the copy operation with confirmation dialog
+
+### Features
+- **Validation**: Ensures source and target accounts are selected before copying
+- **Confirmation Dialog**: Shows source account, target count, and warns about overwriting
+- **Detailed Feedback**: Reports success/failure for each target account
+- **Automatic Exclusion**: Source account is automatically excluded from target list
+- **Error Handling**: Individual account failures don't prevent other accounts from succeeding
+
+### API Method
+```csharp
+Dictionary<string, (bool Success, string Message)> CopySettingsToAccounts(
+    string sourceAccountNumber, 
+    IEnumerable<string> targetAccountNumbers)
+```
+
+**Returns:** A dictionary mapping each target account to its copy result status
+
+### Settings Copied
+The following settings are copied from source to target accounts:
+- Feature toggle enabled/disabled state
+- Daily loss limit and profit target
+- Position loss limit and profit target
+- Weekly loss limit and profit target
+- Default contract limit
+- Blocked symbols list
+- Symbol-specific contract limits
+- Trading time restrictions
+- Trading lock state and reason
+- Settings lock state and reason
+
+**Note:** Account number and timestamps (CreatedAt/UpdatedAt) are NOT copied - each account maintains its own identity and modification history.
+
+### Usage Example
+1. Navigate to "📋 Copy Settings" tab
+2. Select source account from dropdown (e.g., "Demo Account 1")
+3. Target accounts list auto-populates with all other accounts
+4. Check boxes for desired target accounts or click "Select All"
+5. Click "COPY SETTINGS TO SELECTED ACCOUNTS"
+6. Review confirmation dialog and click "Yes"
+7. View results showing success/failure for each account
+
+### Error Handling
+- Invalid source account → Error message
+- No target accounts selected → Warning message
+- Individual copy failures → Reported separately in results
+- Service initialization failure → Clear error message
+
 ## Summary
 
 This implementation delivers a complete, production-ready per-account feature toggle system with:
@@ -197,5 +259,6 @@ This implementation delivers a complete, production-ready per-account feature to
 - User-friendly error handling
 - Thread-safe persistence
 - Full documentation
+- **NEW:** Efficient multi-account settings management via Copy Settings feature
 
-The system allows each trading account to have its own isolated risk management configuration, meeting all requirements specified in the problem statement.
+The system allows each trading account to have its own isolated risk management configuration, with the flexibility to quickly duplicate settings across multiple accounts when needed.
