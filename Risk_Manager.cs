@@ -22,7 +22,7 @@ namespace Risk_Manager
                 Group = PluginGroup.Portfolio,
                 ShortName = "RMMUI",
                 SortIndex = 34,
-                WindowParameters = new NativeWindowParameters(NativeWindowParameters.Panel)
+                WindowParameters = new NativeWindowParameters(NativeWindowParameters.Window)
                 {
                     BrowserUsageType = BrowserUsageType.None,
                     WindowStyle = NativeWindowStyle.SingleBorderWindow,
@@ -51,6 +51,28 @@ namespace Risk_Manager
             this.table.AllowFilter = true;
             this.table.AllowSorting = true;
             this.table.AllowHeaderContextMenu = true;
+            
+            // Log window parameters to verify they are applied correctly
+            try
+            {
+                var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                var log = System.IO.Path.Combine(desktop, "RiskManager_window_params_log.txt");
+                var info = GetInfo();
+                System.IO.File.AppendAllText(log, $"[{DateTime.Now:O}] Initialize called{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"WindowParameters Type: {info.WindowParameters?.GetType().Name ?? "null"}{Environment.NewLine}");
+                
+                if (info.WindowParameters is NativeWindowParameters nwp)
+                {
+                    System.IO.File.AppendAllText(log, $"  AllowCloseButton: {nwp.AllowCloseButton}{Environment.NewLine}");
+                    System.IO.File.AppendAllText(log, $"  AllowMaximizeButton: {nwp.AllowMaximizeButton}{Environment.NewLine}");
+                    System.IO.File.AppendAllText(log, $"  AllowFullScreenButton: {nwp.AllowFullScreenButton}{Environment.NewLine}");
+                    System.IO.File.AppendAllText(log, $"  AllowActionsButton: {nwp.AllowActionsButton}{Environment.NewLine}");
+                    System.IO.File.AppendAllText(log, $"  WindowStyle: {nwp.WindowStyle}{Environment.NewLine}");
+                    System.IO.File.AppendAllText(log, $"  ResizeMode: {nwp.ResizeMode}{Environment.NewLine}");
+                }
+                System.IO.File.AppendAllText(log, Environment.NewLine);
+            }
+            catch { /* Ignore logging errors */ }
         }
 
         public override void Populate(PluginParameters args = null)
