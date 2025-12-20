@@ -2710,6 +2710,23 @@ namespace Risk_Manager
             var connName = account.Connection.Name?.ToLower() ?? "";
             var accountId = (account.Id ?? account.Name ?? "").ToLower();
             
+            // Check account ID prefixes first (most specific matching)
+            // FFNX prefix -> PA account
+            if (accountId.StartsWith("ffnx"))
+                return ACCOUNT_TYPE_PA;
+            
+            // FFN prefix -> Eval account (must come after FFNX check)
+            if (accountId.StartsWith("ffn"))
+                return ACCOUNT_TYPE_EVAL;
+            
+            // BX prefix -> PA account
+            if (accountId.StartsWith("bx"))
+                return ACCOUNT_TYPE_PA;
+            
+            // APEX prefix -> Eval account
+            if (accountId.StartsWith("apex"))
+                return ACCOUNT_TYPE_EVAL;
+            
             // Check for specific account type patterns with word boundaries to avoid false positives
             // PA (Personal Account)
             if (PAPattern.IsMatch(connName) || PAPattern.IsMatch(accountId) ||
