@@ -2708,24 +2708,27 @@ namespace Risk_Manager
                 return ACCOUNT_TYPE_UNKNOWN;
 
             var connName = account.Connection.Name?.ToLower() ?? "";
-            var accountId = (account.Id ?? account.Name ?? "").ToLower();
+            var accountId = account.Id ?? account.Name ?? "";
             
             // Check account ID prefixes first (most specific matching)
             // FFNX prefix -> PA account
-            if (accountId.StartsWith("ffnx"))
+            if (accountId.StartsWith("ffnx", StringComparison.OrdinalIgnoreCase))
                 return ACCOUNT_TYPE_PA;
             
             // FFN prefix -> Eval account (must come after FFNX check)
-            if (accountId.StartsWith("ffn"))
+            if (accountId.StartsWith("ffn", StringComparison.OrdinalIgnoreCase))
                 return ACCOUNT_TYPE_EVAL;
             
             // BX prefix -> PA account
-            if (accountId.StartsWith("bx"))
+            if (accountId.StartsWith("bx", StringComparison.OrdinalIgnoreCase))
                 return ACCOUNT_TYPE_PA;
             
             // APEX prefix -> Eval account
-            if (accountId.StartsWith("apex"))
+            if (accountId.StartsWith("apex", StringComparison.OrdinalIgnoreCase))
                 return ACCOUNT_TYPE_EVAL;
+            
+            // Convert to lowercase for remaining pattern checks
+            accountId = accountId.ToLower();
             
             // Check for specific account type patterns with word boundaries to avoid false positives
             // PA (Personal Account)
