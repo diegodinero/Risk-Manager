@@ -2367,14 +2367,8 @@ namespace Risk_Manager
                         settingsService.SetTradingLock(accountNumber, true, "Manual lock via Lock Trading button");
                     }
                     
-                    // Update the trading status badge and button states immediately
-                    // Check if the locked account is the currently selected one
-                    var currentlySelected = GetSelectedAccountNumber();
-                    if (currentlySelected == accountNumber)
-                    {
-                        // Update badge for currently selected account
-                        UpdateTradingStatusBadgeUI(true);
-                    }
+                    // Always update the trading status badge immediately (no conditional check)
+                    UpdateTradingStatusBadgeUI(true);
                     
                     // Update button states - Lock button should now be disabled
                     // Do this BEFORE refresh to avoid race conditions
@@ -2439,14 +2433,8 @@ namespace Risk_Manager
                         settingsService.SetTradingLock(accountNumber, false, "Manual unlock via Unlock Trading button");
                     }
                     
-                    // Update the trading status badge and button states immediately
-                    // Check if the unlocked account is the currently selected one
-                    var currentlySelected = GetSelectedAccountNumber();
-                    if (currentlySelected == accountNumber)
-                    {
-                        // Update badge for currently selected account
-                        UpdateTradingStatusBadgeUI(false);
-                    }
+                    // Always update the trading status badge immediately (no conditional check)
+                    UpdateTradingStatusBadgeUI(false);
                     
                     // Update button states - Unlock button should now be disabled
                     // Do this BEFORE refresh to avoid race conditions
