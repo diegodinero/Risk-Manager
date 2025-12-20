@@ -1354,7 +1354,7 @@ namespace Risk_Manager
             typeSummaryGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
 
             // Add columns as requested
-            typeSummaryGrid.Columns.Add("Summary", "Summary");
+            typeSummaryGrid.Columns.Add("Type", "Type");
             typeSummaryGrid.Columns.Add("Count", "Count");
             typeSummaryGrid.Columns.Add("Equity", "Equity");
             typeSummaryGrid.Columns.Add("OpenPnL", "Open P&L");
