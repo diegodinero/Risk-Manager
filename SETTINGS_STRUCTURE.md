@@ -125,6 +125,24 @@ service.SetTradingLock("account1", true, "Daily loss limit exceeded");
 service.SetSettingsLock("account1", true, "Manual lock");
 ```
 
+### Copying Settings Between Accounts
+```csharp
+// Copy all settings from account1 to account2 and account3
+var results = service.CopySettingsToAccounts(
+    "account1", 
+    new[] { "account2", "account3" }
+);
+
+// Check results
+foreach (var result in results)
+{
+    if (result.Value.Success)
+        Console.WriteLine($"✓ {result.Key}: {result.Value.Message}");
+    else
+        Console.WriteLine($"✗ {result.Key}: {result.Value.Message}");
+}
+```
+
 ## UI Integration
 
 The Risk Manager UI automatically:
@@ -133,6 +151,29 @@ The Risk Manager UI automatically:
 3. Validates input values before saving
 4. Updates status badges to reflect lock states
 5. Shows error messages for validation failures
+6. **NEW:** Provides "Copy Settings" tab for bulk settings replication across accounts
+
+## Copy Settings Feature
+
+**Location:** "📋 Copy Settings" tab in navigation menu
+
+**Functionality:**
+- Select a source account to copy settings from
+- Select multiple target accounts via checkboxes
+- Use "Select All" / "Deselect All" for quick selection
+- Confirmation dialog before copying
+- Detailed success/failure feedback per account
+
+**What Gets Copied:**
+- All risk limits (daily, weekly, position)
+- Feature toggle states
+- Symbol blocks and contract limits
+- Trading time restrictions
+- Lock states
+
+**What Doesn't Get Copied:**
+- Account number (each account keeps its identity)
+- Timestamps (each account maintains its own history)
 
 ## Migration Notes
 

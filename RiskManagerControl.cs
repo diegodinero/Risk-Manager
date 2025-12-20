@@ -64,6 +64,10 @@ namespace Risk_Manager
         // Feature toggle master switch
         private CheckBox featureToggleEnabledCheckbox;
         
+        // Copy Settings controls
+        private ComboBox copySettingsSourceComboBox;
+        private FlowLayoutPanel copySettingsTargetPanel;
+        
         private SoundPlayer alertSoundPlayer;
 
         // Default values for settings
@@ -86,7 +90,7 @@ namespace Risk_Manager
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
         private static readonly string[] NavItems = new[]
         {
-            "📊 Accounts Summary", "📈 Stats", "📋 Type", "⚙️ Feature Toggles", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
+            "📊 Accounts Summary", "📈 Stats", "📋 Type", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
             "📉 Weekly Loss", "📈 Weekly Profit Target", "🔒 Lock Settings", "🔒 Manual Lock"
         };
 
@@ -129,6 +133,8 @@ namespace Risk_Manager
                     placeholder = CreateTypeSummaryPanel();
                 else if (name.EndsWith("Feature Toggles"))
                     placeholder = CreateFeatureTogglesPanel();
+                else if (name.EndsWith("Copy Settings"))
+                    placeholder = CreateCopySettingsPanel();
                 else if (name.EndsWith("Positions"))
                     placeholder = CreatePositionsPanel();
                 else if (name.EndsWith("Limits"))
@@ -159,7 +165,11 @@ namespace Risk_Manager
 
             // Refresh dropdown periodically as accounts connect/disconnect
             var dropdownRefreshTimer = new System.Windows.Forms.Timer { Interval = 2000 };
-            dropdownRefreshTimer.Tick += (s, e) => RefreshAccountDropdown();
+            dropdownRefreshTimer.Tick += (s, e) => 
+            {
+                RefreshAccountDropdown();
+                RefreshCopySettingsAccounts();
+            };
             dropdownRefreshTimer.Start();
 
             // Show Accounts Summary by default
@@ -276,6 +286,72 @@ namespace Risk_Manager
                 // Load settings for the selected account
                 LoadAccountSettings();
             }
+        }
+
+        /// <summary>
+        /// Refreshes the Copy Settings panel source dropdown with connected accounts.
+        /// </summary>
+        private void RefreshCopySettingsAccounts()
+        {
+            if (copySettingsSourceComboBox == null || copySettingsTargetPanel == null)
+                return;
+
+            var core = Core.Instance;
+            var connectedAccounts = core?.Accounts?
+                .Where(a => a != null && a.Connection != null)
+                .ToList() ?? new List<Account>();
+
+            // Preserve current selection
+            var currentSelection = copySettingsSourceComboBox.SelectedItem as Account;
+
+            // Check if accounts list has changed
+            bool needsUpdate = false;
+            if (copySettingsSourceComboBox.Items.Count != connectedAccounts.Count)
+            {
+                needsUpdate = true;
+            }
+            else
+            {
+                for (int i = 0; i < connectedAccounts.Count; i++)
+                {
+                    if (i >= copySettingsSourceComboBox.Items.Count)
+                    {
+                        needsUpdate = true;
+                        break;
+                    }
+                    if (copySettingsSourceComboBox.Items[i] != connectedAccounts[i])
+                    {
+                        needsUpdate = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!needsUpdate)
+                return;
+
+            // Temporarily disable event handling during update
+            copySettingsSourceComboBox.SelectedIndexChanged -= null; // Will be re-added automatically by designer
+
+            copySettingsSourceComboBox.Items.Clear();
+            foreach (var account in connectedAccounts)
+            {
+                copySettingsSourceComboBox.Items.Add(account);
+            }
+
+            // Restore selection if it still exists
+            if (currentSelection != null && copySettingsSourceComboBox.Items.Contains(currentSelection))
+            {
+                copySettingsSourceComboBox.SelectedItem = currentSelection;
+            }
+            else if (copySettingsSourceComboBox.Items.Count > 0)
+            {
+                // Don't auto-select, let user choose
+                copySettingsSourceComboBox.SelectedIndex = -1;
+            }
+
+            // Clear target panel since source selection may have changed
+            copySettingsTargetPanel.Controls.Clear();
         }
 
         /// <summary>
@@ -2357,6 +2433,20 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Gets a simple identifier for an account (without needing the index).
+        /// Used for display and operations where we don't have the index.
+        /// Delegates to GetUniqueAccountIdentifier with index=-1 for consistency.
+        /// </summary>
+        /// <param name="account">The account to get an identifier for</param>
+        /// <returns>A unique identifier string for the account</returns>
+        private string GetAccountIdentifier(Account account)
+        {
+            // Use GetUniqueAccountIdentifier with -1 index to get fallback behavior
+            // This ensures consistent logic between both methods
+            return GetUniqueAccountIdentifier(account, -1);
+        }
+
+        /// <summary>
         /// Formats a numeric value for display, using parentheses for negative values.
         /// </summary>
         private string FormatNumeric(double value, int decimals = 2)
@@ -3083,6 +3173,335 @@ namespace Risk_Manager
             // Add controls in correct order: Bottom first, Fill second, Top last
             // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(saveButton);
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
+
+            return mainPanel;
+        }
+
+        /// <summary>
+        /// Creates the "Copy Settings" panel for copying settings from one account to multiple accounts.
+        /// </summary>
+        private Control CreateCopySettingsPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title
+            var titleLabel = CreateEmojiLabel("📋 Copy Settings", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Copy risk management settings from one account to multiple target accounts:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            // Content area
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(20),
+                AutoScroll = true
+            };
+
+            var contentFlow = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                Dock = DockStyle.Top,
+                BackColor = CardBackground
+            };
+
+            // Source Account Section
+            var sourceLabel = new Label
+            {
+                Text = "Source Account (Copy From):",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = TextWhite,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            contentFlow.Controls.Add(sourceLabel);
+
+            copySettingsSourceComboBox = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 10),
+                Width = 400,
+                BackColor = DarkBackground,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(0, 0, 0, 20)
+            };
+            contentFlow.Controls.Add(copySettingsSourceComboBox);
+
+            // Target Accounts Section
+            var targetLabel = new Label
+            {
+                Text = "Target Accounts (Copy To):",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = TextWhite,
+                Margin = new Padding(0, 10, 0, 10)
+            };
+            contentFlow.Controls.Add(targetLabel);
+
+            copySettingsTargetPanel = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                Width = 400,
+                BackColor = DarkerBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 0, 0, 20)
+            };
+            contentFlow.Controls.Add(copySettingsTargetPanel);
+
+            // Initial population will happen in RefreshCopySettingsAccounts
+            RefreshCopySettingsAccounts();
+
+            // Update target checkboxes when source is selected
+            copySettingsSourceComboBox.SelectedIndexChanged += (s, e) =>
+            {
+                copySettingsTargetPanel.Controls.Clear();
+                
+                if (copySettingsSourceComboBox.SelectedItem is Account sourceAccount)
+                {
+                    // Get current connected accounts
+                    var core = Core.Instance;
+                    var connectedAccounts = core?.Accounts?
+                        .Where(a => a != null && a.Connection != null)
+                        .ToList() ?? new List<Account>();
+                    
+                    // Add checkboxes for all accounts except the source
+                    foreach (var account in connectedAccounts)
+                    {
+                        if (account == sourceAccount) continue;
+
+                        var checkbox = new CheckBox
+                        {
+                            Text = $"{account.Name} ({GetAccountIdentifier(account)})",
+                            Tag = account,
+                            AutoSize = true,
+                            Font = new Font("Segoe UI", 9.5f),
+                            ForeColor = TextWhite,
+                            BackColor = DarkerBackground,
+                            Margin = new Padding(0, 5, 0, 5)
+                        };
+                        copySettingsTargetPanel.Controls.Add(checkbox);
+                    }
+
+                    if (copySettingsTargetPanel.Controls.Count == 0)
+                    {
+                        var noAccountsLabel = new Label
+                        {
+                            Text = "No other accounts available",
+                            AutoSize = true,
+                            Font = new Font("Segoe UI", 9.5f, FontStyle.Italic),
+                            ForeColor = TextGray,
+                            BackColor = DarkerBackground
+                        };
+                        copySettingsTargetPanel.Controls.Add(noAccountsLabel);
+                    }
+                }
+            };
+
+            // Select All / Deselect All buttons
+            var buttonPanel = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                Margin = new Padding(0, 0, 0, 20)
+            };
+
+            var selectAllButton = new Button
+            {
+                Text = "Select All",
+                Width = 120,
+                Height = 35,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                BackColor = Color.FromArgb(52, 73, 94),
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 10, 0)
+            };
+            selectAllButton.FlatAppearance.BorderSize = 0;
+            selectAllButton.Click += (s, e) =>
+            {
+                foreach (Control control in copySettingsTargetPanel.Controls)
+                {
+                    if (control is CheckBox cb)
+                        cb.Checked = true;
+                }
+            };
+            buttonPanel.Controls.Add(selectAllButton);
+
+            var deselectAllButton = new Button
+            {
+                Text = "Deselect All",
+                Width = 120,
+                Height = 35,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                BackColor = Color.FromArgb(52, 73, 94),
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            deselectAllButton.FlatAppearance.BorderSize = 0;
+            deselectAllButton.Click += (s, e) =>
+            {
+                foreach (Control control in copySettingsTargetPanel.Controls)
+                {
+                    if (control is CheckBox cb)
+                        cb.Checked = false;
+                }
+            };
+            buttonPanel.Controls.Add(deselectAllButton);
+
+            contentFlow.Controls.Add(buttonPanel);
+
+            contentArea.Controls.Add(contentFlow);
+
+            // Copy Button
+            var copyButton = new Button
+            {
+                Text = "COPY SETTINGS TO SELECTED ACCOUNTS",
+                Dock = DockStyle.Bottom,
+                Height = 50,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = AccentGreen,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            copyButton.FlatAppearance.BorderSize = 0;
+            copyButton.Click += (s, e) =>
+            {
+                try
+                {
+                    // Validate source account selection
+                    if (copySettingsSourceComboBox.SelectedItem == null)
+                    {
+                        MessageBox.Show(
+                            "Please select a source account to copy settings from.",
+                            "Validation Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    // Get selected target accounts
+                    var targetAccounts = new List<string>();
+                    foreach (Control control in copySettingsTargetPanel.Controls)
+                    {
+                        if (control is CheckBox cb && cb.Checked && cb.Tag is Account account)
+                        {
+                            targetAccounts.Add(GetAccountIdentifier(account));
+                        }
+                    }
+
+                    if (targetAccounts.Count == 0)
+                    {
+                        MessageBox.Show(
+                            "Please select at least one target account to copy settings to.",
+                            "Validation Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    // Confirm action
+                    if (!(copySettingsSourceComboBox.SelectedItem is Account sourceAccount))
+                    {
+                        MessageBox.Show(
+                            "Invalid source account selected.",
+                            "Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        return;
+                    }
+                    
+                    var sourceAccountId = GetAccountIdentifier(sourceAccount);
+                    var confirmMessage = $"Are you sure you want to copy settings from:\n\n" +
+                                       $"Source: {sourceAccount.Name} ({sourceAccountId})\n\n" +
+                                       $"To {targetAccounts.Count} target account(s)?\n\n" +
+                                       $"This will overwrite existing settings on the target accounts.";
+                    
+                    var result = MessageBox.Show(
+                        confirmMessage,
+                        "Confirm Copy Settings",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+
+                    if (result != DialogResult.Yes)
+                        return;
+
+                    // Perform the copy operation
+                    var service = RiskManagerSettingsService.Instance;
+                    var copyResults = service.CopySettingsToAccounts(sourceAccountId, targetAccounts);
+
+                    // Build result message
+                    var successCount = copyResults.Count(r => r.Value.Success);
+                    var failureCount = copyResults.Count(r => !r.Value.Success);
+                    
+                    var resultMessage = $"Copy operation completed:\n\n" +
+                                      $"✓ Successful: {successCount}\n" +
+                                      $"✗ Failed: {failureCount}";
+
+                    if (failureCount > 0)
+                    {
+                        resultMessage += "\n\nFailed accounts:\n";
+                        foreach (var kvp in copyResults.Where(r => !r.Value.Success))
+                        {
+                            resultMessage += $"- {kvp.Key}: {kvp.Value.Message}\n";
+                        }
+                    }
+
+                    MessageBox.Show(
+                        resultMessage,
+                        failureCount > 0 ? "Copy Completed with Errors" : "Success",
+                        MessageBoxButtons.OK,
+                        failureCount > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+
+                    // Clear selections on success
+                    if (successCount > 0)
+                    {
+                        foreach (Control control in copySettingsTargetPanel.Controls)
+                        {
+                            if (control is CheckBox cb)
+                                cb.Checked = false;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        $"Error copying settings: {ex.Message}",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+            };
+
+            // Add controls in correct order
+            mainPanel.Controls.Add(copyButton);
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(titleLabel);
