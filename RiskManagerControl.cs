@@ -940,34 +940,8 @@ namespace Risk_Manager
                     var accountId = account.Id ?? account.Name ?? "Unknown";
                     var equity = account.Balance;
 
-                    // Get account type from AdditionalInfo or Connection
-                    var accountType = "Unknown";
-                    if (account.Connection != null)
-                    {
-                        // Try to determine account type from connection name patterns
-                        var connName = account.Connection.Name?.ToLower() ?? "";
-                        var accountIdLower = accountId?.ToLower() ?? "";
-                        
-                        // Check for PA (Personal Account) patterns
-                        if (connName.Contains("pa") || accountIdLower.Contains("pa") || 
-                            connName.Contains("personal"))
-                            accountType = "PA";
-                        // Check for Eval (Evaluation) patterns
-                        else if (connName.Contains("eval") || accountIdLower.Contains("eval") ||
-                                 connName.Contains("evaluation"))
-                            accountType = "Eval";
-                        // Check for Cash patterns
-                        else if (connName.Contains("cash") || accountIdLower.Contains("cash"))
-                            accountType = "Cash";
-                        // Check for Demo/Simulation patterns
-                        else if (connName.Contains("demo") || connName.Contains("simulation") || 
-                                 connName.Contains("paper") || accountIdLower.Contains("demo"))
-                            accountType = "Demo";
-                        // Check for Live/Real patterns
-                        else if (connName.Contains("live") || connName.Contains("real"))
-                            accountType = "Live";
-                        // Keep as "Unknown" if we can't determine the type
-                    }
+                    // Get account type using centralized method
+                    var accountType = DetermineAccountType(account);
 
                     // Count positions
                     int positionsCount = 0;
@@ -1387,49 +1361,8 @@ namespace Risk_Manager
                 {
                     if (account == null) continue;
 
-                    // Get account type (same logic as Accounts Summary)
-                    var accountType = "Unknown";
-                    var accountId = account.Id ?? account.Name ?? "Unknown";
-                    if (account.Connection != null)
-                    {
-                        var connName = account.Connection.Name?.ToLower() ?? "";
-                        var accountIdLower = accountId?.ToLower() ?? "";
-                        
-                        // Check for PA (Personal Account) patterns
-                        if (connName.Contains("pa") || accountIdLower.Contains("pa") || 
-                            connName.Contains("personal"))
-                            accountType = "PA";
-                        // Check for Eval (Evaluation) patterns
-                        else if (connName.Contains("eval") || accountIdLower.Contains("eval") ||
-                                 connName.Contains("evaluation"))
-                            accountType = "Eval";
-                        // Check for Cash patterns
-                        else if (connName.Contains("cash") || accountIdLower.Contains("cash"))
-                            accountType = "Cash";
-                        // Check for Demo/Simulation patterns
-                        else if (connName.Contains("demo") || connName.Contains("simulation") || 
-                                 connName.Contains("paper") || accountIdLower.Contains("demo"))
-                            accountType = "Demo";
-                        // Check for Live/Real patterns
-                        else if (connName.Contains("live") || connName.Contains("real"))
-                            accountType = "Live";
-                    }
-
-                    // Check AdditionalInfo for type override
-                    if (account.AdditionalInfo != null)
-                    {
-                        foreach (var info in account.AdditionalInfo)
-                        {
-                            if (info?.Id == null) continue;
-                            var id = info.Id;
-                            if (string.Equals(id, "Account Type", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "AccountType", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(id, "Type", StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (info.Value is string at) accountType = at;
-                            }
-                        }
-                    }
+                    // Get account type using centralized method
+                    var accountType = DetermineAccountType(account);
 
                     // Initialize type data if not exists
                     if (!typeData.ContainsKey(accountType))
@@ -2477,6 +2410,64 @@ namespace Risk_Manager
             // Use GetUniqueAccountIdentifier with -1 index to get fallback behavior
             // This ensures consistent logic between both methods
             return GetUniqueAccountIdentifier(account, -1);
+        }
+
+        /// <summary>
+        /// Determines the account type based on connection name, account ID, and AdditionalInfo.
+        /// </summary>
+        /// <param name="account">The account to check</param>
+        /// <returns>Account type: PA, Eval, Cash, Demo, Live, or Unknown</returns>
+        private string DetermineAccountType(Account account)
+        {
+            if (account == null || account.Connection == null)
+                return "Unknown";
+
+            var connName = account.Connection.Name?.ToLower() ?? "";
+            var accountId = (account.Id ?? account.Name ?? "").ToLower();
+            
+            // Check for specific account type patterns with word boundaries to avoid false positives
+            // PA (Personal Account) - check for "pa" as separate word or at word boundaries
+            if (System.Text.RegularExpressions.Regex.IsMatch(connName, @"\bpa\b") || 
+                System.Text.RegularExpressions.Regex.IsMatch(accountId, @"\bpa\b") ||
+                connName.Contains("personal"))
+                return "PA";
+            
+            // Eval (Evaluation) - check for "eval" patterns
+            if (connName.Contains("eval") || accountId.Contains("eval") ||
+                connName.Contains("evaluation"))
+                return "Eval";
+            
+            // Cash - check for "cash" patterns
+            if (connName.Contains("cash") || accountId.Contains("cash"))
+                return "Cash";
+            
+            // Demo/Simulation patterns
+            if (connName.Contains("demo") || connName.Contains("simulation") || 
+                connName.Contains("paper") || accountId.Contains("demo"))
+                return "Demo";
+            
+            // Live/Real patterns
+            if (connName.Contains("live") || connName.Contains("real"))
+                return "Live";
+            
+            // Check AdditionalInfo for explicit type
+            if (account.AdditionalInfo != null)
+            {
+                foreach (var info in account.AdditionalInfo)
+                {
+                    if (info?.Id == null) continue;
+                    var id = info.Id;
+                    if (string.Equals(id, "Account Type", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(id, "AccountType", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(id, "Type", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (info.Value is string at && !string.IsNullOrWhiteSpace(at))
+                            return at;
+                    }
+                }
+            }
+            
+            return "Unknown";
         }
 
         /// <summary>
@@ -3713,15 +3704,15 @@ namespace Risk_Manager
             {
                 Text = "Account: Not Selected",
                 Dock = DockStyle.Top,
-                Height = 0,  // Set height to 0 to effectively hide it
+                Height = 30,
                 TextAlign = ContentAlignment.TopLeft,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 Padding = new Padding(10, 5, 10, 0),
-                BackColor = DarkBackground,  // Match background to blend in
-                ForeColor = Color.Transparent,  // Text is transparent
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
                 AutoSize = false,
-                BorderStyle = BorderStyle.None,  // Remove border to make it invisible
-                Visible = false  // Make the control completely invisible
+                BorderStyle = BorderStyle.FixedSingle,
+                Visible = false  // Hide the control while retaining functionality
             };
             
             // Update the display with current account
