@@ -944,10 +944,26 @@ namespace Risk_Manager
                     var accountType = "Unknown";
                     if (account.Connection != null)
                     {
-                        // Try to determine if it's a demo or live account
+                        // Try to determine account type from connection name patterns
                         var connName = account.Connection.Name?.ToLower() ?? "";
-                        if (connName.Contains("demo") || connName.Contains("simulation") || connName.Contains("paper"))
+                        var accountIdLower = accountId?.ToLower() ?? "";
+                        
+                        // Check for PA (Personal Account) patterns
+                        if (connName.Contains("pa") || accountIdLower.Contains("pa") || 
+                            connName.Contains("personal"))
+                            accountType = "PA";
+                        // Check for Eval (Evaluation) patterns
+                        else if (connName.Contains("eval") || accountIdLower.Contains("eval") ||
+                                 connName.Contains("evaluation"))
+                            accountType = "Eval";
+                        // Check for Cash patterns
+                        else if (connName.Contains("cash") || accountIdLower.Contains("cash"))
+                            accountType = "Cash";
+                        // Check for Demo/Simulation patterns
+                        else if (connName.Contains("demo") || connName.Contains("simulation") || 
+                                 connName.Contains("paper") || accountIdLower.Contains("demo"))
                             accountType = "Demo";
+                        // Check for Live/Real patterns
                         else if (connName.Contains("live") || connName.Contains("real"))
                             accountType = "Live";
                         // Keep as "Unknown" if we can't determine the type
@@ -1071,7 +1087,7 @@ namespace Risk_Manager
                         positionsCount.ToString(), 
                         status,
                         lockStatus,
-                        FormatNumeric(lossLimit),
+                        FormatLossLimit(lossLimit),
                         FormatNumeric(profitTarget),
                         FormatNumeric(drawdown)
                     );
@@ -1373,11 +1389,28 @@ namespace Risk_Manager
 
                     // Get account type (same logic as Accounts Summary)
                     var accountType = "Unknown";
+                    var accountId = account.Id ?? account.Name ?? "Unknown";
                     if (account.Connection != null)
                     {
                         var connName = account.Connection.Name?.ToLower() ?? "";
-                        if (connName.Contains("demo") || connName.Contains("simulation") || connName.Contains("paper"))
+                        var accountIdLower = accountId?.ToLower() ?? "";
+                        
+                        // Check for PA (Personal Account) patterns
+                        if (connName.Contains("pa") || accountIdLower.Contains("pa") || 
+                            connName.Contains("personal"))
+                            accountType = "PA";
+                        // Check for Eval (Evaluation) patterns
+                        else if (connName.Contains("eval") || accountIdLower.Contains("eval") ||
+                                 connName.Contains("evaluation"))
+                            accountType = "Eval";
+                        // Check for Cash patterns
+                        else if (connName.Contains("cash") || accountIdLower.Contains("cash"))
+                            accountType = "Cash";
+                        // Check for Demo/Simulation patterns
+                        else if (connName.Contains("demo") || connName.Contains("simulation") || 
+                                 connName.Contains("paper") || accountIdLower.Contains("demo"))
                             accountType = "Demo";
+                        // Check for Live/Real patterns
                         else if (connName.Contains("live") || connName.Contains("real"))
                             accountType = "Live";
                     }
@@ -2471,6 +2504,18 @@ namespace Risk_Manager
                 return $"({Math.Abs(value.Value).ToString($"N{decimals}")})";
             }
             return value.Value.ToString($"N{decimals}");
+        }
+
+        /// <summary>
+        /// Formats a loss limit value for display, always using parentheses.
+        /// Loss limits are displayed in parentheses to indicate they are constraints/limits.
+        /// </summary>
+        private string FormatLossLimit(decimal? value, int decimals = 2)
+        {
+            if (!value.HasValue)
+                return "-";
+            
+            return $"({value.Value.ToString($"N{decimals}")})";
         }
 
         private Label GetTradingStatusLabel(Button button)
@@ -3663,18 +3708,20 @@ namespace Risk_Manager
             };
 
             // Account Number Display - shows which account settings will be saved to
+            // This is hidden but functionality is retained for settings persistence
             accountNumberDisplay = new Label
             {
                 Text = "Account: Not Selected",
                 Dock = DockStyle.Top,
-                Height = 30,
+                Height = 0,  // Set height to 0 to effectively hide it
                 TextAlign = ContentAlignment.TopLeft,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 Padding = new Padding(10, 5, 10, 0),
-                BackColor = CardBackground,
-                ForeColor = Color.Transparent,
+                BackColor = DarkBackground,  // Match background to blend in
+                ForeColor = Color.Transparent,  // Text is transparent
                 AutoSize = false,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.None,  // Remove border to make it invisible
+                Visible = false  // Make the control completely invisible
             };
             
             // Update the display with current account
