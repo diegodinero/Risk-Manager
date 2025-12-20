@@ -81,6 +81,7 @@ namespace Risk_Manager
         private static readonly Regex PAPattern = new Regex(@"\bpa\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex EvalPattern = new Regex(@"\beval\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex CashPattern = new Regex(@"\bcash\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex PracPattern = new Regex(@"\bprac\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         // Dark theme colors
         private static readonly Color DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
@@ -949,6 +950,9 @@ namespace Risk_Manager
 
                     // Get account type using centralized method
                     var accountType = DetermineAccountType(account);
+                    
+                    // Apply automatic locking/unlocking based on account type
+                    ApplyAccountTypeLocking(account, accountType);
 
                     // Count positions
                     int positionsCount = 0;
@@ -2424,7 +2428,7 @@ namespace Risk_Manager
         /// Uses word boundary pattern matching to avoid false positives.
         /// </summary>
         /// <param name="account">The account to check</param>
-        /// <returns>Account type: PA, Eval, Cash, Demo, Live, or Unknown</returns>
+        /// <returns>Account type: PA, Eval, Cash, Prac, Demo, Live, or Unknown</returns>
         private string DetermineAccountType(Account account)
         {
             if (account == null || account.Connection == null)
@@ -2447,6 +2451,11 @@ namespace Risk_Manager
             // Cash
             if (CashPattern.IsMatch(connName) || CashPattern.IsMatch(accountId))
                 return "Cash";
+            
+            // Prac (Practice)
+            if (PracPattern.IsMatch(connName) || PracPattern.IsMatch(accountId) ||
+                connName.Contains("practice"))
+                return "Prac";
             
             // Demo/Simulation patterns
             if (connName.Contains("demo") || connName.Contains("simulation") || 
@@ -2475,6 +2484,47 @@ namespace Risk_Manager
             }
             
             return "Unknown";
+        }
+
+        /// <summary>
+        /// Applies automatic locking/unlocking to accounts based on their type.
+        /// Uses Core.Instance.LockAccount and UnlockAccount API methods.
+        /// </summary>
+        /// <param name="account">The account to lock/unlock</param>
+        /// <param name="accountType">The detected account type</param>
+        private void ApplyAccountTypeLocking(Account account, string accountType)
+        {
+            try
+            {
+                var core = Core.Instance;
+                if (core == null || account == null)
+                    return;
+
+                // Define which account types should be locked
+                var shouldBeLocked = accountType == "Prac" || accountType == "Live";
+
+                if (shouldBeLocked)
+                {
+                    // Lock the account using Core API
+                    core.LockAccount(account);
+#if DEBUG
+                    System.Diagnostics.Debug.WriteLine($"Locked account {account.Id ?? account.Name} of type {accountType}");
+#endif
+                }
+                else
+                {
+                    // Unlock the account using Core API
+                    core.UnlockAccount(account);
+#if DEBUG
+                    System.Diagnostics.Debug.WriteLine($"Unlocked account {account.Id ?? account.Name} of type {accountType}");
+#endif
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't crash the UI
+                System.Diagnostics.Debug.WriteLine($"Error applying account type locking: {ex.Message}");
+            }
         }
 
         /// <summary>
