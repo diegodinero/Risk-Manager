@@ -1255,8 +1255,13 @@ namespace Risk_Manager
                 var lockStatus = "Unlocked";
                 if (settingsService.IsInitialized)
                 {
-                    var isLocked = settingsService.IsTradingLocked(accountId);
-                    lockStatus = isLocked ? "Locked" : "Unlocked";
+                    // Use GetUniqueAccountIdentifier to match the same identifier used for locking
+                    var accountNumber = GetSelectedAccountNumber();
+                    if (!string.IsNullOrEmpty(accountNumber))
+                    {
+                        var isLocked = settingsService.IsTradingLocked(accountNumber);
+                        lockStatus = isLocked ? "Locked" : "Unlocked";
+                    }
                 }
 
                 // Display all stats matching Accounts Summary data
@@ -2158,25 +2163,8 @@ namespace Risk_Manager
             unlockButton.Click += BtnUnlock_Click;
             contentArea.Controls.Add(unlockButton);
 
-            // Status label
-            var lblTradingStatus = new Label
-            {
-                Text = "Trading Unlocked",
-                Left = 440,
-                Top = 10,
-                Width = 150,
-                Height = 30,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                ForeColor = AccentGreen,
-                BackColor = CardBackground,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Tag = "TradingStatus" // Tag for identification
-            };
-            contentArea.Controls.Add(lblTradingStatus);
-
-            // Update status and account display on panel creation
+            // Update account display on panel creation
             UpdateLockAccountDisplay(lockAccountDisplay);
-            UpdateAccountStatus(lblTradingStatus);
 
             // Add controls in correct order: Fill first, then Top
             mainPanel.Controls.Add(contentArea);
@@ -2327,14 +2315,6 @@ namespace Risk_Manager
                     
                     MessageBox.Show($"Account '{accountNumber}' has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     
-                    // Find the status label and update it
-                    var statusLabel = GetTradingStatusLabel(sender as Button);
-                    if (statusLabel != null)
-                    {
-                        statusLabel.Text = "Trading Locked";
-                        statusLabel.ForeColor = Color.Red;
-                    }
-
                     // Update the trading status badge and refresh grids
                     UpdateTradingStatusBadge();
                     RefreshAccountsSummary();
@@ -2396,14 +2376,6 @@ namespace Risk_Manager
                     
                     MessageBox.Show($"Account '{accountNumber}' has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     
-                    // Find the status label and update it
-                    var statusLabel = GetTradingStatusLabel(sender as Button);
-                    if (statusLabel != null)
-                    {
-                        statusLabel.Text = "Trading Unlocked";
-                        statusLabel.ForeColor = AccentGreen;
-                    }
-
                     // Update the trading status badge and refresh grids
                     UpdateTradingStatusBadge();
                     RefreshAccountsSummary();
