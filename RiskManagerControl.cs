@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Linq;
 using System.Media;
 using System.Text.RegularExpressions;
@@ -134,8 +135,9 @@ namespace Risk_Manager
 
         public RiskManagerControl()
         {
-            // Initialize default theme (Blue)
-            ApplyTheme(Theme.Blue);
+            // Load saved theme preference or use default (Blue)
+            var savedTheme = LoadThemePreference();
+            ApplyTheme(savedTheme);
             
             Dock = DockStyle.Fill;
             BackColor = DarkBackground;
@@ -266,6 +268,9 @@ namespace Risk_Manager
                     SelectedColor = Color.FromArgb(210, 210, 210);    // Light selected
                     break;
             }
+            
+            // Save theme preference
+            SaveThemePreference();
             
             // Apply theme to all controls
             UpdateAllControlColors();
@@ -431,6 +436,12 @@ namespace Risk_Manager
                 {
                     checkBox.BackColor = CardBackground;
                 }
+                else if (checkBox.BackColor == Color.FromArgb(35, 52, 70) ||
+                         checkBox.BackColor == Color.FromArgb(10, 10, 10) ||
+                         checkBox.BackColor == Color.FromArgb(220, 220, 220))
+                {
+                    checkBox.BackColor = DarkerBackground;
+                }
                 checkBox.Invalidate();
             }
             else if (control is Button button)
@@ -449,6 +460,64 @@ namespace Risk_Manager
             {
                 UpdateControlRecursively(child);
             }
+        }
+
+        /// <summary>
+        /// Gets the theme preferences file path
+        /// </summary>
+        private string GetThemePreferencesPath()
+        {
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var folderPath = Path.Combine(appDataPath, "RiskManager");
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+            return Path.Combine(folderPath, "theme_preference.txt");
+        }
+
+        /// <summary>
+        /// Saves the current theme preference to disk
+        /// </summary>
+        private void SaveThemePreference()
+        {
+            try
+            {
+                var themePath = GetThemePreferencesPath();
+                File.WriteAllText(themePath, currentTheme.ToString());
+                System.Diagnostics.Debug.WriteLine($"Theme preference saved: {currentTheme}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save theme preference: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Loads the theme preference from disk
+        /// </summary>
+        private Theme LoadThemePreference()
+        {
+            try
+            {
+                var themePath = GetThemePreferencesPath();
+                if (File.Exists(themePath))
+                {
+                    var themeString = File.ReadAllText(themePath).Trim();
+                    if (Enum.TryParse<Theme>(themeString, out var theme))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Theme preference loaded: {theme}");
+                        return theme;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load theme preference: {ex.Message}");
+            }
+            
+            // Default to Blue theme
+            return Theme.Blue;
         }
 
         private void RefreshAccountDropdown()
