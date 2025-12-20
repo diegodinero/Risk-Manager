@@ -87,6 +87,11 @@ namespace Risk_Manager
         private const string ACCOUNT_TYPE_DEMO = "Demo";
         private const string ACCOUNT_TYPE_LIVE = "Live";
         private const string ACCOUNT_TYPE_UNKNOWN = "Unknown";
+        
+        // Filter mode constants for Type Summary
+        private const string FILTER_MODE_TYPE = "Type";
+        private const string FILTER_MODE_FIRM = "Firm";
+        private static readonly string[] TypeSummaryFilterOptions = new[] { FILTER_MODE_TYPE, FILTER_MODE_FIRM };
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -1361,7 +1366,7 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat
             };
-            typeSummaryFilterComboBox.Items.AddRange(new object[] { "Type", "Firm" });
+            typeSummaryFilterComboBox.Items.AddRange(TypeSummaryFilterOptions);
             typeSummaryFilterComboBox.SelectedIndex = 0; // Default to "Type"
             typeSummaryFilterComboBox.SelectedIndexChanged += (s, e) => RefreshTypeSummary();
 
@@ -1434,12 +1439,12 @@ namespace Risk_Manager
                 }
 
                 // Determine if we're filtering by Type or Firm
-                var filterByFirm = typeSummaryFilterComboBox?.SelectedItem?.ToString() == "Firm";
+                var filterByFirm = typeSummaryFilterComboBox?.SelectedItem?.ToString() == FILTER_MODE_FIRM;
                 
                 // Update column header based on filter mode
                 if (typeSummaryGrid.Columns.Count > 0)
                 {
-                    typeSummaryGrid.Columns[0].HeaderText = filterByFirm ? "Firm" : "Type";
+                    typeSummaryGrid.Columns[0].HeaderText = filterByFirm ? FILTER_MODE_FIRM : FILTER_MODE_TYPE;
                 }
 
                 // Dictionary to store aggregated data by type or firm
@@ -1450,32 +1455,7 @@ namespace Risk_Manager
                     if (account == null) continue;
 
                     // Get the grouping key based on filter mode
-                    string groupKey;
-                    if (filterByFirm)
-                    {
-                        // Get IbId (firm) from AdditionalInfo
-                        groupKey = "Unknown";
-                        if (account.AdditionalInfo != null)
-                        {
-                            foreach (var info in account.AdditionalInfo)
-                            {
-                                if (info?.Id == null) continue;
-                                if (string.Equals(info.Id, "IbId", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    if (info.Value != null)
-                                    {
-                                        groupKey = info.Value.ToString();
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // Get account type using centralized method
-                        groupKey = DetermineAccountType(account);
-                    }
+                    string groupKey = filterByFirm ? GetAccountIbId(account) : DetermineAccountType(account);
 
                     // Initialize data if not exists
                     if (!aggregatedData.ContainsKey(groupKey))
@@ -2853,6 +2833,29 @@ namespace Risk_Manager
                         if (info.Value is string at && !string.IsNullOrWhiteSpace(at))
                             return at;
                     }
+                }
+            }
+            
+            return ACCOUNT_TYPE_UNKNOWN;
+        }
+
+        /// <summary>
+        /// Extracts the IbId (firm identifier) from an account's AdditionalInfo.
+        /// </summary>
+        /// <param name="account">The account to extract IbId from</param>
+        /// <returns>IbId value or "Unknown" if not found</returns>
+        private string GetAccountIbId(Account account)
+        {
+            if (account?.AdditionalInfo == null)
+                return ACCOUNT_TYPE_UNKNOWN;
+
+            foreach (var info in account.AdditionalInfo)
+            {
+                if (info?.Id == null) continue;
+                if (string.Equals(info.Id, "IbId", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (info.Value != null)
+                        return info.Value.ToString();
                 }
             }
             
