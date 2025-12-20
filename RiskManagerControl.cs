@@ -2173,13 +2173,6 @@ namespace Risk_Manager
         {
             try
             {
-                var accountNumber = GetSelectedAccountNumber();
-                if (string.IsNullOrEmpty(accountNumber))
-                {
-                    MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
                 // Get the selected account object
                 var account = selectedAccount;
                 if (account == null)
@@ -2230,13 +2223,6 @@ namespace Risk_Manager
         {
             try
             {
-                var accountNumber = GetSelectedAccountNumber();
-                if (string.IsNullOrEmpty(accountNumber))
-                {
-                    MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
                 // Get the selected account object
                 var account = selectedAccount;
                 if (account == null)
