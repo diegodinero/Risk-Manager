@@ -17,6 +17,7 @@ namespace Risk_Manager
     {
         private readonly Panel contentPanel;
         private readonly Panel leftPanel;
+        private Panel topPanel;
         private readonly Dictionary<string, Control> pageContents = new();
         private DataGridView statsGrid;
         private System.Windows.Forms.Timer statsRefreshTimer;
@@ -279,6 +280,7 @@ namespace Risk_Manager
             this.BackColor = DarkBackground;
             
             // Update panels
+            if (topPanel != null) topPanel.BackColor = DarkBackground;
             if (contentPanel != null) contentPanel.BackColor = DarkBackground;
             if (leftPanel != null) leftPanel.BackColor = DarkerBackground;
             
@@ -316,6 +318,12 @@ namespace Risk_Manager
             foreach (var kvp in pageContents)
             {
                 UpdateControlRecursively(kvp.Value);
+            }
+            
+            // Update topPanel and its children
+            if (topPanel != null)
+            {
+                UpdateControlRecursively(topPanel);
             }
             
             // Refresh current page
@@ -788,7 +796,7 @@ namespace Risk_Manager
 
         private Panel CreateTopPanel()
         {
-            var topPanel = new Panel
+            topPanel = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 70,
@@ -872,13 +880,14 @@ namespace Risk_Manager
                 Text = "🎨",
                 Width = 40,
                 Height = 32,
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                Font = new Font("Segoe UI Emoji", 16, FontStyle.Bold),
                 BackColor = Color.FromArgb(52, 152, 219),  // Nice blue color
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(5, 0, 0, 0),
-                Padding = new Padding(0)
+                Padding = new Padding(0),
+                UseCompatibleTextRendering = true  // Better emoji support
             };
             themeButton.FlatAppearance.BorderSize = 0;
             themeButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(41, 128, 185);
