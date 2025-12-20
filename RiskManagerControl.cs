@@ -27,6 +27,7 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
         private DataGridView typeSummaryGrid;
         private System.Windows.Forms.Timer typeSummaryRefreshTimer;
+        private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
         private Label settingsStatusBadge;
@@ -1321,13 +1322,52 @@ namespace Risk_Manager
         {
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
+            // Title and filter row
+            var topPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = DarkBackground,
+                Padding = new Padding(10, 5, 10, 5)
+            };
+
             // Title with colored emoji rendering
             var titleLabel = CreateEmojiLabel("📋 Type Summary", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
+            titleLabel.Dock = DockStyle.Left;
+            titleLabel.Width = 200;
             titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
             titleLabel.BackColor = DarkBackground;
+
+            // Filter label
+            var filterLabel = new Label
+            {
+                Text = "Filter by:",
+                Dock = DockStyle.Left,
+                Width = 70,
+                Font = new Font("Segoe UI", 9),
+                ForeColor = TextWhite,
+                TextAlign = ContentAlignment.MiddleLeft,
+                BackColor = DarkBackground
+            };
+
+            // Filter dropdown
+            typeSummaryFilterComboBox = new ComboBox
+            {
+                Dock = DockStyle.Left,
+                Width = 120,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat
+            };
+            typeSummaryFilterComboBox.Items.AddRange(new object[] { "Type", "Firm" });
+            typeSummaryFilterComboBox.SelectedIndex = 0; // Default to "Type"
+            typeSummaryFilterComboBox.SelectedIndexChanged += (s, e) => RefreshTypeSummary();
+
+            topPanel.Controls.Add(typeSummaryFilterComboBox);
+            topPanel.Controls.Add(filterLabel);
+            topPanel.Controls.Add(titleLabel);
 
             typeSummaryGrid = new DataGridView
             {
@@ -1369,7 +1409,7 @@ namespace Risk_Manager
 
             // Add controls in correct order: Fill control first, then Top controls
             mainPanel.Controls.Add(typeSummaryGrid);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(topPanel);
             return mainPanel;
         }
 
@@ -1393,23 +1433,57 @@ namespace Risk_Manager
                     return;
                 }
 
-                // Dictionary to store aggregated data by type
-                var typeData = new Dictionary<string, TypeSummaryData>();
+                // Determine if we're filtering by Type or Firm
+                var filterByFirm = typeSummaryFilterComboBox?.SelectedItem?.ToString() == "Firm";
+                
+                // Update column header based on filter mode
+                if (typeSummaryGrid.Columns.Count > 0)
+                {
+                    typeSummaryGrid.Columns[0].HeaderText = filterByFirm ? "Firm" : "Type";
+                }
+
+                // Dictionary to store aggregated data by type or firm
+                var aggregatedData = new Dictionary<string, TypeSummaryData>();
 
                 foreach (var account in core.Accounts)
                 {
                     if (account == null) continue;
 
-                    // Get account type using centralized method
-                    var accountType = DetermineAccountType(account);
-
-                    // Initialize type data if not exists
-                    if (!typeData.ContainsKey(accountType))
+                    // Get the grouping key based on filter mode
+                    string groupKey;
+                    if (filterByFirm)
                     {
-                        typeData[accountType] = new TypeSummaryData();
+                        // Get IbId (firm) from AdditionalInfo
+                        groupKey = "Unknown";
+                        if (account.AdditionalInfo != null)
+                        {
+                            foreach (var info in account.AdditionalInfo)
+                            {
+                                if (info?.Id == null) continue;
+                                if (string.Equals(info.Id, "IbId", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (info.Value != null)
+                                    {
+                                        groupKey = info.Value.ToString();
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Get account type using centralized method
+                        groupKey = DetermineAccountType(account);
                     }
 
-                    var data = typeData[accountType];
+                    // Initialize data if not exists
+                    if (!aggregatedData.ContainsKey(groupKey))
+                    {
+                        aggregatedData[groupKey] = new TypeSummaryData();
+                    }
+
+                    var data = aggregatedData[groupKey];
                     data.Count++;
                     data.Equity += account.Balance;
 
@@ -1444,7 +1518,7 @@ namespace Risk_Manager
 
                 // Calculate totals
                 var totalData = new TypeSummaryData();
-                foreach (var kvp in typeData)
+                foreach (var kvp in aggregatedData)
                 {
                     totalData.Count += kvp.Value.Count;
                     totalData.Equity += kvp.Value.Equity;
@@ -1453,17 +1527,17 @@ namespace Risk_Manager
                     totalData.TrailingDrawdown += kvp.Value.TrailingDrawdown;
                 }
 
-                // Add rows for each type
-                foreach (var kvp in typeData.OrderBy(x => x.Key))
+                // Add rows for each group
+                foreach (var kvp in aggregatedData.OrderBy(x => x.Key))
                 {
-                    var type = kvp.Key;
+                    var groupName = kvp.Key;
                     var data = kvp.Value;
                     var totalPnL = data.OpenPnL + data.ClosedPnL;
                     // Calculate Drawdown as Equity - Trailing Drawdown
                     var drawdown = data.Equity - data.TrailingDrawdown;
 
                     typeSummaryGrid.Rows.Add(
-                        type,
+                        groupName,
                         data.Count.ToString(),
                         FormatNumeric(data.Equity),
                         FormatNumeric(data.OpenPnL),
