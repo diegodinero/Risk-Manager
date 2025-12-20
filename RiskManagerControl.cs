@@ -64,6 +64,10 @@ namespace Risk_Manager
         // Feature toggle master switch
         private CheckBox featureToggleEnabledCheckbox;
         
+        // Copy Settings controls
+        private ComboBox copySettingsSourceComboBox;
+        private FlowLayoutPanel copySettingsTargetPanel;
+        
         private SoundPlayer alertSoundPlayer;
 
         // Default values for settings
@@ -161,7 +165,11 @@ namespace Risk_Manager
 
             // Refresh dropdown periodically as accounts connect/disconnect
             var dropdownRefreshTimer = new System.Windows.Forms.Timer { Interval = 2000 };
-            dropdownRefreshTimer.Tick += (s, e) => RefreshAccountDropdown();
+            dropdownRefreshTimer.Tick += (s, e) => 
+            {
+                RefreshAccountDropdown();
+                RefreshCopySettingsAccounts();
+            };
             dropdownRefreshTimer.Start();
 
             // Show Accounts Summary by default
@@ -278,6 +286,72 @@ namespace Risk_Manager
                 // Load settings for the selected account
                 LoadAccountSettings();
             }
+        }
+
+        /// <summary>
+        /// Refreshes the Copy Settings panel source dropdown with connected accounts.
+        /// </summary>
+        private void RefreshCopySettingsAccounts()
+        {
+            if (copySettingsSourceComboBox == null || copySettingsTargetPanel == null)
+                return;
+
+            var core = Core.Instance;
+            var connectedAccounts = core?.Accounts?
+                .Where(a => a != null && a.Connection != null)
+                .ToList() ?? new List<Account>();
+
+            // Preserve current selection
+            var currentSelection = copySettingsSourceComboBox.SelectedItem as Account;
+
+            // Check if accounts list has changed
+            bool needsUpdate = false;
+            if (copySettingsSourceComboBox.Items.Count != connectedAccounts.Count)
+            {
+                needsUpdate = true;
+            }
+            else
+            {
+                for (int i = 0; i < connectedAccounts.Count; i++)
+                {
+                    if (i >= copySettingsSourceComboBox.Items.Count)
+                    {
+                        needsUpdate = true;
+                        break;
+                    }
+                    if (copySettingsSourceComboBox.Items[i] != connectedAccounts[i])
+                    {
+                        needsUpdate = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!needsUpdate)
+                return;
+
+            // Temporarily disable event handling during update
+            copySettingsSourceComboBox.SelectedIndexChanged -= null; // Will be re-added automatically by designer
+
+            copySettingsSourceComboBox.Items.Clear();
+            foreach (var account in connectedAccounts)
+            {
+                copySettingsSourceComboBox.Items.Add(account);
+            }
+
+            // Restore selection if it still exists
+            if (currentSelection != null && copySettingsSourceComboBox.Items.Contains(currentSelection))
+            {
+                copySettingsSourceComboBox.SelectedItem = currentSelection;
+            }
+            else if (copySettingsSourceComboBox.Items.Count > 0)
+            {
+                // Don't auto-select, let user choose
+                copySettingsSourceComboBox.SelectedIndex = -1;
+            }
+
+            // Clear target panel since source selection may have changed
+            copySettingsTargetPanel.Controls.Clear();
         }
 
         /// <summary>
@@ -3164,7 +3238,7 @@ namespace Risk_Manager
             };
             contentFlow.Controls.Add(sourceLabel);
 
-            var sourceAccountComboBox = new ComboBox
+            copySettingsSourceComboBox = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = new Font("Segoe UI", 10),
@@ -3174,7 +3248,7 @@ namespace Risk_Manager
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0, 0, 0, 20)
             };
-            contentFlow.Controls.Add(sourceAccountComboBox);
+            contentFlow.Controls.Add(copySettingsSourceComboBox);
 
             // Target Accounts Section
             var targetLabel = new Label
@@ -3187,7 +3261,7 @@ namespace Risk_Manager
             };
             contentFlow.Controls.Add(targetLabel);
 
-            var targetAccountsPanel = new FlowLayoutPanel
+            copySettingsTargetPanel = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
@@ -3197,26 +3271,24 @@ namespace Risk_Manager
                 Padding = new Padding(15),
                 Margin = new Padding(0, 0, 0, 20)
             };
-            contentFlow.Controls.Add(targetAccountsPanel);
+            contentFlow.Controls.Add(copySettingsTargetPanel);
 
-            // Populate source dropdown with accounts
-            var core = Core.Instance;
-            var connectedAccounts = core?.Accounts?
-                .Where(a => a != null && a.Connection != null)
-                .ToList() ?? new List<Account>();
-
-            foreach (var account in connectedAccounts)
-            {
-                sourceAccountComboBox.Items.Add(account);
-            }
+            // Initial population will happen in RefreshCopySettingsAccounts
+            RefreshCopySettingsAccounts();
 
             // Update target checkboxes when source is selected
-            sourceAccountComboBox.SelectedIndexChanged += (s, e) =>
+            copySettingsSourceComboBox.SelectedIndexChanged += (s, e) =>
             {
-                targetAccountsPanel.Controls.Clear();
+                copySettingsTargetPanel.Controls.Clear();
                 
-                if (sourceAccountComboBox.SelectedItem is Account sourceAccount)
+                if (copySettingsSourceComboBox.SelectedItem is Account sourceAccount)
                 {
+                    // Get current connected accounts
+                    var core = Core.Instance;
+                    var connectedAccounts = core?.Accounts?
+                        .Where(a => a != null && a.Connection != null)
+                        .ToList() ?? new List<Account>();
+                    
                     // Add checkboxes for all accounts except the source
                     foreach (var account in connectedAccounts)
                     {
@@ -3232,10 +3304,10 @@ namespace Risk_Manager
                             BackColor = DarkerBackground,
                             Margin = new Padding(0, 5, 0, 5)
                         };
-                        targetAccountsPanel.Controls.Add(checkbox);
+                        copySettingsTargetPanel.Controls.Add(checkbox);
                     }
 
-                    if (targetAccountsPanel.Controls.Count == 0)
+                    if (copySettingsTargetPanel.Controls.Count == 0)
                     {
                         var noAccountsLabel = new Label
                         {
@@ -3245,7 +3317,7 @@ namespace Risk_Manager
                             ForeColor = TextGray,
                             BackColor = DarkerBackground
                         };
-                        targetAccountsPanel.Controls.Add(noAccountsLabel);
+                        copySettingsTargetPanel.Controls.Add(noAccountsLabel);
                     }
                 }
             };
@@ -3273,7 +3345,7 @@ namespace Risk_Manager
             selectAllButton.FlatAppearance.BorderSize = 0;
             selectAllButton.Click += (s, e) =>
             {
-                foreach (Control control in targetAccountsPanel.Controls)
+                foreach (Control control in copySettingsTargetPanel.Controls)
                 {
                     if (control is CheckBox cb)
                         cb.Checked = true;
@@ -3295,7 +3367,7 @@ namespace Risk_Manager
             deselectAllButton.FlatAppearance.BorderSize = 0;
             deselectAllButton.Click += (s, e) =>
             {
-                foreach (Control control in targetAccountsPanel.Controls)
+                foreach (Control control in copySettingsTargetPanel.Controls)
                 {
                     if (control is CheckBox cb)
                         cb.Checked = false;
@@ -3325,7 +3397,7 @@ namespace Risk_Manager
                 try
                 {
                     // Validate source account selection
-                    if (sourceAccountComboBox.SelectedItem == null)
+                    if (copySettingsSourceComboBox.SelectedItem == null)
                     {
                         MessageBox.Show(
                             "Please select a source account to copy settings from.",
@@ -3337,7 +3409,7 @@ namespace Risk_Manager
 
                     // Get selected target accounts
                     var targetAccounts = new List<string>();
-                    foreach (Control control in targetAccountsPanel.Controls)
+                    foreach (Control control in copySettingsTargetPanel.Controls)
                     {
                         if (control is CheckBox cb && cb.Checked && cb.Tag is Account account)
                         {
@@ -3356,7 +3428,7 @@ namespace Risk_Manager
                     }
 
                     // Confirm action
-                    if (!(sourceAccountComboBox.SelectedItem is Account sourceAccount))
+                    if (!(copySettingsSourceComboBox.SelectedItem is Account sourceAccount))
                     {
                         MessageBox.Show(
                             "Invalid source account selected.",
@@ -3411,7 +3483,7 @@ namespace Risk_Manager
                     // Clear selections on success
                     if (successCount > 0)
                     {
-                        foreach (Control control in targetAccountsPanel.Controls)
+                        foreach (Control control in copySettingsTargetPanel.Controls)
                         {
                             if (control is CheckBox cb)
                                 cb.Checked = false;
