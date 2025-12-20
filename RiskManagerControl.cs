@@ -2251,6 +2251,37 @@ namespace Risk_Manager
             }
         }
 
+        /// <summary>
+        /// Finds an account by its unique identifier.
+        /// </summary>
+        /// <param name="accountNumber">The unique account identifier to search for</param>
+        /// <returns>The matching account, or null if not found</returns>
+        private Account FindAccountByIdentifier(string accountNumber)
+        {
+            var core = Core.Instance;
+            if (core == null || core.Accounts == null)
+                return null;
+
+            int accountIndex = 0;
+            foreach (var account in core.Accounts)
+            {
+                if (account == null)
+                {
+                    accountIndex++;
+                    continue;
+                }
+                
+                var uniqueAccountId = GetUniqueAccountIdentifier(account, accountIndex);
+                if (uniqueAccountId == accountNumber)
+                {
+                    return account;
+                }
+                accountIndex++;
+            }
+
+            return null;
+        }
+
         private void BtnLock_Click(object sender, EventArgs e)
         {
             try
@@ -2263,30 +2294,15 @@ namespace Risk_Manager
                     return;
                 }
 
-                // Find the account by the displayed/cached account number
+                // Find the account by the cached identifier
                 var core = Core.Instance;
-                if (core == null || core.Accounts == null)
+                if (core == null)
                 {
-                    MessageBox.Show("Core instance or accounts not available.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Core instance not available.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                // Find the account that matches the cached identifier
-                Account targetAccount = null;
-                int accountIndex = 0;
-                foreach (var account in core.Accounts)
-                {
-                    if (account == null) continue;
-                    
-                    var uniqueAccountId = GetUniqueAccountIdentifier(account, accountIndex);
-                    if (uniqueAccountId == accountNumber)
-                    {
-                        targetAccount = account;
-                        break;
-                    }
-                    accountIndex++;
-                }
-
+                var targetAccount = FindAccountByIdentifier(accountNumber);
                 if (targetAccount == null)
                 {
                     MessageBox.Show($"Could not find account: {accountNumber}", "Account Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -2338,30 +2354,15 @@ namespace Risk_Manager
                     return;
                 }
 
-                // Find the account by the displayed/cached account number
+                // Find the account by the cached identifier
                 var core = Core.Instance;
-                if (core == null || core.Accounts == null)
+                if (core == null)
                 {
-                    MessageBox.Show("Core instance or accounts not available.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Core instance not available.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                // Find the account that matches the cached identifier
-                Account targetAccount = null;
-                int accountIndex = 0;
-                foreach (var account in core.Accounts)
-                {
-                    if (account == null) continue;
-                    
-                    var uniqueAccountId = GetUniqueAccountIdentifier(account, accountIndex);
-                    if (uniqueAccountId == accountNumber)
-                    {
-                        targetAccount = account;
-                        break;
-                    }
-                    accountIndex++;
-                }
-
+                var targetAccount = FindAccountByIdentifier(accountNumber);
                 if (targetAccount == null)
                 {
                     MessageBox.Show($"Could not find account: {accountNumber}", "Account Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
