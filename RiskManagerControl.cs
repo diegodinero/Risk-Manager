@@ -74,6 +74,16 @@ namespace Risk_Manager
         
         private SoundPlayer alertSoundPlayer;
 
+        // Theme management
+        private enum Theme
+        {
+            Blue,
+            Black,
+            White
+        }
+        
+        private Theme currentTheme = Theme.Blue;  // Default theme
+
         // Default values for settings
         private const decimal DEFAULT_WEEKLY_LOSS_LIMIT = 1000m;
         private const decimal DEFAULT_WEEKLY_PROFIT_TARGET = 2000m;
@@ -100,16 +110,16 @@ namespace Risk_Manager
         private static readonly Regex CashPattern = new Regex(@"\bcash\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex PracPattern = new Regex(@"\bprac\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        // Dark theme colors
-        private static readonly Color DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
-        private static readonly Color DarkerBackground = Color.FromArgb(35, 52, 70);    // Slightly darker for sidebar
-        private static readonly Color CardBackground = Color.FromArgb(55, 72, 90);      // Card/panel background
-        private static readonly Color AccentGreen = Color.FromArgb(39, 174, 96);        // #27AE60 - Green for badges
-        private static readonly Color AccentAmber = Color.FromArgb(243, 156, 18);       // #F39C12 - Amber for warnings
-        private static readonly Color TextWhite = Color.White;
-        private static readonly Color TextGray = Color.FromArgb(189, 195, 199);         // #BDC3C7
-        private static readonly Color HoverColor = Color.FromArgb(65, 82, 100);         // Hover state
-        private static readonly Color SelectedColor = Color.FromArgb(75, 92, 110);      // Selected state
+        // Theme colors - instance fields that can be updated
+        private Color DarkBackground;
+        private Color DarkerBackground;
+        private Color CardBackground;
+        private Color AccentGreen;
+        private Color AccentAmber;
+        private Color TextWhite;
+        private Color TextGray;
+        private Color HoverColor;
+        private Color SelectedColor;
 
         // Navigation items - includes Stats and Accounts Summary
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
@@ -123,6 +133,9 @@ namespace Risk_Manager
 
         public RiskManagerControl()
         {
+            // Initialize default theme (Blue)
+            ApplyTheme(Theme.Blue);
+            
             Dock = DockStyle.Fill;
             BackColor = DarkBackground;
             DoubleBuffered = true;
@@ -201,6 +214,233 @@ namespace Risk_Manager
             selectedNavItem = "📊 Accounts Summary";
             UpdateNavButtonStates();
             ShowPage("📊 Accounts Summary");
+        }
+
+        /// <summary>
+        /// Applies the specified theme to all controls
+        /// </summary>
+        private void ApplyTheme(Theme theme)
+        {
+            currentTheme = theme;
+            
+            // Set theme colors based on selection
+            switch (theme)
+            {
+                case Theme.Blue:
+                    // Blue theme (original dark theme)
+                    DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
+                    DarkerBackground = Color.FromArgb(35, 52, 70);    // Slightly darker for sidebar
+                    CardBackground = Color.FromArgb(55, 72, 90);      // Card/panel background
+                    AccentGreen = Color.FromArgb(39, 174, 96);        // #27AE60 - Green for badges
+                    AccentAmber = Color.FromArgb(243, 156, 18);       // #F39C12 - Amber for warnings
+                    TextWhite = Color.White;
+                    TextGray = Color.FromArgb(189, 195, 199);         // #BDC3C7
+                    HoverColor = Color.FromArgb(65, 82, 100);         // Hover state
+                    SelectedColor = Color.FromArgb(75, 92, 110);      // Selected state
+                    break;
+                    
+                case Theme.Black:
+                    // Black theme (pure dark)
+                    DarkBackground = Color.FromArgb(20, 20, 20);      // Very dark gray
+                    DarkerBackground = Color.FromArgb(10, 10, 10);    // Almost black sidebar
+                    CardBackground = Color.FromArgb(30, 30, 30);      // Dark gray for cards
+                    AccentGreen = Color.FromArgb(0, 200, 83);         // Brighter green
+                    AccentAmber = Color.FromArgb(255, 185, 0);        // Bright amber
+                    TextWhite = Color.White;
+                    TextGray = Color.FromArgb(160, 160, 160);         // Medium gray
+                    HoverColor = Color.FromArgb(50, 50, 50);          // Hover state
+                    SelectedColor = Color.FromArgb(60, 60, 60);       // Selected state
+                    break;
+                    
+                case Theme.White:
+                    // White theme (light)
+                    DarkBackground = Color.FromArgb(245, 245, 245);   // Light gray
+                    DarkerBackground = Color.FromArgb(220, 220, 220); // Slightly darker sidebar
+                    CardBackground = Color.White;                      // White cards
+                    AccentGreen = Color.FromArgb(39, 174, 96);        // Keep green accent
+                    AccentAmber = Color.FromArgb(243, 156, 18);       // Keep amber accent
+                    TextWhite = Color.FromArgb(30, 30, 30);           // Dark text for contrast
+                    TextGray = Color.FromArgb(90, 90, 90);            // Dark gray for secondary text
+                    HoverColor = Color.FromArgb(230, 230, 230);       // Light hover
+                    SelectedColor = Color.FromArgb(210, 210, 210);    // Light selected
+                    break;
+            }
+            
+            // Apply theme to all controls
+            UpdateAllControlColors();
+        }
+
+        /// <summary>
+        /// Updates colors for all controls in the application
+        /// </summary>
+        private void UpdateAllControlColors()
+        {
+            // Update main control
+            this.BackColor = DarkBackground;
+            
+            // Update panels
+            if (contentPanel != null) contentPanel.BackColor = DarkBackground;
+            if (leftPanel != null) leftPanel.BackColor = DarkerBackground;
+            
+            // Update navigation buttons
+            foreach (var btn in navButtons)
+            {
+                var itemName = btn.Tag as string;
+                btn.BackColor = itemName == selectedNavItem ? SelectedColor : DarkerBackground;
+                btn.ForeColor = TextWhite;
+                btn.FlatAppearance.MouseOverBackColor = HoverColor;
+                btn.FlatAppearance.MouseDownBackColor = SelectedColor;
+                btn.Invalidate();
+            }
+            
+            // Update account selector
+            if (accountSelector != null)
+            {
+                accountSelector.BackColor = CardBackground;
+                accountSelector.ForeColor = TextWhite;
+            }
+            
+            // Update status badges
+            if (settingsStatusBadge != null)
+            {
+                // Badge colors stay the same but need repaint for rounded corners
+                settingsStatusBadge.Invalidate();
+            }
+            
+            if (tradingStatusBadge != null)
+            {
+                tradingStatusBadge.Invalidate();
+            }
+            
+            // Update all page contents
+            foreach (var kvp in pageContents)
+            {
+                UpdateControlRecursively(kvp.Value);
+            }
+            
+            // Refresh current page
+            this.Invalidate(true);
+        }
+        
+        /// <summary>
+        /// Recursively updates colors for a control and its children
+        /// </summary>
+        private void UpdateControlRecursively(Control control)
+        {
+            if (control == null) return;
+            
+            // Update background colors based on control type
+            if (control is Panel)
+            {
+                if (control.BackColor == Color.FromArgb(45, 62, 80) || 
+                    control.BackColor == Color.FromArgb(20, 20, 20) ||
+                    control.BackColor == Color.FromArgb(245, 245, 245))
+                {
+                    control.BackColor = DarkBackground;
+                }
+                else if (control.BackColor == Color.FromArgb(35, 52, 70) ||
+                         control.BackColor == Color.FromArgb(10, 10, 10) ||
+                         control.BackColor == Color.FromArgb(220, 220, 220))
+                {
+                    control.BackColor = DarkerBackground;
+                }
+                else if (control.BackColor == Color.FromArgb(55, 72, 90) ||
+                         control.BackColor == Color.FromArgb(30, 30, 30) ||
+                         control.BackColor == Color.White)
+                {
+                    control.BackColor = CardBackground;
+                }
+            }
+            else if (control is DataGridView grid)
+            {
+                grid.BackgroundColor = CardBackground;
+                grid.GridColor = DarkerBackground;
+                grid.DefaultCellStyle.BackColor = CardBackground;
+                grid.DefaultCellStyle.ForeColor = TextWhite;
+                grid.DefaultCellStyle.SelectionBackColor = SelectedColor;
+                grid.DefaultCellStyle.SelectionForeColor = TextWhite;
+                grid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
+                grid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
+            }
+            else if (control is Label label)
+            {
+                // Update text color for labels
+                if (label.ForeColor == Color.White || 
+                    label.ForeColor == Color.FromArgb(30, 30, 30))
+                {
+                    label.ForeColor = TextWhite;
+                }
+                else if (label.ForeColor == Color.FromArgb(189, 195, 199) ||
+                         label.ForeColor == Color.FromArgb(160, 160, 160) ||
+                         label.ForeColor == Color.FromArgb(90, 90, 90))
+                {
+                    label.ForeColor = TextGray;
+                }
+                
+                // Update background
+                if (label.BackColor == Color.FromArgb(45, 62, 80) ||
+                    label.BackColor == Color.FromArgb(20, 20, 20) ||
+                    label.BackColor == Color.FromArgb(245, 245, 245))
+                {
+                    label.BackColor = DarkBackground;
+                }
+                else if (label.BackColor == Color.FromArgb(55, 72, 90) ||
+                         label.BackColor == Color.FromArgb(30, 30, 30) ||
+                         label.BackColor == Color.White)
+                {
+                    label.BackColor = CardBackground;
+                }
+                
+                label.Invalidate();
+            }
+            else if (control is TextBox textBox)
+            {
+                if (textBox.BackColor == Color.FromArgb(35, 52, 70) ||
+                    textBox.BackColor == Color.FromArgb(10, 10, 10) ||
+                    textBox.BackColor == Color.FromArgb(220, 220, 220))
+                {
+                    textBox.BackColor = DarkerBackground;
+                }
+                else if (textBox.BackColor == Color.FromArgb(55, 72, 90) ||
+                         textBox.BackColor == Color.FromArgb(30, 30, 30) ||
+                         textBox.BackColor == Color.White)
+                {
+                    textBox.BackColor = CardBackground;
+                }
+                textBox.ForeColor = TextWhite;
+            }
+            else if (control is ComboBox comboBox)
+            {
+                comboBox.BackColor = CardBackground;
+                comboBox.ForeColor = TextWhite;
+            }
+            else if (control is CheckBox checkBox)
+            {
+                checkBox.ForeColor = TextWhite;
+                if (checkBox.BackColor == Color.FromArgb(55, 72, 90) ||
+                    checkBox.BackColor == Color.FromArgb(30, 30, 30) ||
+                    checkBox.BackColor == Color.White)
+                {
+                    checkBox.BackColor = CardBackground;
+                }
+                checkBox.Invalidate();
+            }
+            else if (control is Button button)
+            {
+                // Only update non-accent buttons
+                if (button.BackColor != AccentGreen && 
+                    button.BackColor != AccentAmber &&
+                    button.BackColor != Color.Red)
+                {
+                    button.ForeColor = TextWhite;
+                }
+            }
+            
+            // Recursively update children
+            foreach (Control child in control.Controls)
+            {
+                UpdateControlRecursively(child);
+            }
         }
 
         private void RefreshAccountDropdown()
@@ -626,37 +866,39 @@ namespace Risk_Manager
             tradingStatusBadge = CreateStatusBadge("Trading Unlocked", AccentGreen);
             badgesPanel.Controls.Add(tradingStatusBadge);
 
-            // Close button (X)
-            var closeButton = new Button
+            // Theme Changer button (replaces the X button)
+            var themeButton = new Button
             {
-                Text = "✕",
-                Width = 32,
+                Text = "🎨",
+                Width = 40,
                 Height = 32,
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                BackColor = AccentAmber,
-                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                BackColor = Color.FromArgb(52, 152, 219),  // Nice blue color
+                ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(5, 0, 0, 0),
                 Padding = new Padding(0)
             };
-            closeButton.FlatAppearance.BorderSize = 0;
-            closeButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 140, 0);
-            closeButton.Click += (s, e) =>
+            themeButton.FlatAppearance.BorderSize = 0;
+            themeButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(41, 128, 185);
+            themeButton.Click += (s, e) =>
             {
-                // Request parent to remove this control
-                if (this.Parent != null)
+                // Cycle through themes: Blue -> Black -> White -> Blue
+                switch (currentTheme)
                 {
-                    this.Parent.Controls.Remove(this);
-                }
-
-                var form = this.FindForm();
-                if (form != null)
-                {
-                    form.Close();
+                    case Theme.Blue:
+                        ApplyTheme(Theme.Black);
+                        break;
+                    case Theme.Black:
+                        ApplyTheme(Theme.White);
+                        break;
+                    case Theme.White:
+                        ApplyTheme(Theme.Blue);
+                        break;
                 }
             };
-            badgesPanel.Controls.Add(closeButton);
+            badgesPanel.Controls.Add(themeButton);
 
             // Position the badges panel initially and on resize
             PositionBadgesPanel(topPanel, badgesPanel);
