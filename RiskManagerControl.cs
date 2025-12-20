@@ -959,9 +959,6 @@ namespace Risk_Manager
 
                     // Get account type using centralized method
                     var accountType = DetermineAccountType(account);
-                    
-                    // Apply automatic locking/unlocking based on account type
-                    ApplyAccountTypeLocking(account, accountType);
 
                     // Count positions
                     int positionsCount = 0;
@@ -2183,23 +2180,45 @@ namespace Risk_Manager
                     return;
                 }
 
-                if (!ValidateSettingsService(out var settingsService))
+                // Get the selected account object
+                var account = selectedAccount;
+                if (account == null)
                 {
+                    MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                settingsService.SetTradingLock(accountNumber, true, "Manual lock");
-                MessageBox.Show("The account has been locked successfully.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                
-                // Find the status label and update it
-                var statusLabel = GetTradingStatusLabel(sender as Button);
-                if (statusLabel != null)
+                // Use Core.Instance.LockAccount API
+                var core = Core.Instance;
+                if (core != null)
                 {
-                    UpdateAccountStatus(statusLabel);
-                }
+                    // Check if the method exists before calling (defensive programming)
+                    var lockMethod = core.GetType().GetMethod("LockAccount");
+                    if (lockMethod != null)
+                    {
+                        lockMethod.Invoke(core, new object[] { account });
+                        MessageBox.Show("The account has been locked successfully using Core API.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        
+                        // Find the status label and update it
+                        var statusLabel = GetTradingStatusLabel(sender as Button);
+                        if (statusLabel != null)
+                        {
+                            statusLabel.Text = "Trading Locked";
+                            statusLabel.ForeColor = Color.Red;
+                        }
 
-                // Update the trading status badge
-                UpdateTradingStatusBadge();
+                        // Update the trading status badge
+                        UpdateTradingStatusBadge();
+                    }
+                    else
+                    {
+                        MessageBox.Show("LockAccount method not available in Core API.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Core instance not available.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             catch (Exception ex)
             {
@@ -2218,23 +2237,45 @@ namespace Risk_Manager
                     return;
                 }
 
-                if (!ValidateSettingsService(out var settingsService))
+                // Get the selected account object
+                var account = selectedAccount;
+                if (account == null)
                 {
+                    MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                settingsService.SetTradingLock(accountNumber, false, "Manual unlock");
-                MessageBox.Show("The account has been unlocked successfully.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                
-                // Find the status label and update it
-                var statusLabel = GetTradingStatusLabel(sender as Button);
-                if (statusLabel != null)
+                // Use Core.Instance.UnlockAccount API
+                var core = Core.Instance;
+                if (core != null)
                 {
-                    UpdateAccountStatus(statusLabel);
-                }
+                    // Check if the method exists before calling (defensive programming)
+                    var unlockMethod = core.GetType().GetMethod("UnlockAccount");
+                    if (unlockMethod != null)
+                    {
+                        unlockMethod.Invoke(core, new object[] { account });
+                        MessageBox.Show("The account has been unlocked successfully using Core API.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        
+                        // Find the status label and update it
+                        var statusLabel = GetTradingStatusLabel(sender as Button);
+                        if (statusLabel != null)
+                        {
+                            statusLabel.Text = "Trading Unlocked";
+                            statusLabel.ForeColor = AccentGreen;
+                        }
 
-                // Update the trading status badge
-                UpdateTradingStatusBadge();
+                        // Update the trading status badge
+                        UpdateTradingStatusBadge();
+                    }
+                    else
+                    {
+                        MessageBox.Show("UnlockAccount method not available in Core API.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Core instance not available.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             catch (Exception ex)
             {
@@ -2493,57 +2534,6 @@ namespace Risk_Manager
             }
             
             return ACCOUNT_TYPE_UNKNOWN;
-        }
-
-        /// <summary>
-        /// Applies automatic locking/unlocking to accounts based on their type.
-        /// Uses Core.Instance.LockAccount and UnlockAccount API methods.
-        /// </summary>
-        /// <param name="account">The account to lock/unlock</param>
-        /// <param name="accountType">The detected account type</param>
-        private void ApplyAccountTypeLocking(Account account, string accountType)
-        {
-            try
-            {
-                var core = Core.Instance;
-                if (core == null || account == null)
-                    return;
-
-                // Define which account types should be locked
-                var shouldBeLocked = accountType == ACCOUNT_TYPE_PRAC || accountType == ACCOUNT_TYPE_LIVE;
-
-                if (shouldBeLocked)
-                {
-                    // Lock the account using Core API
-                    // Check if the method exists before calling (defensive programming)
-                    var lockMethod = core.GetType().GetMethod("LockAccount");
-                    if (lockMethod != null)
-                    {
-                        lockMethod.Invoke(core, new object[] { account });
-#if DEBUG
-                        System.Diagnostics.Debug.WriteLine($"Locked account {account.Id ?? account.Name} of type {accountType}");
-#endif
-                    }
-                }
-                else
-                {
-                    // Unlock the account using Core API
-                    // Check if the method exists before calling (defensive programming)
-                    var unlockMethod = core.GetType().GetMethod("UnlockAccount");
-                    if (unlockMethod != null)
-                    {
-                        unlockMethod.Invoke(core, new object[] { account });
-#if DEBUG
-                        System.Diagnostics.Debug.WriteLine($"Unlocked account {account.Id ?? account.Name} of type {accountType}");
-#endif
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log error but don't crash the UI
-                System.Diagnostics.Debug.WriteLine($"Error applying account type locking: {ex.Message}");
-            }
         }
 
         /// <summary>
