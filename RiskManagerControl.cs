@@ -2379,7 +2379,7 @@ namespace Risk_Manager
                 }
 
                 // Check if the method exists before calling (defensive programming)
-                var unlockMethod = core.GetType().GetMethod("UnlockAccount");
+                var unlockMethod = core.GetType().GetMethod("UnLockAccount");
                 if (unlockMethod != null)
                 {
                     unlockMethod.Invoke(core, new object[] { targetAccount });
@@ -2411,7 +2411,7 @@ namespace Risk_Manager
                 }
                 else
                 {
-                    MessageBox.Show("UnlockAccount method not available in Core API.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("UnLockAccount method not available in Core API.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
