@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Media;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
@@ -74,6 +75,9 @@ namespace Risk_Manager
         private const decimal DEFAULT_WEEKLY_LOSS_LIMIT = 1000m;
         private const decimal DEFAULT_WEEKLY_PROFIT_TARGET = 2000m;
         private const int DEFAULT_CONTRACT_LIMIT = 10;
+
+        // Regex patterns for account type detection (compiled for performance)
+        private static readonly Regex PAPattern = new Regex(@"\bpa\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         // Dark theme colors
         private static readonly Color DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
@@ -2427,8 +2431,7 @@ namespace Risk_Manager
             
             // Check for specific account type patterns with word boundaries to avoid false positives
             // PA (Personal Account) - check for "pa" as separate word or at word boundaries
-            if (System.Text.RegularExpressions.Regex.IsMatch(connName, @"\bpa\b") || 
-                System.Text.RegularExpressions.Regex.IsMatch(accountId, @"\bpa\b") ||
+            if (PAPattern.IsMatch(connName) || PAPattern.IsMatch(accountId) ||
                 connName.Contains("personal"))
                 return "PA";
             
