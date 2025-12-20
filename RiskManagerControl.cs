@@ -85,6 +85,7 @@ namespace Risk_Manager
         }
         
         private Theme currentTheme = Theme.Blue;  // Default theme
+        private bool isInitializing = true;  // Flag to prevent saving during initialization
 
         // Default values for settings
         private const decimal DEFAULT_WEEKLY_LOSS_LIMIT = 1000m;
@@ -217,6 +218,9 @@ namespace Risk_Manager
             selectedNavItem = "📊 Accounts Summary";
             UpdateNavButtonStates();
             ShowPage("📊 Accounts Summary");
+            
+            // Initialization complete, enable theme saving
+            isInitializing = false;
         }
 
         /// <summary>
@@ -481,6 +485,10 @@ namespace Risk_Manager
         /// </summary>
         private void SaveThemePreference()
         {
+            // Don't save during initialization to avoid unnecessary file I/O
+            if (isInitializing)
+                return;
+                
             try
             {
                 var themePath = GetThemePreferencesPath();
