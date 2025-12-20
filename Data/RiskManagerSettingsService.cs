@@ -320,6 +320,106 @@ namespace Risk_Manager.Data
             }
         }
 
+        /// <summary>
+        /// Copies all settings from one account to multiple target accounts.
+        /// </summary>
+        /// <param name="sourceAccountNumber">The account to copy settings from</param>
+        /// <param name="targetAccountNumbers">The accounts to copy settings to</param>
+        /// <returns>A dictionary mapping account numbers to success/failure status</returns>
+        public Dictionary<string, (bool Success, string Message)> CopySettingsToAccounts(
+            string sourceAccountNumber, 
+            IEnumerable<string> targetAccountNumbers)
+        {
+            var results = new Dictionary<string, (bool Success, string Message)>();
+            
+            if (string.IsNullOrEmpty(sourceAccountNumber))
+            {
+                throw new ArgumentException("Source account number cannot be null or empty.", nameof(sourceAccountNumber));
+            }
+            
+            if (targetAccountNumbers == null || !targetAccountNumbers.Any())
+            {
+                throw new ArgumentException("Target account numbers cannot be null or empty.", nameof(targetAccountNumbers));
+            }
+            
+            // Get source settings
+            var sourceSettings = GetSettings(sourceAccountNumber);
+            if (sourceSettings == null)
+            {
+                throw new InvalidOperationException($"No settings found for source account: {sourceAccountNumber}");
+            }
+            
+            // Copy to each target account
+            foreach (var targetAccount in targetAccountNumbers.Where(a => !string.IsNullOrEmpty(a)))
+            {
+                try
+                {
+                    // Get or create target settings
+                    var targetSettings = GetOrCreateSettings(targetAccount);
+                    if (targetSettings == null)
+                    {
+                        results[targetAccount] = (false, "Failed to create settings");
+                        continue;
+                    }
+                    
+                    // Copy all settings (except account number and timestamps)
+                    targetSettings.FeatureToggleEnabled = sourceSettings.FeatureToggleEnabled;
+                    targetSettings.DailyLossLimit = sourceSettings.DailyLossLimit;
+                    targetSettings.DailyProfitTarget = sourceSettings.DailyProfitTarget;
+                    targetSettings.PositionLossLimit = sourceSettings.PositionLossLimit;
+                    targetSettings.PositionProfitTarget = sourceSettings.PositionProfitTarget;
+                    targetSettings.WeeklyLossLimit = sourceSettings.WeeklyLossLimit;
+                    targetSettings.WeeklyProfitTarget = sourceSettings.WeeklyProfitTarget;
+                    targetSettings.DefaultContractLimit = sourceSettings.DefaultContractLimit;
+                    targetSettings.BlockedSymbols = new List<string>(sourceSettings.BlockedSymbols);
+                    targetSettings.SymbolContractLimits = new Dictionary<string, int>(sourceSettings.SymbolContractLimits);
+                    targetSettings.TradingTimeRestrictions = sourceSettings.TradingTimeRestrictions
+                        .Select(tr => new TradingTimeRestriction
+                        {
+                            DayOfWeek = tr.DayOfWeek,
+                            StartTime = tr.StartTime,
+                            EndTime = tr.EndTime,
+                            IsAllowed = tr.IsAllowed,
+                            Name = tr.Name
+                        }).ToList();
+                    
+                    // Copy lock settings
+                    if (sourceSettings.TradingLock != null)
+                    {
+                        targetSettings.TradingLock = new LockInfo
+                        {
+                            IsLocked = sourceSettings.TradingLock.IsLocked,
+                            LockTime = sourceSettings.TradingLock.LockTime,
+                            LockDayOfWeek = sourceSettings.TradingLock.LockDayOfWeek,
+                            LockReason = sourceSettings.TradingLock.LockReason
+                        };
+                    }
+                    
+                    if (sourceSettings.SettingsLock != null)
+                    {
+                        targetSettings.SettingsLock = new LockInfo
+                        {
+                            IsLocked = sourceSettings.SettingsLock.IsLocked,
+                            LockTime = sourceSettings.SettingsLock.LockTime,
+                            LockDayOfWeek = sourceSettings.SettingsLock.LockDayOfWeek,
+                            LockReason = sourceSettings.SettingsLock.LockReason
+                        };
+                    }
+                    
+                    // Save the target settings
+                    SaveSettings(targetSettings);
+                    
+                    results[targetAccount] = (true, "Settings copied successfully");
+                }
+                catch (Exception ex)
+                {
+                    results[targetAccount] = (false, $"Error: {ex.Message}");
+                }
+            }
+            
+            return results;
+        }
+
         #endregion
 
         #region Blocked Symbols
