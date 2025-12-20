@@ -33,6 +33,8 @@ namespace Risk_Manager
         private Label tradingStatusBadge;
         private ComboBox accountSelector;
         private Label accountNumberDisplay; // Display current account number in UI
+        private Button lockTradingButton; // Lock Trading button reference
+        private Button unlockTradingButton; // Unlock Trading button reference
 
         // Settings input control references for persistence
         private TextBox dailyLossLimitInput;
@@ -2144,6 +2146,7 @@ namespace Risk_Manager
             };
             lockButton.FlatAppearance.BorderSize = 0;
             lockButton.Click += BtnLock_Click;
+            lockTradingButton = lockButton; // Store reference
             contentArea.Controls.Add(lockButton);
 
             var unlockButton = new Button
@@ -2161,10 +2164,14 @@ namespace Risk_Manager
             };
             unlockButton.FlatAppearance.BorderSize = 0;
             unlockButton.Click += BtnUnlock_Click;
+            unlockTradingButton = unlockButton; // Store reference
             contentArea.Controls.Add(unlockButton);
 
             // Update account display on panel creation
             UpdateLockAccountDisplay(lockAccountDisplay);
+            
+            // Update button states based on current lock status
+            UpdateLockButtonStates();
 
             // Add controls in correct order: Fill first, then Top
             mainPanel.Controls.Add(contentArea);
@@ -2232,10 +2239,57 @@ namespace Risk_Manager
                 
                 System.Diagnostics.Debug.WriteLine($"UpdateLockAccountDisplay: Displaying and caching account='{accountNumber}'");
                 lockAccountDisplay.Invalidate();
+                
+                // Update button states after account display changes
+                UpdateLockButtonStates();
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error updating lock account display: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Updates the enabled/disabled state of lock and unlock buttons based on current lock status.
+        /// Grey out Lock button if already locked, grey out Unlock button if already unlocked.
+        /// </summary>
+        private void UpdateLockButtonStates()
+        {
+            try
+            {
+                if (lockTradingButton == null || unlockTradingButton == null)
+                    return;
+
+                var accountNumber = GetSelectedAccountNumber();
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    // No account selected - disable both buttons
+                    lockTradingButton.Enabled = false;
+                    unlockTradingButton.Enabled = false;
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    // Service not initialized - enable both buttons as fallback
+                    lockTradingButton.Enabled = true;
+                    unlockTradingButton.Enabled = true;
+                    return;
+                }
+
+                bool isLocked = settingsService.IsTradingLocked(accountNumber);
+
+                // If locked: disable Lock button, enable Unlock button
+                // If unlocked: enable Lock button, disable Unlock button
+                lockTradingButton.Enabled = !isLocked;
+                unlockTradingButton.Enabled = isLocked;
+                
+                System.Diagnostics.Debug.WriteLine($"UpdateLockButtonStates: account='{accountNumber}', isLocked={isLocked}, Lock.Enabled={lockTradingButton.Enabled}, Unlock.Enabled={unlockTradingButton.Enabled}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating lock button states: {ex.Message}");
             }
         }
 
@@ -2325,6 +2379,9 @@ namespace Risk_Manager
                     RefreshAccountsSummary();
                     RefreshAccountStats();
                     
+                    // Update button states - Lock button should now be disabled
+                    UpdateLockButtonStates();
+                    
                     MessageBox.Show($"Account '{accountNumber}' has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
@@ -2392,6 +2449,9 @@ namespace Risk_Manager
                     
                     RefreshAccountsSummary();
                     RefreshAccountStats();
+                    
+                    // Update button states - Unlock button should now be disabled
+                    UpdateLockButtonStates();
                     
                     MessageBox.Show($"Account '{accountNumber}' has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
