@@ -2199,11 +2199,17 @@ namespace Risk_Manager
                             {
                                 // Get TradingStatus enum type and the Locked value
                                 var tradingStatusType = tradingStatusProperty.PropertyType;
-                                var lockedValue = Enum.Parse(tradingStatusType, "Locked");
-                                tradingStatusProperty.SetValue(core, lockedValue);
+                                if (Enum.TryParse(tradingStatusType, "Locked", true, out var lockedValue))
+                                {
+                                    tradingStatusProperty.SetValue(core, lockedValue);
 #if DEBUG
-                                System.Diagnostics.Debug.WriteLine($"Set Core.TradingStatus to Locked");
+                                    System.Diagnostics.Debug.WriteLine($"Set Core.TradingStatus to Locked");
 #endif
+                                }
+                                else
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"'Locked' value not found in TradingStatus enum");
+                                }
                             }
                         }
                         catch (Exception ex)
@@ -2270,11 +2276,17 @@ namespace Risk_Manager
                             {
                                 // Get TradingStatus enum type and the Allowed value
                                 var tradingStatusType = tradingStatusProperty.PropertyType;
-                                var allowedValue = Enum.Parse(tradingStatusType, "Allowed");
-                                tradingStatusProperty.SetValue(core, allowedValue);
+                                if (Enum.TryParse(tradingStatusType, "Allowed", true, out var allowedValue))
+                                {
+                                    tradingStatusProperty.SetValue(core, allowedValue);
 #if DEBUG
-                                System.Diagnostics.Debug.WriteLine($"Set Core.TradingStatus to Allowed");
+                                    System.Diagnostics.Debug.WriteLine($"Set Core.TradingStatus to Allowed");
 #endif
+                                }
+                                else
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"'Allowed' value not found in TradingStatus enum");
+                                }
                             }
                         }
                         catch (Exception ex)
