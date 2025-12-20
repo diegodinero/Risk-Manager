@@ -378,38 +378,21 @@ namespace Risk_Manager.Data
                         ? new Dictionary<string, int>(sourceSettings.SymbolContractLimits) 
                         : new Dictionary<string, int>();
                     targetSettings.TradingTimeRestrictions = sourceSettings.TradingTimeRestrictions != null
-                        ? sourceSettings.TradingTimeRestrictions.Select(tr => new TradingTimeRestriction
-                        {
-                            DayOfWeek = tr.DayOfWeek,
-                            StartTime = tr.StartTime,
-                            EndTime = tr.EndTime,
-                            IsAllowed = tr.IsAllowed,
-                            Name = tr.Name
-                        }).ToList()
+                        ? sourceSettings.TradingTimeRestrictions
+                            .Where(tr => tr != null)  // Filter out null items
+                            .Select(tr => new TradingTimeRestriction
+                            {
+                                DayOfWeek = tr.DayOfWeek,
+                                StartTime = tr.StartTime,
+                                EndTime = tr.EndTime,
+                                IsAllowed = tr.IsAllowed,
+                                Name = tr.Name
+                            }).ToList()
                         : new List<TradingTimeRestriction>();
                     
-                    // Copy lock settings
-                    if (sourceSettings.TradingLock != null)
-                    {
-                        targetSettings.TradingLock = new LockInfo
-                        {
-                            IsLocked = sourceSettings.TradingLock.IsLocked,
-                            LockTime = sourceSettings.TradingLock.LockTime,
-                            LockDayOfWeek = sourceSettings.TradingLock.LockDayOfWeek,
-                            LockReason = sourceSettings.TradingLock.LockReason
-                        };
-                    }
-                    
-                    if (sourceSettings.SettingsLock != null)
-                    {
-                        targetSettings.SettingsLock = new LockInfo
-                        {
-                            IsLocked = sourceSettings.SettingsLock.IsLocked,
-                            LockTime = sourceSettings.SettingsLock.LockTime,
-                            LockDayOfWeek = sourceSettings.SettingsLock.LockDayOfWeek,
-                            LockReason = sourceSettings.SettingsLock.LockReason
-                        };
-                    }
+                    // Copy lock settings using helper method
+                    targetSettings.TradingLock = CopyLockInfo(sourceSettings.TradingLock);
+                    targetSettings.SettingsLock = CopyLockInfo(sourceSettings.SettingsLock);
                     
                     // Save the target settings
                     SaveSettings(targetSettings);
@@ -423,6 +406,23 @@ namespace Risk_Manager.Data
             }
             
             return results;
+        }
+
+        /// <summary>
+        /// Helper method to copy LockInfo objects with null safety.
+        /// </summary>
+        private LockInfo? CopyLockInfo(LockInfo? source)
+        {
+            if (source == null)
+                return null;
+            
+            return new LockInfo
+            {
+                IsLocked = source.IsLocked,
+                LockTime = source.LockTime,
+                LockDayOfWeek = source.LockDayOfWeek,
+                LockReason = source.LockReason
+            };
         }
 
         #endregion

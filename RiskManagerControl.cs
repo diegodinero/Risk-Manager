@@ -3356,7 +3356,16 @@ namespace Risk_Manager
                     }
 
                     // Confirm action
-                    var sourceAccount = (Account)sourceAccountComboBox.SelectedItem;
+                    if (!(sourceAccountComboBox.SelectedItem is Account sourceAccount))
+                    {
+                        MessageBox.Show(
+                            "Invalid source account selected.",
+                            "Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        return;
+                    }
+                    
                     var sourceAccountId = GetAccountIdentifier(sourceAccount);
                     var confirmMessage = $"Are you sure you want to copy settings from:\n\n" +
                                        $"Source: {sourceAccount.Name} ({sourceAccountId})\n\n" +
