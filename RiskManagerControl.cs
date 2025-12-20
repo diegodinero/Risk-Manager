@@ -2192,30 +2192,7 @@ namespace Risk_Manager
                         lockMethod.Invoke(core, new object[] { account });
                         
                         // Set TradingStatus to Locked to disable buy/sell buttons
-                        try
-                        {
-                            var tradingStatusProperty = core.GetType().GetProperty("TradingStatus");
-                            if (tradingStatusProperty != null && tradingStatusProperty.CanWrite)
-                            {
-                                // Get TradingStatus enum type and the Locked value
-                                var tradingStatusType = tradingStatusProperty.PropertyType;
-                                if (Enum.TryParse(tradingStatusType, "Locked", true, out var lockedValue))
-                                {
-                                    tradingStatusProperty.SetValue(core, lockedValue);
-#if DEBUG
-                                    System.Diagnostics.Debug.WriteLine($"Set Core.TradingStatus to Locked");
-#endif
-                                }
-                                else
-                                {
-                                    System.Diagnostics.Debug.WriteLine($"'Locked' value not found in TradingStatus enum");
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Error setting TradingStatus: {ex.Message}");
-                        }
+                        SetCoreTradingStatus(core, "Locked");
                         
                         MessageBox.Show("The account has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         
@@ -2269,30 +2246,7 @@ namespace Risk_Manager
                         unlockMethod.Invoke(core, new object[] { account });
                         
                         // Set TradingStatus to Allowed to enable buy/sell buttons
-                        try
-                        {
-                            var tradingStatusProperty = core.GetType().GetProperty("TradingStatus");
-                            if (tradingStatusProperty != null && tradingStatusProperty.CanWrite)
-                            {
-                                // Get TradingStatus enum type and the Allowed value
-                                var tradingStatusType = tradingStatusProperty.PropertyType;
-                                if (Enum.TryParse(tradingStatusType, "Allowed", true, out var allowedValue))
-                                {
-                                    tradingStatusProperty.SetValue(core, allowedValue);
-#if DEBUG
-                                    System.Diagnostics.Debug.WriteLine($"Set Core.TradingStatus to Allowed");
-#endif
-                                }
-                                else
-                                {
-                                    System.Diagnostics.Debug.WriteLine($"'Allowed' value not found in TradingStatus enum");
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Error setting TradingStatus: {ex.Message}");
-                        }
+                        SetCoreTradingStatus(core, "Allowed");
                         
                         MessageBox.Show("The account has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         
@@ -2320,6 +2274,42 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 MessageBox.Show($"Error unlocking the account: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to set Core.TradingStatus property using reflection.
+        /// </summary>
+        /// <param name="core">The Core instance</param>
+        /// <param name="statusValue">The status value to set (e.g., "Locked" or "Allowed")</param>
+        private void SetCoreTradingStatus(object core, string statusValue)
+        {
+            try
+            {
+                var tradingStatusProperty = core.GetType().GetProperty("TradingStatus");
+                if (tradingStatusProperty != null && tradingStatusProperty.CanWrite)
+                {
+                    // Get TradingStatus enum type
+                    var tradingStatusType = tradingStatusProperty.PropertyType;
+                    
+                    // Try to parse the enum value (case-insensitive)
+                    try
+                    {
+                        var enumValue = Enum.Parse(tradingStatusType, statusValue, ignoreCase: true);
+                        tradingStatusProperty.SetValue(core, enumValue);
+#if DEBUG
+                        System.Diagnostics.Debug.WriteLine($"Set Core.TradingStatus to {statusValue}");
+#endif
+                    }
+                    catch (ArgumentException)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"'{statusValue}' value not found in TradingStatus enum");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error setting TradingStatus: {ex.Message}");
             }
         }
 
