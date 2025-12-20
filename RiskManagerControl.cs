@@ -3716,6 +3716,7 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 Padding = new Padding(10, 5, 10, 0),
                 BackColor = CardBackground,
+                ForeColor = TextWhite,  // Set proper color in case it's made visible later
                 AutoSize = false,
                 BorderStyle = BorderStyle.FixedSingle,
                 Visible = false  // Hide the control while retaining functionality
