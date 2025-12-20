@@ -1257,8 +1257,22 @@ namespace Risk_Manager
                 var lockStatus = "Unlocked";
                 if (settingsService.IsInitialized)
                 {
-                    // Use GetUniqueAccountIdentifier to match the same identifier used for locking
-                    var accountNumber = GetSelectedAccountNumber();
+                    // Generate the account identifier from accountToDisplay to ensure we check the correct account
+                    // Find the account index
+                    int accountIndex = 0;
+                    if (core != null && core.Accounts != null)
+                    {
+                        foreach (var acc in core.Accounts)
+                        {
+                            if (acc == accountToDisplay)
+                            {
+                                break;
+                            }
+                            accountIndex++;
+                        }
+                    }
+                    
+                    var accountNumber = GetUniqueAccountIdentifier(accountToDisplay, accountIndex);
                     if (!string.IsNullOrEmpty(accountNumber))
                     {
                         var isLocked = settingsService.IsTradingLocked(accountNumber);
