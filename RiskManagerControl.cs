@@ -888,13 +888,16 @@ namespace Risk_Manager
             // Title label
             var titleLabel = new Label
             {
-                Text = "Risk Manager",
+                Text = "Risk Manager [DRAG ME TO MOVE]",
                 AutoSize = true,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 Location = new Point(15, 8),
                 Cursor = Cursors.SizeAll  // Show move cursor
             };
+            // Add tooltip to make it clear this is draggable
+            var toolTip = new ToolTip();
+            toolTip.SetToolTip(titleLabel, "Click and drag to move window");
             EnableDragging(titleLabel);  // Make title draggable too
             topPanel.Controls.Add(titleLabel);
 
@@ -5090,7 +5093,7 @@ namespace Risk_Manager
             {
                 if (e.Button == MouseButtons.Left && lastPoint != Point.Empty)
                 {
-                    // Find the top-level parent form from the control
+                    // Try WinForms Form first
                     Form parentForm = control.FindForm();
                     if (parentForm != null)
                     {
@@ -5100,6 +5103,58 @@ namespace Risk_Manager
                         
                         // Move the form
                         parentForm.Location = new Point(newX, newY);
+                    }
+                    else
+                    {
+                        // Try to find WPF Window via WindowsFormsHost
+                        try
+                        {
+                            var parent = control.Parent;
+                            while (parent != null)
+                            {
+                                // Check if parent is a WindowsFormsHost
+                                if (parent.GetType().Name == "WindowsFormsHost")
+                                {
+                                    // Get the WPF Window from the WindowsFormsHost
+                                    var windowProp = parent.GetType().GetProperty("Window", 
+                                        System.Reflection.BindingFlags.Instance | 
+                                        System.Reflection.BindingFlags.Public);
+                                    
+                                    if (windowProp != null)
+                                    {
+                                        var wpfWindow = windowProp.GetValue(parent);
+                                        if (wpfWindow != null)
+                                        {
+                                            var wpfWindowType = wpfWindow.GetType();
+                                            
+                                            // Get Left and Top properties
+                                            var leftProp = wpfWindowType.GetProperty("Left");
+                                            var topProp = wpfWindowType.GetProperty("Top");
+                                            
+                                            if (leftProp != null && topProp != null)
+                                            {
+                                                double currentLeft = (double)leftProp.GetValue(wpfWindow);
+                                                double currentTop = (double)topProp.GetValue(wpfWindow);
+                                                
+                                                // Calculate new position
+                                                double newX = currentLeft + (e.X - lastPoint.X);
+                                                double newY = currentTop + (e.Y - lastPoint.Y);
+                                                
+                                                // Move the WPF window
+                                                leftProp.SetValue(wpfWindow, newX);
+                                                topProp.SetValue(wpfWindow, newY);
+                                            }
+                                        }
+                                    }
+                                    break;
+                                }
+                                parent = parent.Parent;
+                            }
+                        }
+                        catch
+                        {
+                            // Silently fail if WPF window dragging doesn't work
+                        }
                     }
                 }
             };
