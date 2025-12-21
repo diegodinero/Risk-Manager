@@ -22,7 +22,8 @@ namespace Risk_Manager
                 Group = PluginGroup.Portfolio,
                 ShortName = "RMMUI",
                 SortIndex = 34,
-                WindowParameters = new NativeWindowParameters(NativeWindowParameters.Panel)
+                // Use default constructor (Dialog mode) instead of Panel to ensure title bar is shown
+                WindowParameters = new NativeWindowParameters()
                 {
                     BrowserUsageType = BrowserUsageType.None,
                     WindowStyle = NativeWindowStyle.SingleBorderWindow,
@@ -30,7 +31,8 @@ namespace Risk_Manager
                     AllowActionsButton = true,
                     AllowCloseButton = true,
                     AllowMaximizeButton = true,
-                    AllowFullScreenButton = true
+                    AllowFullScreenButton = true,
+                    ShowInTaskbar = true
 
                 },
                 CustomProperties = new Dictionary<string, object>
@@ -46,6 +48,33 @@ namespace Risk_Manager
         public override void Initialize()
         {
             base.Initialize();
+            
+#if DEBUG
+            // Debug logging to verify PluginInfo settings are applied
+            try
+            {
+                var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                var log = System.IO.Path.Combine(desktop, "RiskManager_window_log.txt");
+                var info = GetInfo();
+                
+                System.IO.File.AppendAllText(log, $"=== Risk_Manager Initialize - {DateTime.Now:O} ==={Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"Plugin Title: {info.Title}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"WindowStyle: {info.WindowParameters?.WindowStyle}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"ResizeMode: {info.WindowParameters?.ResizeMode}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"AllowCloseButton: {info.WindowParameters?.AllowCloseButton}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"AllowMaximizeButton: {info.WindowParameters?.AllowMaximizeButton}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"AllowFullScreenButton: {info.WindowParameters?.AllowFullScreenButton}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"ShowInTaskbar: {info.WindowParameters?.ShowInTaskbar}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, Environment.NewLine);
+                
+                System.Diagnostics.Debug.WriteLine($"Risk_Manager initialized with WindowStyle: {info.WindowParameters?.WindowStyle}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Risk_Manager: Logging error: {ex.Message}");
+            }
+#endif
+            
             this.AllowDataExport = true;
             this.table.RowsLimit = 1000;
             this.table.AllowFilter = true;

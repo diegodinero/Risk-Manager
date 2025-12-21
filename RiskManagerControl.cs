@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Media;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
@@ -75,6 +76,28 @@ namespace Risk_Manager
         private FlowLayoutPanel copySettingsTargetPanel;
         
         private SoundPlayer alertSoundPlayer;
+        
+        // Tooltip for draggable title
+        private ToolTip titleToolTip;
+        
+        // Cache for WPF window dragging to avoid repeated reflection
+        private object cachedWpfWindow;
+        private PropertyInfo cachedLeftProperty;
+        private PropertyInfo cachedTopProperty;
+
+        /// <summary>
+        /// Sets the WPF window reference for dragging functionality
+        /// </summary>
+        public void SetWpfWindow(object wpfWindow)
+        {
+            if (wpfWindow != null)
+            {
+                cachedWpfWindow = wpfWindow;
+                var wpfWindowType = wpfWindow.GetType();
+                cachedLeftProperty = wpfWindowType.GetProperty("Left");
+                cachedTopProperty = wpfWindowType.GetProperty("Top");
+            }
+        }
 
         // Theme management
         private enum Theme
@@ -878,8 +901,12 @@ namespace Risk_Manager
                 Dock = DockStyle.Top,
                 Height = 70,
                 BackColor = DarkBackground,
-                Padding = new Padding(15, 10, 15, 10)
+                Padding = new Padding(15, 10, 15, 10),
+                Cursor = Cursors.SizeAll  // Show move cursor to indicate draggability
             };
+
+            // Make the top panel draggable to move the parent window
+            EnableDragging(topPanel);
 
             // Title label
             var titleLabel = new Label
@@ -888,8 +915,13 @@ namespace Risk_Manager
                 AutoSize = true,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                Location = new Point(15, 8)
+                Location = new Point(15, 8),
+                Cursor = Cursors.SizeAll  // Show move cursor
             };
+            // Add tooltip to indicate draggability
+            titleToolTip = new ToolTip();
+            titleToolTip.SetToolTip(titleLabel, "Click and drag to move window");
+            EnableDragging(titleLabel);  // Make title draggable too
             topPanel.Controls.Add(titleLabel);
 
             // Account selector
@@ -4869,6 +4901,9 @@ namespace Risk_Manager
 
                 alertSoundPlayer?.Dispose();
                 alertSoundPlayer = null;
+                
+                titleToolTip?.Dispose();
+                titleToolTip = null;
             }
             base.Dispose(disposing);
         }
@@ -5063,6 +5098,119 @@ namespace Risk_Manager
             mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
+        }
+
+        /// <summary>
+        /// Enables dragging functionality for a control to move the parent window
+        /// </summary>
+        private void EnableDragging(Control control)
+        {
+            Point lastPoint = Point.Empty;
+            
+            control.MouseDown += (sender, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    lastPoint = e.Location;
+                }
+            };
+            
+            control.MouseMove += (sender, e) =>
+            {
+                if (e.Button == MouseButtons.Left && lastPoint != Point.Empty)
+                {
+                    // Try WinForms Form first
+                    Form parentForm = control.FindForm();
+                    if (parentForm != null)
+                    {
+                        // Calculate the new position
+                        int newX = parentForm.Left + (e.X - lastPoint.X);
+                        int newY = parentForm.Top + (e.Y - lastPoint.Y);
+                        
+                        // Move the form
+                        parentForm.Location = new Point(newX, newY);
+                    }
+                    else
+                    {
+                        // Try to find WPF Window via WindowsFormsHost
+                        try
+                        {
+                            // Use cached WPF window if available
+                            if (cachedWpfWindow != null && cachedLeftProperty != null && cachedTopProperty != null)
+                            {
+                                double currentLeft = (double)cachedLeftProperty.GetValue(cachedWpfWindow);
+                                double currentTop = (double)cachedTopProperty.GetValue(cachedWpfWindow);
+                                
+                                // Calculate new position
+                                double newX = currentLeft + (e.X - lastPoint.X);
+                                double newY = currentTop + (e.Y - lastPoint.Y);
+                                
+                                // Move the WPF window
+                                cachedLeftProperty.SetValue(cachedWpfWindow, newX);
+                                cachedTopProperty.SetValue(cachedWpfWindow, newY);
+                            }
+                            else
+                            {
+                                // Find and cache WPF window
+                                var parent = control.Parent;
+                                while (parent != null)
+                                {
+                                    // Check if parent is a WindowsFormsHost using type comparison
+                                    var parentType = parent.GetType();
+                                    if (parentType.FullName == "System.Windows.Forms.Integration.WindowsFormsHost" ||
+                                        parentType.Name == "WindowsFormsHost")
+                                    {
+                                        // Get the WPF Window from the WindowsFormsHost
+                                        var windowProp = parentType.GetProperty("Window", 
+                                            System.Reflection.BindingFlags.Instance | 
+                                            System.Reflection.BindingFlags.Public);
+                                        
+                                        if (windowProp != null)
+                                        {
+                                            var wpfWindow = windowProp.GetValue(parent);
+                                            if (wpfWindow != null)
+                                            {
+                                                var wpfWindowType = wpfWindow.GetType();
+                                                
+                                                // Cache the window and properties for future use
+                                                cachedWpfWindow = wpfWindow;
+                                                cachedLeftProperty = wpfWindowType.GetProperty("Left");
+                                                cachedTopProperty = wpfWindowType.GetProperty("Top");
+                                                
+                                                if (cachedLeftProperty != null && cachedTopProperty != null)
+                                                {
+                                                    double currentLeft = (double)cachedLeftProperty.GetValue(cachedWpfWindow);
+                                                    double currentTop = (double)cachedTopProperty.GetValue(cachedWpfWindow);
+                                                    
+                                                    // Calculate new position
+                                                    double newX = currentLeft + (e.X - lastPoint.X);
+                                                    double newY = currentTop + (e.Y - lastPoint.Y);
+                                                    
+                                                    // Move the WPF window
+                                                    cachedLeftProperty.SetValue(cachedWpfWindow, newX);
+                                                    cachedTopProperty.SetValue(cachedWpfWindow, newY);
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    }
+                                    parent = parent.Parent;
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log exception for debugging but don't crash
+                            System.Diagnostics.Debug.WriteLine($"WPF window dragging error: {ex.Message}");
+                        }
+                    }
+                }
+            };
+            
+            control.MouseUp += (sender, e) =>
+            {
+                lastPoint = Point.Empty;
+            };
         }
     }
 }
