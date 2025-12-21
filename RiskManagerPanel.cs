@@ -46,6 +46,7 @@ namespace Risk_Manager
         {
             base.Initialize();
             
+#if DEBUG
             // Debug logging to verify PluginInfo settings are applied
             try
             {
@@ -69,6 +70,7 @@ namespace Risk_Manager
             {
                 System.Diagnostics.Debug.WriteLine($"RiskManagerPanel: Logging error: {ex.Message}");
             }
+#endif
         }
 
         public override void Populate(PluginParameters args = null)

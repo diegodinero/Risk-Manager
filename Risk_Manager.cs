@@ -49,6 +49,7 @@ namespace Risk_Manager
         {
             base.Initialize();
             
+#if DEBUG
             // Debug logging to verify PluginInfo settings are applied
             try
             {
@@ -72,6 +73,7 @@ namespace Risk_Manager
             {
                 System.Diagnostics.Debug.WriteLine($"Risk_Manager: Logging error: {ex.Message}");
             }
+#endif
             
             this.AllowDataExport = true;
             this.table.RowsLimit = 1000;
