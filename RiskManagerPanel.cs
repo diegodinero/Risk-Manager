@@ -60,7 +60,31 @@ namespace Risk_Manager
                     _control = new RiskManagerControl { Dock = DockStyle.Fill };
 
                 bool attached = AttachControlToHostWithLogging(_control, log);
-                System.IO.File.AppendAllText(log, $"Attach result: {attached}{Environment.NewLine}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"Attach result: {attached}{Environment.NewLine}");
+                
+                // If attached successfully and we have a WPF window, pass it to the control for dragging
+                if (attached)
+                {
+                    try
+                    {
+                        var windowProp = this.GetType().BaseType?.GetProperty("Window", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                        if (windowProp != null)
+                        {
+                            var nativeWindow = windowProp.GetValue(this);
+                            if (nativeWindow != null)
+                            {
+                                _control.SetWpfWindow(nativeWindow);
+                                System.IO.File.AppendAllText(log, "WPF window reference passed to control for dragging" + Environment.NewLine);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.IO.File.AppendAllText(log, $"Failed to pass WPF window to control: {ex.Message}{Environment.NewLine}");
+                    }
+                }
+                
+                System.IO.File.AppendAllText(log, Environment.NewLine);
 
                 try { MessageBox.Show("RiskManagerPanel.Populate executed. Check Desktop log: RiskManagerPanel_attach_log.txt", "Risk Manager - Debug"); }
                 catch { /* hosts may prevent UI */ }

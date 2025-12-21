@@ -85,6 +85,20 @@ namespace Risk_Manager
         private PropertyInfo cachedLeftProperty;
         private PropertyInfo cachedTopProperty;
 
+        /// <summary>
+        /// Sets the WPF window reference for dragging functionality
+        /// </summary>
+        public void SetWpfWindow(object wpfWindow)
+        {
+            if (wpfWindow != null)
+            {
+                cachedWpfWindow = wpfWindow;
+                var wpfWindowType = wpfWindow.GetType();
+                cachedLeftProperty = wpfWindowType.GetProperty("Left");
+                cachedTopProperty = wpfWindowType.GetProperty("Top");
+            }
+        }
+
         // Theme management
         private enum Theme
         {
