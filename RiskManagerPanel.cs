@@ -75,10 +75,6 @@ namespace Risk_Manager
                 // For TablePlugin, use AddControl to add custom content
                 try
                 {
-                    // Hide the table control
-                    if (this.table != null)
-                        this.table.Visible = false;
-
                     // Try to add control using TablePlugin's built-in method
                     var addControlMethod = this.GetType().BaseType?.GetMethod("AddControl", 
                         System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
