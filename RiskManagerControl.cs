@@ -878,8 +878,12 @@ namespace Risk_Manager
                 Dock = DockStyle.Top,
                 Height = 70,
                 BackColor = DarkBackground,
-                Padding = new Padding(15, 10, 15, 10)
+                Padding = new Padding(15, 10, 15, 10),
+                Cursor = Cursors.SizeAll  // Show move cursor to indicate draggability
             };
+
+            // Make the top panel draggable to move the parent window
+            EnableDragging(topPanel);
 
             // Title label
             var titleLabel = new Label
@@ -888,8 +892,10 @@ namespace Risk_Manager
                 AutoSize = true,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                Location = new Point(15, 8)
+                Location = new Point(15, 8),
+                Cursor = Cursors.SizeAll  // Show move cursor
             };
+            EnableDragging(titleLabel);  // Make title draggable too
             topPanel.Controls.Add(titleLabel);
 
             // Account selector
@@ -5063,6 +5069,45 @@ namespace Risk_Manager
             mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
+        }
+
+        /// <summary>
+        /// Enables dragging functionality for a control to move the parent window
+        /// </summary>
+        private void EnableDragging(Control control)
+        {
+            Point lastPoint = Point.Empty;
+            
+            control.MouseDown += (sender, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    lastPoint = e.Location;
+                }
+            };
+            
+            control.MouseMove += (sender, e) =>
+            {
+                if (e.Button == MouseButtons.Left && lastPoint != Point.Empty)
+                {
+                    // Find the top-level parent form
+                    Form parentForm = this.FindForm();
+                    if (parentForm != null)
+                    {
+                        // Calculate the new position
+                        int newX = parentForm.Left + (e.X - lastPoint.X);
+                        int newY = parentForm.Top + (e.Y - lastPoint.Y);
+                        
+                        // Move the form
+                        parentForm.Location = new Point(newX, newY);
+                    }
+                }
+            };
+            
+            control.MouseUp += (sender, e) =>
+            {
+                lastPoint = Point.Empty;
+            };
         }
     }
 }

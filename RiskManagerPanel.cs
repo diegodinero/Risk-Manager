@@ -1,16 +1,13 @@
 using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using TradingPlatform.PresentationLayer.Plugins;
-using TradingPlatform.PresentationLayer.Renderers.Table;
 
 namespace Risk_Manager
 {
-    public class RiskManagerPanel : TablePlugin
+    public class RiskManagerPanel : Plugin
     {
         private RiskManagerControl _control;
 
@@ -44,19 +41,9 @@ namespace Risk_Manager
             };
         }
 
-        // Required by TablePlugin but not used - we display custom control instead
-        public override Size DefaultSize => new Size(1200, 800);
-        protected override TableItem AssociatedTableItem => null;
-
         public override void Initialize()
         {
             base.Initialize();
-            
-            // Hide the table since we're using a custom control
-            if (this.table != null)
-            {
-                this.table.Visible = false;
-            }
         }
 
         public override void Populate(PluginParameters args = null)
@@ -72,34 +59,8 @@ namespace Risk_Manager
                 if (_control == null)
                     _control = new RiskManagerControl { Dock = DockStyle.Fill };
 
-                // For TablePlugin, use AddControl to add custom content
-                try
-                {
-                    // Try to add control using TablePlugin's built-in method
-                    var addControlMethod = this.GetType().BaseType?.GetMethod("AddControl", 
-                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                    
-                    if (addControlMethod != null)
-                    {
-                        addControlMethod.Invoke(this, new object[] { _control });
-                        System.IO.File.AppendAllText(log, "Control attached using AddControl method" + Environment.NewLine);
-                    }
-                    else
-                    {
-                        // Fallback to reflection-based attachment
-                        bool attached = AttachControlToHostWithLogging(_control, log);
-                        System.IO.File.AppendAllText(log, $"Attach result: {attached}{Environment.NewLine}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.IO.File.AppendAllText(log, $"Control attachment error: {ex.Message}{Environment.NewLine}");
-                    // Try fallback method
-                    bool attached = AttachControlToHostWithLogging(_control, log);
-                    System.IO.File.AppendAllText(log, $"Fallback attach result: {attached}{Environment.NewLine}");
-                }
-
-                System.IO.File.AppendAllText(log, Environment.NewLine);
+                bool attached = AttachControlToHostWithLogging(_control, log);
+                System.IO.File.AppendAllText(log, $"Attach result: {attached}{Environment.NewLine}{Environment.NewLine}");
 
                 try { MessageBox.Show("RiskManagerPanel.Populate executed. Check Desktop log: RiskManagerPanel_attach_log.txt", "Risk Manager - Debug"); }
                 catch { /* hosts may prevent UI */ }
