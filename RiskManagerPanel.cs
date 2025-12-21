@@ -105,6 +105,34 @@ namespace Risk_Manager
 
                                 try
                                 {
+                                    // Get the WPF Dispatcher to ensure we're on the correct thread
+                                    var dispatcherProp = nwType.GetProperty("Dispatcher");
+                                    if (dispatcherProp != null)
+                                    {
+                                        var dispatcher = dispatcherProp.GetValue(nativeWindow);
+                                        if (dispatcher != null)
+                                        {
+                                            var dispatcherType = dispatcher.GetType();
+                                            var invokeMethod = dispatcherType.GetMethod("Invoke", new[] { typeof(Delegate), typeof(object[]) });
+                                            
+                                            if (invokeMethod != null)
+                                            {
+                                                // Use Dispatcher.Invoke to run on the WPF UI thread
+                                                Action attachAction = () =>
+                                                {
+                                                    var host = new WindowsFormsHost();
+                                                    host.Child = control;
+                                                    contentProp.SetValue(nativeWindow, host);
+                                                };
+                                                
+                                                invokeMethod.Invoke(dispatcher, new object[] { attachAction, new object[0] });
+                                                System.IO.File.AppendAllText(logPath, "Attached via NativeWindow.Content = WindowsFormsHost(Child = control) using Dispatcher" + Environment.NewLine);
+                                                return true;
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Fallback: try without Dispatcher
                                     var host = new WindowsFormsHost();
                                     host.Child = control;
                                     contentProp.SetValue(nativeWindow, host);
@@ -127,6 +155,34 @@ namespace Risk_Manager
                                 System.IO.File.AppendAllText(logPath, "Attempting nativeWindow.AddChild with WindowsFormsHost..." + Environment.NewLine);
                                 try
                                 {
+                                    // Get the WPF Dispatcher to ensure we're on the correct thread
+                                    var dispatcherProp = nwType.GetProperty("Dispatcher");
+                                    if (dispatcherProp != null)
+                                    {
+                                        var dispatcher = dispatcherProp.GetValue(nativeWindow);
+                                        if (dispatcher != null)
+                                        {
+                                            var dispatcherType = dispatcher.GetType();
+                                            var invokeMethod = dispatcherType.GetMethod("Invoke", new[] { typeof(Delegate), typeof(object[]) });
+                                            
+                                            if (invokeMethod != null)
+                                            {
+                                                // Use Dispatcher.Invoke to run on the WPF UI thread
+                                                Action attachAction = () =>
+                                                {
+                                                    var host = new WindowsFormsHost();
+                                                    host.Child = control;
+                                                    addChild.Invoke(nativeWindow, new object[] { host });
+                                                };
+                                                
+                                                invokeMethod.Invoke(dispatcher, new object[] { attachAction, new object[0] });
+                                                System.IO.File.AppendAllText(logPath, "Attached via NativeWindow.AddChild(WindowsFormsHost) using Dispatcher" + Environment.NewLine);
+                                                return true;
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Fallback: try without Dispatcher
                                     var host = new WindowsFormsHost();
                                     host.Child = control;
                                     addChild.Invoke(nativeWindow, new object[] { host });
