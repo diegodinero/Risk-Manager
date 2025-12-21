@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Media;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
