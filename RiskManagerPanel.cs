@@ -1,13 +1,16 @@
 using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using TradingPlatform.PresentationLayer.Plugins;
+using TradingPlatform.PresentationLayer.Renderers.Table;
 
 namespace Risk_Manager
 {
-    public class RiskManagerPanel : Plugin
+    public class RiskManagerPanel : TablePlugin
     {
         private RiskManagerControl _control;
 
@@ -20,8 +23,8 @@ namespace Risk_Manager
                 Group = PluginGroup.Portfolio,
                 ShortName = "RMMUI",
                 SortIndex = 34,
-                // Use default constructor (Dialog mode) instead of Panel to ensure title bar with controls is shown
-                WindowParameters = new NativeWindowParameters()
+                // Request a host window (with chrome) instead of an embedded panel
+                WindowParameters = new NativeWindowParameters(NativeWindowParameters.Panel)
                 {
                     BrowserUsageType = BrowserUsageType.None,
                     WindowStyle = NativeWindowStyle.SingleBorderWindow,
@@ -29,8 +32,7 @@ namespace Risk_Manager
                     AllowActionsButton = true,
                     AllowCloseButton = true,
                     AllowMaximizeButton = true,
-                    AllowFullScreenButton = true,
-                    ShowInTaskbar = true
+                    AllowFullScreenButton = true
                 },
                 CustomProperties = new System.Collections.Generic.Dictionary<string, object>
                 {
@@ -42,35 +44,19 @@ namespace Risk_Manager
             };
         }
 
+        // Required by TablePlugin but not used - we display custom control instead
+        public override Size DefaultSize => new Size(1200, 800);
+        protected override TableItem AssociatedTableItem => null;
+
         public override void Initialize()
         {
             base.Initialize();
             
-#if DEBUG
-            // Debug logging to verify PluginInfo settings are applied
-            try
+            // Hide the table since we're using a custom control
+            if (this.table != null)
             {
-                var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                var log = System.IO.Path.Combine(desktop, "RiskManagerPanel_window_log.txt");
-                var info = GetInfo();
-                
-                System.IO.File.AppendAllText(log, $"=== RiskManagerPanel Initialize - {DateTime.Now:O} ==={Environment.NewLine}");
-                System.IO.File.AppendAllText(log, $"Plugin Title: {info.Title}{Environment.NewLine}");
-                System.IO.File.AppendAllText(log, $"WindowStyle: {info.WindowParameters?.WindowStyle}{Environment.NewLine}");
-                System.IO.File.AppendAllText(log, $"ResizeMode: {info.WindowParameters?.ResizeMode}{Environment.NewLine}");
-                System.IO.File.AppendAllText(log, $"AllowCloseButton: {info.WindowParameters?.AllowCloseButton}{Environment.NewLine}");
-                System.IO.File.AppendAllText(log, $"AllowMaximizeButton: {info.WindowParameters?.AllowMaximizeButton}{Environment.NewLine}");
-                System.IO.File.AppendAllText(log, $"AllowFullScreenButton: {info.WindowParameters?.AllowFullScreenButton}{Environment.NewLine}");
-                System.IO.File.AppendAllText(log, $"ShowInTaskbar: {info.WindowParameters?.ShowInTaskbar}{Environment.NewLine}");
-                System.IO.File.AppendAllText(log, Environment.NewLine);
-                
-                System.Diagnostics.Debug.WriteLine($"RiskManagerPanel initialized with WindowStyle: {info.WindowParameters?.WindowStyle}");
+                this.table.Visible = false;
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"RiskManagerPanel: Logging error: {ex.Message}");
-            }
-#endif
         }
 
         public override void Populate(PluginParameters args = null)
@@ -86,8 +72,38 @@ namespace Risk_Manager
                 if (_control == null)
                     _control = new RiskManagerControl { Dock = DockStyle.Fill };
 
-                bool attached = AttachControlToHostWithLogging(_control, log);
-                System.IO.File.AppendAllText(log, $"Attach result: {attached}{Environment.NewLine}{Environment.NewLine}");
+                // For TablePlugin, use AddControl to add custom content
+                try
+                {
+                    // Hide the table control
+                    if (this.table != null)
+                        this.table.Visible = false;
+
+                    // Try to add control using TablePlugin's built-in method
+                    var addControlMethod = this.GetType().BaseType?.GetMethod("AddControl", 
+                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    
+                    if (addControlMethod != null)
+                    {
+                        addControlMethod.Invoke(this, new object[] { _control });
+                        System.IO.File.AppendAllText(log, "Control attached using AddControl method" + Environment.NewLine);
+                    }
+                    else
+                    {
+                        // Fallback to reflection-based attachment
+                        bool attached = AttachControlToHostWithLogging(_control, log);
+                        System.IO.File.AppendAllText(log, $"Attach result: {attached}{Environment.NewLine}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.IO.File.AppendAllText(log, $"Control attachment error: {ex.Message}{Environment.NewLine}");
+                    // Try fallback method
+                    bool attached = AttachControlToHostWithLogging(_control, log);
+                    System.IO.File.AppendAllText(log, $"Fallback attach result: {attached}{Environment.NewLine}");
+                }
+
+                System.IO.File.AppendAllText(log, Environment.NewLine);
 
                 try { MessageBox.Show("RiskManagerPanel.Populate executed. Check Desktop log: RiskManagerPanel_attach_log.txt", "Risk Manager - Debug"); }
                 catch { /* hosts may prevent UI */ }
