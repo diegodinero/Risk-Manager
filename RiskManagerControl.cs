@@ -911,14 +911,14 @@ namespace Risk_Manager
             // Title label
             var titleLabel = new Label
             {
-                Text = "Risk Manager [DRAG ME TO MOVE]",
+                Text = "Risk Manager",
                 AutoSize = true,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 Location = new Point(15, 8),
                 Cursor = Cursors.SizeAll  // Show move cursor
             };
-            // Add tooltip to make it clear this is draggable
+            // Add tooltip to indicate draggability
             titleToolTip = new ToolTip();
             titleToolTip.SetToolTip(titleLabel, "Click and drag to move window");
             EnableDragging(titleLabel);  // Make title draggable too
