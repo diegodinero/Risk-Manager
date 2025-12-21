@@ -5090,8 +5090,8 @@ namespace Risk_Manager
             {
                 if (e.Button == MouseButtons.Left && lastPoint != Point.Empty)
                 {
-                    // Find the top-level parent form
-                    Form parentForm = this.FindForm();
+                    // Find the top-level parent form from the control
+                    Form parentForm = control.FindForm();
                     if (parentForm != null)
                     {
                         // Calculate the new position
