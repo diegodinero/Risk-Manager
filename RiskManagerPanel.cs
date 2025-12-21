@@ -20,8 +20,8 @@ namespace Risk_Manager
                 Group = PluginGroup.Portfolio,
                 ShortName = "RMMUI",
                 SortIndex = 34,
-                // Request a host window (with chrome) instead of an embedded panel
-                WindowParameters = new NativeWindowParameters(NativeWindowParameters.Panel)
+                // Use default constructor (Dialog mode) instead of Panel to ensure title bar with controls is shown
+                WindowParameters = new NativeWindowParameters()
                 {
                     BrowserUsageType = BrowserUsageType.None,
                     WindowStyle = NativeWindowStyle.SingleBorderWindow,
@@ -29,7 +29,8 @@ namespace Risk_Manager
                     AllowActionsButton = true,
                     AllowCloseButton = true,
                     AllowMaximizeButton = true,
-                    AllowFullScreenButton = true
+                    AllowFullScreenButton = true,
+                    ShowInTaskbar = true
                 },
                 CustomProperties = new System.Collections.Generic.Dictionary<string, object>
                 {
@@ -44,6 +45,30 @@ namespace Risk_Manager
         public override void Initialize()
         {
             base.Initialize();
+            
+            // Debug logging to verify PluginInfo settings are applied
+            try
+            {
+                var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                var log = System.IO.Path.Combine(desktop, "RiskManagerPanel_window_log.txt");
+                var info = GetInfo();
+                
+                System.IO.File.AppendAllText(log, $"=== RiskManagerPanel Initialize - {DateTime.Now:O} ==={Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"Plugin Title: {info.Title}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"WindowStyle: {info.WindowParameters?.WindowStyle}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"ResizeMode: {info.WindowParameters?.ResizeMode}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"AllowCloseButton: {info.WindowParameters?.AllowCloseButton}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"AllowMaximizeButton: {info.WindowParameters?.AllowMaximizeButton}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"AllowFullScreenButton: {info.WindowParameters?.AllowFullScreenButton}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, $"ShowInTaskbar: {info.WindowParameters?.ShowInTaskbar}{Environment.NewLine}");
+                System.IO.File.AppendAllText(log, Environment.NewLine);
+                
+                System.Diagnostics.Debug.WriteLine($"RiskManagerPanel initialized with WindowStyle: {info.WindowParameters?.WindowStyle}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"RiskManagerPanel: Logging error: {ex.Message}");
+            }
         }
 
         public override void Populate(PluginParameters args = null)
