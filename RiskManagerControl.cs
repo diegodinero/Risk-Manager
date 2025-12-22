@@ -5404,15 +5404,29 @@ namespace Risk_Manager
             overviewGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             overviewGrid.RowTemplate.Height = 35;
 
-            // Add columns
-            overviewGrid.Columns.Add("Setting", "Setting");
-            overviewGrid.Columns.Add("Value", "Value");
-            overviewGrid.Columns.Add("Status", "Status");
+            // Add columns with proportional fill weights
+            var colSetting = new DataGridViewTextBoxColumn
+            {
+                Name = "Setting",
+                HeaderText = "Setting",
+                FillWeight = 30
+            };
+            var colValue = new DataGridViewTextBoxColumn
+            {
+                Name = "Value",
+                HeaderText = "Value",
+                FillWeight = 50
+            };
+            var colStatus = new DataGridViewTextBoxColumn
+            {
+                Name = "Status",
+                HeaderText = "Status",
+                FillWeight = 20
+            };
             
-            // Make Value column wider
-            overviewGrid.Columns["Setting"].Width = 200;
-            overviewGrid.Columns["Value"].Width = 300;
-            overviewGrid.Columns["Status"].Width = 100;
+            overviewGrid.Columns.Add(colSetting);
+            overviewGrid.Columns.Add(colValue);
+            overviewGrid.Columns.Add(colStatus);
 
             // Populate grid with current account settings
             PopulateRiskOverview(overviewGrid);
