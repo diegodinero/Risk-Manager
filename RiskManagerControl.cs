@@ -37,6 +37,7 @@ namespace Risk_Manager
         private readonly List<Button> navButtons = new();
         private Label settingsStatusBadge;
         private Label tradingStatusBadge;
+        private Label tradingStatusAccountLabel; // Shows which account's lock status is displayed
         private ComboBox accountSelector;
         private Label accountNumberDisplay; // Display current account number in UI
         private Button lockTradingButton; // Lock Trading button reference
@@ -998,6 +999,18 @@ namespace Risk_Manager
             // Trading Unlocked badge
             tradingStatusBadge = CreateStatusBadge("Trading Unlocked", AccentGreen);
             badgesPanel.Controls.Add(tradingStatusBadge);
+
+            // Add label below trading status badge to show which account
+            tradingStatusAccountLabel = new Label
+            {
+                Text = "Account: None",
+                AutoSize = true,
+                ForeColor = TextLightGray,
+                Font = new Font("Segoe UI", 7, FontStyle.Regular),
+                Margin = new Padding(5, 0, 5, 5),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            badgesPanel.Controls.Add(tradingStatusAccountLabel);
 
             // Theme Changer button (replaces the X button)
             var themeButton = new Button
@@ -4157,6 +4170,10 @@ namespace Risk_Manager
                 var accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
+                    if (tradingStatusAccountLabel != null)
+                    {
+                        tradingStatusAccountLabel.Text = "Account: None";
+                    }
                     return;
                 }
 
@@ -4168,6 +4185,12 @@ namespace Risk_Manager
 
                 bool isLocked = settingsService.IsTradingLocked(accountNumber);
                 System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadge: Account='{accountNumber}', IsLocked={isLocked}");
+
+                // Update the account label to show which account's status is displayed
+                if (tradingStatusAccountLabel != null)
+                {
+                    tradingStatusAccountLabel.Text = $"Account: {accountNumber}";
+                }
 
                 UpdateTradingStatusBadgeUI(isLocked);
             }
