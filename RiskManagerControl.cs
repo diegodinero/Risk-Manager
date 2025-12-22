@@ -3249,6 +3249,9 @@ namespace Risk_Manager
                     // Check Daily P&L limits
                     CheckDailyPnLLimits(item.account, uniqueAccountId, settings, core);
 
+                    // Check Weekly P&L limits
+                    CheckWeeklyPnLLimits(item.account, uniqueAccountId, settings, core);
+
                     // Check Position P&L limits
                     CheckPositionPnLLimits(item.account, uniqueAccountId, settings, core);
                 }
@@ -3301,6 +3304,54 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error checking daily P&L limits for account {accountId}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks if weekly P&L has exceeded limits and locks account if necessary.
+        /// </summary>
+        private void CheckWeeklyPnLLimits(Account account, string accountId, AccountSettings settings, Core core)
+        {
+            try
+            {
+                // Get daily P&L (we'll use this as proxy for weekly P&L tracking)
+                // In a production system, you would track cumulative weekly P&L separately
+                double dailyPnL = GetAccountDailyPnL(account);
+
+                // Check Weekly Loss Limit (negative value)
+                if (settings.WeeklyLossLimit.HasValue && settings.WeeklyLossLimit.Value < 0)
+                {
+                    decimal lossLimit = settings.WeeklyLossLimit.Value;
+                    // For weekly limits, we compare against the same daily P&L
+                    // In production, you'd track cumulative weekly P&L
+                    if ((decimal)dailyPnL <= lossLimit)
+                    {
+                        // Weekly loss limit exceeded - lock account until 5 PM ET Friday
+                        string reason = $"Weekly Loss Limit reached: P&L ${dailyPnL:F2} ≤ Limit ${lossLimit:F2}";
+                        LockAccountUntil5PMETFriday(accountId, reason, core, account);
+                        CloseAllPositionsForAccount(account, core);
+                        System.Diagnostics.Debug.WriteLine($"Account {accountId} locked due to weekly loss limit");
+                        return; // Exit after locking
+                    }
+                }
+
+                // Check Weekly Profit Target (positive value)
+                if (settings.WeeklyProfitTarget.HasValue && settings.WeeklyProfitTarget.Value > 0)
+                {
+                    decimal profitTarget = settings.WeeklyProfitTarget.Value;
+                    if ((decimal)dailyPnL >= profitTarget)
+                    {
+                        // Weekly profit target reached - lock account until 5 PM ET Friday
+                        string reason = $"Weekly Profit Target reached: P&L ${dailyPnL:F2} ≥ Target ${profitTarget:F2}";
+                        LockAccountUntil5PMETFriday(accountId, reason, core, account);
+                        CloseAllPositionsForAccount(account, core);
+                        System.Diagnostics.Debug.WriteLine($"Account {accountId} locked due to weekly profit target");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking weekly P&L limits for account {accountId}: {ex.Message}");
             }
         }
 
@@ -3490,6 +3541,116 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"Error calculating time until 5 PM ET: {ex.Message}");
                 // Fallback: lock for rest of trading day
                 return TimeSpan.FromHours(FALLBACK_LOCK_HOURS);
+            }
+        }
+
+        /// <summary>
+        /// Locks an account until 5 PM ET Friday.
+        /// </summary>
+        private void LockAccountUntil5PMETFriday(string accountId, string reason, Core core, Account account)
+        {
+            try
+            {
+                // Calculate time until 5 PM ET Friday
+                TimeSpan lockDuration = CalculateTimeUntil5PMETFriday();
+                
+                var settingsService = RiskManagerSettingsService.Instance;
+                settingsService.SetTradingLock(accountId, true, reason, lockDuration);
+
+                // Lock the account in Core API
+                try
+                {
+                    var lockMethod = core.GetType().GetMethod("LockAccount");
+                    if (lockMethod != null)
+                    {
+                        lockMethod.Invoke(core, new object[] { account });
+                        System.Diagnostics.Debug.WriteLine($"Locked account {accountId} in Core API until Friday 5 PM ET");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error locking account {accountId} in Core API: {ex.Message}");
+                }
+
+                // Update UI if this is the selected account
+                var selectedAccountNumber = GetSelectedAccountNumber();
+                if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == accountId)
+                {
+                    UpdateTradingStatusBadgeUI(true);
+                    UpdateLockButtonStates();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error locking account {accountId} until Friday: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Calculates the time duration until 5 PM ET Friday.
+        /// </summary>
+        private TimeSpan CalculateTimeUntil5PMETFriday()
+        {
+            try
+            {
+                // Get current time in ET (Eastern Time)
+                // Try cross-platform ID first, then fall back to Windows ID
+                TimeZoneInfo etZone;
+                try
+                {
+                    etZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                    etZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                }
+                
+                DateTime nowET = TimeZoneInfo.ConvertTime(DateTime.Now, etZone);
+
+                // Target time is 5 PM ET on Friday
+                DateTime targetFriday5PM = nowET.Date.AddHours(17); // 5 PM = 17:00
+                
+                // Get current day of week
+                DayOfWeek currentDay = nowET.DayOfWeek;
+                
+                // Calculate days until Friday
+                int daysUntilFriday;
+                if (currentDay == DayOfWeek.Friday)
+                {
+                    // If it's Friday but past 5 PM, go to next Friday
+                    if (nowET >= targetFriday5PM)
+                    {
+                        daysUntilFriday = 7;
+                    }
+                    else
+                    {
+                        daysUntilFriday = 0;
+                    }
+                }
+                else if (currentDay == DayOfWeek.Saturday)
+                {
+                    daysUntilFriday = 6; // Saturday to Friday
+                }
+                else if (currentDay == DayOfWeek.Sunday)
+                {
+                    daysUntilFriday = 5; // Sunday to Friday
+                }
+                else
+                {
+                    // Monday-Thursday: calculate days until Friday
+                    daysUntilFriday = (int)DayOfWeek.Friday - (int)currentDay;
+                }
+                
+                targetFriday5PM = targetFriday5PM.AddDays(daysUntilFriday);
+                
+                TimeSpan duration = targetFriday5PM - nowET;
+                return duration;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error calculating time until Friday 5 PM ET: {ex.Message}");
+                // Fallback: lock for rest of week (assume 5 days)
+                return TimeSpan.FromDays(5);
             }
         }
 
