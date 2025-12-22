@@ -5795,10 +5795,40 @@ namespace Risk_Manager
                 Width = 300,
                 Height = 30,
                 Checked = false,
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                Font = new Font("Segoe UI Emoji", 11, FontStyle.Bold),
                 ForeColor = TextWhite,
-                BackColor = CardBackground
+                BackColor = CardBackground,
+                UseCompatibleTextRendering = false
             };
+            
+            // Custom paint for colored emoji rendering in checkbox
+            sectionHeader.Paint += (s, e) =>
+            {
+                var cb = (CheckBox)s;
+                e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                // Draw background
+                e.Graphics.Clear(cb.BackColor);
+                
+                // Draw checkbox
+                var checkBoxSize = 13;
+                var checkBoxRect = new Rectangle(0, (cb.Height - checkBoxSize) / 2, checkBoxSize, checkBoxSize);
+                ControlPaint.DrawCheckBox(e.Graphics, checkBoxRect, cb.Checked ? ButtonState.Checked : ButtonState.Normal);
+                
+                // Draw text with GDI+ for colored emoji support
+                using (var brush = new SolidBrush(cb.ForeColor))
+                {
+                    var sf = new StringFormat
+                    {
+                        LineAlignment = StringAlignment.Center,
+                        Alignment = StringAlignment.Near
+                    };
+                    var textRect = new RectangleF(checkBoxSize + 5, 0, cb.Width - checkBoxSize - 5, cb.Height);
+                    e.Graphics.DrawString(cb.Text, cb.Font, brush, textRect, sf);
+                }
+            };
+            
             sectionPanel.Controls.Add(sectionHeader);
             enabledCheckbox = sectionHeader;
 
