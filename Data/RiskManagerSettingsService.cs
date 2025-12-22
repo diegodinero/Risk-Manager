@@ -421,7 +421,9 @@ namespace Risk_Manager.Data
                 IsLocked = source.IsLocked,
                 LockTime = source.LockTime,
                 LockDayOfWeek = source.LockDayOfWeek,
-                LockReason = source.LockReason
+                LockReason = source.LockReason,
+                LockDuration = source.LockDuration,
+                LockExpirationTime = source.LockExpirationTime
             };
         }
 
