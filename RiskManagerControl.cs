@@ -30,6 +30,7 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
         private DataGridView typeSummaryGrid;
         private System.Windows.Forms.Timer typeSummaryRefreshTimer;
+        private System.Windows.Forms.Timer lockExpirationCheckTimer;
         private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
@@ -237,6 +238,11 @@ namespace Risk_Manager
                 RefreshCopySettingsAccounts();
             };
             dropdownRefreshTimer.Start();
+
+            // Check for expired locks every 30 seconds
+            lockExpirationCheckTimer = new System.Windows.Forms.Timer { Interval = 30000 };
+            lockExpirationCheckTimer.Tick += (s, e) => CheckExpiredLocks();
+            lockExpirationCheckTimer.Start();
 
             // Show Accounts Summary by default
             selectedNavItem = "📊 Accounts Summary";
@@ -3019,6 +3025,81 @@ namespace Risk_Manager
             }
         }
 
+        /// <summary>
+        /// Checks all accounts for expired locks and triggers auto-unlock if needed.
+        /// Called periodically by the lockExpirationCheckTimer.
+        /// </summary>
+        private void CheckExpiredLocks()
+        {
+            try
+            {
+                var core = Core.Instance;
+                if (core == null || core.Accounts == null)
+                    return;
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                    return;
+
+                int accountIndex = 0;
+                bool anyUnlocked = false;
+
+                foreach (var account in core.Accounts)
+                {
+                    if (account == null)
+                    {
+                        accountIndex++;
+                        continue;
+                    }
+
+                    var uniqueAccountId = GetUniqueAccountIdentifier(account, accountIndex);
+                    if (!string.IsNullOrEmpty(uniqueAccountId))
+                    {
+                        // IsTradingLocked already checks expiration and auto-unlocks
+                        // We just need to call it to trigger the check
+                        var wasLocked = settingsService.IsTradingLocked(uniqueAccountId);
+                        
+                        // Check if it was just unlocked by comparing with previous state
+                        var settings = settingsService.GetSettings(uniqueAccountId);
+                        if (settings?.TradingLock?.LockReason?.Contains("Auto-unlocked") == true)
+                        {
+                            anyUnlocked = true;
+                            
+                            // Unlock the account in Core API
+                            try
+                            {
+                                var unlockMethod = core.GetType().GetMethod("UnLockAccount");
+                                if (unlockMethod != null)
+                                {
+                                    unlockMethod.Invoke(core, new object[] { account });
+                                    SetCoreTradingStatus(core, "Allowed");
+                                    System.Diagnostics.Debug.WriteLine($"Auto-unlocked account: {uniqueAccountId}");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error auto-unlocking account {uniqueAccountId}: {ex.Message}");
+                            }
+                        }
+                    }
+
+                    accountIndex++;
+                }
+
+                // If any accounts were unlocked, refresh the UI
+                if (anyUnlocked)
+                {
+                    UpdateTradingStatusBadgeUI(false);
+                    RefreshAccountsSummary();
+                    RefreshAccountStats();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking expired locks: {ex.Message}");
+            }
+        }
+
         private void UpdateAccountStatus(Label lblTradingStatus)
         {
             try
@@ -4997,6 +5078,10 @@ namespace Risk_Manager
                 typeSummaryRefreshTimer?.Stop();
                 typeSummaryRefreshTimer?.Dispose();
                 typeSummaryRefreshTimer = null;
+
+                lockExpirationCheckTimer?.Stop();
+                lockExpirationCheckTimer?.Dispose();
+                lockExpirationCheckTimer = null;
 
                 alertSoundPlayer?.Dispose();
                 alertSoundPlayer = null;
