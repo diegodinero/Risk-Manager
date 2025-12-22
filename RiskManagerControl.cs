@@ -2865,6 +2865,7 @@ namespace Risk_Manager
                     if (settingsService.IsInitialized)
                     {
                         string reason = $"Manual lock via Lock Trading button for {durationText}";
+                        System.Diagnostics.Debug.WriteLine($"LockTradingButton: Locking account='{accountNumber}' for {duration?.TotalMinutes ?? 0} minutes");
                         settingsService.SetTradingLock(accountNumber, true, reason, duration);
                     }
                     
@@ -3182,6 +3183,7 @@ namespace Risk_Manager
                 if (!string.IsNullOrEmpty(selectedAccountNumber))
                 {
                     bool selectedIsLocked = settingsService.IsTradingLocked(selectedAccountNumber);
+                    System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: Badge update - Account='{selectedAccountNumber}', IsLocked={selectedIsLocked}");
                     UpdateTradingStatusBadgeUI(selectedIsLocked);
                 }
                 
