@@ -38,6 +38,7 @@ namespace Risk_Manager
         private Label settingsStatusBadge;
         private Label tradingStatusBadge;
         private ComboBox accountSelector;
+        private TextBox accountNumberTextBox; // TextBox showing and storing the current account identifier
         private Label accountNumberDisplay; // Display current account number in UI
         private Button lockTradingButton; // Lock Trading button reference
         private Button unlockTradingButton; // Unlock Trading button reference
@@ -986,14 +987,42 @@ namespace Risk_Manager
             accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
             topPanel.Controls.Add(accountSelector);
 
+            // Account Number TextBox - displays and stores the current account identifier
+            var accountNumberLabel = new Label
+            {
+                Text = "Account ID:",
+                Location = new Point(80, 70),
+                Width = 80,
+                Height = 20,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            topPanel.Controls.Add(accountNumberLabel);
+
+            accountNumberTextBox = new TextBox
+            {
+                Location = new Point(165, 68),
+                Width = 250,
+                Height = 22,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                ReadOnly = true, // Read-only to prevent manual editing
+                Text = "No account selected"
+            };
+            topPanel.Controls.Add(accountNumberTextBox);
+
             // Emergency Flatten button next to Account Selector
             var emergencyFlattenButton = new Button
             {
                 Text = "⚠️ EMERGENCY FLATTEN ⚠️",
-                Location = new Point(340, 37),
-                Width = 250,
-                Height = 26,
-                Font = new Font("Arial", 10, FontStyle.Bold),
+                Location = new Point(420, 68),
+                Width = 200,
+                Height = 24,
+                Font = new Font("Arial", 9, FontStyle.Bold),
                 BackColor = Color.Red,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -3993,17 +4022,27 @@ namespace Risk_Manager
         /// </summary>
         private string GetSelectedAccountNumber()
         {
+            // CRITICAL: Read from the textbox to ensure exact same identifier is used everywhere
+            // This textbox is populated by GetUniqueAccountIdentifier when account is selected
+            if (accountNumberTextBox != null && !string.IsNullOrEmpty(accountNumberTextBox.Text) && accountNumberTextBox.Text != "No account selected")
+            {
+                var textboxValue = accountNumberTextBox.Text;
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Reading from textbox='{textboxValue}'");
+                return textboxValue;
+            }
+            
+            // Fallback: Calculate from selected account if textbox not available
             if (selectedAccount == null)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is NULL");
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is NULL and textbox empty");
                 return null;
             }
             
-            // IMPORTANT: Use GetUniqueAccountIdentifier with the stored index to ensure
+            // Use GetUniqueAccountIdentifier with the stored index to ensure
             // the same identifier is used for saving and loading settings
             var uniqueId = GetUniqueAccountIdentifier(selectedAccount, selectedAccountIndex);
             
-            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using GetUniqueAccountIdentifier result='{uniqueId}' with index={selectedAccountIndex}");
+            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Fallback using GetUniqueAccountIdentifier result='{uniqueId}' with index={selectedAccountIndex}");
             
             return uniqueId;
         }
@@ -4389,27 +4428,43 @@ namespace Risk_Manager
         {
             try
             {
-                if (accountNumberDisplay == null)
-                    return;
-                
                 var accountNumber = GetSelectedAccountNumber();
                 
                 // Cache the account number so save operation uses exactly what's displayed
                 displayedAccountNumber = accountNumber;
                 
-                if (string.IsNullOrEmpty(accountNumber))
+                // Update the textbox in top panel
+                if (accountNumberTextBox != null)
                 {
-                    accountNumberDisplay.Text = "Account: Not Selected";
-                    accountNumberDisplay.ForeColor = Color.Orange;
+                    if (string.IsNullOrEmpty(accountNumber))
+                    {
+                        accountNumberTextBox.Text = "No account selected";
+                        accountNumberTextBox.ForeColor = Color.Orange;
+                    }
+                    else
+                    {
+                        accountNumberTextBox.Text = accountNumber;
+                        accountNumberTextBox.ForeColor = TextWhite;
+                    }
                 }
-                else
+                
+                // Update the label in Limits panel (if it exists)
+                if (accountNumberDisplay != null)
                 {
-                    accountNumberDisplay.Text = $"Account: {accountNumber}";
-                    accountNumberDisplay.ForeColor = Color.Transparent;
+                    if (string.IsNullOrEmpty(accountNumber))
+                    {
+                        accountNumberDisplay.Text = "Account: Not Selected";
+                        accountNumberDisplay.ForeColor = Color.Orange;
+                    }
+                    else
+                    {
+                        accountNumberDisplay.Text = $"Account: {accountNumber}";
+                        accountNumberDisplay.ForeColor = TextWhite;
+                    }
+                    accountNumberDisplay.Invalidate();
                 }
                 
                 System.Diagnostics.Debug.WriteLine($"UpdateAccountNumberDisplay: Displaying and caching account='{accountNumber}'");
-                accountNumberDisplay.Invalidate();
             }
             catch (Exception ex)
             {
@@ -5682,10 +5737,10 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 Padding = new Padding(10, 5, 10, 0),
                 BackColor = CardBackground,
-                ForeColor = TextWhite,  // Set proper color in case it's made visible later
+                ForeColor = TextWhite,
                 AutoSize = false,
                 BorderStyle = BorderStyle.FixedSingle,
-                Visible = false  // Hide the control while retaining functionality
+                Visible = true  // Make visible so users can see account identifier
             };
             
             // Update the display with current account
