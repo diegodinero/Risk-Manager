@@ -3016,8 +3016,17 @@ namespace Risk_Manager
                     // Lock until end of week (Sunday 11:59 PM)
                     var endOfWeek = DateTime.Now;
                     int daysUntilSunday = ((int)DayOfWeek.Sunday - (int)endOfWeek.DayOfWeek + 7) % 7;
-                    if (daysUntilSunday == 0) daysUntilSunday = 7; // If today is Sunday, lock until next Sunday
-                    endOfWeek = endOfWeek.AddDays(daysUntilSunday).Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+                    // If today is Sunday, calculate time until end of today instead of next week
+                    if (daysUntilSunday == 0)
+                    {
+                        // Already Sunday, lock until end of today (Sunday 11:59 PM)
+                        endOfWeek = endOfWeek.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+                    }
+                    else
+                    {
+                        // Not Sunday, lock until end of this coming Sunday
+                        endOfWeek = endOfWeek.AddDays(daysUntilSunday).Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+                    }
                     return endOfWeek - DateTime.Now;
                 case "Indefinite":
                 default:
@@ -3055,13 +3064,15 @@ namespace Risk_Manager
                     var uniqueAccountId = GetUniqueAccountIdentifier(account, accountIndex);
                     if (!string.IsNullOrEmpty(uniqueAccountId))
                     {
-                        // IsTradingLocked already checks expiration and auto-unlocks
-                        // We just need to call it to trigger the check
-                        var wasLocked = settingsService.IsTradingLocked(uniqueAccountId);
-                        
-                        // Check if it was just unlocked by comparing with previous state
+                        // Get current settings before checking lock status
                         var settings = settingsService.GetSettings(uniqueAccountId);
-                        if (settings?.TradingLock?.LockReason?.Contains("Auto-unlocked") == true)
+                        var wasLocked = settings?.TradingLock?.IsLocked == true;
+                        
+                        // IsTradingLocked checks expiration and auto-unlocks if expired
+                        var isLocked = settingsService.IsTradingLocked(uniqueAccountId);
+                        
+                        // If was locked but now unlocked, the lock expired and was auto-unlocked
+                        if (wasLocked && !isLocked)
                         {
                             anyUnlocked = true;
                             
@@ -3092,6 +3103,7 @@ namespace Risk_Manager
                     UpdateTradingStatusBadgeUI(false);
                     RefreshAccountsSummary();
                     RefreshAccountStats();
+                }
                 }
             }
             catch (Exception ex)

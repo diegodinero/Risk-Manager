@@ -648,8 +648,10 @@ namespace Risk_Manager.Data
                 return $"Locked ({ts.Days}d {ts.Hours}h {ts.Minutes}m)";
             else if (ts.TotalHours >= 1)
                 return $"Locked ({ts.Hours}h {ts.Minutes}m)";
-            else
+            else if (ts.TotalMinutes >= 1)
                 return $"Locked ({ts.Minutes}m)";
+            else
+                return "Locked (<1m)"; // Less than 1 minute remaining
         }
 
         public bool AreSettingsLocked(string accountNumber)
