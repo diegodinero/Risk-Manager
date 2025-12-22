@@ -3178,15 +3178,6 @@ namespace Risk_Manager
                     accountIndex++;
                 }
 
-                // Always update badge based on currently selected account, regardless of state changes
-                var selectedAccountNumber = GetSelectedAccountNumber();
-                if (!string.IsNullOrEmpty(selectedAccountNumber))
-                {
-                    bool selectedIsLocked = settingsService.IsTradingLocked(selectedAccountNumber);
-                    System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: Badge update - Account='{selectedAccountNumber}', IsLocked={selectedIsLocked}");
-                    UpdateTradingStatusBadgeUI(selectedIsLocked);
-                }
-                
                 // Update button states and refresh displays only if state changed
                 if (anyUnlocked || anyLocked)
                 {
@@ -3197,6 +3188,15 @@ namespace Risk_Manager
                     {
                         RefreshAccountsSummary();
                         RefreshAccountStats();
+                    }
+                    
+                    // Update badge only when state changes are detected
+                    var selectedAccountNumber = GetSelectedAccountNumber();
+                    if (!string.IsNullOrEmpty(selectedAccountNumber))
+                    {
+                        bool selectedIsLocked = settingsService.IsTradingLocked(selectedAccountNumber);
+                        System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: State changed - updating badge. Account='{selectedAccountNumber}', IsLocked={selectedIsLocked}");
+                        UpdateTradingStatusBadgeUI(selectedIsLocked);
                     }
                 }
             }
