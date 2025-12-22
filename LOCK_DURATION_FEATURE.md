@@ -57,8 +57,11 @@ Accounts can be unlocked in two ways:
 
 2. **Automatic Unlock**
    - When the lock duration expires, the account automatically unlocks
-   - A background timer checks every 30 seconds for expired locks
-   - The UI updates to reflect the unlocked status
+   - A background timer checks every second for expired locks and enforces lock status
+   - The UI updates immediately to reflect the unlocked status
+   - Buy/sell buttons are re-enabled when lock expires
+   - Lock status badge changes from "Trading Locked" to "Trading Unlocked"
+   - Manual Lock button is un-greyed in the Manual Lock Tab
    - The lock reason will show "Auto-unlocked after duration expired"
 
 ## Technical Details
@@ -76,7 +79,12 @@ Two mechanisms ensure locks are auto-unlocked:
 
 1. **On-Demand Check**: Every time `IsTradingLocked()` is called, it checks if the lock has expired and auto-unlocks if necessary.
 
-2. **Background Timer**: A background timer (`lockExpirationCheckTimer`) runs every 30 seconds to check all accounts for expired locks and process auto-unlocks.
+2. **Background Timer**: A background timer (`lockExpirationCheckTimer`) runs **every second** to:
+   - Check all accounts for expired locks and process auto-unlocks
+   - Enforce lock status to prevent manual override attempts
+   - Update buy/sell button states
+   - Update lock status badge
+   - Update Manual Lock button states
 
 ### Lock Status Display
 The `GetLockStatusString()` method in the settings service formats the lock status with remaining time:
@@ -101,7 +109,9 @@ Before locking an account, a confirmation dialog appears asking:
    - Implemented `GetSelectedLockDuration()` helper method with Eastern Time support
    - Added confirmation dialog before locking
    - Changed "All Week" to lock until 5 PM ET Friday (not Sunday)
-   - Added `CheckExpiredLocks()` method and background timer
+   - Added `CheckExpiredLocks()` method with **1-second background timer**
+   - Enforces lock status every second to prevent manual override
+   - Automatically updates buy/sell buttons, lock badge, and Manual Lock button when lock expires
    - Updated lock status displays in Accounts Summary and Stats tabs
 
 ## Benefits

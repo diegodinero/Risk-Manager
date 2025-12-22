@@ -111,10 +111,21 @@ All times are based on Eastern Time (ET).
 ### Lock Expiration
 **New Feature:**
 - When a lock duration expires:
-  1. Account automatically unlocks in Core API
+  1. Account automatically unlocks in Core API (buy/sell buttons re-enabled)
   2. Trading status changes to "Allowed"
-  3. UI refreshes to show "Unlocked" status
-  4. Debug log shows: "Auto-unlocked account: [account_id]"
+  3. Lock status badge changes from "Trading Locked" (red) to "Trading Unlocked" (green)
+  4. Manual Lock button becomes un-greyed (enabled) in the Manual Lock Tab
+  5. UI refreshes to show "Unlocked" status in all tabs
+  6. Debug log shows: "Auto-unlocked account: [account_id]"
+
+### Lock Enforcement
+**New Feature:**
+- Background timer runs **every second** (not every 30 seconds) to:
+  1. Check for expired locks and auto-unlock
+  2. Enforce active locks to prevent manual override
+  3. Update all UI elements (buttons, badges, status displays)
+- This prevents users from bypassing the lock system
+- Ensures lock status is always current and accurate
 
 ### 5 PM ET Auto-Unlock for Short Durations
 **New Feature:**
@@ -138,6 +149,8 @@ All times are based on Eastern Time (ET).
 6. **Convenience**: "All Day" and "All Week" options for planned breaks
 7. **Weekly Alignment**: "All Week" now ends at trading week close (5 PM ET Friday)
 8. **Market Close Protection**: Short duration locks auto-unlock at 5 PM ET to align with market close
+9. **Real-time Enforcement**: Lock status enforced every second to prevent override
+10. **Complete UI Updates**: All UI elements update automatically when lock expires
 
 ---
 
@@ -186,9 +199,11 @@ All times are based on Eastern Time (ET).
 
 ## Technical Notes
 
-- Lock status updates automatically every second via UI refresh timers
-- Background expiration check runs every 30 seconds
+- Lock status updates automatically every second via background enforcement timer
+- Background timer runs **every second** to check expired locks and enforce active locks
 - Expiration checking also happens on-demand when status is queried
 - **All date/time calculations use Eastern Time (ET) for consistency**
 - Lock duration calculations account for Eastern Time zone regardless of user's local time
 - Lock settings are persisted to disk and survive application restart
+- Lock enforcement prevents manual override attempts by re-applying lock status every second
+- UI elements (buy/sell buttons, badges, Manual Lock button) update automatically when lock expires

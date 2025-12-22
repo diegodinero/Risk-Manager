@@ -239,8 +239,8 @@ namespace Risk_Manager
             };
             dropdownRefreshTimer.Start();
 
-            // Check for expired locks every 30 seconds
-            lockExpirationCheckTimer = new System.Windows.Forms.Timer { Interval = 30000 };
+            // Check for expired locks and enforce lock status every second
+            lockExpirationCheckTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             lockExpirationCheckTimer.Tick += (s, e) => CheckExpiredLocks();
             lockExpirationCheckTimer.Start();
 
@@ -3093,7 +3093,8 @@ namespace Risk_Manager
 
         /// <summary>
         /// Checks all accounts for expired locks and triggers auto-unlock if needed.
-        /// Called periodically by the lockExpirationCheckTimer.
+        /// Also enforces lock status to prevent manual override.
+        /// Called every second by the lockExpirationCheckTimer.
         /// </summary>
         private void CheckExpiredLocks()
         {
@@ -3109,6 +3110,7 @@ namespace Risk_Manager
 
                 int accountIndex = 0;
                 bool anyUnlocked = false;
+                bool anyLocked = false;
 
                 foreach (var account in core.Accounts)
                 {
@@ -3149,18 +3151,51 @@ namespace Risk_Manager
                                 System.Diagnostics.Debug.WriteLine($"Error auto-unlocking account {uniqueAccountId}: {ex.Message}");
                             }
                         }
+                        // If still locked, enforce the lock to prevent manual override
+                        else if (isLocked)
+                        {
+                            anyLocked = true;
+                            
+                            // Ensure the account remains locked in Core API
+                            try
+                            {
+                                var lockMethod = core.GetType().GetMethod("LockAccount");
+                                if (lockMethod != null)
+                                {
+                                    lockMethod.Invoke(core, new object[] { account });
+                                    SetCoreTradingStatus(core, "Locked");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error enforcing lock on account {uniqueAccountId}: {ex.Message}");
+                            }
+                        }
                     }
 
                     accountIndex++;
                 }
 
-                // If any accounts were unlocked, refresh the UI
-                if (anyUnlocked)
+                // If any accounts were unlocked or locked state changed, refresh the UI
+                if (anyUnlocked || anyLocked)
                 {
-                    UpdateTradingStatusBadgeUI(false);
-                    RefreshAccountsSummary();
-                    RefreshAccountStats();
-                }
+                    // Update badge based on currently selected account
+                    var selectedAccountNumber = GetSelectedAccountNumber();
+                    if (!string.IsNullOrEmpty(selectedAccountNumber))
+                    {
+                        bool selectedIsLocked = settingsService.IsTradingLocked(selectedAccountNumber);
+                        UpdateTradingStatusBadgeUI(selectedIsLocked);
+                    }
+                    
+                    // Update button states
+                    UpdateLockButtonStates();
+                    
+                    // Refresh account summary and stats displays
+                    if (anyUnlocked)
+                    {
+                        RefreshAccountsSummary();
+                        RefreshAccountStats();
+                    }
                 }
             }
             catch (Exception ex)
