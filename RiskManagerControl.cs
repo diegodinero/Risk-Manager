@@ -119,7 +119,7 @@ namespace Risk_Manager
         private const int DEFAULT_CONTRACT_LIMIT = 10;
 
         // P&L monitoring constants
-        private const int PNL_MONITOR_INTERVAL_MS = 2000; // Check P&L every 2 seconds
+        private const int PNL_MONITOR_INTERVAL_MS = 500; // Check P&L every half second
         private const int FALLBACK_LOCK_HOURS = 8; // Fallback lock duration if timezone calculation fails
 
         // Account type constants
@@ -252,7 +252,7 @@ namespace Risk_Manager
             lockExpirationCheckTimer.Tick += (s, e) => CheckExpiredLocks();
             lockExpirationCheckTimer.Start();
 
-            // Monitor P&L limits and auto-close positions every 2 seconds
+            // Monitor P&L limits and auto-close positions every half second
             pnlMonitorTimer = new System.Windows.Forms.Timer { Interval = PNL_MONITOR_INTERVAL_MS };
             pnlMonitorTimer.Tick += (s, e) => MonitorPnLLimits();
             pnlMonitorTimer.Start();
