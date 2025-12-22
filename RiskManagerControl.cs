@@ -31,6 +31,7 @@ namespace Risk_Manager
         private DataGridView typeSummaryGrid;
         private System.Windows.Forms.Timer typeSummaryRefreshTimer;
         private System.Windows.Forms.Timer lockExpirationCheckTimer;
+        private System.Windows.Forms.Timer pnlMonitorTimer; // Timer to monitor P&L limits
         private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
@@ -117,6 +118,10 @@ namespace Risk_Manager
         private const decimal DEFAULT_WEEKLY_PROFIT_TARGET = 2000m;
         private const int DEFAULT_CONTRACT_LIMIT = 10;
 
+        // P&L monitoring constants
+        private const int PNL_MONITOR_INTERVAL_MS = 500; // Check P&L every half second
+        private const int FALLBACK_LOCK_HOURS = 8; // Fallback lock duration if timezone calculation fails
+
         // Account type constants
         private const string ACCOUNT_TYPE_PA = "PA";
         private const string ACCOUNT_TYPE_EVAL = "Eval";
@@ -130,6 +135,9 @@ namespace Risk_Manager
         private const string FILTER_MODE_TYPE = "Type";
         private const string FILTER_MODE_FIRM = "Firm";
         private static readonly string[] TypeSummaryFilterOptions = new[] { FILTER_MODE_TYPE, FILTER_MODE_FIRM };
+
+        // P&L field identifiers
+        private const string TOTAL_PNL_ID = "TotalPnL";
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -154,7 +162,7 @@ namespace Risk_Manager
         private static readonly string[] NavItems = new[]
         {
             "📊 Accounts Summary", "📈 Stats", "📋 Type", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
-            "📉 Weekly Loss", "📈 Weekly Profit Target", "🔒 Lock Settings", "🔒 Manual Lock"
+            "🔒 Lock Settings", "🔒 Manual Lock"
         };
 
         private const int LeftPanelWidth = 200;
@@ -210,10 +218,6 @@ namespace Risk_Manager
                     placeholder = CreateSymbolsPanel();
                 else if (name.EndsWith("Allowed Trading Times"))
                     placeholder = CreateAllowedTradingTimesDarkPanel();
-                else if (name.EndsWith("Weekly Loss"))
-                    placeholder = CreateWeeklyLossDarkPanel();
-                else if (name.EndsWith("Weekly Profit Target"))
-                    placeholder = CreateWeeklyProfitTargetDarkPanel();
                 else if (name.EndsWith("Lock Settings"))
                     placeholder = CreateLockSettingsDarkPanel();
                 else if (name.EndsWith("Manual Lock"))
@@ -243,6 +247,11 @@ namespace Risk_Manager
             lockExpirationCheckTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             lockExpirationCheckTimer.Tick += (s, e) => CheckExpiredLocks();
             lockExpirationCheckTimer.Start();
+
+            // Monitor P&L limits and auto-close positions every half second
+            pnlMonitorTimer = new System.Windows.Forms.Timer { Interval = PNL_MONITOR_INTERVAL_MS };
+            pnlMonitorTimer.Tick += (s, e) => MonitorPnLLimits();
+            pnlMonitorTimer.Start();
 
             // Show Accounts Summary by default
             selectedNavItem = "📊 Accounts Summary";
@@ -3196,6 +3205,494 @@ namespace Risk_Manager
             }
         }
 
+        /// <summary>
+        /// Monitors P&L limits for all accounts and enforces automatic lockouts and position closures.
+        /// Checks daily P&L against daily limits and position P&L against position limits.
+        /// </summary>
+        private void MonitorPnLLimits()
+        {
+            try
+            {
+                var core = Core.Instance;
+                if (core == null || core.Accounts == null)
+                    return;
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                    return;
+
+                // Use indexed enumeration for cleaner code
+                var accountsWithIndex = core.Accounts.Select((account, index) => new { account, index });
+
+                foreach (var item in accountsWithIndex)
+                {
+                    if (item.account == null)
+                        continue;
+
+                    var uniqueAccountId = GetUniqueAccountIdentifier(item.account, item.index);
+                    if (string.IsNullOrEmpty(uniqueAccountId))
+                        continue;
+
+                    // Get settings for this account
+                    var settings = settingsService.GetSettings(uniqueAccountId);
+                    if (settings == null || !settings.FeatureToggleEnabled)
+                        continue;
+
+                    // Skip if account is already locked
+                    if (settingsService.IsTradingLocked(uniqueAccountId))
+                        continue;
+
+                    // Check Daily P&L limits
+                    CheckDailyPnLLimits(item.account, uniqueAccountId, settings, core);
+
+                    // Check Position P&L limits
+                    CheckPositionPnLLimits(item.account, uniqueAccountId, settings, core);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error monitoring P&L limits: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks if daily P&L has exceeded limits and locks account if necessary.
+        /// </summary>
+        private void CheckDailyPnLLimits(Account account, string accountId, AccountSettings settings, Core core)
+        {
+            try
+            {
+                // Get daily P&L from account
+                double dailyPnL = GetAccountDailyPnL(account);
+
+                // Check Daily Loss Limit (negative value)
+                if (settings.DailyLossLimit.HasValue && settings.DailyLossLimit.Value < 0)
+                {
+                    decimal lossLimit = settings.DailyLossLimit.Value;
+                    if ((decimal)dailyPnL <= lossLimit)
+                    {
+                        // Loss limit exceeded - lock account until 5 PM ET
+                        string reason = $"Daily Loss Limit reached: P&L ${dailyPnL:F2} ≤ Limit ${lossLimit:F2}";
+                        LockAccountUntil5PMET(accountId, reason, core, account);
+                        CloseAllPositionsForAccount(account, core);
+                        System.Diagnostics.Debug.WriteLine($"Account {accountId} locked due to daily loss limit");
+                        return; // Exit after locking
+                    }
+                }
+
+                // Check Daily Profit Target (positive value)
+                if (settings.DailyProfitTarget.HasValue && settings.DailyProfitTarget.Value > 0)
+                {
+                    decimal profitTarget = settings.DailyProfitTarget.Value;
+                    if ((decimal)dailyPnL >= profitTarget)
+                    {
+                        // Profit target reached - lock account until 5 PM ET
+                        string reason = $"Daily Profit Target reached: P&L ${dailyPnL:F2} ≥ Target ${profitTarget:F2}";
+                        LockAccountUntil5PMET(accountId, reason, core, account);
+                        CloseAllPositionsForAccount(account, core);
+                        System.Diagnostics.Debug.WriteLine($"Account {accountId} locked due to daily profit target");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking daily P&L limits for account {accountId}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks if weekly P&L has exceeded limits and locks account if necessary.
+        /// </summary>
+        private void CheckWeeklyPnLLimits(Account account, string accountId, AccountSettings settings, Core core)
+        {
+            try
+            {
+                // Get daily P&L (we'll use this as proxy for weekly P&L tracking)
+                // In a production system, you would track cumulative weekly P&L separately
+                double dailyPnL = GetAccountDailyPnL(account);
+
+                // Check Weekly Loss Limit (negative value)
+                if (settings.WeeklyLossLimit.HasValue && settings.WeeklyLossLimit.Value < 0)
+                {
+                    decimal lossLimit = settings.WeeklyLossLimit.Value;
+                    // For weekly limits, we compare against the same daily P&L
+                    // In production, you'd track cumulative weekly P&L
+                    if ((decimal)dailyPnL <= lossLimit)
+                    {
+                        // Weekly loss limit exceeded - lock account until 5 PM ET Friday
+                        string reason = $"Weekly Loss Limit reached: P&L ${dailyPnL:F2} ≤ Limit ${lossLimit:F2}";
+                        LockAccountUntil5PMETFriday(accountId, reason, core, account);
+                        CloseAllPositionsForAccount(account, core);
+                        System.Diagnostics.Debug.WriteLine($"Account {accountId} locked due to weekly loss limit");
+                        return; // Exit after locking
+                    }
+                }
+
+                // Check Weekly Profit Target (positive value)
+                if (settings.WeeklyProfitTarget.HasValue && settings.WeeklyProfitTarget.Value > 0)
+                {
+                    decimal profitTarget = settings.WeeklyProfitTarget.Value;
+                    if ((decimal)dailyPnL >= profitTarget)
+                    {
+                        // Weekly profit target reached - lock account until 5 PM ET Friday
+                        string reason = $"Weekly Profit Target reached: P&L ${dailyPnL:F2} ≥ Target ${profitTarget:F2}";
+                        LockAccountUntil5PMETFriday(accountId, reason, core, account);
+                        CloseAllPositionsForAccount(account, core);
+                        System.Diagnostics.Debug.WriteLine($"Account {accountId} locked due to weekly profit target");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking weekly P&L limits for account {accountId}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks if any position has exceeded P&L limits and closes position if necessary.
+        /// </summary>
+        private void CheckPositionPnLLimits(Account account, string accountId, AccountSettings settings, Core core)
+        {
+            try
+            {
+                if (core.Positions == null)
+                    return;
+
+                // Get all positions for this account
+                var accountPositions = core.Positions
+                    .Where(p => p != null && p.Account == account)
+                    .ToList();
+
+                foreach (var position in accountPositions)
+                {
+                    double openPnL = GetPositionOpenPnL(position);
+
+                    // Check Position Loss Limit (negative value)
+                    if (settings.PositionLossLimit.HasValue && settings.PositionLossLimit.Value < 0)
+                    {
+                        decimal lossLimit = settings.PositionLossLimit.Value;
+                        if ((decimal)openPnL <= lossLimit)
+                        {
+                            // Position loss limit exceeded - close position
+                            ClosePosition(position, core);
+                            System.Diagnostics.Debug.WriteLine($"Position closed due to loss limit: {position.Symbol} OpenPnL ${openPnL:F2} ≤ Limit ${lossLimit:F2}");
+                        }
+                    }
+
+                    // Check Position Profit Target (positive value)
+                    if (settings.PositionProfitTarget.HasValue && settings.PositionProfitTarget.Value > 0)
+                    {
+                        decimal profitTarget = settings.PositionProfitTarget.Value;
+                        if ((decimal)openPnL >= profitTarget)
+                        {
+                            // Position profit target reached - close position
+                            ClosePosition(position, core);
+                            System.Diagnostics.Debug.WriteLine($"Position closed due to profit target: {position.Symbol} OpenPnL ${openPnL:F2} ≥ Target ${profitTarget:F2}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking position P&L limits for account {accountId}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Gets the daily P&L for an account from AdditionalInfo.
+        /// </summary>
+        private double GetAccountDailyPnL(Account account)
+        {
+            try
+            {
+                if (account?.AdditionalInfo == null)
+                    return 0;
+
+                foreach (var info in account.AdditionalInfo)
+                {
+                    if (info == null)
+                        continue;
+
+                    string id = info.Id ?? string.Empty;
+
+                    // Daily P&L is in TotalPnL field
+                    if (string.Equals(id, TOTAL_PNL_ID, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (info.Value is double dailyPnL)
+                            return dailyPnL;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting daily P&L: {ex.Message}");
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Gets the open P&L for a position.
+        /// </summary>
+        private double GetPositionOpenPnL(Position position)
+        {
+            try
+            {
+                if (position == null)
+                    return 0;
+
+                // Position.GrossPnL is a PnLItem object, access its Value property
+                if (position.GrossPnL != null)
+                    return position.GrossPnL.Value;
+                
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting position open P&L: {ex.Message}");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Locks an account until 5 PM ET.
+        /// </summary>
+        private void LockAccountUntil5PMET(string accountId, string reason, Core core, Account account)
+        {
+            try
+            {
+                // Calculate time until 5 PM ET
+                TimeSpan lockDuration = CalculateTimeUntil5PMET();
+                
+                var settingsService = RiskManagerSettingsService.Instance;
+                settingsService.SetTradingLock(accountId, true, reason, lockDuration);
+
+                // Lock the account in Core API
+                try
+                {
+                    var lockMethod = core.GetType().GetMethod("LockAccount");
+                    if (lockMethod != null)
+                    {
+                        lockMethod.Invoke(core, new object[] { account });
+                        System.Diagnostics.Debug.WriteLine($"Locked account {accountId} in Core API");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error locking account {accountId} in Core API: {ex.Message}");
+                }
+
+                // Update UI if this is the selected account
+                var selectedAccountNumber = GetSelectedAccountNumber();
+                if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == accountId)
+                {
+                    UpdateTradingStatusBadgeUI(true);
+                    UpdateLockButtonStates();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error locking account {accountId}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Calculates the time duration until 5 PM ET today (or tomorrow if past 5 PM).
+        /// </summary>
+        private TimeSpan CalculateTimeUntil5PMET()
+        {
+            try
+            {
+                // Get current time in ET (Eastern Time)
+                // Try cross-platform ID first, then fall back to Windows ID
+                TimeZoneInfo etZone;
+                try
+                {
+                    etZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                    etZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                }
+                
+                DateTime nowET = TimeZoneInfo.ConvertTime(DateTime.Now, etZone);
+
+                // Target time is 5 PM ET today
+                DateTime target5PM = nowET.Date.AddHours(17); // 5 PM = 17:00
+
+                // If we're past 5 PM, target tomorrow's 5 PM
+                if (nowET >= target5PM)
+                {
+                    target5PM = target5PM.AddDays(1);
+                }
+
+                TimeSpan duration = target5PM - nowET;
+                return duration;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error calculating time until 5 PM ET: {ex.Message}");
+                // Fallback: lock for rest of trading day
+                return TimeSpan.FromHours(FALLBACK_LOCK_HOURS);
+            }
+        }
+
+        /// <summary>
+        /// Locks an account until 5 PM ET Friday.
+        /// </summary>
+        private void LockAccountUntil5PMETFriday(string accountId, string reason, Core core, Account account)
+        {
+            try
+            {
+                // Calculate time until 5 PM ET Friday
+                TimeSpan lockDuration = CalculateTimeUntil5PMETFriday();
+                
+                var settingsService = RiskManagerSettingsService.Instance;
+                settingsService.SetTradingLock(accountId, true, reason, lockDuration);
+
+                // Lock the account in Core API
+                try
+                {
+                    var lockMethod = core.GetType().GetMethod("LockAccount");
+                    if (lockMethod != null)
+                    {
+                        lockMethod.Invoke(core, new object[] { account });
+                        System.Diagnostics.Debug.WriteLine($"Locked account {accountId} in Core API until Friday 5 PM ET");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error locking account {accountId} in Core API: {ex.Message}");
+                }
+
+                // Update UI if this is the selected account
+                var selectedAccountNumber = GetSelectedAccountNumber();
+                if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == accountId)
+                {
+                    UpdateTradingStatusBadgeUI(true);
+                    UpdateLockButtonStates();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error locking account {accountId} until Friday: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Calculates the time duration until 5 PM ET Friday.
+        /// </summary>
+        private TimeSpan CalculateTimeUntil5PMETFriday()
+        {
+            try
+            {
+                // Get current time in ET (Eastern Time)
+                // Try cross-platform ID first, then fall back to Windows ID
+                TimeZoneInfo etZone;
+                try
+                {
+                    etZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                    etZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                }
+                
+                DateTime nowET = TimeZoneInfo.ConvertTime(DateTime.Now, etZone);
+
+                // Target time is 5 PM ET on Friday
+                DateTime targetFriday5PM = nowET.Date.AddHours(17); // 5 PM = 17:00
+                
+                // Get current day of week
+                DayOfWeek currentDay = nowET.DayOfWeek;
+                
+                // Calculate days until Friday
+                int daysUntilFriday;
+                if (currentDay == DayOfWeek.Friday)
+                {
+                    // If it's Friday but past 5 PM, go to next Friday
+                    if (nowET >= targetFriday5PM)
+                    {
+                        daysUntilFriday = 7;
+                    }
+                    else
+                    {
+                        daysUntilFriday = 0;
+                    }
+                }
+                else if (currentDay == DayOfWeek.Saturday)
+                {
+                    daysUntilFriday = 6; // Saturday to Friday
+                }
+                else if (currentDay == DayOfWeek.Sunday)
+                {
+                    daysUntilFriday = 5; // Sunday to Friday
+                }
+                else
+                {
+                    // Monday-Thursday: calculate days until Friday
+                    daysUntilFriday = (int)DayOfWeek.Friday - (int)currentDay;
+                }
+                
+                targetFriday5PM = targetFriday5PM.AddDays(daysUntilFriday);
+                
+                TimeSpan duration = targetFriday5PM - nowET;
+                return duration;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error calculating time until Friday 5 PM ET: {ex.Message}");
+                // Fallback: lock for rest of week (assume 5 days)
+                return TimeSpan.FromDays(5);
+            }
+        }
+
+        /// <summary>
+        /// Closes all positions for a specific account.
+        /// </summary>
+        private void CloseAllPositionsForAccount(Account account, Core core)
+        {
+            try
+            {
+                if (core.Positions == null)
+                    return;
+
+                var accountPositions = core.Positions
+                    .Where(p => p != null && p.Account == account)
+                    .ToList();
+
+                foreach (var position in accountPositions)
+                {
+                    ClosePosition(position, core);
+                }
+
+                System.Diagnostics.Debug.WriteLine($"Closed {accountPositions.Count} positions for account");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error closing all positions for account: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Closes a single position.
+        /// </summary>
+        private void ClosePosition(Position position, Core core)
+        {
+            try
+            {
+                if (position == null)
+                    return;
+
+                core.ClosePosition(position);
+                System.Diagnostics.Debug.WriteLine($"Closed position: {position.Symbol}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error closing position {position?.Symbol}: {ex.Message}");
+            }
+        }
+
         private void UpdateAccountStatus(Label lblTradingStatus)
         {
             try
@@ -5178,6 +5675,10 @@ namespace Risk_Manager
                 lockExpirationCheckTimer?.Stop();
                 lockExpirationCheckTimer?.Dispose();
                 lockExpirationCheckTimer = null;
+
+                pnlMonitorTimer?.Stop();
+                pnlMonitorTimer?.Dispose();
+                pnlMonitorTimer = null;
 
                 alertSoundPlayer?.Dispose();
                 alertSoundPlayer = null;
