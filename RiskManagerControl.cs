@@ -162,7 +162,7 @@ namespace Risk_Manager
         private static readonly string[] NavItems = new[]
         {
             "📊 Accounts Summary", "📈 Stats", "📋 Type", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
-            "📉 Weekly Loss", "📈 Weekly Profit Target", "🔒 Lock Settings", "🔒 Manual Lock"
+            "🔒 Lock Settings", "🔒 Manual Lock"
         };
 
         private const int LeftPanelWidth = 200;
@@ -218,10 +218,6 @@ namespace Risk_Manager
                     placeholder = CreateSymbolsPanel();
                 else if (name.EndsWith("Allowed Trading Times"))
                     placeholder = CreateAllowedTradingTimesDarkPanel();
-                else if (name.EndsWith("Weekly Loss"))
-                    placeholder = CreateWeeklyLossDarkPanel();
-                else if (name.EndsWith("Weekly Profit Target"))
-                    placeholder = CreateWeeklyProfitTargetDarkPanel();
                 else if (name.EndsWith("Lock Settings"))
                     placeholder = CreateLockSettingsDarkPanel();
                 else if (name.EndsWith("Manual Lock"))
@@ -3248,9 +3244,6 @@ namespace Risk_Manager
 
                     // Check Daily P&L limits
                     CheckDailyPnLLimits(item.account, uniqueAccountId, settings, core);
-
-                    // Check Weekly P&L limits
-                    CheckWeeklyPnLLimits(item.account, uniqueAccountId, settings, core);
 
                     // Check Position P&L limits
                     CheckPositionPnLLimits(item.account, uniqueAccountId, settings, core);
