@@ -2595,16 +2595,15 @@ namespace Risk_Manager
                 FlatStyle = FlatStyle.Flat
             };
 
-            // Add duration options
-            lockDurationComboBox.Items.Add("Indefinite");
+            // Add duration options (removed Indefinite per user request)
             lockDurationComboBox.Items.Add("5 Minutes");
             lockDurationComboBox.Items.Add("15 Minutes");
             lockDurationComboBox.Items.Add("1 Hour");
             lockDurationComboBox.Items.Add("2 Hours");
             lockDurationComboBox.Items.Add("4 Hours");
-            lockDurationComboBox.Items.Add("All Day (Until 5PM)");
-            lockDurationComboBox.Items.Add("All Week");
-            lockDurationComboBox.SelectedIndex = 0; // Default to Indefinite
+            lockDurationComboBox.Items.Add("All Day (Until 5PM ET)");
+            lockDurationComboBox.Items.Add("All Week (Until 5PM ET Friday)");
+            lockDurationComboBox.SelectedIndex = 0; // Default to 5 Minutes
 
             contentArea.Controls.Add(lockDurationComboBox);
 
@@ -2814,6 +2813,23 @@ namespace Risk_Manager
                     return;
                 }
 
+                // Get selected duration
+                TimeSpan? duration = GetSelectedLockDuration();
+                string durationText = lockDurationComboBox?.SelectedItem?.ToString() ?? "Unknown";
+
+                // Show confirmation dialog
+                var confirmResult = MessageBox.Show(
+                    $"Are you sure you want to lock account '{accountNumber}' for {durationText}?\n\n" +
+                    "This will disable all Buy/Sell buttons until the lock expires.",
+                    "Confirm Lock Trading",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (confirmResult != DialogResult.Yes)
+                {
+                    return; // User cancelled
+                }
+
                 // Find the account by the cached identifier
                 var core = Core.Instance;
                 if (core == null)
@@ -2829,10 +2845,6 @@ namespace Risk_Manager
                     return;
                 }
 
-                // Get selected duration
-                TimeSpan? duration = GetSelectedLockDuration();
-                string durationText = lockDurationComboBox?.SelectedItem?.ToString() ?? "Indefinite";
-
                 // Check if the method exists before calling (defensive programming)
                 var lockMethod = core.GetType().GetMethod("LockAccount");
                 if (lockMethod != null)
@@ -2846,9 +2858,7 @@ namespace Risk_Manager
                     var settingsService = RiskManagerSettingsService.Instance;
                     if (settingsService.IsInitialized)
                     {
-                        string reason = duration.HasValue 
-                            ? $"Manual lock via Lock Trading button for {durationText}"
-                            : "Manual lock via Lock Trading button";
+                        string reason = $"Manual lock via Lock Trading button for {durationText}";
                         settingsService.SetTradingLock(accountNumber, true, reason, duration);
                     }
                     
@@ -2862,10 +2872,11 @@ namespace Risk_Manager
                     RefreshAccountsSummary();
                     RefreshAccountStats();
                     
-                    string message = duration.HasValue
-                        ? $"Account '{accountNumber}' has been locked for {durationText}. Buy/Sell buttons are now disabled."
-                        : $"Account '{accountNumber}' has been locked indefinitely. Buy/Sell buttons are now disabled.";
-                    MessageBox.Show(message, "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(
+                        $"Account '{accountNumber}' has been locked for {durationText}.\n\nBuy/Sell buttons are now disabled.",
+                        "Trading Locked",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
                 }
                 else
                 {
@@ -2982,6 +2993,7 @@ namespace Risk_Manager
 
         /// <summary>
         /// Gets the selected lock duration from the combo box.
+        /// All calculations are based on Eastern Time (ET).
         /// </summary>
         private TimeSpan? GetSelectedLockDuration()
         {
@@ -2989,6 +3001,10 @@ namespace Risk_Manager
                 return null;
 
             string selection = lockDurationComboBox.SelectedItem.ToString();
+            
+            // Get Eastern Time Zone
+            TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            DateTime nowEt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
             
             switch (selection)
             {
@@ -3002,35 +3018,39 @@ namespace Risk_Manager
                     return TimeSpan.FromHours(2);
                 case "4 Hours":
                     return TimeSpan.FromHours(4);
-                case "All Day (Until 5PM)":
-                    // Calculate time until 5 PM today (or tomorrow if past 5 PM)
-                    var now = DateTime.Now;
-                    var targetTime = new DateTime(now.Year, now.Month, now.Day, 17, 0, 0); // 5 PM today
-                    if (now >= targetTime)
+                case "All Day (Until 5PM ET)":
+                    // Calculate time until 5 PM ET today (or tomorrow if past 5 PM ET)
+                    var targetTime = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0); // 5 PM ET today
+                    if (nowEt >= targetTime)
                     {
-                        // If past 5 PM, lock until 5 PM tomorrow
+                        // If past 5 PM ET, lock until 5 PM ET tomorrow
                         targetTime = targetTime.AddDays(1);
                     }
-                    return targetTime - now;
-                case "All Week":
-                    // Lock until end of week (Sunday 11:59 PM)
-                    var endOfWeek = DateTime.Now;
-                    int daysUntilSunday = ((int)DayOfWeek.Sunday - (int)endOfWeek.DayOfWeek + 7) % 7;
-                    // If today is Sunday, calculate time until end of today instead of next week
-                    if (daysUntilSunday == 0)
+                    return targetTime - nowEt;
+                case "All Week (Until 5PM ET Friday)":
+                    // Lock until 5 PM ET Friday
+                    int daysUntilFriday = ((int)DayOfWeek.Friday - (int)nowEt.DayOfWeek + 7) % 7;
+                    DateTime fridayAt5PM;
+                    
+                    if (daysUntilFriday == 0)
                     {
-                        // Already Sunday, lock until end of today (Sunday 11:59 PM)
-                        endOfWeek = endOfWeek.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+                        // Today is Friday
+                        fridayAt5PM = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0);
+                        if (nowEt >= fridayAt5PM)
+                        {
+                            // Already past 5 PM Friday, lock until next Friday at 5 PM ET
+                            fridayAt5PM = fridayAt5PM.AddDays(7);
+                        }
                     }
                     else
                     {
-                        // Not Sunday, lock until end of this coming Sunday
-                        endOfWeek = endOfWeek.AddDays(daysUntilSunday).Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+                        // Calculate this coming Friday at 5 PM ET
+                        fridayAt5PM = nowEt.AddDays(daysUntilFriday).Date.AddHours(17);
                     }
-                    return endOfWeek - DateTime.Now;
-                case "Indefinite":
+                    
+                    return fridayAt5PM - nowEt;
                 default:
-                    return null; // No duration = indefinite lock
+                    return null; // Fallback, should not happen
             }
         }
 
