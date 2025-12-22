@@ -3884,64 +3884,13 @@ namespace Risk_Manager
                 return null;
             }
             
-            var accountId = selectedAccount.Id;
-            var accountName = selectedAccount.Name;
-            var connectionName = selectedAccount.Connection?.Name;
+            // CRITICAL: Use GetUniqueAccountIdentifier to ensure consistency
+            // This ensures the same identifier is used for locks, settings, and badge updates
+            var uniqueId = GetUniqueAccountIdentifier(selectedAccount, selectedAccountIndex);
             
-            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: accountId='{accountId}', accountName='{accountName}', connectionName='{connectionName}', index={selectedAccountIndex}");
+            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using GetUniqueAccountIdentifier result='{uniqueId}' with index={selectedAccountIndex}");
             
-            // Strategy 1: Use Connection.Name + Name for best uniqueness
-            // Connection names are usually unique per connection/account
-            if (!string.IsNullOrEmpty(connectionName))
-            {
-                if (!string.IsNullOrEmpty(accountName))
-                {
-                    var uniqueId = $"{connectionName}_{accountName}";
-                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection+Name='{uniqueId}'");
-                    return uniqueId;
-                }
-                if (!string.IsNullOrEmpty(accountId))
-                {
-                    var uniqueId = $"{connectionName}_{accountId}";
-                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection+Id='{uniqueId}'");
-                    return uniqueId;
-                }
-                // Connection name alone
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection='{connectionName}'");
-                return connectionName;
-            }
-            
-            // Strategy 2: Use the stored index from dropdown (most reliable when Connection is not available)
-            if (selectedAccountIndex >= 0)
-            {
-                // Create identifier with index and any available property
-                string indexBasedId;
-                if (!string.IsNullOrEmpty(accountName))
-                    indexBasedId = $"Account_{selectedAccountIndex}_{accountName}";
-                else if (!string.IsNullOrEmpty(accountId))
-                    indexBasedId = $"Account_{selectedAccountIndex}_{accountId}";
-                else
-                    indexBasedId = $"Account_{selectedAccountIndex}";
-                
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using stored index-based ID='{indexBasedId}'");
-                return indexBasedId;
-            }
-            
-            // Strategy 3: Fallback to Id or Name alone (least reliable)
-            if (!string.IsNullOrEmpty(accountId))
-            {
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Fallback to Id='{accountId}'");
-                return accountId;
-            }
-            
-            if (!string.IsNullOrEmpty(accountName))
-            {
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Fallback to Name='{accountName}'");
-                return accountName;
-            }
-            
-            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Could not generate unique ID, returning 'UNKNOWN'");
-            return "UNKNOWN";
+            return uniqueId;
         }
 
         /// <summary>
