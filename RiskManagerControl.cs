@@ -3394,8 +3394,14 @@ namespace Risk_Manager
         {
             try
             {
-                // Position has GrossPnL property for open P&L
-                return position?.GrossPnL ?? 0;
+                if (position == null)
+                    return 0;
+
+                // Position.GrossPnL is a PnLItem object, access its Value property
+                if (position.GrossPnL != null)
+                    return position.GrossPnL.Value;
+                
+                return 0;
             }
             catch (Exception ex)
             {
