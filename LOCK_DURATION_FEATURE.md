@@ -6,15 +6,22 @@ This feature allows users to lock trading accounts for specified durations in th
 ## Lock Duration Options
 The following lock duration options are available in the Manual Lock Tab:
 
-1. **5 Minutes** - Lock for 5 minutes
-2. **15 Minutes** - Lock for 15 minutes
-3. **1 Hour** - Lock for 1 hour
+1. **5 Minutes** - Lock for 5 minutes (auto-unlocks at 5 PM ET if expiration would be after 5 PM ET)
+2. **15 Minutes** - Lock for 15 minutes (auto-unlocks at 5 PM ET if expiration would be after 5 PM ET)
+3. **1 Hour** - Lock for 1 hour (auto-unlocks at 5 PM ET if expiration would be after 5 PM ET)
 4. **2 Hours** - Lock for 2 hours
-5. **4 Hours** - Lock for 4 hours
+5. **4 Hours** - Lock for 4 hours (auto-unlocks at 5 PM ET if expiration would be after 5 PM ET)
 6. **All Day (Until 5PM ET)** - Lock until 5 PM Eastern Time today (or tomorrow if after 5 PM ET)
 7. **All Week (Until 5PM ET Friday)** - Lock until 5 PM Eastern Time Friday
 
 **Note:** The "Indefinite" option has been removed. All locks must have a specific duration.
+
+**Auto-Unlock at 5 PM ET:** For shorter duration locks (5 min, 15 min, 1 hour, 4 hours), if the calculated expiration time would be after 5 PM ET today, the lock will automatically expire at 5 PM ET instead. This ensures accounts unlock at market close.
+
+**Examples:**
+- Lock at 4:50 PM ET for 15 minutes → Unlocks at 5:00 PM ET (not 5:05 PM ET)
+- Lock at 4:30 PM ET for 1 hour → Unlocks at 5:00 PM ET (not 5:30 PM ET)
+- Lock at 2:00 PM ET for 1 hour → Unlocks at 3:00 PM ET (normal expiration before 5 PM)
 
 ## How to Use
 

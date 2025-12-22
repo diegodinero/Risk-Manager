@@ -34,6 +34,7 @@ Lock Duration: [Dropdown with 7 options]
 - **Confirmation dialog** - "Are you sure?" confirmation before locking
 - **Eastern Time** - All time calculations use Eastern Time (ET)
 - **All Week changed** - Now locks until 5 PM ET Friday (not Sunday)
+- **5 PM ET Auto-Unlock** - Short duration locks (5 min, 15 min, 1 hour, 4 hours) automatically unlock at 5 PM ET if their normal expiration would be after 5 PM ET
 
 ---
 
@@ -115,6 +116,16 @@ All times are based on Eastern Time (ET).
   3. UI refreshes to show "Unlocked" status
   4. Debug log shows: "Auto-unlocked account: [account_id]"
 
+### 5 PM ET Auto-Unlock for Short Durations
+**New Feature:**
+- Short duration locks (5 min, 15 min, 1 hour, 4 hours) automatically unlock at 5 PM ET if their normal expiration would be after 5 PM ET
+- This ensures accounts are unlocked at market close time
+- **Examples:**
+  - Lock at 4:50 PM ET for 15 minutes → Unlocks at 5:00 PM ET (not 5:05 PM ET)
+  - Lock at 4:30 PM ET for 1 hour → Unlocks at 5:00 PM ET (not 5:30 PM ET)
+  - Lock at 2:00 PM ET for 1 hour → Unlocks at 3:00 PM ET (normal expiration, before 5 PM)
+- **2 Hours option does NOT have this behavior** - it will lock for exactly 2 hours regardless of 5 PM ET
+
 ---
 
 ## User Experience Improvements
@@ -126,6 +137,7 @@ All times are based on Eastern Time (ET).
 5. **Transparency**: Always know how much time remains on a lock
 6. **Convenience**: "All Day" and "All Week" options for planned breaks
 7. **Weekly Alignment**: "All Week" now ends at trading week close (5 PM ET Friday)
+8. **Market Close Protection**: Short duration locks auto-unlock at 5 PM ET to align with market close
 
 ---
 
@@ -138,6 +150,13 @@ All times are based on Eastern Time (ET).
 - Status shows "Locked (15m)"
 - Take a 15-minute break
 - Account automatically unlocks when time expires
+
+### Example 1a: Short Break Before Market Close
+- At 4:50 PM ET, select "15 Minutes" from dropdown
+- Click "LOCK TRADING"
+- Confirm "Yes" in dialog
+- Status shows "Locked (10m)" (will unlock at 5 PM ET, not 5:05 PM ET)
+- Account automatically unlocks at 5 PM ET
 
 ### Example 2: Lunch Break
 - Select "1 Hour" from dropdown

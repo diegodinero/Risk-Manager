@@ -2994,6 +2994,8 @@ namespace Risk_Manager
         /// <summary>
         /// Gets the selected lock duration from the combo box.
         /// All calculations are based on Eastern Time (ET).
+        /// For short duration locks (5 min, 15 min, 1 hour, 4 hours), the lock will automatically 
+        /// unlock at 5 PM ET if the calculated expiration would be after 5 PM ET.
         /// </summary>
         private TimeSpan? GetSelectedLockDuration()
         {
@@ -3005,19 +3007,53 @@ namespace Risk_Manager
             // Get Eastern Time Zone
             TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
             DateTime nowEt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
+            DateTime fivePmEtToday = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0); // 5 PM ET today
             
             switch (selection)
             {
                 case "5 Minutes":
-                    return TimeSpan.FromMinutes(5);
                 case "15 Minutes":
-                    return TimeSpan.FromMinutes(15);
                 case "1 Hour":
-                    return TimeSpan.FromHours(1);
+                case "4 Hours":
+                    // Calculate the normal duration
+                    TimeSpan normalDuration;
+                    switch (selection)
+                    {
+                        case "5 Minutes":
+                            normalDuration = TimeSpan.FromMinutes(5);
+                            break;
+                        case "15 Minutes":
+                            normalDuration = TimeSpan.FromMinutes(15);
+                            break;
+                        case "1 Hour":
+                            normalDuration = TimeSpan.FromHours(1);
+                            break;
+                        case "4 Hours":
+                            normalDuration = TimeSpan.FromHours(4);
+                            break;
+                        default:
+                            normalDuration = TimeSpan.Zero;
+                            break;
+                    }
+                    
+                    // Calculate when the lock would normally expire
+                    DateTime normalExpiration = nowEt.Add(normalDuration);
+                    
+                    // If normal expiration is after 5 PM ET today, cap it at 5 PM ET today
+                    if (normalExpiration > fivePmEtToday && nowEt < fivePmEtToday)
+                    {
+                        // Lock until 5 PM ET today instead
+                        return fivePmEtToday - nowEt;
+                    }
+                    else
+                    {
+                        // Use normal duration
+                        return normalDuration;
+                    }
+                    
                 case "2 Hours":
                     return TimeSpan.FromHours(2);
-                case "4 Hours":
-                    return TimeSpan.FromHours(4);
+                    
                 case "All Day (Until 5PM ET)":
                     // Calculate time until 5 PM ET today (or tomorrow if past 5 PM ET)
                     var targetTime = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0); // 5 PM ET today
@@ -3027,6 +3063,7 @@ namespace Risk_Manager
                         targetTime = targetTime.AddDays(1);
                     }
                     return targetTime - nowEt;
+                    
                 case "All Week (Until 5PM ET Friday)":
                     // Lock until 5 PM ET Friday
                     int daysUntilFriday = ((int)DayOfWeek.Friday - (int)nowEt.DayOfWeek + 7) % 7;
