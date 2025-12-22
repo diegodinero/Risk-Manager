@@ -39,6 +39,7 @@ namespace Risk_Manager
         private Label accountNumberDisplay; // Display current account number in UI
         private Button lockTradingButton; // Lock Trading button reference
         private Button unlockTradingButton; // Unlock Trading button reference
+        private ComboBox lockDurationComboBox; // Lock duration selector
 
         // Settings input control references for persistence
         private TextBox dailyLossLimitInput;
@@ -1416,8 +1417,8 @@ namespace Risk_Manager
                     decimal? profitTarget = null;
                     if (settingsService.IsInitialized)
                     {
-                        var isLocked = settingsService.IsTradingLocked(uniqueAccountId);
-                        lockStatus = isLocked ? "Locked" : "Unlocked";
+                        // Use the new method that includes remaining time
+                        lockStatus = settingsService.GetLockStatusString(uniqueAccountId);
 
                         // Get loss limit and profit target from settings using unique identifier
                         var settings = settingsService.GetSettings(uniqueAccountId);
@@ -1641,8 +1642,8 @@ namespace Risk_Manager
                     var accountNumber = GetUniqueAccountIdentifier(accountToDisplay, accountIndex);
                     if (!string.IsNullOrEmpty(accountNumber))
                     {
-                        var isLocked = settingsService.IsTradingLocked(accountNumber);
-                        lockStatus = isLocked ? "Locked" : "Unlocked";
+                        // Use the new method that includes remaining time
+                        lockStatus = settingsService.GetLockStatusString(accountNumber);
                     }
                 }
 
@@ -2525,7 +2526,7 @@ namespace Risk_Manager
             // Subtitle
             var subtitleLabel = new Label
             {
-                Text = "Manually lock or unlock trading.",
+                Text = "Manually lock or unlock trading with optional duration.",
                 Dock = DockStyle.Top,
                 Height = 30,
                 TextAlign = ContentAlignment.TopLeft,
@@ -2556,16 +2557,59 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
-                Padding = new Padding(15)
+                Padding = new Padding(15),
+                AutoScroll = true
             };
 
+            // Lock Duration Section
+            var durationLabel = new Label
+            {
+                Text = "Lock Duration:",
+                Left = 0,
+                Top = 10,
+                Width = 150,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            contentArea.Controls.Add(durationLabel);
+
+            lockDurationComboBox = new ComboBox
+            {
+                Left = 160,
+                Top = 10,
+                Width = 200,
+                Height = 25,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 10),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat
+            };
+
+            // Add duration options
+            lockDurationComboBox.Items.Add("Indefinite");
+            lockDurationComboBox.Items.Add("5 Minutes");
+            lockDurationComboBox.Items.Add("15 Minutes");
+            lockDurationComboBox.Items.Add("1 Hour");
+            lockDurationComboBox.Items.Add("2 Hours");
+            lockDurationComboBox.Items.Add("4 Hours");
+            lockDurationComboBox.Items.Add("All Day (Until 5PM)");
+            lockDurationComboBox.Items.Add("All Week");
+            lockDurationComboBox.SelectedIndex = 0; // Default to Indefinite
+
+            contentArea.Controls.Add(lockDurationComboBox);
+
+            // Buttons section
             var lockButton = new Button
             {
                 Text = "LOCK TRADING",
                 Width = 200,
                 Height = 40,
                 Left = 0,
-                Top = 0,
+                Top = 60,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 BackColor = AccentAmber,
                 ForeColor = TextWhite,
@@ -2583,7 +2627,7 @@ namespace Risk_Manager
                 Width = 200,
                 Height = 40,
                 Left = 220,
-                Top = 0,
+                Top = 60,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 BackColor = AccentGreen,
                 ForeColor = TextWhite,
@@ -2779,6 +2823,10 @@ namespace Risk_Manager
                     return;
                 }
 
+                // Get selected duration
+                TimeSpan? duration = GetSelectedLockDuration();
+                string durationText = lockDurationComboBox?.SelectedItem?.ToString() ?? "Indefinite";
+
                 // Check if the method exists before calling (defensive programming)
                 var lockMethod = core.GetType().GetMethod("LockAccount");
                 if (lockMethod != null)
@@ -2788,11 +2836,14 @@ namespace Risk_Manager
                     // Set TradingStatus to Locked to disable buy/sell buttons
                     SetCoreTradingStatus(core, "Locked");
                     
-                    // Update the settings service to track the lock status
+                    // Update the settings service to track the lock status with duration
                     var settingsService = RiskManagerSettingsService.Instance;
                     if (settingsService.IsInitialized)
                     {
-                        settingsService.SetTradingLock(accountNumber, true, "Manual lock via Lock Trading button");
+                        string reason = duration.HasValue 
+                            ? $"Manual lock via Lock Trading button for {durationText}"
+                            : "Manual lock via Lock Trading button";
+                        settingsService.SetTradingLock(accountNumber, true, reason, duration);
                     }
                     
                     // Always update the trading status badge immediately (no conditional check)
@@ -2805,7 +2856,10 @@ namespace Risk_Manager
                     RefreshAccountsSummary();
                     RefreshAccountStats();
                     
-                    MessageBox.Show($"Account '{accountNumber}' has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    string message = duration.HasValue
+                        ? $"Account '{accountNumber}' has been locked for {durationText}. Buy/Sell buttons are now disabled."
+                        : $"Account '{accountNumber}' has been locked indefinitely. Buy/Sell buttons are now disabled.";
+                    MessageBox.Show(message, "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
@@ -2917,6 +2971,51 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error setting TradingStatus: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Gets the selected lock duration from the combo box.
+        /// </summary>
+        private TimeSpan? GetSelectedLockDuration()
+        {
+            if (lockDurationComboBox == null || lockDurationComboBox.SelectedItem == null)
+                return null;
+
+            string selection = lockDurationComboBox.SelectedItem.ToString();
+            
+            switch (selection)
+            {
+                case "5 Minutes":
+                    return TimeSpan.FromMinutes(5);
+                case "15 Minutes":
+                    return TimeSpan.FromMinutes(15);
+                case "1 Hour":
+                    return TimeSpan.FromHours(1);
+                case "2 Hours":
+                    return TimeSpan.FromHours(2);
+                case "4 Hours":
+                    return TimeSpan.FromHours(4);
+                case "All Day (Until 5PM)":
+                    // Calculate time until 5 PM today (or tomorrow if past 5 PM)
+                    var now = DateTime.Now;
+                    var targetTime = new DateTime(now.Year, now.Month, now.Day, 17, 0, 0); // 5 PM today
+                    if (now >= targetTime)
+                    {
+                        // If past 5 PM, lock until 5 PM tomorrow
+                        targetTime = targetTime.AddDays(1);
+                    }
+                    return targetTime - now;
+                case "All Week":
+                    // Lock until end of week (Sunday 11:59 PM)
+                    var endOfWeek = DateTime.Now;
+                    int daysUntilSunday = ((int)DayOfWeek.Sunday - (int)endOfWeek.DayOfWeek + 7) % 7;
+                    if (daysUntilSunday == 0) daysUntilSunday = 7; // If today is Sunday, lock until next Sunday
+                    endOfWeek = endOfWeek.AddDays(daysUntilSunday).Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+                    return endOfWeek - DateTime.Now;
+                case "Indefinite":
+                default:
+                    return null; // No duration = indefinite lock
             }
         }
 
