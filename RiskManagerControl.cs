@@ -1005,7 +1005,7 @@ namespace Risk_Manager
             {
                 Text = "Account: None",
                 AutoSize = true,
-                ForeColor = TextLightGray,
+                ForeColor = Color.LightGray,
                 Font = new Font("Segoe UI", 7, FontStyle.Regular),
                 Margin = new Padding(5, 0, 5, 5),
                 TextAlign = ContentAlignment.MiddleCenter
@@ -4183,8 +4183,11 @@ namespace Risk_Manager
                     return;
                 }
 
-                bool isLocked = settingsService.IsTradingLocked(accountNumber);
-                System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadge: Account='{accountNumber}', IsLocked={isLocked}");
+                // Use the SAME method that Account Summary tab uses for consistency
+                string lockStatusString = settingsService.GetLockStatusString(accountNumber);
+                bool isLocked = !lockStatusString.Equals("Unlocked", StringComparison.OrdinalIgnoreCase);
+                
+                System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadge: Account='{accountNumber}', LockStatusString='{lockStatusString}', IsLocked={isLocked}");
 
                 // Update the account label to show which account's status is displayed
                 if (tradingStatusAccountLabel != null)
