@@ -118,6 +118,10 @@ namespace Risk_Manager
         private const decimal DEFAULT_WEEKLY_PROFIT_TARGET = 2000m;
         private const int DEFAULT_CONTRACT_LIMIT = 10;
 
+        // P&L monitoring constants
+        private const int PNL_MONITOR_INTERVAL_MS = 2000; // Check P&L every 2 seconds
+        private const int FALLBACK_LOCK_HOURS = 8; // Fallback lock duration if timezone calculation fails
+
         // Account type constants
         private const string ACCOUNT_TYPE_PA = "PA";
         private const string ACCOUNT_TYPE_EVAL = "Eval";
@@ -249,7 +253,7 @@ namespace Risk_Manager
             lockExpirationCheckTimer.Start();
 
             // Monitor P&L limits and auto-close positions every 2 seconds
-            pnlMonitorTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+            pnlMonitorTimer = new System.Windows.Forms.Timer { Interval = PNL_MONITOR_INTERVAL_MS };
             pnlMonitorTimer.Tick += (s, e) => MonitorPnLLimits();
             pnlMonitorTimer.Start();
 
@@ -3456,7 +3460,7 @@ namespace Risk_Manager
                 {
                     etZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
                 }
-                catch
+                catch (TimeZoneNotFoundException)
                 {
                     etZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
                 }
@@ -3478,8 +3482,8 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error calculating time until 5 PM ET: {ex.Message}");
-                // Fallback: lock for rest of day (assume 8 hours)
-                return TimeSpan.FromHours(8);
+                // Fallback: lock for rest of trading day
+                return TimeSpan.FromHours(FALLBACK_LOCK_HOURS);
             }
         }
 
