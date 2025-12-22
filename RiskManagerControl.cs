@@ -161,7 +161,7 @@ namespace Risk_Manager
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
         private static readonly string[] NavItems = new[]
         {
-            "📊 Accounts Summary", "📈 Stats", "📋 Type", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
+            "📊 Accounts Summary", "📈 Stats", "📋 Type", "⚙️ Feature Toggles", "📋 Copy Settings", "🔍 Risk Overview", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
             "🔒 Lock Settings", "🔒 Manual Lock"
         };
 
@@ -210,6 +210,8 @@ namespace Risk_Manager
                     placeholder = CreateFeatureTogglesPanel();
                 else if (name.EndsWith("Copy Settings"))
                     placeholder = CreateCopySettingsPanel();
+                else if (name.EndsWith("Risk Overview"))
+                    placeholder = CreateRiskOverviewPanel();
                 else if (name.EndsWith("Positions"))
                     placeholder = CreatePositionsPanel();
                 else if (name.EndsWith("Limits"))
@@ -859,6 +861,26 @@ namespace Risk_Manager
                 if (settingsLockCheckBox != null)
                 {
                     settingsLockCheckBox.Checked = settings.SettingsLock?.IsLocked ?? false;
+                }
+
+                // Load Trading Time Restrictions
+                if (tradingTimeCheckboxes != null && tradingTimeCheckboxes.Any())
+                {
+                    // Get the unique session names from restrictions
+                    var allowedSessions = settings.TradingTimeRestrictions?
+                        .Where(r => r.IsAllowed)
+                        .Select(r => r.Name)
+                        .Distinct()
+                        .ToHashSet() ?? new HashSet<string>();
+
+                    // Update checkboxes based on loaded settings
+                    foreach (var checkbox in tradingTimeCheckboxes)
+                    {
+                        if (checkbox.Tag is string sessionName)
+                        {
+                            checkbox.Checked = allowedSessions.Contains(sessionName);
+                        }
+                    }
                 }
 
                 // Update status displays
@@ -2410,29 +2432,122 @@ namespace Risk_Manager
                 WrapContents = false
             };
 
+            // Define trading sessions with their time ranges
             var sessions = new[]
             {
-                ("NY Session", "8 AM - 5 PM EST"),
-                ("London Session", "3 AM - 12 PM EST"),
-                ("Asia Session", "7 PM - 4 AM EST")
+                ("NY Session", DayOfWeek.Monday, new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+                ("NY Session", DayOfWeek.Tuesday, new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+                ("NY Session", DayOfWeek.Wednesday, new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+                ("NY Session", DayOfWeek.Thursday, new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+                ("NY Session", DayOfWeek.Friday, new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
+                ("London Session", DayOfWeek.Monday, new TimeSpan(3, 0, 0), new TimeSpan(12, 0, 0)),
+                ("London Session", DayOfWeek.Tuesday, new TimeSpan(3, 0, 0), new TimeSpan(12, 0, 0)),
+                ("London Session", DayOfWeek.Wednesday, new TimeSpan(3, 0, 0), new TimeSpan(12, 0, 0)),
+                ("London Session", DayOfWeek.Thursday, new TimeSpan(3, 0, 0), new TimeSpan(12, 0, 0)),
+                ("London Session", DayOfWeek.Friday, new TimeSpan(3, 0, 0), new TimeSpan(12, 0, 0)),
+                ("Asia Session", DayOfWeek.Sunday, new TimeSpan(19, 0, 0), new TimeSpan(23, 59, 59)),
+                ("Asia Session", DayOfWeek.Monday, new TimeSpan(0, 0, 0), new TimeSpan(4, 0, 0)),
+                ("Asia Session", DayOfWeek.Monday, new TimeSpan(19, 0, 0), new TimeSpan(23, 59, 59)),
+                ("Asia Session", DayOfWeek.Tuesday, new TimeSpan(0, 0, 0), new TimeSpan(4, 0, 0)),
+                ("Asia Session", DayOfWeek.Tuesday, new TimeSpan(19, 0, 0), new TimeSpan(23, 59, 59)),
+                ("Asia Session", DayOfWeek.Wednesday, new TimeSpan(0, 0, 0), new TimeSpan(4, 0, 0)),
+                ("Asia Session", DayOfWeek.Wednesday, new TimeSpan(19, 0, 0), new TimeSpan(23, 59, 59)),
+                ("Asia Session", DayOfWeek.Thursday, new TimeSpan(0, 0, 0), new TimeSpan(4, 0, 0)),
+                ("Asia Session", DayOfWeek.Thursday, new TimeSpan(19, 0, 0), new TimeSpan(23, 59, 59)),
+                ("Asia Session", DayOfWeek.Friday, new TimeSpan(0, 0, 0), new TimeSpan(4, 0, 0))
             };
 
-            foreach (var (sessionName, timeRange) in sessions)
+            // Clear existing checkboxes
+            tradingTimeCheckboxes.Clear();
+
+            // Group sessions by name for display
+            var sessionGroups = new Dictionary<string, string>
+            {
+                { "NY Session", "Mon-Fri 8 AM - 5 PM EST" },
+                { "London Session", "Mon-Fri 3 AM - 12 PM EST" },
+                { "Asia Session", "Sun-Fri 7 PM - 4 AM EST" }
+            };
+
+            foreach (var kvp in sessionGroups)
             {
                 var checkbox = new CheckBox
                 {
-                    Text = $"{sessionName} ({timeRange})",
+                    Text = $"{kvp.Key} ({kvp.Value})",
                     AutoSize = true,
                     Checked = true,
                     Font = new Font("Segoe UI", 10, FontStyle.Regular),
                     ForeColor = TextWhite,
                     BackColor = CardBackground,
-                    Margin = new Padding(0, 5, 0, 5)
+                    Margin = new Padding(0, 5, 0, 5),
+                    Tag = kvp.Key // Store session name for identification
                 };
                 contentArea.Controls.Add(checkbox);
+                tradingTimeCheckboxes.Add(checkbox);
             }
 
             var saveButton = CreateDarkSaveButton();
+            
+            // Override save button click to handle trading times
+            saveButton.Click += (s, e) =>
+            {
+                try
+                {
+                    var accountNumber = GetSelectedAccountNumber();
+                    if (string.IsNullOrEmpty(accountNumber))
+                    {
+                        MessageBox.Show("Please select an account first.", "No Account Selected", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    var service = RiskManagerSettingsService.Instance;
+                    if (!service.IsInitialized)
+                    {
+                        MessageBox.Show("Settings service is not initialized.", "Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    // Build restrictions list based on checked sessions
+                    var restrictions = new List<TradingTimeRestriction>();
+                    
+                    foreach (var checkbox in tradingTimeCheckboxes)
+                    {
+                        if (checkbox.Checked && checkbox.Tag is string sessionName)
+                        {
+                            // Add all time slots for this session
+                            var sessionSlots = sessions.Where(s => s.Item1 == sessionName);
+                            foreach (var (name, day, start, end) in sessionSlots)
+                            {
+                                restrictions.Add(new TradingTimeRestriction
+                                {
+                                    Name = name,
+                                    DayOfWeek = day,
+                                    StartTime = start,
+                                    EndTime = end,
+                                    IsAllowed = true
+                                });
+                            }
+                        }
+                    }
+
+                    service.SetTradingTimeRestrictions(accountNumber, restrictions);
+                    
+                    MessageBox.Show(
+                        $"Trading time restrictions saved successfully for account: {accountNumber}",
+                        "Success", 
+                        MessageBoxButtons.OK, 
+                        MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        $"Error saving trading time restrictions: {ex.Message}",
+                        "Error", 
+                        MessageBoxButtons.OK, 
+                        MessageBoxIcon.Error);
+                }
+            };
 
             // Add controls in correct order: Bottom first, Fill second, Top last
             // In WinForms, docking is processed in reverse Z-order
@@ -3242,6 +3357,15 @@ namespace Risk_Manager
                     if (settingsService.IsTradingLocked(uniqueAccountId))
                         continue;
 
+                    // Check Allowed Trading Times - close positions if outside trading hours
+                    CheckTradingTimeRestrictions(item.account, uniqueAccountId, settings, settingsService, core);
+
+                    // Check Symbol Blacklist - close positions for blacklisted symbols
+                    CheckSymbolBlacklist(item.account, uniqueAccountId, settings, settingsService, core);
+
+                    // Check Symbol Contract Limits - close excess positions
+                    CheckSymbolContractLimits(item.account, uniqueAccountId, settings, settingsService, core);
+
                     // Check Daily P&L limits
                     CheckDailyPnLLimits(item.account, uniqueAccountId, settings, core);
 
@@ -3395,6 +3519,135 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error checking position P&L limits for account {accountId}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks if current time is within allowed trading hours and closes positions if not.
+        /// </summary>
+        private void CheckTradingTimeRestrictions(Account account, string accountId, AccountSettings settings, 
+            RiskManagerSettingsService settingsService, Core core)
+        {
+            try
+            {
+                // Check if trading is allowed right now
+                if (settingsService.IsTradingAllowedNow(accountId))
+                    return;
+
+                // Trading is not allowed - close all positions for this account
+                if (core.Positions == null)
+                    return;
+
+                var accountPositions = core.Positions
+                    .Where(p => p != null && p.Account == account && p.Quantity != 0)
+                    .ToList();
+
+                if (accountPositions.Any())
+                {
+                    System.Diagnostics.Debug.WriteLine($"Closing {accountPositions.Count} positions for account {accountId} - outside allowed trading times");
+                    
+                    foreach (var position in accountPositions)
+                    {
+                        ClosePosition(position, core);
+                        System.Diagnostics.Debug.WriteLine($"Position closed (outside trading hours): {position.Symbol}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking trading time restrictions for account {accountId}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks if any positions are for blacklisted symbols and closes them immediately.
+        /// </summary>
+        private void CheckSymbolBlacklist(Account account, string accountId, AccountSettings settings, 
+            RiskManagerSettingsService settingsService, Core core)
+        {
+            try
+            {
+                // Check if blacklist is configured
+                if (settings.BlockedSymbols == null || !settings.BlockedSymbols.Any())
+                    return;
+
+                if (core.Positions == null)
+                    return;
+
+                // Get all positions for this account
+                var accountPositions = core.Positions
+                    .Where(p => p != null && p.Account == account && p.Quantity != 0)
+                    .ToList();
+
+                foreach (var position in accountPositions)
+                {
+                    var symbol = position.Symbol?.Name ?? string.Empty;
+                    
+                    // Check if symbol is blacklisted
+                    if (settingsService.IsSymbolBlocked(accountId, symbol))
+                    {
+                        ClosePosition(position, core);
+                        System.Diagnostics.Debug.WriteLine($"Position closed (blacklisted symbol): {symbol} for account {accountId}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking symbol blacklist for account {accountId}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks if the number of positions per symbol exceeds contract limits and closes excess positions.
+        /// </summary>
+        private void CheckSymbolContractLimits(Account account, string accountId, AccountSettings settings, 
+            RiskManagerSettingsService settingsService, Core core)
+        {
+            try
+            {
+                // Check if contract limits are configured
+                if (!settings.DefaultContractLimit.HasValue && 
+                    (settings.SymbolContractLimits == null || !settings.SymbolContractLimits.Any()))
+                    return;
+
+                if (core.Positions == null)
+                    return;
+
+                // Get all positions for this account grouped by symbol
+                var accountPositions = core.Positions
+                    .Where(p => p != null && p.Account == account && p.Quantity != 0)
+                    .ToList();
+
+                // Group positions by symbol
+                var positionsBySymbol = accountPositions
+                    .GroupBy(p => p.Symbol?.Name ?? string.Empty)
+                    .Where(g => !string.IsNullOrEmpty(g.Key));
+
+                foreach (var symbolGroup in positionsBySymbol)
+                {
+                    var symbol = symbolGroup.Key;
+                    var positions = symbolGroup.ToList();
+                    var positionCount = positions.Count;
+
+                    // Get the contract limit for this symbol
+                    var contractLimit = settingsService.GetContractLimit(accountId, symbol);
+                    
+                    if (contractLimit.HasValue && positionCount > contractLimit.Value)
+                    {
+                        // Exceeded contract limit - close all positions for this symbol
+                        System.Diagnostics.Debug.WriteLine($"Contract limit exceeded for symbol {symbol}: {positionCount} positions > {contractLimit.Value} limit");
+                        
+                        foreach (var position in positions)
+                        {
+                            ClosePosition(position, core);
+                            System.Diagnostics.Debug.WriteLine($"Position closed (contract limit exceeded): {symbol} for account {accountId}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking symbol contract limits for account {accountId}: {ex.Message}");
             }
         }
 
@@ -5082,6 +5335,225 @@ namespace Risk_Manager
             mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
+        }
+
+        /// <summary>
+        /// Creates the Risk Overview panel that displays all risk management settings for the selected account.
+        /// </summary>
+        private Control CreateRiskOverviewPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title with emoji rendering
+            var titleLabel = CreateEmojiLabel("🔍 Risk Overview", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Overview of all risk management settings for the selected account:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            // Content area
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(20),
+                AutoScroll = true
+            };
+
+            // Create overview grid
+            var overviewGrid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                BackgroundColor = CardBackground,
+                GridColor = DarkerBackground,
+                BorderStyle = BorderStyle.None,
+                RowHeadersVisible = false,
+                EnableHeadersVisualStyles = false,
+                AllowUserToResizeRows = false
+            };
+
+            // Style the grid
+            overviewGrid.DefaultCellStyle.BackColor = CardBackground;
+            overviewGrid.DefaultCellStyle.ForeColor = TextWhite;
+            overviewGrid.DefaultCellStyle.SelectionBackColor = SelectedColor;
+            overviewGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
+            overviewGrid.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            overviewGrid.DefaultCellStyle.Padding = new Padding(5);
+            overviewGrid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
+            overviewGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
+            overviewGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            overviewGrid.RowTemplate.Height = 35;
+
+            // Add columns
+            overviewGrid.Columns.Add("Setting", "Setting");
+            overviewGrid.Columns.Add("Value", "Value");
+            overviewGrid.Columns.Add("Status", "Status");
+            
+            // Make Value column wider
+            overviewGrid.Columns["Setting"].Width = 200;
+            overviewGrid.Columns["Value"].Width = 300;
+            overviewGrid.Columns["Status"].Width = 100;
+
+            // Populate grid with current account settings
+            PopulateRiskOverview(overviewGrid);
+
+            // Refresh button
+            var refreshButton = new Button
+            {
+                Text = "REFRESH OVERVIEW",
+                Dock = DockStyle.Bottom,
+                Height = 50,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = AccentGreen,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            refreshButton.FlatAppearance.BorderSize = 0;
+            refreshButton.Click += (s, e) => PopulateRiskOverview(overviewGrid);
+
+            contentArea.Controls.Add(overviewGrid);
+
+            // Add controls in correct order
+            mainPanel.Controls.Add(refreshButton);
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
+
+            return mainPanel;
+        }
+
+        /// <summary>
+        /// Populates the Risk Overview grid with current settings.
+        /// </summary>
+        private void PopulateRiskOverview(DataGridView grid)
+        {
+            if (grid == null)
+                return;
+
+            try
+            {
+                grid.Rows.Clear();
+
+                var accountNumber = GetSelectedAccountNumber();
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    grid.Rows.Add("No Account Selected", "Please select an account from the dropdown", "N/A");
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    grid.Rows.Add("Error", "Settings service not initialized", "Error");
+                    return;
+                }
+
+                var settings = settingsService.GetSettings(accountNumber);
+                if (settings == null)
+                {
+                    grid.Rows.Add("No Settings", $"No settings found for account: {accountNumber}", "N/A");
+                    return;
+                }
+
+                // Position Loss Limit
+                if (settings.PositionLossLimit.HasValue)
+                    grid.Rows.Add("Position Loss Limit", $"${settings.PositionLossLimit.Value:N2} per position", "Enabled");
+                else
+                    grid.Rows.Add("Position Loss Limit", "Not configured", "Disabled");
+
+                // Position Profit Target
+                if (settings.PositionProfitTarget.HasValue)
+                    grid.Rows.Add("Position Profit Target", $"${settings.PositionProfitTarget.Value:N2} per position", "Enabled");
+                else
+                    grid.Rows.Add("Position Profit Target", "Not configured", "Disabled");
+
+                // Daily Loss Limit
+                if (settings.DailyLossLimit.HasValue)
+                    grid.Rows.Add("Daily Loss Limit", $"${settings.DailyLossLimit.Value:N2} per day", "Enabled");
+                else
+                    grid.Rows.Add("Daily Loss Limit", "Not configured", "Disabled");
+
+                // Daily Profit Target
+                if (settings.DailyProfitTarget.HasValue)
+                    grid.Rows.Add("Daily Profit Target", $"${settings.DailyProfitTarget.Value:N2} per day", "Enabled");
+                else
+                    grid.Rows.Add("Daily Profit Target", "Not configured", "Disabled");
+
+                // Symbols Blacklisted
+                if (settings.BlockedSymbols != null && settings.BlockedSymbols.Any())
+                {
+                    var symbolsList = string.Join(", ", settings.BlockedSymbols);
+                    grid.Rows.Add("Symbols Blacklisted", symbolsList, "Enabled");
+                }
+                else
+                    grid.Rows.Add("Symbols Blacklisted", "No symbols blacklisted", "Disabled");
+
+                // Symbol Contract Limits
+                if (settings.DefaultContractLimit.HasValue)
+                    grid.Rows.Add("Default Contract Limit", $"{settings.DefaultContractLimit.Value} contracts", "Enabled");
+                else
+                    grid.Rows.Add("Default Contract Limit", "Not configured", "Disabled");
+
+                if (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any())
+                {
+                    foreach (var kvp in settings.SymbolContractLimits)
+                    {
+                        grid.Rows.Add($"Contract Limit: {kvp.Key}", $"{kvp.Value} contracts", "Enabled");
+                    }
+                }
+
+                // Allowed Trading Times
+                if (settings.TradingTimeRestrictions != null && settings.TradingTimeRestrictions.Any())
+                {
+                    var uniqueSessions = settings.TradingTimeRestrictions
+                        .Select(t => t.Name)
+                        .Distinct()
+                        .ToList();
+                    var sessionsList = string.Join(", ", uniqueSessions);
+                    grid.Rows.Add("Allowed Trading Times", $"{uniqueSessions.Count} session(s): {sessionsList}", "Enabled");
+                }
+                else
+                    grid.Rows.Add("Allowed Trading Times", "All times allowed (no restrictions)", "Disabled");
+
+                // Trading Lock Status
+                var isLocked = settingsService.IsTradingLocked(accountNumber);
+                var lockStatus = settingsService.GetLockStatusString(accountNumber);
+                grid.Rows.Add("Trading Lock Status", lockStatus, isLocked ? "Locked" : "Unlocked");
+
+                // Settings Lock Status
+                var settingsLocked = settingsService.AreSettingsLocked(accountNumber);
+                grid.Rows.Add("Settings Lock Status", settingsLocked ? "Settings are locked" : "Settings are unlocked", settingsLocked ? "Locked" : "Unlocked");
+
+                // Feature Toggle Status
+                grid.Rows.Add("Feature Toggle", settings.FeatureToggleEnabled ? "All features enabled" : "Features disabled", settings.FeatureToggleEnabled ? "Enabled" : "Disabled");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error populating risk overview: {ex.Message}");
+                grid.Rows.Clear();
+                grid.Rows.Add("Error", $"Failed to load settings: {ex.Message}", "Error");
+            }
         }
 
         /// <summary>
