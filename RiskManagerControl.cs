@@ -30,6 +30,7 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
         private DataGridView typeSummaryGrid;
         private System.Windows.Forms.Timer typeSummaryRefreshTimer;
+        private System.Windows.Forms.Timer lockExpirationCheckTimer;
         private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
@@ -39,6 +40,7 @@ namespace Risk_Manager
         private Label accountNumberDisplay; // Display current account number in UI
         private Button lockTradingButton; // Lock Trading button reference
         private Button unlockTradingButton; // Unlock Trading button reference
+        private ComboBox lockDurationComboBox; // Lock duration selector
 
         // Settings input control references for persistence
         private TextBox dailyLossLimitInput;
@@ -236,6 +238,11 @@ namespace Risk_Manager
                 RefreshCopySettingsAccounts();
             };
             dropdownRefreshTimer.Start();
+
+            // Check for expired locks and enforce lock status every second
+            lockExpirationCheckTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            lockExpirationCheckTimer.Tick += (s, e) => CheckExpiredLocks();
+            lockExpirationCheckTimer.Start();
 
             // Show Accounts Summary by default
             selectedNavItem = "📊 Accounts Summary";
@@ -1416,8 +1423,8 @@ namespace Risk_Manager
                     decimal? profitTarget = null;
                     if (settingsService.IsInitialized)
                     {
-                        var isLocked = settingsService.IsTradingLocked(uniqueAccountId);
-                        lockStatus = isLocked ? "Locked" : "Unlocked";
+                        // Use the new method that includes remaining time
+                        lockStatus = settingsService.GetLockStatusString(uniqueAccountId);
 
                         // Get loss limit and profit target from settings using unique identifier
                         var settings = settingsService.GetSettings(uniqueAccountId);
@@ -1641,8 +1648,8 @@ namespace Risk_Manager
                     var accountNumber = GetUniqueAccountIdentifier(accountToDisplay, accountIndex);
                     if (!string.IsNullOrEmpty(accountNumber))
                     {
-                        var isLocked = settingsService.IsTradingLocked(accountNumber);
-                        lockStatus = isLocked ? "Locked" : "Unlocked";
+                        // Use the new method that includes remaining time
+                        lockStatus = settingsService.GetLockStatusString(accountNumber);
                     }
                 }
 
@@ -2525,7 +2532,7 @@ namespace Risk_Manager
             // Subtitle
             var subtitleLabel = new Label
             {
-                Text = "Manually lock or unlock trading.",
+                Text = "Manually lock or unlock trading with optional duration.",
                 Dock = DockStyle.Top,
                 Height = 30,
                 TextAlign = ContentAlignment.TopLeft,
@@ -2556,16 +2563,58 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
-                Padding = new Padding(15)
+                Padding = new Padding(15),
+                AutoScroll = true
             };
 
+            // Lock Duration Section
+            var durationLabel = new Label
+            {
+                Text = "Lock Duration:",
+                Left = 0,
+                Top = 10,
+                Width = 150,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            contentArea.Controls.Add(durationLabel);
+
+            lockDurationComboBox = new ComboBox
+            {
+                Left = 160,
+                Top = 10,
+                Width = 200,
+                Height = 25,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 10),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat
+            };
+
+            // Add duration options (removed Indefinite per user request)
+            lockDurationComboBox.Items.Add("5 Minutes");
+            lockDurationComboBox.Items.Add("15 Minutes");
+            lockDurationComboBox.Items.Add("1 Hour");
+            lockDurationComboBox.Items.Add("2 Hours");
+            lockDurationComboBox.Items.Add("4 Hours");
+            lockDurationComboBox.Items.Add("All Day (Until 5PM ET)");
+            lockDurationComboBox.Items.Add("All Week (Until 5PM ET Friday)");
+            lockDurationComboBox.SelectedIndex = 0; // Default to 5 Minutes
+
+            contentArea.Controls.Add(lockDurationComboBox);
+
+            // Buttons section
             var lockButton = new Button
             {
                 Text = "LOCK TRADING",
                 Width = 200,
                 Height = 40,
                 Left = 0,
-                Top = 0,
+                Top = 60,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 BackColor = AccentAmber,
                 ForeColor = TextWhite,
@@ -2583,7 +2632,7 @@ namespace Risk_Manager
                 Width = 200,
                 Height = 40,
                 Left = 220,
-                Top = 0,
+                Top = 60,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 BackColor = AccentGreen,
                 ForeColor = TextWhite,
@@ -2764,6 +2813,23 @@ namespace Risk_Manager
                     return;
                 }
 
+                // Get selected duration
+                TimeSpan? duration = GetSelectedLockDuration();
+                string durationText = lockDurationComboBox?.SelectedItem?.ToString() ?? "Unknown";
+
+                // Show confirmation dialog
+                var confirmResult = MessageBox.Show(
+                    $"Are you sure you want to lock account '{accountNumber}' for {durationText}?\n\n" +
+                    "This will disable all Buy/Sell buttons until the lock expires.",
+                    "Confirm Lock Trading",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (confirmResult != DialogResult.Yes)
+                {
+                    return; // User cancelled
+                }
+
                 // Find the account by the cached identifier
                 var core = Core.Instance;
                 if (core == null)
@@ -2785,14 +2851,12 @@ namespace Risk_Manager
                 {
                     lockMethod.Invoke(core, new object[] { targetAccount });
                     
-                    // Set TradingStatus to Locked to disable buy/sell buttons
-                    SetCoreTradingStatus(core, "Locked");
-                    
-                    // Update the settings service to track the lock status
+                    // Update the settings service to track the lock status with duration
                     var settingsService = RiskManagerSettingsService.Instance;
                     if (settingsService.IsInitialized)
                     {
-                        settingsService.SetTradingLock(accountNumber, true, "Manual lock via Lock Trading button");
+                        string reason = $"Manual lock via Lock Trading button for {durationText}";
+                        settingsService.SetTradingLock(accountNumber, true, reason, duration);
                     }
                     
                     // Always update the trading status badge immediately (no conditional check)
@@ -2805,7 +2869,11 @@ namespace Risk_Manager
                     RefreshAccountsSummary();
                     RefreshAccountStats();
                     
-                    MessageBox.Show($"Account '{accountNumber}' has been locked successfully. Buy/Sell buttons are now disabled.", "Trading Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(
+                        $"Account '{accountNumber}' has been locked for {durationText}.\n\nBuy/Sell buttons are now disabled.",
+                        "Trading Locked",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
                 }
                 else
                 {
@@ -2850,9 +2918,6 @@ namespace Risk_Manager
                 if (unlockMethod != null)
                 {
                     unlockMethod.Invoke(core, new object[] { targetAccount });
-                    
-                    // Set TradingStatus to Allowed to enable buy/sell buttons
-                    SetCoreTradingStatus(core, "Allowed");
                     
                     // Update the settings service to track the unlock status
                     var settingsService = RiskManagerSettingsService.Instance;
@@ -2917,6 +2982,217 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error setting TradingStatus: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Gets the selected lock duration from the combo box.
+        /// All calculations are based on Eastern Time (ET).
+        /// For short duration locks (5 min, 15 min, 1 hour, 4 hours), the lock will automatically 
+        /// unlock at 5 PM ET if the calculated expiration would be after 5 PM ET.
+        /// </summary>
+        private TimeSpan? GetSelectedLockDuration()
+        {
+            if (lockDurationComboBox == null || lockDurationComboBox.SelectedItem == null)
+                return null;
+
+            string selection = lockDurationComboBox.SelectedItem.ToString();
+            
+            // Get Eastern Time Zone
+            TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            DateTime nowEt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
+            DateTime fivePmEtToday = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0); // 5 PM ET today
+            
+            switch (selection)
+            {
+                case "5 Minutes":
+                case "15 Minutes":
+                case "1 Hour":
+                case "4 Hours":
+                    // Calculate the normal duration
+                    TimeSpan normalDuration;
+                    switch (selection)
+                    {
+                        case "5 Minutes":
+                            normalDuration = TimeSpan.FromMinutes(5);
+                            break;
+                        case "15 Minutes":
+                            normalDuration = TimeSpan.FromMinutes(15);
+                            break;
+                        case "1 Hour":
+                            normalDuration = TimeSpan.FromHours(1);
+                            break;
+                        case "4 Hours":
+                            normalDuration = TimeSpan.FromHours(4);
+                            break;
+                        default:
+                            normalDuration = TimeSpan.Zero;
+                            break;
+                    }
+                    
+                    // Calculate when the lock would normally expire
+                    DateTime normalExpiration = nowEt.Add(normalDuration);
+                    
+                    // If normal expiration is after 5 PM ET today, cap it at 5 PM ET today
+                    if (normalExpiration > fivePmEtToday && nowEt < fivePmEtToday)
+                    {
+                        // Lock until 5 PM ET today instead
+                        return fivePmEtToday - nowEt;
+                    }
+                    else
+                    {
+                        // Use normal duration
+                        return normalDuration;
+                    }
+                    
+                case "2 Hours":
+                    return TimeSpan.FromHours(2);
+                    
+                case "All Day (Until 5PM ET)":
+                    // Calculate time until 5 PM ET today (or tomorrow if past 5 PM ET)
+                    var targetTime = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0); // 5 PM ET today
+                    if (nowEt >= targetTime)
+                    {
+                        // If past 5 PM ET, lock until 5 PM ET tomorrow
+                        targetTime = targetTime.AddDays(1);
+                    }
+                    return targetTime - nowEt;
+                    
+                case "All Week (Until 5PM ET Friday)":
+                    // Lock until 5 PM ET Friday
+                    int daysUntilFriday = ((int)DayOfWeek.Friday - (int)nowEt.DayOfWeek + 7) % 7;
+                    DateTime fridayAt5PM;
+                    
+                    if (daysUntilFriday == 0)
+                    {
+                        // Today is Friday
+                        fridayAt5PM = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0);
+                        if (nowEt >= fridayAt5PM)
+                        {
+                            // Already past 5 PM Friday, lock until next Friday at 5 PM ET
+                            fridayAt5PM = fridayAt5PM.AddDays(7);
+                        }
+                    }
+                    else
+                    {
+                        // Calculate this coming Friday at 5 PM ET
+                        fridayAt5PM = nowEt.AddDays(daysUntilFriday).Date.AddHours(17);
+                    }
+                    
+                    return fridayAt5PM - nowEt;
+                default:
+                    return null; // Fallback, should not happen
+            }
+        }
+
+        /// <summary>
+        /// Checks all accounts for expired locks and triggers auto-unlock if needed.
+        /// Also enforces lock status to prevent manual override.
+        /// Called every second by the lockExpirationCheckTimer.
+        /// </summary>
+        private void CheckExpiredLocks()
+        {
+            try
+            {
+                var core = Core.Instance;
+                if (core == null || core.Accounts == null)
+                    return;
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                    return;
+
+                int accountIndex = 0;
+                bool anyUnlocked = false;
+                bool anyLocked = false;
+
+                foreach (var account in core.Accounts)
+                {
+                    if (account == null)
+                    {
+                        accountIndex++;
+                        continue;
+                    }
+
+                    var uniqueAccountId = GetUniqueAccountIdentifier(account, accountIndex);
+                    if (!string.IsNullOrEmpty(uniqueAccountId))
+                    {
+                        // Get current settings before checking lock status
+                        var settings = settingsService.GetSettings(uniqueAccountId);
+                        var wasLocked = settings?.TradingLock?.IsLocked == true;
+                        
+                        // IsTradingLocked checks expiration and auto-unlocks if expired
+                        var isLocked = settingsService.IsTradingLocked(uniqueAccountId);
+                        
+                        // If was locked but now unlocked, the lock expired and was auto-unlocked
+                        if (wasLocked && !isLocked)
+                        {
+                            anyUnlocked = true;
+                            
+                            // Unlock the account in Core API
+                            try
+                            {
+                                var unlockMethod = core.GetType().GetMethod("UnLockAccount");
+                                if (unlockMethod != null)
+                                {
+                                    unlockMethod.Invoke(core, new object[] { account });
+                                    System.Diagnostics.Debug.WriteLine($"Auto-unlocked account: {uniqueAccountId}");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error auto-unlocking account {uniqueAccountId}: {ex.Message}");
+                            }
+                        }
+                        // If still locked, enforce the lock to prevent manual override
+                        else if (isLocked)
+                        {
+                            anyLocked = true;
+                            
+                            // Ensure the account remains locked in Core API
+                            try
+                            {
+                                var lockMethod = core.GetType().GetMethod("LockAccount");
+                                if (lockMethod != null)
+                                {
+                                    lockMethod.Invoke(core, new object[] { account });
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error enforcing lock on account {uniqueAccountId}: {ex.Message}");
+                            }
+                        }
+                    }
+
+                    accountIndex++;
+                }
+
+                // If any accounts were unlocked or locked state changed, refresh the UI
+                if (anyUnlocked || anyLocked)
+                {
+                    // Update badge based on currently selected account
+                    var selectedAccountNumber = GetSelectedAccountNumber();
+                    if (!string.IsNullOrEmpty(selectedAccountNumber))
+                    {
+                        bool selectedIsLocked = settingsService.IsTradingLocked(selectedAccountNumber);
+                        UpdateTradingStatusBadgeUI(selectedIsLocked);
+                    }
+                    
+                    // Update button states
+                    UpdateLockButtonStates();
+                    
+                    // Refresh account summary and stats displays
+                    if (anyUnlocked)
+                    {
+                        RefreshAccountsSummary();
+                        RefreshAccountStats();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking expired locks: {ex.Message}");
             }
         }
 
@@ -4898,6 +5174,10 @@ namespace Risk_Manager
                 typeSummaryRefreshTimer?.Stop();
                 typeSummaryRefreshTimer?.Dispose();
                 typeSummaryRefreshTimer = null;
+
+                lockExpirationCheckTimer?.Stop();
+                lockExpirationCheckTimer?.Dispose();
+                lockExpirationCheckTimer = null;
 
                 alertSoundPlayer?.Dispose();
                 alertSoundPlayer = null;

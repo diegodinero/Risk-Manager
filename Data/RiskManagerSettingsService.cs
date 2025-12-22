@@ -421,7 +421,9 @@ namespace Risk_Manager.Data
                 IsLocked = source.IsLocked,
                 LockTime = source.LockTime,
                 LockDayOfWeek = source.LockDayOfWeek,
-                LockReason = source.LockReason
+                LockReason = source.LockReason,
+                LockDuration = source.LockDuration,
+                LockExpirationTime = source.LockExpirationTime
             };
         }
 
@@ -552,17 +554,25 @@ namespace Risk_Manager.Data
 
         #region Locks
 
-        public void SetTradingLock(string accountNumber, bool isLocked, string? reason = null)
+        public void SetTradingLock(string accountNumber, bool isLocked, string? reason = null, TimeSpan? duration = null)
         {
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
+                DateTime? expirationTime = null;
+                if (isLocked && duration.HasValue)
+                {
+                    expirationTime = DateTime.UtcNow.Add(duration.Value);
+                }
+
                 settings.TradingLock = new LockInfo
                 {
                     IsLocked = isLocked,
                     LockTime = isLocked ? DateTime.UtcNow : null,
                     LockDayOfWeek = isLocked ? DateTime.UtcNow.DayOfWeek : null,
-                    LockReason = reason
+                    LockReason = reason,
+                    LockDuration = duration,
+                    LockExpirationTime = expirationTime
                 };
                 SaveSettings(settings);
             }
@@ -587,7 +597,61 @@ namespace Risk_Manager.Data
         public bool IsTradingLocked(string accountNumber)
         {
             var settings = GetSettings(accountNumber);
-            return settings?.TradingLock?.IsLocked == true;
+            if (settings?.TradingLock == null || !settings.TradingLock.IsLocked)
+                return false;
+
+            // Check if lock has expired
+            if (settings.TradingLock.LockExpirationTime.HasValue)
+            {
+                if (DateTime.UtcNow >= settings.TradingLock.LockExpirationTime.Value)
+                {
+                    // Lock has expired, auto-unlock
+                    SetTradingLock(accountNumber, false, "Auto-unlocked after duration expired");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Gets the remaining lock time for an account. Returns null if not locked or lock is indefinite.
+        /// </summary>
+        public TimeSpan? GetRemainingLockTime(string accountNumber)
+        {
+            var settings = GetSettings(accountNumber);
+            if (settings?.TradingLock == null || !settings.TradingLock.IsLocked)
+                return null;
+
+            if (!settings.TradingLock.LockExpirationTime.HasValue)
+                return null; // Indefinite lock
+
+            var remaining = settings.TradingLock.LockExpirationTime.Value - DateTime.UtcNow;
+            return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+        }
+
+        /// <summary>
+        /// Gets the lock status string with remaining time.
+        /// </summary>
+        public string GetLockStatusString(string accountNumber)
+        {
+            if (!IsTradingLocked(accountNumber))
+                return "Unlocked";
+
+            var remainingTime = GetRemainingLockTime(accountNumber);
+            if (!remainingTime.HasValue)
+                return "Locked";
+
+            // Format remaining time
+            var ts = remainingTime.Value;
+            if (ts.TotalDays >= 1)
+                return $"Locked ({ts.Days}d {ts.Hours}h {ts.Minutes}m)";
+            else if (ts.TotalHours >= 1)
+                return $"Locked ({ts.Hours}h {ts.Minutes}m)";
+            else if (ts.TotalMinutes >= 1)
+                return $"Locked ({ts.Minutes}m)";
+            else
+                return "Locked (<1m)"; // Less than 1 minute remaining
         }
 
         public bool AreSettingsLocked(string accountNumber)
@@ -697,6 +761,16 @@ namespace Risk_Manager.Data
         public DateTime? LockTime { get; set; }
         public DayOfWeek? LockDayOfWeek { get; set; }
         public string? LockReason { get; set; }
+        
+        /// <summary>
+        /// The duration of the lock (optional). If null, lock is indefinite.
+        /// </summary>
+        public TimeSpan? LockDuration { get; set; }
+        
+        /// <summary>
+        /// The time when the lock will expire (optional). If null, lock is indefinite.
+        /// </summary>
+        public DateTime? LockExpirationTime { get; set; }
     }
 
     #endregion
