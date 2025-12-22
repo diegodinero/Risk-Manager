@@ -2865,6 +2865,7 @@ namespace Risk_Manager
                     if (settingsService.IsInitialized)
                     {
                         string reason = $"Manual lock via Lock Trading button for {durationText}";
+                        System.Diagnostics.Debug.WriteLine($"LockTradingButton: Locking account='{accountNumber}' for {duration?.TotalMinutes ?? 0} minutes");
                         settingsService.SetTradingLock(accountNumber, true, reason, duration);
                     }
                     
@@ -3177,18 +3178,9 @@ namespace Risk_Manager
                     accountIndex++;
                 }
 
-                // If any accounts were unlocked or locked state changed, refresh the UI
+                // Update button states and refresh displays only if state changed
                 if (anyUnlocked || anyLocked)
                 {
-                    // Update badge based on currently selected account
-                    var selectedAccountNumber = GetSelectedAccountNumber();
-                    if (!string.IsNullOrEmpty(selectedAccountNumber))
-                    {
-                        bool selectedIsLocked = settingsService.IsTradingLocked(selectedAccountNumber);
-                        UpdateTradingStatusBadgeUI(selectedIsLocked);
-                    }
-                    
-                    // Update button states
                     UpdateLockButtonStates();
                     
                     // Refresh account summary and stats displays
@@ -3196,6 +3188,15 @@ namespace Risk_Manager
                     {
                         RefreshAccountsSummary();
                         RefreshAccountStats();
+                    }
+                    
+                    // Update badge only when state changes are detected
+                    var selectedAccountNumber = GetSelectedAccountNumber();
+                    if (!string.IsNullOrEmpty(selectedAccountNumber))
+                    {
+                        bool selectedIsLocked = settingsService.IsTradingLocked(selectedAccountNumber);
+                        System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: State changed - updating badge. Account='{selectedAccountNumber}', IsLocked={selectedIsLocked}");
+                        UpdateTradingStatusBadgeUI(selectedIsLocked);
                     }
                 }
             }
@@ -3241,6 +3242,15 @@ namespace Risk_Manager
                     // Skip if account is already locked
                     if (settingsService.IsTradingLocked(uniqueAccountId))
                         continue;
+
+                    // Check Allowed Trading Times - close positions if outside trading hours
+                    CheckTradingTimeRestrictions(item.account, uniqueAccountId, settings, settingsService, core);
+
+                    // Check Symbol Blacklist - close positions for blacklisted symbols
+                    CheckSymbolBlacklist(item.account, uniqueAccountId, settings, settingsService, core);
+
+                    // Check Symbol Contract Limits - close excess positions
+                    CheckSymbolContractLimits(item.account, uniqueAccountId, settings, settingsService, core);
 
                     // Check Daily P&L limits
                     CheckDailyPnLLimits(item.account, uniqueAccountId, settings, core);
@@ -3395,6 +3405,135 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error checking position P&L limits for account {accountId}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks if current time is within allowed trading hours and closes positions if not.
+        /// </summary>
+        private void CheckTradingTimeRestrictions(Account account, string accountId, AccountSettings settings, 
+            RiskManagerSettingsService settingsService, Core core)
+        {
+            try
+            {
+                // Check if trading is allowed right now
+                if (settingsService.IsTradingAllowedNow(accountId))
+                    return;
+
+                // Trading is not allowed - close all positions for this account
+                if (core.Positions == null)
+                    return;
+
+                var accountPositions = core.Positions
+                    .Where(p => p != null && p.Account == account && p.Quantity != 0)
+                    .ToList();
+
+                if (accountPositions.Any())
+                {
+                    System.Diagnostics.Debug.WriteLine($"Closing {accountPositions.Count} positions for account {accountId} - outside allowed trading times");
+                    
+                    foreach (var position in accountPositions)
+                    {
+                        ClosePosition(position, core);
+                        System.Diagnostics.Debug.WriteLine($"Position closed (outside trading hours): {position.Symbol}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking trading time restrictions for account {accountId}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks if any positions are for blacklisted symbols and closes them immediately.
+        /// </summary>
+        private void CheckSymbolBlacklist(Account account, string accountId, AccountSettings settings, 
+            RiskManagerSettingsService settingsService, Core core)
+        {
+            try
+            {
+                // Check if blacklist is configured
+                if (settings.BlockedSymbols == null || !settings.BlockedSymbols.Any())
+                    return;
+
+                if (core.Positions == null)
+                    return;
+
+                // Get all positions for this account
+                var accountPositions = core.Positions
+                    .Where(p => p != null && p.Account == account && p.Quantity != 0)
+                    .ToList();
+
+                foreach (var position in accountPositions)
+                {
+                    var symbol = position.Symbol?.Name ?? string.Empty;
+                    
+                    // Check if symbol is blacklisted
+                    if (settingsService.IsSymbolBlocked(accountId, symbol))
+                    {
+                        ClosePosition(position, core);
+                        System.Diagnostics.Debug.WriteLine($"Position closed (blacklisted symbol): {symbol} for account {accountId}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking symbol blacklist for account {accountId}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks if the number of positions per symbol exceeds contract limits and closes excess positions.
+        /// </summary>
+        private void CheckSymbolContractLimits(Account account, string accountId, AccountSettings settings, 
+            RiskManagerSettingsService settingsService, Core core)
+        {
+            try
+            {
+                // Check if contract limits are configured
+                if (!settings.DefaultContractLimit.HasValue && 
+                    (settings.SymbolContractLimits == null || !settings.SymbolContractLimits.Any()))
+                    return;
+
+                if (core.Positions == null)
+                    return;
+
+                // Get all positions for this account grouped by symbol
+                var accountPositions = core.Positions
+                    .Where(p => p != null && p.Account == account && p.Quantity != 0)
+                    .ToList();
+
+                // Group positions by symbol
+                var positionsBySymbol = accountPositions
+                    .GroupBy(p => p.Symbol?.Name ?? string.Empty)
+                    .Where(g => !string.IsNullOrEmpty(g.Key));
+
+                foreach (var symbolGroup in positionsBySymbol)
+                {
+                    var symbol = symbolGroup.Key;
+                    var positions = symbolGroup.ToList();
+                    var positionCount = positions.Count;
+
+                    // Get the contract limit for this symbol
+                    var contractLimit = settingsService.GetContractLimit(accountId, symbol);
+                    
+                    if (contractLimit.HasValue && positionCount > contractLimit.Value)
+                    {
+                        // Exceeded contract limit - close all positions for this symbol
+                        System.Diagnostics.Debug.WriteLine($"Contract limit exceeded for symbol {symbol}: {positionCount} positions > {contractLimit.Value} limit");
+                        
+                        foreach (var position in positions)
+                        {
+                            ClosePosition(position, core);
+                            System.Diagnostics.Debug.WriteLine($"Position closed (contract limit exceeded): {symbol} for account {accountId}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking symbol contract limits for account {accountId}: {ex.Message}");
             }
         }
 
@@ -3747,64 +3886,13 @@ namespace Risk_Manager
                 return null;
             }
             
-            var accountId = selectedAccount.Id;
-            var accountName = selectedAccount.Name;
-            var connectionName = selectedAccount.Connection?.Name;
+            // CRITICAL: Use GetUniqueAccountIdentifier to ensure consistency
+            // This ensures the same identifier is used for locks, settings, and badge updates
+            var uniqueId = GetUniqueAccountIdentifier(selectedAccount, selectedAccountIndex);
             
-            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: accountId='{accountId}', accountName='{accountName}', connectionName='{connectionName}', index={selectedAccountIndex}");
+            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using GetUniqueAccountIdentifier result='{uniqueId}' with index={selectedAccountIndex}");
             
-            // Strategy 1: Use Connection.Name + Name for best uniqueness
-            // Connection names are usually unique per connection/account
-            if (!string.IsNullOrEmpty(connectionName))
-            {
-                if (!string.IsNullOrEmpty(accountName))
-                {
-                    var uniqueId = $"{connectionName}_{accountName}";
-                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection+Name='{uniqueId}'");
-                    return uniqueId;
-                }
-                if (!string.IsNullOrEmpty(accountId))
-                {
-                    var uniqueId = $"{connectionName}_{accountId}";
-                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection+Id='{uniqueId}'");
-                    return uniqueId;
-                }
-                // Connection name alone
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection='{connectionName}'");
-                return connectionName;
-            }
-            
-            // Strategy 2: Use the stored index from dropdown (most reliable when Connection is not available)
-            if (selectedAccountIndex >= 0)
-            {
-                // Create identifier with index and any available property
-                string indexBasedId;
-                if (!string.IsNullOrEmpty(accountName))
-                    indexBasedId = $"Account_{selectedAccountIndex}_{accountName}";
-                else if (!string.IsNullOrEmpty(accountId))
-                    indexBasedId = $"Account_{selectedAccountIndex}_{accountId}";
-                else
-                    indexBasedId = $"Account_{selectedAccountIndex}";
-                
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using stored index-based ID='{indexBasedId}'");
-                return indexBasedId;
-            }
-            
-            // Strategy 3: Fallback to Id or Name alone (least reliable)
-            if (!string.IsNullOrEmpty(accountId))
-            {
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Fallback to Id='{accountId}'");
-                return accountId;
-            }
-            
-            if (!string.IsNullOrEmpty(accountName))
-            {
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Fallback to Name='{accountName}'");
-                return accountName;
-            }
-            
-            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Could not generate unique ID, returning 'UNKNOWN'");
-            return "UNKNOWN";
+            return uniqueId;
         }
 
         /// <summary>
@@ -4078,7 +4166,11 @@ namespace Risk_Manager
                     return;
                 }
 
-                bool isLocked = settingsService.IsTradingLocked(accountNumber);
+                // Use the SAME method that Account Summary tab uses for consistency
+                string lockStatusString = settingsService.GetLockStatusString(accountNumber);
+                bool isLocked = !lockStatusString.Equals("Unlocked", StringComparison.OrdinalIgnoreCase);
+                
+                System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadge: Account='{accountNumber}', LockStatusString='{lockStatusString}', IsLocked={isLocked}");
 
                 UpdateTradingStatusBadgeUI(isLocked);
             }
@@ -4095,6 +4187,9 @@ namespace Risk_Manager
             {
                 if (tradingStatusBadge != null)
                 {
+                    string newState = isLocked ? "Locked (Red)" : "Unlocked (Green)";
+                    System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadgeUI: Setting badge to {newState}");
+                    
                     if (isLocked)
                     {
                         tradingStatusBadge.Text = "  Trading Locked  ";
@@ -5309,10 +5404,40 @@ namespace Risk_Manager
                 Width = 300,
                 Height = 30,
                 Checked = false,
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                Font = new Font("Segoe UI Emoji", 11, FontStyle.Bold),
                 ForeColor = TextWhite,
-                BackColor = CardBackground
+                BackColor = CardBackground,
+                UseCompatibleTextRendering = false
             };
+            
+            // Custom paint for colored emoji rendering in checkbox
+            sectionHeader.Paint += (s, e) =>
+            {
+                var cb = (CheckBox)s;
+                e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                // Draw background
+                e.Graphics.Clear(cb.BackColor);
+                
+                // Draw checkbox
+                var checkBoxSize = 13;
+                var checkBoxRect = new Rectangle(0, (cb.Height - checkBoxSize) / 2, checkBoxSize, checkBoxSize);
+                ControlPaint.DrawCheckBox(e.Graphics, checkBoxRect, cb.Checked ? ButtonState.Checked : ButtonState.Normal);
+                
+                // Draw text with GDI+ for colored emoji support
+                using (var brush = new SolidBrush(cb.ForeColor))
+                {
+                    var sf = new StringFormat
+                    {
+                        LineAlignment = StringAlignment.Center,
+                        Alignment = StringAlignment.Near
+                    };
+                    var textRect = new RectangleF(checkBoxSize + 5, 0, cb.Width - checkBoxSize - 5, cb.Height);
+                    e.Graphics.DrawString(cb.Text, cb.Font, brush, textRect, sf);
+                }
+            };
+            
             sectionPanel.Controls.Add(sectionHeader);
             enabledCheckbox = sectionHeader;
 
