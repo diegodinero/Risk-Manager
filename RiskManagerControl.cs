@@ -4167,6 +4167,7 @@ namespace Risk_Manager
                 }
 
                 bool isLocked = settingsService.IsTradingLocked(accountNumber);
+                System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadge: Account='{accountNumber}', IsLocked={isLocked}");
 
                 UpdateTradingStatusBadgeUI(isLocked);
             }
@@ -4183,6 +4184,9 @@ namespace Risk_Manager
             {
                 if (tradingStatusBadge != null)
                 {
+                    string newState = isLocked ? "Locked (Red)" : "Unlocked (Green)";
+                    System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadgeUI: Setting badge to {newState}");
+                    
                     if (isLocked)
                     {
                         tradingStatusBadge.Text = "  Trading Locked  ";
