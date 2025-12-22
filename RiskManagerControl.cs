@@ -3177,18 +3177,17 @@ namespace Risk_Manager
                     accountIndex++;
                 }
 
-                // If any accounts were unlocked or locked state changed, refresh the UI
+                // Always update badge based on currently selected account, regardless of state changes
+                var selectedAccountNumber = GetSelectedAccountNumber();
+                if (!string.IsNullOrEmpty(selectedAccountNumber))
+                {
+                    bool selectedIsLocked = settingsService.IsTradingLocked(selectedAccountNumber);
+                    UpdateTradingStatusBadgeUI(selectedIsLocked);
+                }
+                
+                // Update button states and refresh displays only if state changed
                 if (anyUnlocked || anyLocked)
                 {
-                    // Update badge based on currently selected account
-                    var selectedAccountNumber = GetSelectedAccountNumber();
-                    if (!string.IsNullOrEmpty(selectedAccountNumber))
-                    {
-                        bool selectedIsLocked = settingsService.IsTradingLocked(selectedAccountNumber);
-                        UpdateTradingStatusBadgeUI(selectedIsLocked);
-                    }
-                    
-                    // Update button states
                     UpdateLockButtonStates();
                     
                     // Refresh account summary and stats displays
