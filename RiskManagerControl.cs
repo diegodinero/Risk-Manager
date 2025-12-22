@@ -132,6 +132,9 @@ namespace Risk_Manager
         private const string FILTER_MODE_FIRM = "Firm";
         private static readonly string[] TypeSummaryFilterOptions = new[] { FILTER_MODE_TYPE, FILTER_MODE_FIRM };
 
+        // P&L field identifiers
+        private const string TOTAL_PNL_ID = "TotalPnL";
+
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
         private static readonly Regex PAPattern = new Regex(@"\bpa\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -3218,45 +3221,32 @@ namespace Risk_Manager
                 if (!settingsService.IsInitialized)
                     return;
 
-                int accountIndex = 0;
+                // Use indexed enumeration for cleaner code
+                var accountsWithIndex = core.Accounts.Select((account, index) => new { account, index });
 
-                foreach (var account in core.Accounts)
+                foreach (var item in accountsWithIndex)
                 {
-                    if (account == null)
-                    {
-                        accountIndex++;
+                    if (item.account == null)
                         continue;
-                    }
 
-                    var uniqueAccountId = GetUniqueAccountIdentifier(account, accountIndex);
+                    var uniqueAccountId = GetUniqueAccountIdentifier(item.account, item.index);
                     if (string.IsNullOrEmpty(uniqueAccountId))
-                    {
-                        accountIndex++;
                         continue;
-                    }
 
                     // Get settings for this account
                     var settings = settingsService.GetSettings(uniqueAccountId);
                     if (settings == null || !settings.FeatureToggleEnabled)
-                    {
-                        accountIndex++;
                         continue;
-                    }
 
                     // Skip if account is already locked
                     if (settingsService.IsTradingLocked(uniqueAccountId))
-                    {
-                        accountIndex++;
                         continue;
-                    }
 
                     // Check Daily P&L limits
-                    CheckDailyPnLLimits(account, uniqueAccountId, settings, core);
+                    CheckDailyPnLLimits(item.account, uniqueAccountId, settings, core);
 
                     // Check Position P&L limits
-                    CheckPositionPnLLimits(account, uniqueAccountId, settings, core);
-
-                    accountIndex++;
+                    CheckPositionPnLLimits(item.account, uniqueAccountId, settings, core);
                 }
             }
             catch (Exception ex)
@@ -3378,7 +3368,7 @@ namespace Risk_Manager
                     string id = info.Id ?? string.Empty;
 
                     // Daily P&L is in TotalPnL field
-                    if (string.Equals(id, "TotalPnL", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(id, TOTAL_PNL_ID, StringComparison.OrdinalIgnoreCase))
                     {
                         if (info.Value is double dailyPnL)
                             return dailyPnL;
@@ -3460,7 +3450,17 @@ namespace Risk_Manager
             try
             {
                 // Get current time in ET (Eastern Time)
-                TimeZoneInfo etZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                // Try cross-platform ID first, then fall back to Windows ID
+                TimeZoneInfo etZone;
+                try
+                {
+                    etZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+                }
+                catch
+                {
+                    etZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                }
+                
                 DateTime nowET = TimeZoneInfo.ConvertTime(DateTime.Now, etZone);
 
                 // Target time is 5 PM ET today
