@@ -38,7 +38,6 @@ namespace Risk_Manager
         private Label settingsStatusBadge;
         private Label tradingStatusBadge;
         private ComboBox accountSelector;
-        private TextBox accountNumberTextBox; // TextBox showing and storing the current account identifier
         private Label accountNumberDisplay; // Display current account number in UI
         private Button lockTradingButton; // Lock Trading button reference
         private Button unlockTradingButton; // Unlock Trading button reference
@@ -162,7 +161,7 @@ namespace Risk_Manager
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
         private static readonly string[] NavItems = new[]
         {
-            "📊 Accounts Summary", "📈 Stats", "📋 Type", "⚙️ Feature Toggles", "📋 Copy Settings", "🔍 Risk Overview", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
+            "📊 Accounts Summary", "📈 Stats", "📋 Type", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
             "🔒 Lock Settings", "🔒 Manual Lock"
         };
 
@@ -211,8 +210,6 @@ namespace Risk_Manager
                     placeholder = CreateFeatureTogglesPanel();
                 else if (name.EndsWith("Copy Settings"))
                     placeholder = CreateCopySettingsPanel();
-                else if (name.EndsWith("Risk Overview"))
-                    placeholder = CreateRiskOverviewPanel();
                 else if (name.EndsWith("Positions"))
                     placeholder = CreatePositionsPanel();
                 else if (name.EndsWith("Limits"))
@@ -864,26 +861,6 @@ namespace Risk_Manager
                     settingsLockCheckBox.Checked = settings.SettingsLock?.IsLocked ?? false;
                 }
 
-                // Load Trading Time Restrictions
-                if (tradingTimeCheckboxes != null && tradingTimeCheckboxes.Any())
-                {
-                    // Get the unique session names from restrictions
-                    var allowedSessions = settings.TradingTimeRestrictions?
-                        .Where(r => r.IsAllowed)
-                        .Select(r => r.Name)
-                        .Distinct()
-                        .ToHashSet() ?? new HashSet<string>();
-
-                    // Update checkboxes based on loaded settings
-                    foreach (var checkbox in tradingTimeCheckboxes)
-                    {
-                        if (checkbox.Tag is string sessionName)
-                        {
-                            checkbox.Checked = allowedSessions.Contains(sessionName);
-                        }
-                    }
-                }
-
                 // Update status displays
                 UpdateTradingStatusBadge();
                 if (settingsLockCheckBox?.Tag is Label statusLabel)
@@ -987,42 +964,14 @@ namespace Risk_Manager
             accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
             topPanel.Controls.Add(accountSelector);
 
-            // Account Number TextBox - displays and stores the current account identifier
-            var accountNumberLabel = new Label
-            {
-                Text = "Account ID:",
-                Location = new Point(80, 70),
-                Width = 80,
-                Height = 20,
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                ForeColor = TextWhite,
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-            topPanel.Controls.Add(accountNumberLabel);
-
-            accountNumberTextBox = new TextBox
-            {
-                Location = new Point(165, 68),
-                Width = 250,
-                Height = 22,
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                BackColor = DarkerBackground,
-                ForeColor = TextWhite,
-                BorderStyle = BorderStyle.FixedSingle,
-                ReadOnly = true, // Read-only to prevent manual editing
-                Text = "No account selected"
-            };
-            topPanel.Controls.Add(accountNumberTextBox);
-
             // Emergency Flatten button next to Account Selector
             var emergencyFlattenButton = new Button
             {
                 Text = "⚠️ EMERGENCY FLATTEN ⚠️",
-                Location = new Point(420, 68),
-                Width = 200,
-                Height = 24,
-                Font = new Font("Arial", 9, FontStyle.Bold),
+                Location = new Point(340, 37),
+                Width = 250,
+                Height = 26,
+                Font = new Font("Arial", 10, FontStyle.Bold),
                 BackColor = Color.Red,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -2461,122 +2410,29 @@ namespace Risk_Manager
                 WrapContents = false
             };
 
-            // Define trading sessions with their time ranges
             var sessions = new[]
             {
-                ("NY Session", DayOfWeek.Monday, new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
-                ("NY Session", DayOfWeek.Tuesday, new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
-                ("NY Session", DayOfWeek.Wednesday, new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
-                ("NY Session", DayOfWeek.Thursday, new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
-                ("NY Session", DayOfWeek.Friday, new TimeSpan(8, 0, 0), new TimeSpan(17, 0, 0)),
-                ("London Session", DayOfWeek.Monday, new TimeSpan(3, 0, 0), new TimeSpan(12, 0, 0)),
-                ("London Session", DayOfWeek.Tuesday, new TimeSpan(3, 0, 0), new TimeSpan(12, 0, 0)),
-                ("London Session", DayOfWeek.Wednesday, new TimeSpan(3, 0, 0), new TimeSpan(12, 0, 0)),
-                ("London Session", DayOfWeek.Thursday, new TimeSpan(3, 0, 0), new TimeSpan(12, 0, 0)),
-                ("London Session", DayOfWeek.Friday, new TimeSpan(3, 0, 0), new TimeSpan(12, 0, 0)),
-                ("Asia Session", DayOfWeek.Sunday, new TimeSpan(19, 0, 0), new TimeSpan(23, 59, 59)),
-                ("Asia Session", DayOfWeek.Monday, new TimeSpan(0, 0, 0), new TimeSpan(4, 0, 0)),
-                ("Asia Session", DayOfWeek.Monday, new TimeSpan(19, 0, 0), new TimeSpan(23, 59, 59)),
-                ("Asia Session", DayOfWeek.Tuesday, new TimeSpan(0, 0, 0), new TimeSpan(4, 0, 0)),
-                ("Asia Session", DayOfWeek.Tuesday, new TimeSpan(19, 0, 0), new TimeSpan(23, 59, 59)),
-                ("Asia Session", DayOfWeek.Wednesday, new TimeSpan(0, 0, 0), new TimeSpan(4, 0, 0)),
-                ("Asia Session", DayOfWeek.Wednesday, new TimeSpan(19, 0, 0), new TimeSpan(23, 59, 59)),
-                ("Asia Session", DayOfWeek.Thursday, new TimeSpan(0, 0, 0), new TimeSpan(4, 0, 0)),
-                ("Asia Session", DayOfWeek.Thursday, new TimeSpan(19, 0, 0), new TimeSpan(23, 59, 59)),
-                ("Asia Session", DayOfWeek.Friday, new TimeSpan(0, 0, 0), new TimeSpan(4, 0, 0))
+                ("NY Session", "8 AM - 5 PM EST"),
+                ("London Session", "3 AM - 12 PM EST"),
+                ("Asia Session", "7 PM - 4 AM EST")
             };
 
-            // Clear existing checkboxes
-            tradingTimeCheckboxes.Clear();
-
-            // Group sessions by name for display
-            var sessionGroups = new Dictionary<string, string>
-            {
-                { "NY Session", "Mon-Fri 8 AM - 5 PM EST" },
-                { "London Session", "Mon-Fri 3 AM - 12 PM EST" },
-                { "Asia Session", "Sun-Fri 7 PM - 4 AM EST" }
-            };
-
-            foreach (var kvp in sessionGroups)
+            foreach (var (sessionName, timeRange) in sessions)
             {
                 var checkbox = new CheckBox
                 {
-                    Text = $"{kvp.Key} ({kvp.Value})",
+                    Text = $"{sessionName} ({timeRange})",
                     AutoSize = true,
                     Checked = true,
                     Font = new Font("Segoe UI", 10, FontStyle.Regular),
                     ForeColor = TextWhite,
                     BackColor = CardBackground,
-                    Margin = new Padding(0, 5, 0, 5),
-                    Tag = kvp.Key // Store session name for identification
+                    Margin = new Padding(0, 5, 0, 5)
                 };
                 contentArea.Controls.Add(checkbox);
-                tradingTimeCheckboxes.Add(checkbox);
             }
 
             var saveButton = CreateDarkSaveButton();
-            
-            // Override save button click to handle trading times
-            saveButton.Click += (s, e) =>
-            {
-                try
-                {
-                    var accountNumber = GetSelectedAccountNumber();
-                    if (string.IsNullOrEmpty(accountNumber))
-                    {
-                        MessageBox.Show("Please select an account first.", "No Account Selected", 
-                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    var service = RiskManagerSettingsService.Instance;
-                    if (!service.IsInitialized)
-                    {
-                        MessageBox.Show("Settings service is not initialized.", "Error", 
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
-                    }
-
-                    // Build restrictions list based on checked sessions
-                    var restrictions = new List<TradingTimeRestriction>();
-                    
-                    foreach (var checkbox in tradingTimeCheckboxes)
-                    {
-                        if (checkbox.Checked && checkbox.Tag is string sessionName)
-                        {
-                            // Add all time slots for this session
-                            var sessionSlots = sessions.Where(s => s.Item1 == sessionName);
-                            foreach (var (name, day, start, end) in sessionSlots)
-                            {
-                                restrictions.Add(new TradingTimeRestriction
-                                {
-                                    Name = name,
-                                    DayOfWeek = day,
-                                    StartTime = start,
-                                    EndTime = end,
-                                    IsAllowed = true
-                                });
-                            }
-                        }
-                    }
-
-                    service.SetTradingTimeRestrictions(accountNumber, restrictions);
-                    
-                    MessageBox.Show(
-                        $"Trading time restrictions saved successfully for account: {accountNumber}",
-                        "Success", 
-                        MessageBoxButtons.OK, 
-                        MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(
-                        $"Error saving trading time restrictions: {ex.Message}",
-                        "Error", 
-                        MessageBoxButtons.OK, 
-                        MessageBoxIcon.Error);
-                }
-            };
 
             // Add controls in correct order: Bottom first, Fill second, Top last
             // In WinForms, docking is processed in reverse Z-order
@@ -3321,17 +3177,18 @@ namespace Risk_Manager
                     accountIndex++;
                 }
 
-                // Always update badge based on currently selected account, regardless of state changes
-                var selectedAccountNumber = GetSelectedAccountNumber();
-                if (!string.IsNullOrEmpty(selectedAccountNumber))
-                {
-                    bool selectedIsLocked = settingsService.IsTradingLocked(selectedAccountNumber);
-                    UpdateTradingStatusBadgeUI(selectedIsLocked);
-                }
-                
-                // Update button states and refresh displays only if state changed
+                // If any accounts were unlocked or locked state changed, refresh the UI
                 if (anyUnlocked || anyLocked)
                 {
+                    // Update badge based on currently selected account
+                    var selectedAccountNumber = GetSelectedAccountNumber();
+                    if (!string.IsNullOrEmpty(selectedAccountNumber))
+                    {
+                        bool selectedIsLocked = settingsService.IsTradingLocked(selectedAccountNumber);
+                        UpdateTradingStatusBadgeUI(selectedIsLocked);
+                    }
+                    
+                    // Update button states
                     UpdateLockButtonStates();
                     
                     // Refresh account summary and stats displays
@@ -4022,29 +3879,70 @@ namespace Risk_Manager
         /// </summary>
         private string GetSelectedAccountNumber()
         {
-            // CRITICAL: Read from the textbox to ensure exact same identifier is used everywhere
-            // This textbox is populated by GetUniqueAccountIdentifier when account is selected
-            if (accountNumberTextBox != null && !string.IsNullOrEmpty(accountNumberTextBox.Text) && accountNumberTextBox.Text != "No account selected")
-            {
-                var textboxValue = accountNumberTextBox.Text;
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Reading from textbox='{textboxValue}'");
-                return textboxValue;
-            }
-            
-            // Fallback: Calculate from selected account if textbox not available
             if (selectedAccount == null)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is NULL and textbox empty");
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is NULL");
                 return null;
             }
             
-            // Use GetUniqueAccountIdentifier with the stored index to ensure
-            // the same identifier is used for saving and loading settings
-            var uniqueId = GetUniqueAccountIdentifier(selectedAccount, selectedAccountIndex);
+            var accountId = selectedAccount.Id;
+            var accountName = selectedAccount.Name;
+            var connectionName = selectedAccount.Connection?.Name;
             
-            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Fallback using GetUniqueAccountIdentifier result='{uniqueId}' with index={selectedAccountIndex}");
+            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: accountId='{accountId}', accountName='{accountName}', connectionName='{connectionName}', index={selectedAccountIndex}");
             
-            return uniqueId;
+            // Strategy 1: Use Connection.Name + Name for best uniqueness
+            // Connection names are usually unique per connection/account
+            if (!string.IsNullOrEmpty(connectionName))
+            {
+                if (!string.IsNullOrEmpty(accountName))
+                {
+                    var uniqueId = $"{connectionName}_{accountName}";
+                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection+Name='{uniqueId}'");
+                    return uniqueId;
+                }
+                if (!string.IsNullOrEmpty(accountId))
+                {
+                    var uniqueId = $"{connectionName}_{accountId}";
+                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection+Id='{uniqueId}'");
+                    return uniqueId;
+                }
+                // Connection name alone
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using Connection='{connectionName}'");
+                return connectionName;
+            }
+            
+            // Strategy 2: Use the stored index from dropdown (most reliable when Connection is not available)
+            if (selectedAccountIndex >= 0)
+            {
+                // Create identifier with index and any available property
+                string indexBasedId;
+                if (!string.IsNullOrEmpty(accountName))
+                    indexBasedId = $"Account_{selectedAccountIndex}_{accountName}";
+                else if (!string.IsNullOrEmpty(accountId))
+                    indexBasedId = $"Account_{selectedAccountIndex}_{accountId}";
+                else
+                    indexBasedId = $"Account_{selectedAccountIndex}";
+                
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using stored index-based ID='{indexBasedId}'");
+                return indexBasedId;
+            }
+            
+            // Strategy 3: Fallback to Id or Name alone (least reliable)
+            if (!string.IsNullOrEmpty(accountId))
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Fallback to Id='{accountId}'");
+                return accountId;
+            }
+            
+            if (!string.IsNullOrEmpty(accountName))
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Fallback to Name='{accountName}'");
+                return accountName;
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Could not generate unique ID, returning 'UNKNOWN'");
+            return "UNKNOWN";
         }
 
         /// <summary>
@@ -4428,43 +4326,27 @@ namespace Risk_Manager
         {
             try
             {
+                if (accountNumberDisplay == null)
+                    return;
+                
                 var accountNumber = GetSelectedAccountNumber();
                 
                 // Cache the account number so save operation uses exactly what's displayed
                 displayedAccountNumber = accountNumber;
                 
-                // Update the textbox in top panel
-                if (accountNumberTextBox != null)
+                if (string.IsNullOrEmpty(accountNumber))
                 {
-                    if (string.IsNullOrEmpty(accountNumber))
-                    {
-                        accountNumberTextBox.Text = "No account selected";
-                        accountNumberTextBox.ForeColor = Color.Orange;
-                    }
-                    else
-                    {
-                        accountNumberTextBox.Text = accountNumber;
-                        accountNumberTextBox.ForeColor = TextWhite;
-                    }
+                    accountNumberDisplay.Text = "Account: Not Selected";
+                    accountNumberDisplay.ForeColor = Color.Orange;
                 }
-                
-                // Update the label in Limits panel (if it exists)
-                if (accountNumberDisplay != null)
+                else
                 {
-                    if (string.IsNullOrEmpty(accountNumber))
-                    {
-                        accountNumberDisplay.Text = "Account: Not Selected";
-                        accountNumberDisplay.ForeColor = Color.Orange;
-                    }
-                    else
-                    {
-                        accountNumberDisplay.Text = $"Account: {accountNumber}";
-                        accountNumberDisplay.ForeColor = TextWhite;
-                    }
-                    accountNumberDisplay.Invalidate();
+                    accountNumberDisplay.Text = $"Account: {accountNumber}";
+                    accountNumberDisplay.ForeColor = Color.Transparent;
                 }
                 
                 System.Diagnostics.Debug.WriteLine($"UpdateAccountNumberDisplay: Displaying and caching account='{accountNumber}'");
+                accountNumberDisplay.Invalidate();
             }
             catch (Exception ex)
             {
@@ -5341,239 +5223,6 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Creates the Risk Overview panel that displays all risk management settings for the selected account.
-        /// </summary>
-        private Control CreateRiskOverviewPanel()
-        {
-            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
-
-            // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel("🔍 Risk Overview", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
-
-            // Subtitle
-            var subtitleLabel = new Label
-            {
-                Text = "Overview of all risk management settings for the selected account:",
-                Dock = DockStyle.Top,
-                Height = 30,
-                TextAlign = ContentAlignment.TopLeft,
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Padding = new Padding(10, 0, 10, 0),
-                BackColor = DarkBackground,
-                ForeColor = TextGray,
-                AutoSize = false
-            };
-
-            // Content area
-            var contentArea = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = CardBackground,
-                Padding = new Padding(20),
-                AutoScroll = true
-            };
-
-            // Create overview grid
-            var overviewGrid = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                BackgroundColor = CardBackground,
-                GridColor = DarkerBackground,
-                BorderStyle = BorderStyle.None,
-                RowHeadersVisible = false,
-                EnableHeadersVisualStyles = false,
-                AllowUserToResizeRows = false
-            };
-
-            // Style the grid
-            overviewGrid.DefaultCellStyle.BackColor = CardBackground;
-            overviewGrid.DefaultCellStyle.ForeColor = TextWhite;
-            overviewGrid.DefaultCellStyle.SelectionBackColor = SelectedColor;
-            overviewGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
-            overviewGrid.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
-            overviewGrid.DefaultCellStyle.Padding = new Padding(5);
-            overviewGrid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
-            overviewGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
-            overviewGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
-            overviewGrid.RowTemplate.Height = 35;
-
-            // Add columns with proportional fill weights
-            var colSetting = new DataGridViewTextBoxColumn
-            {
-                Name = "Setting",
-                HeaderText = "Setting",
-                FillWeight = 30
-            };
-            var colValue = new DataGridViewTextBoxColumn
-            {
-                Name = "Value",
-                HeaderText = "Value",
-                FillWeight = 50
-            };
-            var colStatus = new DataGridViewTextBoxColumn
-            {
-                Name = "Status",
-                HeaderText = "Status",
-                FillWeight = 20
-            };
-            
-            overviewGrid.Columns.Add(colSetting);
-            overviewGrid.Columns.Add(colValue);
-            overviewGrid.Columns.Add(colStatus);
-
-            // Populate grid with current account settings
-            PopulateRiskOverview(overviewGrid);
-
-            // Refresh button
-            var refreshButton = new Button
-            {
-                Text = "REFRESH OVERVIEW",
-                Dock = DockStyle.Bottom,
-                Height = 50,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                BackColor = AccentGreen,
-                ForeColor = TextWhite,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
-            refreshButton.FlatAppearance.BorderSize = 0;
-            refreshButton.Click += (s, e) => PopulateRiskOverview(overviewGrid);
-
-            contentArea.Controls.Add(overviewGrid);
-
-            // Add controls in correct order
-            mainPanel.Controls.Add(refreshButton);
-            mainPanel.Controls.Add(contentArea);
-            mainPanel.Controls.Add(subtitleLabel);
-            mainPanel.Controls.Add(titleLabel);
-
-            return mainPanel;
-        }
-
-        /// <summary>
-        /// Populates the Risk Overview grid with current settings.
-        /// </summary>
-        private void PopulateRiskOverview(DataGridView grid)
-        {
-            if (grid == null)
-                return;
-
-            try
-            {
-                grid.Rows.Clear();
-
-                var accountNumber = GetSelectedAccountNumber();
-                if (string.IsNullOrEmpty(accountNumber))
-                {
-                    grid.Rows.Add("No Account Selected", "Please select an account from the dropdown", "N/A");
-                    return;
-                }
-
-                var settingsService = RiskManagerSettingsService.Instance;
-                if (!settingsService.IsInitialized)
-                {
-                    grid.Rows.Add("Error", "Settings service not initialized", "Error");
-                    return;
-                }
-
-                var settings = settingsService.GetSettings(accountNumber);
-                if (settings == null)
-                {
-                    grid.Rows.Add("No Settings", $"No settings found for account: {accountNumber}", "N/A");
-                    return;
-                }
-
-                // Position Loss Limit
-                if (settings.PositionLossLimit.HasValue)
-                    grid.Rows.Add("Position Loss Limit", $"${settings.PositionLossLimit.Value:N2} per position", "Enabled");
-                else
-                    grid.Rows.Add("Position Loss Limit", "Not configured", "Disabled");
-
-                // Position Profit Target
-                if (settings.PositionProfitTarget.HasValue)
-                    grid.Rows.Add("Position Profit Target", $"${settings.PositionProfitTarget.Value:N2} per position", "Enabled");
-                else
-                    grid.Rows.Add("Position Profit Target", "Not configured", "Disabled");
-
-                // Daily Loss Limit
-                if (settings.DailyLossLimit.HasValue)
-                    grid.Rows.Add("Daily Loss Limit", $"${settings.DailyLossLimit.Value:N2} per day", "Enabled");
-                else
-                    grid.Rows.Add("Daily Loss Limit", "Not configured", "Disabled");
-
-                // Daily Profit Target
-                if (settings.DailyProfitTarget.HasValue)
-                    grid.Rows.Add("Daily Profit Target", $"${settings.DailyProfitTarget.Value:N2} per day", "Enabled");
-                else
-                    grid.Rows.Add("Daily Profit Target", "Not configured", "Disabled");
-
-                // Symbols Blacklisted
-                if (settings.BlockedSymbols != null && settings.BlockedSymbols.Any())
-                {
-                    var symbolsList = string.Join(", ", settings.BlockedSymbols);
-                    grid.Rows.Add("Symbols Blacklisted", symbolsList, "Enabled");
-                }
-                else
-                    grid.Rows.Add("Symbols Blacklisted", "No symbols blacklisted", "Disabled");
-
-                // Symbol Contract Limits
-                if (settings.DefaultContractLimit.HasValue)
-                    grid.Rows.Add("Default Contract Limit", $"{settings.DefaultContractLimit.Value} contracts", "Enabled");
-                else
-                    grid.Rows.Add("Default Contract Limit", "Not configured", "Disabled");
-
-                if (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any())
-                {
-                    foreach (var kvp in settings.SymbolContractLimits)
-                    {
-                        grid.Rows.Add($"Contract Limit: {kvp.Key}", $"{kvp.Value} contracts", "Enabled");
-                    }
-                }
-
-                // Allowed Trading Times
-                if (settings.TradingTimeRestrictions != null && settings.TradingTimeRestrictions.Any())
-                {
-                    var uniqueSessions = settings.TradingTimeRestrictions
-                        .Select(t => t.Name)
-                        .Distinct()
-                        .ToList();
-                    var sessionsList = string.Join(", ", uniqueSessions);
-                    grid.Rows.Add("Allowed Trading Times", $"{uniqueSessions.Count} session(s): {sessionsList}", "Enabled");
-                }
-                else
-                    grid.Rows.Add("Allowed Trading Times", "All times allowed (no restrictions)", "Disabled");
-
-                // Trading Lock Status
-                var isLocked = settingsService.IsTradingLocked(accountNumber);
-                var lockStatus = settingsService.GetLockStatusString(accountNumber);
-                grid.Rows.Add("Trading Lock Status", lockStatus, isLocked ? "Locked" : "Unlocked");
-
-                // Settings Lock Status
-                var settingsLocked = settingsService.AreSettingsLocked(accountNumber);
-                grid.Rows.Add("Settings Lock Status", settingsLocked ? "Settings are locked" : "Settings are unlocked", settingsLocked ? "Locked" : "Unlocked");
-
-                // Feature Toggle Status
-                grid.Rows.Add("Feature Toggle", settings.FeatureToggleEnabled ? "All features enabled" : "Features disabled", settings.FeatureToggleEnabled ? "Enabled" : "Disabled");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error populating risk overview: {ex.Message}");
-                grid.Rows.Clear();
-                grid.Rows.Add("Error", $"Failed to load settings: {ex.Message}", "Error");
-            }
-        }
-
-        /// <summary>
         /// Creates the consolidated "Positions" panel combining Position Loss Limit and Position Profit Target.
         /// </summary>
         private Control CreatePositionsPanel()
@@ -5737,10 +5386,10 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 Padding = new Padding(10, 5, 10, 0),
                 BackColor = CardBackground,
-                ForeColor = TextWhite,
+                ForeColor = TextWhite,  // Set proper color in case it's made visible later
                 AutoSize = false,
                 BorderStyle = BorderStyle.FixedSingle,
-                Visible = true  // Make visible so users can see account identifier
+                Visible = false  // Hide the control while retaining functionality
             };
             
             // Update the display with current account
@@ -5798,40 +5447,10 @@ namespace Risk_Manager
                 Width = 300,
                 Height = 30,
                 Checked = false,
-                Font = new Font("Segoe UI Emoji", 11, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
                 ForeColor = TextWhite,
-                BackColor = CardBackground,
-                UseCompatibleTextRendering = false
+                BackColor = CardBackground
             };
-            
-            // Custom paint for colored emoji rendering in checkbox
-            sectionHeader.Paint += (s, e) =>
-            {
-                var cb = (CheckBox)s;
-                e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                
-                // Draw background
-                e.Graphics.Clear(cb.BackColor);
-                
-                // Draw checkbox
-                var checkBoxSize = 13;
-                var checkBoxRect = new Rectangle(0, (cb.Height - checkBoxSize) / 2, checkBoxSize, checkBoxSize);
-                ControlPaint.DrawCheckBox(e.Graphics, checkBoxRect, cb.Checked ? ButtonState.Checked : ButtonState.Normal);
-                
-                // Draw text with GDI+ for colored emoji support
-                using (var brush = new SolidBrush(cb.ForeColor))
-                {
-                    var sf = new StringFormat
-                    {
-                        LineAlignment = StringAlignment.Center,
-                        Alignment = StringAlignment.Near
-                    };
-                    var textRect = new RectangleF(checkBoxSize + 5, 0, cb.Width - checkBoxSize - 5, cb.Height);
-                    e.Graphics.DrawString(cb.Text, cb.Font, brush, textRect, sf);
-                }
-            };
-            
             sectionPanel.Controls.Add(sectionHeader);
             enabledCheckbox = sectionHeader;
 
