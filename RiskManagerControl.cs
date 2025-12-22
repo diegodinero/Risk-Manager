@@ -2851,9 +2851,6 @@ namespace Risk_Manager
                 {
                     lockMethod.Invoke(core, new object[] { targetAccount });
                     
-                    // Set TradingStatus to Locked to disable buy/sell buttons
-                    SetCoreTradingStatus(core, "Locked");
-                    
                     // Update the settings service to track the lock status with duration
                     var settingsService = RiskManagerSettingsService.Instance;
                     if (settingsService.IsInitialized)
@@ -2921,9 +2918,6 @@ namespace Risk_Manager
                 if (unlockMethod != null)
                 {
                     unlockMethod.Invoke(core, new object[] { targetAccount });
-                    
-                    // Set TradingStatus to Allowed to enable buy/sell buttons
-                    SetCoreTradingStatus(core, "Allowed");
                     
                     // Update the settings service to track the unlock status
                     var settingsService = RiskManagerSettingsService.Instance;
@@ -3142,7 +3136,6 @@ namespace Risk_Manager
                                 if (unlockMethod != null)
                                 {
                                     unlockMethod.Invoke(core, new object[] { account });
-                                    SetCoreTradingStatus(core, "Allowed");
                                     System.Diagnostics.Debug.WriteLine($"Auto-unlocked account: {uniqueAccountId}");
                                 }
                             }
@@ -3163,7 +3156,6 @@ namespace Risk_Manager
                                 if (lockMethod != null)
                                 {
                                     lockMethod.Invoke(core, new object[] { account });
-                                    SetCoreTradingStatus(core, "Locked");
                                 }
                             }
                             catch (Exception ex)
