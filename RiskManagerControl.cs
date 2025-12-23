@@ -4259,13 +4259,13 @@ namespace Risk_Manager
                 DateTime nowET = TimeZoneInfo.ConvertTime(DateTime.Now, etZone);
                 
                 // Market close is 5 PM ET (17:00)
-                // Check if we're at or after 4:59 PM ET (16:59)
+                // Check if we're at or after 4:59 PM ET (16:59) and before 5:00 PM ET
                 TimeSpan currentTime = nowET.TimeOfDay;
                 TimeSpan marketCloseTime = new TimeSpan(17, 0, 0); // 5:00 PM
                 TimeSpan oneMinuteBeforeClose = new TimeSpan(16, 59, 0); // 4:59 PM
                 
-                // Return true if between 4:59 PM and 5:00 PM (inclusive)
-                bool isNearClose = currentTime >= oneMinuteBeforeClose && currentTime <= marketCloseTime;
+                // Return true if between 4:59 PM (inclusive) and 5:00 PM (exclusive)
+                bool isNearClose = currentTime >= oneMinuteBeforeClose && currentTime < marketCloseTime;
                 
                 return isNearClose;
             }
