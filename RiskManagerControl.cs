@@ -5632,8 +5632,16 @@ namespace Risk_Manager
                             Checked = isAllowed,
                             Enabled = false, // Read-only for overview
                             BackColor = CardBackground,
-                            ForeColor = TextWhite
+                            ForeColor = TextWhite,
+                            FlatStyle = FlatStyle.Flat,
+                            UseVisualStyleBackColor = false
                         };
+                        
+                        // Custom appearance for better visibility
+                        checkBox.FlatAppearance.BorderColor = TextGray;
+                        checkBox.FlatAppearance.BorderSize = 1;
+                        checkBox.FlatAppearance.CheckedBackColor = AccentGreen;
+                        
                         dayRow.Controls.Add(checkBox);
                         xPos += 95;
                     }
