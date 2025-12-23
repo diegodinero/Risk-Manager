@@ -168,7 +168,7 @@ namespace Risk_Manager
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
         private static readonly string[] NavItems = new[]
         {
-            "📊 Accounts Summary", "📈 Stats", "📋 Type", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
+            "📊 Accounts Summary", "📈 Stats", "📋 Type", "🔍 Risk Overview", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
             "🔒 Lock Settings", "🔒 Manual Lock"
         };
 
@@ -213,6 +213,8 @@ namespace Risk_Manager
                     placeholder = CreateAccountStatsPanel();
                 else if (name.EndsWith("Type"))
                     placeholder = CreateTypeSummaryPanel();
+                else if (name.EndsWith("Risk Overview"))
+                    placeholder = CreateRiskOverviewPanel();
                 else if (name.EndsWith("Feature Toggles"))
                     placeholder = CreateFeatureTogglesPanel();
                 else if (name.EndsWith("Copy Settings"))
@@ -682,6 +684,15 @@ namespace Risk_Manager
                 // Refresh Stats tab if visible
                 if (statsDetailGrid != null)
                     RefreshAccountStats();
+                
+                // Refresh Risk Overview tab if it's currently displayed
+                if (selectedNavItem != null && selectedNavItem.EndsWith("Risk Overview"))
+                {
+                    if (pageContents.TryGetValue(selectedNavItem, out var riskOverviewPanel))
+                    {
+                        RefreshRiskOverviewPanel(riskOverviewPanel);
+                    }
+                }
                 
                 // Load settings for the selected account
                 LoadAccountSettings();
@@ -1204,38 +1215,22 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Creates a label with colored emoji support using custom painting
+        /// Creates a label with colored emoji support using Segoe UI Emoji font
         /// </summary>
-        private Label CreateEmojiLabel(string text, int fontSize, FontStyle fontStyle = FontStyle.Regular)
+        private Label CreateEmojiLabel(string text, int fontSize, FontStyle fontStyle = FontStyle.Regular, Color? backgroundColor = null)
         {
             var label = new Label
             {
                 Text = text,
                 Font = new Font("Segoe UI Emoji", fontSize, fontStyle),
                 ForeColor = TextWhite,
-                BackColor = Color.Transparent,
-                AutoSize = false
+                BackColor = backgroundColor ?? DarkBackground,
+                AutoSize = false,
+                UseCompatibleTextRendering = false // Use GDI for better emoji support
             };
 
-            // Custom paint for colored emoji rendering
-            label.Paint += (s, e) =>
-            {
-                var lbl = (Label)s;
-                e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                
-                // Draw text with GDI+ for colored emoji support
-                using (var brush = new SolidBrush(lbl.ForeColor))
-                {
-                    var sf = new StringFormat
-                    {
-                        LineAlignment = StringAlignment.Center,
-                        Alignment = StringAlignment.Near
-                    };
-                    e.Graphics.DrawString(lbl.Text, lbl.Font, brush, 
-                        new RectangleF(lbl.Padding.Left, 0, lbl.Width, lbl.Height), sf);
-                }
-            };
+            // No custom paint - let default rendering handle emojis properly
+            // The default label rendering supports colored emojis with Segoe UI Emoji font
 
             return label;
         }
@@ -5314,6 +5309,600 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Creates the "Risk Overview" panel displaying comprehensive risk settings for the selected account.
+        /// </summary>
+        private Control CreateRiskOverviewPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title with emoji rendering
+            var titleLabel = CreateEmojiLabel("🔍 Risk Overview", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Comprehensive risk settings overview for the selected account:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            // Content area with scroll
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground,
+                Padding = new Padding(15),
+                AutoScroll = true
+            };
+
+            // Create a flow layout for risk settings cards in 2-column grid (3 rows x 2 columns)
+            var flowLayout = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                FlowDirection = FlowDirection.LeftToRight, // Changed from TopDown to LeftToRight for columns
+                WrapContents = true, // Changed to true to allow wrapping to next row
+                AutoSize = true,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 0, 15, 0) // Right padding for scrollbar
+            };
+
+            // Account Lock/Unlock Status Card
+            var lockStatusCard = CreateRiskOverviewCard(
+                "🔒 Account Status",
+                new[] { "Lock Status:", "Settings Lock:" },
+                new[] { GetAccountLockStatus, GetSettingsLockStatus }
+            );
+            flowLayout.Controls.Add(lockStatusCard);
+
+            // Position Limits Card
+            var positionLimitsCard = CreateRiskOverviewCard(
+                "📈 Position Limits",
+                new[] { "Loss Limit:", "Profit Target:" },
+                new[] { GetPositionLossLimit, GetPositionProfitTarget }
+            );
+            flowLayout.Controls.Add(positionLimitsCard);
+
+            // Daily Limits Card
+            var dailyLimitsCard = CreateRiskOverviewCard(
+                "📊 Daily Limits",
+                new[] { "Loss Limit:", "Profit Target:" },
+                new[] { GetDailyLossLimit, GetDailyProfitTarget }
+            );
+            flowLayout.Controls.Add(dailyLimitsCard);
+
+            // Symbol Restrictions Card
+            var symbolRestrictionsCard = CreateRiskOverviewCard(
+                "🛡️ Symbol Restrictions",
+                new[] { "Blacklisted Symbols:", "Default Contract Limit:", "Symbol-Specific Limits:" },
+                new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits }
+            );
+            flowLayout.Controls.Add(symbolRestrictionsCard);
+
+            // Allowed Trading Times Card - Custom display with day/session grid
+            var tradingTimesCard = CreateTradingTimesOverviewCard();
+            flowLayout.Controls.Add(tradingTimesCard);
+
+            contentArea.Controls.Add(flowLayout);
+
+            // Add controls in correct order: Fill second, Top last
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
+
+            return mainPanel;
+        }
+
+        /// <summary>
+        /// Creates a card panel for displaying risk overview information.
+        /// </summary>
+        private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters)
+        {
+            var cardPanel = new Panel
+            {
+                Width = 480, // Adjusted width for 2-column layout
+                AutoSize = true,
+                BackColor = CardBackground,
+                Padding = new Padding(20),
+                Margin = new Padding(0, 0, 15, 15) // Add right and bottom margin for spacing
+            };
+
+            var cardLayout = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                BackColor = CardBackground
+            };
+
+            // Card title with emoji - use CardBackground for consistency
+            var titleLabel = CreateEmojiLabel(title, 12, FontStyle.Bold, CardBackground);
+            titleLabel.Height = 30;
+            titleLabel.Width = 440; // Adjusted for new card width
+            titleLabel.Margin = new Padding(0, 0, 0, 10);
+            cardLayout.Controls.Add(titleLabel);
+
+            // Add each label-value pair
+            for (int i = 0; i < labels.Length && i < valueGetters.Length; i++)
+            {
+                var rowPanel = new Panel
+                {
+                    Width = 440, // Adjusted for new card width
+                    Height = 30,
+                    BackColor = CardBackground,
+                    Margin = new Padding(0, 5, 0, 5)
+                };
+
+                var labelControl = new Label
+                {
+                    Text = labels[i],
+                    Left = 0,
+                    Top = 5,
+                    Width = 180, // Adjusted for new card width
+                    Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                    ForeColor = TextWhite,
+                    BackColor = CardBackground
+                };
+                rowPanel.Controls.Add(labelControl);
+
+                var valueControl = new Label
+                {
+                    Text = valueGetters[i](),
+                    Left = 190, // Adjusted for new card width
+                    Top = 5,
+                    Width = 240, // Adjusted for new card width
+                    Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular), // Use Segoe UI Emoji for emoji support
+                    ForeColor = TextGray,
+                    BackColor = CardBackground,
+                    Tag = valueGetters[i], // Store the getter function for later refresh
+                    UseCompatibleTextRendering = false // Use GDI for proper emoji rendering
+                };
+                rowPanel.Controls.Add(valueControl);
+
+                cardLayout.Controls.Add(rowPanel);
+            }
+
+            cardPanel.Controls.Add(cardLayout);
+            return cardPanel;
+        }
+
+        /// <summary>
+        /// Creates a specialized Trading Times card showing days and sessions (Asia, London, New York).
+        /// </summary>
+        private Panel CreateTradingTimesOverviewCard()
+        {
+            var cardPanel = new Panel
+            {
+                Width = 480,
+                AutoSize = true,
+                BackColor = CardBackground,
+                Padding = new Padding(20),
+                Margin = new Padding(0, 0, 15, 15),
+                Tag = "TradingTimesCard" // Tag to identify this card for refresh
+            };
+
+            var cardLayout = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                BackColor = CardBackground
+            };
+
+            // Card title
+            var titleLabel = CreateEmojiLabel("🕐 Allowed Trading Times", 12, FontStyle.Bold, CardBackground);
+            titleLabel.Height = 30;
+            titleLabel.Width = 440;
+            titleLabel.Margin = new Padding(0, 0, 0, 10);
+            cardLayout.Controls.Add(titleLabel);
+
+            // Get trading time restrictions
+            var accountNumber = GetSelectedAccountNumber();
+            var settingsService = RiskManagerSettingsService.Instance;
+            
+            if (string.IsNullOrEmpty(accountNumber) || !settingsService.IsInitialized)
+            {
+                var noDataLabel = new Label
+                {
+                    Text = "⚠️ No account selected",
+                    Width = 440,
+                    Height = 25,
+                    Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+                    ForeColor = TextGray,
+                    BackColor = CardBackground,
+                    UseCompatibleTextRendering = false
+                };
+                cardLayout.Controls.Add(noDataLabel);
+            }
+            else
+            {
+                var settings = settingsService.GetSettings(accountNumber);
+                
+                // Define trading sessions with their time ranges
+                var sessions = new[]
+                {
+                    ("Asia", new TimeSpan(0, 0, 0), new TimeSpan(9, 0, 0)),      // 00:00-09:00
+                    ("London", new TimeSpan(8, 0, 0), new TimeSpan(16, 0, 0)),   // 08:00-16:00
+                    ("New York", new TimeSpan(13, 0, 0), new TimeSpan(21, 0, 0)) // 13:00-21:00
+                };
+
+                // Header row
+                var headerRow = new Panel
+                {
+                    Width = 440,
+                    Height = 25,
+                    BackColor = CardBackground,
+                    Margin = new Padding(0, 5, 0, 5)
+                };
+
+                var dayHeader = new Label
+                {
+                    Text = "Day",
+                    Left = 0,
+                    Top = 0,
+                    Width = 80,
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = TextWhite,
+                    BackColor = CardBackground
+                };
+                headerRow.Controls.Add(dayHeader);
+
+                int xPos = 100;
+                foreach (var (sessionName, _, _) in sessions)
+                {
+                    var sessionHeader = new Label
+                    {
+                        Text = sessionName,
+                        Left = xPos,
+                        Top = 0,
+                        Width = 80,
+                        Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                        ForeColor = TextWhite,
+                        BackColor = CardBackground,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    headerRow.Controls.Add(sessionHeader);
+                    xPos += 95;
+                }
+                cardLayout.Controls.Add(headerRow);
+
+                // Day rows
+                var daysOfWeek = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, 
+                                        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+
+                foreach (var day in daysOfWeek)
+                {
+                    var dayRow = new Panel
+                    {
+                        Width = 440,
+                        Height = 25,
+                        BackColor = CardBackground,
+                        Margin = new Padding(0, 2, 0, 2)
+                    };
+
+                    var dayLabel = new Label
+                    {
+                        Text = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(day),
+                        Left = 0,
+                        Top = 3,
+                        Width = 80,
+                        Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                        ForeColor = TextGray,
+                        BackColor = CardBackground
+                    };
+                    dayRow.Controls.Add(dayLabel);
+
+                    xPos = 100;
+                    foreach (var (_, startTime, endTime) in sessions)
+                    {
+                        // Check if this session is allowed for this day
+                        // Session is allowed if there's ANY time restriction that:
+                        // 1. Is for this day of week
+                        // 2. Is marked as allowed
+                        // 3. Overlaps with the session time range
+                        bool isAllowed = false;
+                        if (settings?.TradingTimeRestrictions != null)
+                        {
+                            isAllowed = settings.TradingTimeRestrictions.Any(r =>
+                                r.DayOfWeek == day &&
+                                r.IsAllowed &&
+                                // Check for any overlap between restriction and session
+                                r.StartTime < endTime &&
+                                r.EndTime > startTime);
+                        }
+
+                        var checkBox = new CheckBox
+                        {
+                            Left = xPos + 30,
+                            Top = 2,
+                            Width = 10,  // Reduced from 20 to 10 (half size)
+                            Height = 10, // Reduced from 20 to 10 (half size)
+                            Checked = isAllowed,
+                            Enabled = false, // Read-only for overview
+                            BackColor = Color.Black,
+                            ForeColor = Color.White,
+                            FlatStyle = FlatStyle.Flat,
+                            UseVisualStyleBackColor = false,
+                            Text = "" // Remove text to only show checkbox
+                        };
+                        
+                        // Simple flat appearance - black box with white check for all themes
+                        checkBox.FlatAppearance.BorderColor = Color.Black;
+                        checkBox.FlatAppearance.BorderSize = 1;
+                        checkBox.FlatAppearance.CheckedBackColor = Color.Black;
+                        
+                        // Custom paint to ensure white checkmark shows on black background
+                        checkBox.Paint += (s, e) =>
+                        {
+                            var cb = (CheckBox)s;
+                            
+                            // Draw black background
+                            using (var bgBrush = new SolidBrush(Color.Black))
+                            {
+                                e.Graphics.FillRectangle(bgBrush, 0, 0, cb.Width, cb.Height);
+                            }
+                            
+                            // Draw black border
+                            using (var borderPen = new Pen(Color.Black, 1))
+                            {
+                                e.Graphics.DrawRectangle(borderPen, 0, 0, cb.Width - 1, cb.Height - 1);
+                            }
+                            
+                            // If checked, draw white checkmark
+                            if (cb.Checked)
+                            {
+                                using (var checkPen = new Pen(Color.White, 1)) // Reduced thickness from 2 to 1
+                                {
+                                    checkPen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
+                                    checkPen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+                                    
+                                    // Draw checkmark (✓) - scaled down proportionally
+                                    var x1 = 2;  // Scaled from 4
+                                    var y1 = 5;  // Scaled from 10
+                                    var x2 = 4;  // Scaled from 8
+                                    var y2 = 7;  // Scaled from 14
+                                    var x3 = 8;  // Scaled from 16
+                                    var y3 = 3;  // Scaled from 6
+                                    
+                                    e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                                    e.Graphics.DrawLine(checkPen, x1, y1, x2, y2);
+                                    e.Graphics.DrawLine(checkPen, x2, y2, x3, y3);
+                                }
+                            }
+                        };
+                        
+                        dayRow.Controls.Add(checkBox);
+                        xPos += 95;
+                    }
+
+                    cardLayout.Controls.Add(dayRow);
+                }
+            }
+
+            cardPanel.Controls.Add(cardLayout);
+            return cardPanel;
+        }
+
+        // Helper methods to get risk setting values for Risk Overview
+        private string GetAccountLockStatus()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
+
+            var lockStatus = settingsService.GetLockStatusString(accountNumber);
+            return lockStatus == "Unlocked" ? "🔓 Unlocked" : "🔒 " + lockStatus;
+        }
+
+        private string GetSettingsLockStatus()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
+
+            var isLocked = settingsService.AreSettingsLocked(accountNumber);
+            return isLocked ? "🔒 Locked" : "🔓 Unlocked";
+        }
+
+        private string GetPositionLossLimit()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.PositionLossLimit.HasValue == true)
+                return $"💵 ${settings.PositionLossLimit.Value:N2} per position";
+            
+            return "❌ Not enabled";
+        }
+
+        private string GetPositionProfitTarget()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.PositionProfitTarget.HasValue == true)
+                return $"💵 ${settings.PositionProfitTarget.Value:N2} per position";
+            
+            return "❌ Not enabled";
+        }
+
+        private string GetDailyLossLimit()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.DailyLossLimit.HasValue == true)
+                return $"💵 ${settings.DailyLossLimit.Value:N2} per day";
+            
+            return "❌ Not enabled";
+        }
+
+        private string GetDailyProfitTarget()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.DailyProfitTarget.HasValue == true)
+                return $"💵 ${settings.DailyProfitTarget.Value:N2} per day";
+            
+            return "❌ Not enabled";
+        }
+
+        private string GetBlockedSymbols()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.BlockedSymbols != null && settings.BlockedSymbols.Any())
+                return $"⛔ {string.Join(", ", settings.BlockedSymbols)}";
+            
+            return "✅ None";
+        }
+
+        private string GetDefaultContractLimit()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.DefaultContractLimit.HasValue == true)
+                return $"📊 {settings.DefaultContractLimit.Value} contracts";
+            
+            return "❌ Not set";
+        }
+
+        private string GetSymbolContractLimits()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.SymbolContractLimits != null && settings.SymbolContractLimits.Any())
+            {
+                var limits = string.Join(", ", settings.SymbolContractLimits.Select(kvp => $"{kvp.Key}:{kvp.Value}"));
+                return $"📊 {limits}";
+            }
+            
+            return "✅ None";
+        }
+
+        private string GetTradingTimeRestrictions()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.TradingTimeRestrictions != null && settings.TradingTimeRestrictions.Any())
+            {
+                var allowedCount = settings.TradingTimeRestrictions.Count(r => r.IsAllowed);
+                return $"✅ {allowedCount} time slot(s) configured";
+            }
+            
+            return "⚠️ No restrictions (24/7 trading)";
+        }
+
+        /// <summary>
+        /// Refreshes the Risk Overview panel with current account data.
+        /// </summary>
+        private void RefreshRiskOverviewPanel(Control panel)
+        {
+            if (panel == null) return;
+
+            // Find all labels in the panel that display values
+            RefreshLabelsInControl(panel);
+        }
+
+        /// <summary>
+        /// Recursively refreshes all value labels in a control.
+        /// </summary>
+        private void RefreshLabelsInControl(Control control)
+        {
+            if (control == null) return;
+
+            // Check if this is the Trading Times card - needs special refresh
+            if (control is Panel panel && panel.Tag as string == "TradingTimesCard")
+            {
+                // Clear and recreate the trading times card content
+                var parent = panel.Parent;
+                var index = parent?.Controls.GetChildIndex(panel) ?? -1;
+                if (parent != null && index >= 0)
+                {
+                    parent.Controls.Remove(panel);
+                    var newCard = CreateTradingTimesOverviewCard();
+                    parent.Controls.Add(newCard);
+                    parent.Controls.SetChildIndex(newCard, index);
+                }
+                return;
+            }
+
+            // Check if this is a value label (has a Tag with getter function)
+            if (control is Label label && label.Tag is Func<string> getter)
+            {
+                try
+                {
+                    label.Text = getter();
+                }
+                catch (Exception ex)
+                {
+                    // If getter fails, show error message instead of crashing
+                    label.Text = "⚠️ Error loading data";
+                    System.Diagnostics.Debug.WriteLine($"Error refreshing Risk Overview label: {ex.Message}");
+                }
+            }
+
+            // Recursively refresh child controls
+            foreach (Control child in control.Controls)
+            {
+                RefreshLabelsInControl(child);
+            }
+        }
+
+        /// <summary>
         /// Creates the consolidated "Positions" panel combining Position Loss Limit and Position Profit Target.
         /// </summary>
         private Control CreatePositionsPanel()
@@ -5896,6 +6485,12 @@ namespace Risk_Manager
             {
                 ctrl.Dock = DockStyle.Fill;
                 contentPanel.Controls.Add(ctrl);
+                
+                // Refresh Risk Overview tab when it's shown
+                if (name.EndsWith("Risk Overview"))
+                {
+                    RefreshRiskOverviewPanel(ctrl);
+                }
             }
             else
             {
