@@ -5637,10 +5637,23 @@ namespace Risk_Manager
                             UseVisualStyleBackColor = false
                         };
                         
-                        // Custom appearance for better visibility
-                        checkBox.FlatAppearance.BorderColor = TextGray;
-                        checkBox.FlatAppearance.BorderSize = 1;
+                        // Custom appearance for better visibility in all themes
+                        // Use lighter border color for dark themes, darker for light theme
+                        var borderColor = currentTheme == Theme.White ? TextGray : Color.FromArgb(140, 140, 140);
+                        checkBox.FlatAppearance.BorderColor = borderColor;
+                        checkBox.FlatAppearance.BorderSize = 2; // Increased from 1 for better visibility
                         checkBox.FlatAppearance.CheckedBackColor = AccentGreen;
+                        
+                        // Set background color for unchecked state based on theme
+                        if (!isAllowed)
+                        {
+                            // Make unchecked boxes slightly lighter than card background for visibility
+                            checkBox.BackColor = currentTheme == Theme.White 
+                                ? Color.FromArgb(240, 240, 240) 
+                                : Color.FromArgb(Math.Min(CardBackground.R + 15, 255), 
+                                                Math.Min(CardBackground.G + 15, 255), 
+                                                Math.Min(CardBackground.B + 15, 255));
+                        }
                         
                         dayRow.Controls.Add(checkBox);
                         xPos += 95;
