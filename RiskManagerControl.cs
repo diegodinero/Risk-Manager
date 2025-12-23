@@ -2759,8 +2759,8 @@ namespace Risk_Manager
                     // Lock settings with calculated duration
                     settingsService.SetSettingsLock(accountNumber, true, "Locked until 5 PM ET", duration);
                     
-                    // Update status display
-                    UpdateSettingsLockStatus(lblSettingsStatus);
+                    // Update status display for the account we just locked
+                    UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
                     
                     // Update controls and navigation tabs to disable them immediately
                     UpdateSettingsControlsEnabledState();
@@ -2815,8 +2815,8 @@ namespace Risk_Manager
                     // Unlock settings
                     settingsService.SetSettingsLock(accountNumber, false, "Manually unlocked");
                     
-                    // Update status display
-                    UpdateSettingsLockStatus(lblSettingsStatus);
+                    // Update status display for the account we just unlocked
+                    UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
                     
                     // Update controls and navigation tabs to enable them immediately
                     UpdateSettingsControlsEnabledState();
@@ -5010,6 +5010,30 @@ namespace Risk_Manager
                     return;
                 }
 
+                UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating settings lock status: {ex.Message}");
+                lblSettingsStatus.Text = "Status Error";
+                lblSettingsStatus.ForeColor = TextGray;
+            }
+        }
+        
+        /// <summary>
+        /// Updates the settings lock status label and badge for a specific account number.
+        /// </summary>
+        private void UpdateSettingsLockStatusForAccount(Label lblSettingsStatus, string accountNumber)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    lblSettingsStatus.Text = "No Account Selected";
+                    lblSettingsStatus.ForeColor = TextGray;
+                    return;
+                }
+
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (!settingsService.IsInitialized)
                 {
@@ -5038,7 +5062,7 @@ namespace Risk_Manager
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating settings lock status: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error updating settings lock status for account: {ex.Message}");
                 lblSettingsStatus.Text = "Status Error";
                 lblSettingsStatus.ForeColor = TextGray;
             }
