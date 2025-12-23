@@ -685,6 +685,9 @@ namespace Risk_Manager.Data
         /// <summary>
         /// Checks if a daily loss warning has already been sent today.
         /// Automatically resets if the date has changed.
+        /// Note: Uses UTC for date comparison to ensure consistent behavior across timezones.
+        /// While account locks use 5 PM ET, warning resets are based on UTC midnight for simplicity
+        /// and to prevent edge cases with timezone conversions.
         /// </summary>
         public bool HasDailyLossWarningSent(string accountNumber)
         {
@@ -692,7 +695,7 @@ namespace Risk_Manager.Data
             if (settings?.DailyLossWarning == null)
                 return false;
 
-            // Reset warning if it's a new day
+            // Reset warning if it's a new day (UTC-based for consistency)
             var today = DateTime.UtcNow.Date;
             if (settings.DailyLossWarning.WarningDate.HasValue &&
                 settings.DailyLossWarning.WarningDate.Value.Date != today)

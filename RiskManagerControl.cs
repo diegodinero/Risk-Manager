@@ -124,6 +124,7 @@ namespace Risk_Manager
         // P&L monitoring constants
         private const int PNL_MONITOR_INTERVAL_MS = 500; // Check P&L every half second
         private const int FALLBACK_LOCK_HOURS = 8; // Fallback lock duration if timezone calculation fails
+        private const decimal DAILY_LOSS_WARNING_THRESHOLD = 0.80m; // 80% of loss limit triggers warning
 
         // Account type constants
         private const string ACCOUNT_TYPE_PA = "PA";
@@ -3324,8 +3325,8 @@ namespace Risk_Manager
                     decimal lossLimit = settings.DailyLossLimit.Value;
                     decimal currentPnL = (decimal)grossPnL;
                     
-                    // Calculate 80% warning threshold
-                    decimal warningThreshold = lossLimit * 0.80m;
+                    // Calculate warning threshold using configurable constant
+                    decimal warningThreshold = lossLimit * DAILY_LOSS_WARNING_THRESHOLD;
                     
                     // Check if loss limit is breached
                     if (currentPnL <= lossLimit)
@@ -3349,23 +3350,30 @@ namespace Risk_Manager
                         System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily loss limit breach at ${grossPnL:F2}");
                         return; // Exit after locking
                     }
-                    // Check if 80% warning threshold is reached
+                    // Check if warning threshold is reached
                     else if (currentPnL <= warningThreshold)
                     {
                         // Check if we've already sent a warning today
                         if (!settingsService.HasDailyLossWarningSent(accountId))
                         {
+                            // Calculate percentage safely (guard against division by zero)
+                            decimal percentOfLimit = 0;
+                            if (lossLimit != 0)
+                            {
+                                percentOfLimit = Math.Abs((currentPnL / lossLimit) * 100);
+                            }
+                            
                             // Send warning notification
                             string warningMessage = $"⚠️ Warning: Account {accountId} is approaching daily loss limit!\n\n" +
                                 $"Current Gross P&L: ${grossPnL:F2}\n" +
                                 $"Daily Loss Limit: ${lossLimit:F2}\n" +
-                                $"You are at {Math.Abs((currentPnL / lossLimit) * 100):F0}% of your limit.\n\n" +
+                                $"You are at {percentOfLimit:F0}% of your limit.\n\n" +
                                 $"Account will be locked if limit is reached.";
                             
                             // Log the warning
                             System.Diagnostics.Debug.WriteLine($"[WARNING NOTIFICATION] Account: {accountId}, " +
                                 $"Current P&L: ${grossPnL:F2}, Limit: ${lossLimit:F2}, " +
-                                $"Threshold: 80%, Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+                                $"Threshold: {DAILY_LOSS_WARNING_THRESHOLD * 100:F0}%, Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
                             
                             // Show warning notification
                             try
@@ -3704,8 +3712,12 @@ namespace Risk_Manager
                 }
                 
                 // Fallback to TotalPnL if Gross P&L is not available
-                System.Diagnostics.Debug.WriteLine($"[P&L Monitor] Warning: Gross P&L not found, falling back to TotalPnL for account {account.Id ?? account.Name}");
-                return GetAccountDailyPnL(account);
+                // WARNING: This fallback may not provide the same risk management protection as Gross P&L
+                System.Diagnostics.Debug.WriteLine($"[P&L Monitor] ⚠️ CRITICAL: Gross P&L not found for account {account.Id ?? account.Name}");
+                System.Diagnostics.Debug.WriteLine($"[P&L Monitor] Falling back to TotalPnL - consider verifying account configuration or broker P&L fields");
+                var fallbackPnL = GetAccountDailyPnL(account);
+                System.Diagnostics.Debug.WriteLine($"[P&L Monitor] Using TotalPnL fallback: ${fallbackPnL:F2} for loss limit monitoring");
+                return fallbackPnL;
             }
             catch (Exception ex)
             {
@@ -3759,28 +3771,6 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to show lock notification: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// </summary>
-        private double GetPositionOpenPnL(Position position)
-        {
-            try
-            {
-                if (position == null)
-                    return 0;
-
-                // Position.GrossPnL is a PnLItem object, access its Value property
-                if (position.GrossPnL != null)
-                    return position.GrossPnL.Value;
-                
-                return 0;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error getting position open P&L: {ex.Message}");
-                return 0;
             }
         }
 
