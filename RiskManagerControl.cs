@@ -4199,6 +4199,9 @@ namespace Risk_Manager
                 // Get lock status string with validation
                 string lockStatusString = settingsService.GetLockStatusString(accountNumber);
                 
+                // LOG: Show what we got from the settings service
+                System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadge] Retrieved lockStatusString='{lockStatusString}' for account='{accountNumber}'");
+                
                 // Validate lockStatusString for null/empty/unexpected values
                 if (string.IsNullOrWhiteSpace(lockStatusString))
                 {
@@ -4293,7 +4296,15 @@ namespace Risk_Manager
                 if (tradingStatusBadge != null)
                 {
                     string newState = isLocked ? "Locked (Red)" : "Unlocked (Green)";
-                    System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadgeUI: Setting badge to {newState}");
+                    
+                    // Get caller information for debugging
+                    var stackTrace = new System.Diagnostics.StackTrace(1, true);
+                    var callerFrame = stackTrace.GetFrame(0);
+                    var callerMethod = callerFrame?.GetMethod();
+                    var callerName = callerMethod != null ? $"{callerMethod.DeclaringType?.Name}.{callerMethod.Name}" : "Unknown";
+                    var lineNumber = callerFrame?.GetFileLineNumber() ?? 0;
+                    
+                    System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Called from {callerName}:{lineNumber}, Setting badge to {newState}, Previous cache={(_previousTradingLockState.HasValue ? _previousTradingLockState.Value.ToString() : "null")}");
                     
                     if (isLocked)
                     {
@@ -4310,6 +4321,8 @@ namespace Risk_Manager
                     // IMPORTANT: Update cache to keep it in sync with the badge state
                     // This ensures that direct calls to this method don't desync the cache
                     _previousTradingLockState = isLocked;
+                    
+                    System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Badge updated to {newState}, Cache updated to {isLocked}");
                 }
             }
             catch (Exception ex)
