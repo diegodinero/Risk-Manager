@@ -2762,6 +2762,9 @@ namespace Risk_Manager
                     // Update status display
                     UpdateSettingsLockStatus(lblSettingsStatus);
                     
+                    // Update controls and navigation tabs to disable them immediately
+                    UpdateSettingsControlsEnabledState();
+                    
                     MessageBox.Show($"Settings locked until 5:00 PM ET.\nDuration: {duration.Hours}h {duration.Minutes}m", 
                         "Settings Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -2814,6 +2817,9 @@ namespace Risk_Manager
                     
                     // Update status display
                     UpdateSettingsLockStatus(lblSettingsStatus);
+                    
+                    // Update controls and navigation tabs to enable them immediately
+                    UpdateSettingsControlsEnabledState();
                     
                     MessageBox.Show("Settings unlocked successfully.", "Settings Unlocked", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
