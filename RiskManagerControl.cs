@@ -26,6 +26,8 @@ namespace Risk_Manager
         private Account selectedAccount;
         private int selectedAccountIndex = -1; // Track the index of selected account
         private string displayedAccountNumber; // Cache the account number shown in UI
+        private Button lockSettingsButton; // Reference to lock settings button
+        private Button unlockSettingsButton; // Reference to unlock settings button
         private DataGridView statsDetailGrid;
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
         private DataGridView typeSummaryGrid;
@@ -684,6 +686,9 @@ namespace Risk_Manager
                 UpdateAccountNumberDisplay();
                 UpdateAllLockAccountDisplays();
                 
+                // Update settings lock status labels and badge for the new account
+                UpdateSettingsStatusLabelsRecursive(this);
+                
                 // Refresh Stats tab if visible
                 if (statsDetailGrid != null)
                     RefreshAccountStats();
@@ -901,10 +906,242 @@ namespace Risk_Manager
                 {
                     UpdateSettingsLockStatus(statusLabel);
                 }
+                
+                // Enable/disable controls based on settings lock status
+                try
+                {
+                    UpdateSettingsControlsEnabledState();
+                }
+                catch (Exception updateEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error updating settings controls enabled state: {updateEx.Message}");
+                }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading account settings: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Enables or disables all settings input controls and navigation tabs based on whether settings are locked.
+        /// When settings are locked, only the "Lock Trading" action remains available.
+        /// </summary>
+        private void UpdateSettingsControlsEnabledState()
+        {
+            try
+            {
+                var accountNumber = GetSelectedAccountNumber();
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    // No account selected - disable all controls and tabs
+                    SetAllSettingsControlsEnabled(false);
+                    SetNavigationTabsEnabled(false);
+                    UpdateLockUnlockButtonStates(null);
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    // Service not initialized - enable controls by default
+                    SetAllSettingsControlsEnabled(true);
+                    SetNavigationTabsEnabled(true);
+                    UpdateLockUnlockButtonStates(false); // Assume unlocked
+                    return;
+                }
+
+                bool isLocked = settingsService.AreSettingsLocked(accountNumber);
+                
+                // Disable all settings controls and tabs if locked, enable if unlocked
+                SetAllSettingsControlsEnabled(!isLocked);
+                SetNavigationTabsEnabled(!isLocked);
+                UpdateLockUnlockButtonStates(isLocked);
+                
+                System.Diagnostics.Debug.WriteLine($"UpdateSettingsControlsEnabledState: account='{accountNumber}', isLocked={isLocked}, controlsEnabled={!isLocked}, tabsEnabled={!isLocked}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating settings controls enabled state: {ex.Message}");
+            }
+        }
+
+        // Overload that accepts explicit account number to avoid timing issues
+        private void UpdateSettingsControlsEnabledState(string accountNumber)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    // No account specified - disable all controls and tabs
+                    SetAllSettingsControlsEnabled(false);
+                    SetNavigationTabsEnabled(false);
+                    UpdateLockUnlockButtonStates(null);
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    // Service not initialized - enable controls by default
+                    SetAllSettingsControlsEnabled(true);
+                    SetNavigationTabsEnabled(true);
+                    UpdateLockUnlockButtonStates(false); // Assume unlocked
+                    return;
+                }
+
+                bool isLocked = settingsService.AreSettingsLocked(accountNumber);
+                
+                // Disable all settings controls and tabs if locked, enable if unlocked
+                SetAllSettingsControlsEnabled(!isLocked);
+                SetNavigationTabsEnabled(!isLocked);
+                UpdateLockUnlockButtonStates(isLocked);
+                
+                System.Diagnostics.Debug.WriteLine($"UpdateSettingsControlsEnabledState (explicit account): account='{accountNumber}', isLocked={isLocked}, controlsEnabled={!isLocked}, tabsEnabled={!isLocked}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating settings controls enabled state for account '{accountNumber}': {ex.Message}");
+            }
+        }
+
+        // Update lock/unlock button states based on current lock status
+        private void UpdateLockUnlockButtonStates(bool? isLocked)
+        {
+            try
+            {
+                if (lockSettingsButton != null && unlockSettingsButton != null)
+                {
+                    if (isLocked.HasValue)
+                    {
+                        // Disable lock button if already locked, disable unlock button if already unlocked
+                        lockSettingsButton.Enabled = !isLocked.Value;
+                        unlockSettingsButton.Enabled = isLocked.Value;
+                        System.Diagnostics.Debug.WriteLine($"UpdateLockUnlockButtonStates: isLocked={isLocked.Value}, lockButtonEnabled={!isLocked.Value}, unlockButtonEnabled={isLocked.Value}");
+                    }
+                    else
+                    {
+                        // No lock status - enable both buttons
+                        lockSettingsButton.Enabled = true;
+                        unlockSettingsButton.Enabled = true;
+                        System.Diagnostics.Debug.WriteLine("UpdateLockUnlockButtonStates: No lock status, both buttons enabled");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating lock/unlock button states: {ex.Message}");
+            }
+        }
+
+        
+        /// <summary>
+        /// Enables or disables navigation tabs that should be locked when settings are locked.
+        /// Tabs to disable: Feature Toggles, Positions, Limits, Symbols, Allowed Trading Times, Copy Settings
+        /// </summary>
+        private void SetNavigationTabsEnabled(bool enabled)
+        {
+            try
+            {
+                // Define tabs that should be disabled when settings are locked
+                var tabsToDisable = new[]
+                {
+                    "⚙️ Feature Toggles",
+                    "📈 Positions",
+                    "📊 Limits",
+                    "🛡️ Symbols",
+                    "🕐 Allowed Trading Times",
+                    "📋 Copy Settings"
+                };
+
+                foreach (var btn in navButtons)
+                {
+                    var itemName = btn.Tag as string;
+                    if (!string.IsNullOrEmpty(itemName) && tabsToDisable.Contains(itemName))
+                    {
+                        btn.Enabled = enabled;
+                        
+                        // Grey out disabled buttons by adjusting ForeColor
+                        if (!enabled)
+                        {
+                            btn.ForeColor = Color.FromArgb(100, 100, 100); // Dark grey
+                            btn.Cursor = Cursors.No;
+                        }
+                        else
+                        {
+                            btn.ForeColor = TextWhite;
+                            btn.Cursor = Cursors.Hand;
+                        }
+                        
+                        btn.Invalidate(); // Force repaint
+                    }
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"SetNavigationTabsEnabled: enabled={enabled}, affected {tabsToDisable.Length} tabs");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error setting navigation tabs enabled state: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Recursively enables or disables all settings input controls.
+        /// Trading lock controls are intentionally excluded to remain functional during settings lock.
+        /// </summary>
+        private void SetAllSettingsControlsEnabled(bool enabled)
+        {
+            try
+            {
+                // List of controls to enable/disable
+                // Note: tradingLockCheckBox is intentionally excluded so trading can still be locked/unlocked
+                // even when settings are locked
+                var controls = new Control[]
+                {
+                    dailyLossLimitEnabled,
+                    dailyLossLimitInput,
+                    dailyProfitTargetEnabled,
+                    dailyProfitTargetInput,
+                    positionLossLimitEnabled,
+                    positionLossLimitInput,
+                    positionProfitTargetEnabled,
+                    positionProfitTargetInput,
+                    weeklyLossLimitEnabled,
+                    weeklyLossLimitInput,
+                    weeklyProfitTargetEnabled,
+                    weeklyProfitTargetInput,
+                    blockedSymbolsEnabled,
+                    blockedSymbolsInput,
+                    symbolContractLimitsEnabled,
+                    defaultContractLimitInput,
+                    symbolContractLimitsInput,
+                    // tradingLockCheckBox deliberately excluded
+                    featureToggleEnabledCheckbox
+                };
+
+                foreach (var control in controls)
+                {
+                    if (control != null)
+                    {
+                        control.Enabled = enabled;
+                    }
+                }
+                
+                // Also disable trading time checkboxes if we have them
+                if (tradingTimeCheckboxes != null)
+                {
+                    foreach (var checkbox in tradingTimeCheckboxes)
+                    {
+                        if (checkbox != null)
+                        {
+                            checkbox.Enabled = enabled;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error setting settings controls enabled state: {ex.Message}");
             }
         }
 
@@ -1209,6 +1446,18 @@ namespace Risk_Manager
 
             button.Click += (s, e) =>
             {
+                var btn = (Button)s;
+                // Check if button is disabled (settings locked)
+                if (!btn.Enabled)
+                {
+                    MessageBox.Show(
+                        "This tab is currently disabled because settings are locked.\n\nPlease unlock settings first from the \"Lock Settings\" tab.",
+                        "Tab Locked",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+                
                 selectedNavItem = text;
                 UpdateNavButtonStates();
                 ShowPage(text);
@@ -2406,7 +2655,7 @@ namespace Risk_Manager
             // Subtitle
             var subtitleLabel = new Label
             {
-                Text = "Select which sessions the trader is allowed to participate in:",
+                Text = "Select which sessions the trader is allowed to participate in (Monday-Friday only):",
                 Dock = DockStyle.Top,
                 Height = 30,
                 TextAlign = ContentAlignment.TopLeft,
@@ -2477,7 +2726,7 @@ namespace Risk_Manager
             // Subtitle
             var subtitleLabel = new Label
             {
-                Text = "Prevent changes to settings.",
+                Text = "Prevent changes to settings until 5:00 PM ET.",
                 Dock = DockStyle.Top,
                 Height = 30,
                 TextAlign = ContentAlignment.TopLeft,
@@ -2488,37 +2737,39 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display - shows which account settings will be locked
+            var settingsAccountDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                Tag = "LockAccountDisplay" // Tag for identification - will be updated by UpdateLockAccountDisplay
+            };
+
             var contentArea = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
-                Padding = new Padding(15)
+                Padding = new Padding(15),
+                AutoScroll = true
             };
 
-            var lockCheckbox = new CheckBox
-            {
-                Text = "Enable Settings Lock",
-                Left = 0,
-                Top = 0,
-                Width = 250,
-                Height = 30,
-                Checked = false,
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                ForeColor = TextWhite,
-                BackColor = CardBackground
-            };
-            contentArea.Controls.Add(lockCheckbox);
-            settingsLockCheckBox = lockCheckbox;
-
-            // Status label to show lock state with color
+            // Status label to show lock state with color and remaining time
             var lblSettingsStatus = new Label
             {
                 Text = "Settings Unlocked",
-                Left = 270,
-                Top = 5,
-                Width = 150,
+                Left = 0,
+                Top = 0,
+                Width = 400,
                 Height = 30,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
                 ForeColor = AccentGreen,
                 BackColor = CardBackground,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -2526,20 +2777,160 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(lblSettingsStatus);
 
+            // Lock Settings Button
+            lockSettingsButton = new Button
+            {
+                Text = "LOCK SETTINGS FOR REST OF DAY (Until 5 PM ET)",
+                Width = 400,
+                Height = 40,
+                Left = 0,
+                Top = 50,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = AccentAmber,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            lockSettingsButton.FlatAppearance.BorderSize = 0;
+            lockSettingsButton.Click += (s, e) => {
+                try
+                {
+                    // Use the cached account number to ensure we lock exactly what's displayed
+                    var accountNumber = displayedAccountNumber;
+                    if (string.IsNullOrEmpty(accountNumber))
+                    {
+                        MessageBox.Show("Please select an account first.", "No Account Selected", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (!settingsService.IsInitialized)
+                    {
+                        MessageBox.Show("Settings service is not initialized.", "Service Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    // Calculate duration until 5 PM ET
+                    var duration = RiskManagerSettingsService.CalculateDurationUntil5PMET();
+                    
+                    // Show confirmation dialog
+                    var confirmResult = MessageBox.Show(
+                        $"Are you sure you want to lock settings for account '{accountNumber}' until 5:00 PM ET?\n\n" +
+                        $"Duration: {duration.Hours}h {duration.Minutes}m\n\n" +
+                        "While locked, you will not be able to modify:\n" +
+                        "• Daily/Weekly Limits\n" +
+                        "• Position Limits\n" +
+                        "• Blocked Symbols\n" +
+                        "• Contract Limits\n" +
+                        "• Trading Time Restrictions\n" +
+                        "• Feature Toggles\n\n" +
+                        "You can still lock/unlock trading during this time.",
+                        "Confirm Lock Settings",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+                    
+                    if (confirmResult != DialogResult.Yes)
+                    {
+                        return; // User cancelled
+                    }
+                    
+                    // Lock settings with calculated duration
+                    settingsService.SetSettingsLock(accountNumber, true, "Locked until 5 PM ET", duration);
+                    
+                    // Update status display for the account we just locked
+                    UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
+                    
+                    // Update controls and navigation tabs to disable them immediately (using explicit account)
+                    UpdateSettingsControlsEnabledState(accountNumber);
+                    
+                    // Explicitly update the Settings Lock Badge to ensure immediate visual feedback
+                    UpdateSettingsStatusBadge(true);
+                    
+                    MessageBox.Show($"Settings locked until 5:00 PM ET.\nDuration: {duration.Hours}h {duration.Minutes}m", 
+                        "Settings Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error locking settings: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    System.Diagnostics.Debug.WriteLine($"Error in Lock Settings button: {ex}");
+                }
+            };
+            contentArea.Controls.Add(lockSettingsButton);
+
+            // Unlock Settings Button
+            unlockSettingsButton = new Button
+            {
+                Text = "UNLOCK SETTINGS",
+                Width = 200,
+                Height = 40,
+                Left = 0,
+                Top = 110,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = AccentGreen,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            unlockSettingsButton.FlatAppearance.BorderSize = 0;
+            unlockSettingsButton.Click += (s, e) => {
+                try
+                {
+                    // Use the cached account number to ensure we unlock exactly what's displayed
+                    var accountNumber = displayedAccountNumber;
+                    if (string.IsNullOrEmpty(accountNumber))
+                    {
+                        MessageBox.Show("Please select an account first.", "No Account Selected", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (!settingsService.IsInitialized)
+                    {
+                        MessageBox.Show("Settings service is not initialized.", "Service Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    // Unlock settings
+                    settingsService.SetSettingsLock(accountNumber, false, "Manually unlocked");
+                    
+                    // Update status display for the account we just unlocked
+                    UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
+                    
+                    // Update controls and navigation tabs to enable them immediately (using explicit account)
+                    UpdateSettingsControlsEnabledState(accountNumber);
+                    
+                    // Explicitly update the Settings Lock Badge to ensure immediate visual feedback
+                    UpdateSettingsStatusBadge(false);
+                    
+                    MessageBox.Show("Settings unlocked successfully.", "Settings Unlocked", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error unlocking settings: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    System.Diagnostics.Debug.WriteLine($"Error in Unlock Settings button: {ex}");
+                }
+            };
+            contentArea.Controls.Add(unlockSettingsButton);
+
             // Initialize status from settings service
             UpdateSettingsLockStatus(lblSettingsStatus);
 
-            // Store reference to status label for use in save button
-            lockCheckbox.Tag = lblSettingsStatus;
-
-            var saveButton = CreateDarkSaveButton();
-
-            // Add controls in correct order: Bottom first, Fill second, Top last
+            // Add controls in correct order: Fill second, Top last
             // In WinForms, docking is processed in reverse Z-order
-            mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(settingsAccountDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(titleLabel);
+            
+            // Initialize the account display
+            UpdateLockAccountDisplay(settingsAccountDisplay);
 
             return mainPanel;
         }
@@ -3151,6 +3542,7 @@ namespace Risk_Manager
                 int accountIndex = 0;
                 bool anyUnlocked = false;
                 bool anyLocked = false;
+                bool anySettingsUnlocked = false; // Track if any settings locks expired
                 bool selectedAccountChanged = false; // Track if the selected account's state changed
 
                 // Get the currently selected account to check if its state changed
@@ -3170,9 +3562,13 @@ namespace Risk_Manager
                         // Get current settings before checking lock status
                         var settings = settingsService.GetSettings(uniqueAccountId);
                         var wasLocked = settings?.TradingLock?.IsLocked == true;
+                        var wasSettingsLocked = settingsService.AreSettingsLocked(uniqueAccountId);
                         
                         // IsTradingLocked checks expiration and auto-unlocks if expired
                         var isLocked = settingsService.IsTradingLocked(uniqueAccountId);
+                        
+                        // AreSettingsLocked checks expiration and auto-unlocks if expired
+                        var isSettingsLocked = settingsService.AreSettingsLocked(uniqueAccountId);
                         
                         // If was locked but now unlocked, the lock expired and was auto-unlocked
                         if (wasLocked && !isLocked)
@@ -3222,6 +3618,19 @@ namespace Risk_Manager
                                 System.Diagnostics.Debug.WriteLine($"Error enforcing lock on account {uniqueAccountId}: {ex.Message}");
                             }
                         }
+                        
+                        // Check if settings lock expired
+                        if (wasSettingsLocked && !isSettingsLocked)
+                        {
+                            anySettingsUnlocked = true;
+                            
+                            // Check if this is the selected account
+                            if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == uniqueAccountId)
+                            {
+                                selectedAccountChanged = true;
+                                System.Diagnostics.Debug.WriteLine($"Settings lock expired for selected account: {uniqueAccountId}");
+                            }
+                        }
                     }
 
                     accountIndex++;
@@ -3240,6 +3649,31 @@ namespace Risk_Manager
                     RefreshAccountStats();
                 }
                 
+                // Update settings lock status display if any settings locks expired
+                if (anySettingsUnlocked)
+                {
+                    // Find and update all SettingsStatus labels
+                    UpdateSettingsStatusLabelsRecursive(this);
+                    
+                    // Update navigation tabs enabled state for the selected account
+                    if (!string.IsNullOrEmpty(selectedAccountNumber))
+                    {
+                        UpdateSettingsControlsEnabledState();
+                    }
+                    
+                    // Explicitly update the Settings Lock Badge if the selected account's settings were unlocked
+                    if (selectedAccountChanged)
+                    {
+                        // Reuse settingsService from outer scope (line 3535)
+                        if (settingsService.IsInitialized)
+                        {
+                            bool isLocked = settingsService.AreSettingsLocked(selectedAccountNumber);
+                            UpdateSettingsStatusBadge(isLocked);
+                            System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: Explicitly updated Settings Lock Badge for account '{selectedAccountNumber}', isLocked={isLocked}");
+                        }
+                    }
+                }
+                
                 // Update badge only if the selected account changed
                 if (selectedAccountChanged && !string.IsNullOrEmpty(selectedAccountNumber))
                 {
@@ -3253,10 +3687,33 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"Error checking expired locks: {ex.Message}");
             }
         }
+        
+        /// <summary>
+        /// Recursively finds and updates all SettingsStatus labels in the control tree.
+        /// </summary>
+        private void UpdateSettingsStatusLabelsRecursive(Control parent)
+        {
+            if (parent == null) return;
+            
+            foreach (Control control in parent.Controls)
+            {
+                if (control is Label label && label.Tag?.ToString() == "SettingsStatus")
+                {
+                    UpdateSettingsLockStatus(label);
+                }
+                
+                // Recursively check child controls
+                if (control.Controls.Count > 0)
+                {
+                    UpdateSettingsStatusLabelsRecursive(control);
+                }
+            }
+        }
 
         /// <summary>
         /// Monitors P&L limits for all accounts and enforces automatic lockouts and position closures.
         /// Checks daily P&L against daily limits and position P&L against position limits.
+        /// Stops monitoring from 4:59 PM to 6:00 PM ET to prevent re-locking accounts at market close.
         /// </summary>
         private void MonitorPnLLimits()
         {
@@ -3269,6 +3726,14 @@ namespace Risk_Manager
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (!settingsService.IsInitialized)
                     return;
+
+                // Check if we're between 4:59 PM and 6:00 PM ET - if so, stop P&L monitoring
+                // This prevents accounts from being re-locked immediately after unlocking at market close
+                if (IsNearMarketClose())
+                {
+                    System.Diagnostics.Debug.WriteLine("[P&L Monitor] Near/after market close (4:59 PM - 6:00 PM ET), skipping P&L checks to prevent re-locking");
+                    return;
+                }
 
                 // Use indexed enumeration for cleaner code
                 var accountsWithIndex = core.Accounts.Select((account, index) => new { account, index });
@@ -3916,6 +4381,47 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"Error calculating time until 5 PM ET: {ex.Message}");
                 // Fallback: lock for rest of trading day
                 return TimeSpan.FromHours(FALLBACK_LOCK_HOURS);
+            }
+        }
+        
+        /// <summary>
+        /// Checks if current time is near market close (4:59 PM to 6:00 PM ET).
+        /// Used to prevent P&L monitoring from re-locking accounts at market close.
+        /// P&L monitoring resumes at 6:00 PM ET to allow accounts to unlock cleanly at 5:00 PM.
+        /// </summary>
+        private bool IsNearMarketClose()
+        {
+            try
+            {
+                // Get current time in ET (Eastern Time)
+                TimeZoneInfo etZone;
+                try
+                {
+                    etZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                    etZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                }
+                
+                DateTime nowET = TimeZoneInfo.ConvertTime(DateTime.Now, etZone);
+                
+                // Market close is 5 PM ET (17:00), P&L monitoring resumes at 6 PM ET (18:00)
+                // Check if we're at or after 4:59 PM ET (16:59) and before 6:00 PM ET (18:00)
+                TimeSpan currentTime = nowET.TimeOfDay;
+                TimeSpan monitoringResumeTime = new TimeSpan(18, 0, 0); // 6:00 PM
+                TimeSpan oneMinuteBeforeClose = new TimeSpan(16, 59, 0); // 4:59 PM
+                
+                // Return true if between 4:59 PM (inclusive) and 6:00 PM (exclusive)
+                bool isNearClose = currentTime >= oneMinuteBeforeClose && currentTime < monitoringResumeTime;
+                
+                return isNearClose;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking if near market close: {ex.Message}");
+                // On error, allow monitoring to continue
+                return false;
             }
         }
 
@@ -4687,6 +5193,30 @@ namespace Risk_Manager
                     return;
                 }
 
+                UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating settings lock status: {ex.Message}");
+                lblSettingsStatus.Text = "Status Error";
+                lblSettingsStatus.ForeColor = TextGray;
+            }
+        }
+        
+        /// <summary>
+        /// Updates the settings lock status label and badge for a specific account number.
+        /// </summary>
+        private void UpdateSettingsLockStatusForAccount(Label lblSettingsStatus, string accountNumber)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    lblSettingsStatus.Text = "No Account Selected";
+                    lblSettingsStatus.ForeColor = TextGray;
+                    return;
+                }
+
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (!settingsService.IsInitialized)
                 {
@@ -4699,7 +5229,9 @@ namespace Risk_Manager
 
                 if (isLocked)
                 {
-                    lblSettingsStatus.Text = "Settings Locked";
+                    // Get remaining time and display it
+                    var statusString = settingsService.GetSettingsLockStatusString(accountNumber);
+                    lblSettingsStatus.Text = $"Settings {statusString}";
                     lblSettingsStatus.ForeColor = Color.Red;
                 }
                 else
@@ -4713,7 +5245,7 @@ namespace Risk_Manager
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating settings lock status: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error updating settings lock status for account: {ex.Message}");
                 lblSettingsStatus.Text = "Status Error";
                 lblSettingsStatus.ForeColor = TextGray;
             }
@@ -4914,6 +5446,18 @@ namespace Risk_Manager
                         MessageBox.Show(
                             $"Settings initialization failed: {service.InitializationError}\n\nSettings will not be persisted.",
                             "Error", 
+                            MessageBoxButtons.OK, 
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
+                    
+                    // Check if settings are locked
+                    if (service.AreSettingsLocked(accountNumber))
+                    {
+                        var lockStatus = service.GetSettingsLockStatusString(accountNumber);
+                        MessageBox.Show(
+                            $"Settings are currently locked for this account.\n\nStatus: {lockStatus}\n\nYou cannot make changes to settings until the lock expires or is manually unlocked.",
+                            "Settings Locked", 
                             MessageBoxButtons.OK, 
                             MessageBoxIcon.Warning);
                         return;
@@ -5892,9 +6436,9 @@ namespace Risk_Manager
                 }
                 cardLayout.Controls.Add(headerRow);
 
-                // Day rows
+                // Day rows - Only Monday through Friday
                 var daysOfWeek = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, 
-                                        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+                                        DayOfWeek.Thursday, DayOfWeek.Friday };
 
                 foreach (var day in daysOfWeek)
                 {
