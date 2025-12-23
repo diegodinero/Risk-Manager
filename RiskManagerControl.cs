@@ -898,10 +898,107 @@ namespace Risk_Manager
                 {
                     UpdateSettingsLockStatus(statusLabel);
                 }
+                
+                // Enable/disable controls based on settings lock status
+                UpdateSettingsControlsEnabledState();
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading account settings: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Enables or disables all settings input controls based on whether settings are locked.
+        /// When settings are locked, only the "Lock Trading" action remains available.
+        /// </summary>
+        private void UpdateSettingsControlsEnabledState()
+        {
+            try
+            {
+                var accountNumber = GetSelectedAccountNumber();
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    // No account selected - disable all controls
+                    SetAllSettingsControlsEnabled(false);
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    // Service not initialized - enable controls by default
+                    SetAllSettingsControlsEnabled(true);
+                    return;
+                }
+
+                bool isLocked = settingsService.AreSettingsLocked(accountNumber);
+                
+                // Disable all settings controls if locked, enable if unlocked
+                SetAllSettingsControlsEnabled(!isLocked);
+                
+                System.Diagnostics.Debug.WriteLine($"UpdateSettingsControlsEnabledState: account='{accountNumber}', isLocked={isLocked}, controlsEnabled={!isLocked}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating settings controls enabled state: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Recursively enables or disables all settings input controls.
+        /// </summary>
+        private void SetAllSettingsControlsEnabled(bool enabled)
+        {
+            try
+            {
+                // List of controls to enable/disable
+                var controls = new Control[]
+                {
+                    dailyLossLimitEnabled,
+                    dailyLossLimitInput,
+                    dailyProfitTargetEnabled,
+                    dailyProfitTargetInput,
+                    positionLossLimitEnabled,
+                    positionLossLimitInput,
+                    positionProfitTargetEnabled,
+                    positionProfitTargetInput,
+                    weeklyLossLimitEnabled,
+                    weeklyLossLimitInput,
+                    weeklyProfitTargetEnabled,
+                    weeklyProfitTargetInput,
+                    blockedSymbolsEnabled,
+                    blockedSymbolsInput,
+                    symbolContractLimitsEnabled,
+                    defaultContractLimitInput,
+                    symbolContractLimitsInput,
+                    tradingLockCheckBox,
+                    featureToggleEnabledCheckbox
+                };
+
+                foreach (var control in controls)
+                {
+                    if (control != null)
+                    {
+                        control.Enabled = enabled;
+                    }
+                }
+                
+                // Also disable trading time checkboxes if we have them
+                if (tradingTimeCheckboxes != null)
+                {
+                    foreach (var checkbox in tradingTimeCheckboxes)
+                    {
+                        if (checkbox != null)
+                        {
+                            checkbox.Enabled = enabled;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error setting settings controls enabled state: {ex.Message}");
             }
         }
 
@@ -4962,6 +5059,18 @@ namespace Risk_Manager
                         MessageBox.Show(
                             $"Settings initialization failed: {service.InitializationError}\n\nSettings will not be persisted.",
                             "Error", 
+                            MessageBoxButtons.OK, 
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
+                    
+                    // Check if settings are locked
+                    if (service.AreSettingsLocked(accountNumber))
+                    {
+                        var lockStatus = service.GetSettingsLockStatusString(accountNumber);
+                        MessageBox.Show(
+                            $"Settings are currently locked for this account.\n\nStatus: {lockStatus}\n\nYou cannot make changes to settings until the lock expires or is manually unlocked.",
+                            "Settings Locked", 
                             MessageBoxButtons.OK, 
                             MessageBoxIcon.Warning);
                         return;
