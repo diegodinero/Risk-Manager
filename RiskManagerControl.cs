@@ -2718,6 +2718,27 @@ namespace Risk_Manager
                     // Calculate duration until 5 PM ET
                     var duration = RiskManagerSettingsService.CalculateDurationUntil5PMET();
                     
+                    // Show confirmation dialog
+                    var confirmResult = MessageBox.Show(
+                        $"Are you sure you want to lock settings for account '{accountNumber}' until 5:00 PM ET?\n\n" +
+                        $"Duration: {duration.Hours}h {duration.Minutes}m\n\n" +
+                        "While locked, you will not be able to modify:\n" +
+                        "• Daily/Weekly Limits\n" +
+                        "• Position Limits\n" +
+                        "• Blocked Symbols\n" +
+                        "• Contract Limits\n" +
+                        "• Trading Time Restrictions\n" +
+                        "• Feature Toggles\n\n" +
+                        "You can still lock/unlock trading during this time.",
+                        "Confirm Lock Settings",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+                    
+                    if (confirmResult != DialogResult.Yes)
+                    {
+                        return; // User cancelled
+                    }
+                    
                     // Lock settings with calculated duration
                     settingsService.SetSettingsLock(accountNumber, true, "Locked until 5 PM ET", duration);
                     
