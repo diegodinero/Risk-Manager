@@ -5631,16 +5631,57 @@ namespace Risk_Manager
                             Height = 20,
                             Checked = isAllowed,
                             Enabled = false, // Read-only for overview
-                            BackColor = Color.Black,  // Black background for all themes
-                            ForeColor = Color.White,  // White checkmark for all themes
+                            BackColor = Color.Black,
+                            ForeColor = Color.White,
                             FlatStyle = FlatStyle.Flat,
-                            UseVisualStyleBackColor = false
+                            UseVisualStyleBackColor = false,
+                            Text = "" // Remove text to only show checkbox
                         };
                         
                         // Simple flat appearance - black box with white check for all themes
                         checkBox.FlatAppearance.BorderColor = Color.Black;
                         checkBox.FlatAppearance.BorderSize = 1;
                         checkBox.FlatAppearance.CheckedBackColor = Color.Black;
+                        
+                        // Custom paint to ensure white checkmark shows on black background
+                        checkBox.Paint += (s, e) =>
+                        {
+                            var cb = (CheckBox)s;
+                            
+                            // Draw black background
+                            using (var bgBrush = new SolidBrush(Color.Black))
+                            {
+                                e.Graphics.FillRectangle(bgBrush, 0, 0, cb.Width, cb.Height);
+                            }
+                            
+                            // Draw black border
+                            using (var borderPen = new Pen(Color.Black, 1))
+                            {
+                                e.Graphics.DrawRectangle(borderPen, 0, 0, cb.Width - 1, cb.Height - 1);
+                            }
+                            
+                            // If checked, draw white checkmark
+                            if (cb.Checked)
+                            {
+                                using (var checkPen = new Pen(Color.White, 2))
+                                {
+                                    checkPen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
+                                    checkPen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+                                    
+                                    // Draw checkmark (✓) 
+                                    var x1 = 4;
+                                    var y1 = 10;
+                                    var x2 = 8;
+                                    var y2 = 14;
+                                    var x3 = 16;
+                                    var y3 = 6;
+                                    
+                                    e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                                    e.Graphics.DrawLine(checkPen, x1, y1, x2, y2);
+                                    e.Graphics.DrawLine(checkPen, x2, y2, x3, y3);
+                                }
+                            }
+                        };
                         
                         dayRow.Controls.Add(checkBox);
                         xPos += 95;
