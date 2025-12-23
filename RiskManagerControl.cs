@@ -3661,7 +3661,7 @@ namespace Risk_Manager
                     // Explicitly update the Settings Lock Badge if the selected account's settings were unlocked
                     if (selectedAccountChanged)
                     {
-                        var settingsService = RiskManagerSettingsService.Instance;
+                        // Reuse settingsService from outer scope (line 3535)
                         if (settingsService.IsInitialized)
                         {
                             bool isLocked = settingsService.AreSettingsLocked(selectedAccountNumber);
