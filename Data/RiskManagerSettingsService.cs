@@ -662,6 +662,64 @@ namespace Risk_Manager.Data
 
         #endregion
 
+        #region Daily Loss Warning Management
+
+        /// <summary>
+        /// Records that a daily loss warning notification has been sent.
+        /// </summary>
+        public void SetDailyLossWarningSent(string accountNumber, decimal pnlValue)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.DailyLossWarning = new DailyLossWarningInfo
+                {
+                    WarningNotificationSent = true,
+                    WarningDate = DateTime.UtcNow.Date,
+                    WarningPnLValue = pnlValue
+                };
+                SaveSettings(settings);
+            }
+        }
+
+        /// <summary>
+        /// Checks if a daily loss warning has already been sent today.
+        /// Automatically resets if the date has changed.
+        /// </summary>
+        public bool HasDailyLossWarningSent(string accountNumber)
+        {
+            var settings = GetSettings(accountNumber);
+            if (settings?.DailyLossWarning == null)
+                return false;
+
+            // Reset warning if it's a new day
+            var today = DateTime.UtcNow.Date;
+            if (settings.DailyLossWarning.WarningDate.HasValue &&
+                settings.DailyLossWarning.WarningDate.Value.Date != today)
+            {
+                // New day - reset the warning
+                ResetDailyLossWarning(accountNumber);
+                return false;
+            }
+
+            return settings.DailyLossWarning.WarningNotificationSent;
+        }
+
+        /// <summary>
+        /// Resets the daily loss warning state (called at the start of a new trading day).
+        /// </summary>
+        public void ResetDailyLossWarning(string accountNumber)
+        {
+            var settings = GetSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.DailyLossWarning = null;
+                SaveSettings(settings);
+            }
+        }
+
+        #endregion
+
         #region Cache Management
 
         public void InvalidateCache(string accountNumber)
@@ -738,6 +796,9 @@ namespace Risk_Manager.Data
         // Locks
         public LockInfo? TradingLock { get; set; }
         public LockInfo? SettingsLock { get; set; }
+        
+        // Daily Loss Limit Warning Tracking
+        public DailyLossWarningInfo? DailyLossWarning { get; set; }
     }
 
     /// <summary>
@@ -771,6 +832,28 @@ namespace Risk_Manager.Data
         /// The time when the lock will expire (optional). If null, lock is indefinite.
         /// </summary>
         public DateTime? LockExpirationTime { get; set; }
+    }
+
+    /// <summary>
+    /// Daily Loss Warning tracking data class.
+    /// Tracks when the 80% warning was last sent to prevent duplicate notifications.
+    /// </summary>
+    public class DailyLossWarningInfo
+    {
+        /// <summary>
+        /// Whether a warning has been sent for the current day
+        /// </summary>
+        public bool WarningNotificationSent { get; set; }
+        
+        /// <summary>
+        /// The date when the warning was sent (used to reset daily)
+        /// </summary>
+        public DateTime? WarningDate { get; set; }
+        
+        /// <summary>
+        /// The P&L value when the warning was sent (for audit purposes)
+        /// </summary>
+        public decimal? WarningPnLValue { get; set; }
     }
 
     #endregion
