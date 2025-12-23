@@ -831,7 +831,10 @@ namespace Risk_Manager
                 if (positionLossLimitEnabled != null && positionLossLimitInput != null)
                 {
                     positionLossLimitEnabled.Checked = settings.PositionLossLimit.HasValue;
-                    positionLossLimitInput.Text = settings.PositionLossLimit?.ToString() ?? "0";
+                    // Display as positive value for user-friendly input (stored as negative internally)
+                    positionLossLimitInput.Text = settings.PositionLossLimit.HasValue 
+                        ? Math.Abs(settings.PositionLossLimit.Value).ToString() 
+                        : "0";
                 }
 
                 if (positionProfitTargetEnabled != null && positionProfitTargetInput != null)
@@ -844,7 +847,10 @@ namespace Risk_Manager
                 if (weeklyLossLimitEnabled != null && weeklyLossLimitInput != null)
                 {
                     weeklyLossLimitEnabled.Checked = settings.WeeklyLossLimit.HasValue;
-                    weeklyLossLimitInput.Text = settings.WeeklyLossLimit?.ToString() ?? DEFAULT_WEEKLY_LOSS_LIMIT.ToString();
+                    // Display as positive value for user-friendly input (stored as negative internally)
+                    weeklyLossLimitInput.Text = settings.WeeklyLossLimit.HasValue 
+                        ? Math.Abs(settings.WeeklyLossLimit.Value).ToString() 
+                        : DEFAULT_WEEKLY_LOSS_LIMIT.ToString();
                 }
 
                 if (weeklyProfitTargetEnabled != null && weeklyProfitTargetInput != null)
@@ -4852,7 +4858,8 @@ namespace Risk_Manager
                                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
                             }
-                            service.UpdatePositionLossLimit(accountNumber, posLossLimit);
+                            // Convert positive UI value to negative for internal storage (loss limits are negative)
+                            service.UpdatePositionLossLimit(accountNumber, -posLossLimit);
                         }
                         else
                         {
@@ -4902,7 +4909,8 @@ namespace Risk_Manager
                                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
                             }
-                            service.UpdateWeeklyLossLimit(accountNumber, weeklyLossLimit);
+                            // Convert positive UI value to negative for internal storage (loss limits are negative)
+                            service.UpdateWeeklyLossLimit(accountNumber, -weeklyLossLimit);
                         }
                         else
                         {
