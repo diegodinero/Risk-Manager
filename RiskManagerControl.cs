@@ -26,6 +26,8 @@ namespace Risk_Manager
         private Account selectedAccount;
         private int selectedAccountIndex = -1; // Track the index of selected account
         private string displayedAccountNumber; // Cache the account number shown in UI
+        private Button lockSettingsButton; // Reference to lock settings button
+        private Button unlockSettingsButton; // Reference to unlock settings button
         private DataGridView statsDetailGrid;
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
         private DataGridView typeSummaryGrid;
@@ -932,6 +934,7 @@ namespace Risk_Manager
                     // No account selected - disable all controls and tabs
                     SetAllSettingsControlsEnabled(false);
                     SetNavigationTabsEnabled(false);
+                    UpdateLockUnlockButtonStates(null);
                     return;
                 }
 
@@ -941,6 +944,7 @@ namespace Risk_Manager
                     // Service not initialized - enable controls by default
                     SetAllSettingsControlsEnabled(true);
                     SetNavigationTabsEnabled(true);
+                    UpdateLockUnlockButtonStates(false); // Assume unlocked
                     return;
                 }
 
@@ -949,6 +953,7 @@ namespace Risk_Manager
                 // Disable all settings controls and tabs if locked, enable if unlocked
                 SetAllSettingsControlsEnabled(!isLocked);
                 SetNavigationTabsEnabled(!isLocked);
+                UpdateLockUnlockButtonStates(isLocked);
                 
                 System.Diagnostics.Debug.WriteLine($"UpdateSettingsControlsEnabledState: account='{accountNumber}', isLocked={isLocked}, controlsEnabled={!isLocked}, tabsEnabled={!isLocked}");
             }
@@ -957,6 +962,75 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"Error updating settings controls enabled state: {ex.Message}");
             }
         }
+
+        // Overload that accepts explicit account number to avoid timing issues
+        private void UpdateSettingsControlsEnabledState(string accountNumber)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    // No account specified - disable all controls and tabs
+                    SetAllSettingsControlsEnabled(false);
+                    SetNavigationTabsEnabled(false);
+                    UpdateLockUnlockButtonStates(null);
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    // Service not initialized - enable controls by default
+                    SetAllSettingsControlsEnabled(true);
+                    SetNavigationTabsEnabled(true);
+                    UpdateLockUnlockButtonStates(false); // Assume unlocked
+                    return;
+                }
+
+                bool isLocked = settingsService.AreSettingsLocked(accountNumber);
+                
+                // Disable all settings controls and tabs if locked, enable if unlocked
+                SetAllSettingsControlsEnabled(!isLocked);
+                SetNavigationTabsEnabled(!isLocked);
+                UpdateLockUnlockButtonStates(isLocked);
+                
+                System.Diagnostics.Debug.WriteLine($"UpdateSettingsControlsEnabledState (explicit account): account='{accountNumber}', isLocked={isLocked}, controlsEnabled={!isLocked}, tabsEnabled={!isLocked}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating settings controls enabled state for account '{accountNumber}': {ex.Message}");
+            }
+        }
+
+        // Update lock/unlock button states based on current lock status
+        private void UpdateLockUnlockButtonStates(bool? isLocked)
+        {
+            try
+            {
+                if (lockSettingsButton != null && unlockSettingsButton != null)
+                {
+                    if (isLocked.HasValue)
+                    {
+                        // Disable lock button if already locked, disable unlock button if already unlocked
+                        lockSettingsButton.Enabled = !isLocked.Value;
+                        unlockSettingsButton.Enabled = isLocked.Value;
+                        System.Diagnostics.Debug.WriteLine($"UpdateLockUnlockButtonStates: isLocked={isLocked.Value}, lockButtonEnabled={!isLocked.Value}, unlockButtonEnabled={isLocked.Value}");
+                    }
+                    else
+                    {
+                        // No lock status - enable both buttons
+                        lockSettingsButton.Enabled = true;
+                        unlockSettingsButton.Enabled = true;
+                        System.Diagnostics.Debug.WriteLine("UpdateLockUnlockButtonStates: No lock status, both buttons enabled");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating lock/unlock button states: {ex.Message}");
+            }
+        }
+
         
         /// <summary>
         /// Enables or disables navigation tabs that should be locked when settings are locked.
@@ -2701,7 +2775,7 @@ namespace Risk_Manager
             contentArea.Controls.Add(lblSettingsStatus);
 
             // Lock Settings Button
-            var lockSettingsButton = new Button
+            lockSettingsButton = new Button
             {
                 Text = "LOCK SETTINGS FOR REST OF DAY (Until 5 PM ET)",
                 Width = 400,
@@ -2765,8 +2839,8 @@ namespace Risk_Manager
                     // Update status display for the account we just locked
                     UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
                     
-                    // Update controls and navigation tabs to disable them immediately
-                    UpdateSettingsControlsEnabledState();
+                    // Update controls and navigation tabs to disable them immediately (using explicit account)
+                    UpdateSettingsControlsEnabledState(accountNumber);
                     
                     // Explicitly update the Settings Lock Badge to ensure immediate visual feedback
                     UpdateSettingsStatusBadge(true);
@@ -2784,7 +2858,7 @@ namespace Risk_Manager
             contentArea.Controls.Add(lockSettingsButton);
 
             // Unlock Settings Button
-            var unlockSettingsButton = new Button
+            unlockSettingsButton = new Button
             {
                 Text = "UNLOCK SETTINGS",
                 Width = 200,
@@ -2824,8 +2898,8 @@ namespace Risk_Manager
                     // Update status display for the account we just unlocked
                     UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
                     
-                    // Update controls and navigation tabs to enable them immediately
-                    UpdateSettingsControlsEnabledState();
+                    // Update controls and navigation tabs to enable them immediately (using explicit account)
+                    UpdateSettingsControlsEnabledState(accountNumber);
                     
                     // Explicitly update the Settings Lock Badge to ensure immediate visual feedback
                     UpdateSettingsStatusBadge(false);
