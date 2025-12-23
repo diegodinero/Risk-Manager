@@ -3340,6 +3340,13 @@ namespace Risk_Manager
                     // Check if loss limit is breached
                     if (currentPnL <= lossLimit)
                     {
+                        // Check if account is already locked to prevent duplicate notifications
+                        if (settingsService.IsTradingLocked(accountId))
+                        {
+                            // Account is already locked, don't send notification again
+                            return;
+                        }
+                        
                         // Loss limit exceeded - lock account until 5 PM ET
                         string reason = $"Daily Loss Limit reached: Gross P&L ${grossPnL:F2} ≤ Limit ${lossLimit:F2}";
                         
@@ -3350,7 +3357,7 @@ namespace Risk_Manager
                         LockAccountUntil5PMET(accountId, reason, core, account);
                         CloseAllPositionsForAccount(account, core);
                         
-                        // Send notification to user
+                        // Send notification to user (only once, when first locking)
                         NotifyUserAccountLocked(accountId, grossPnL, lossLimit);
                         
                         // Reset warning state since we've breached the limit
