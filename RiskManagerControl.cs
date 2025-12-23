@@ -4201,6 +4201,11 @@ namespace Risk_Manager
                 // Validate lockStatusString for null/empty/unexpected values
                 if (string.IsNullOrWhiteSpace(lockStatusString))
                 {
+                    // NOTE: We default to "Unlocked" (fail-open) rather than "Locked" (fail-closed) because:
+                    // 1. This is a UI indicator issue, not a critical security control
+                    // 2. The actual lock enforcement happens in the Core API/settings service
+                    // 3. Failing open prevents UX confusion when status is temporarily unavailable
+                    // 4. Manual lock/unlock operations always update settings service first
                     LogBadgeUpdate(callerName, accountNumber, null, null, null, "LockStatusString is null or empty, treating as unlocked");
                     lockStatusString = LOCK_STATUS_UNLOCKED; // Default to unlocked for safety
                 }
@@ -4227,8 +4232,8 @@ namespace Risk_Manager
             }
             catch (Exception ex)
             {
-                // Log error with full context but don't interrupt UI flow
-                System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadge] Error: {ex.Message}");
+                // Log error using the same structured format
+                LogBadgeUpdate(callerName ?? "Unknown", null, null, null, null, $"ERROR: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadge] Stack trace: {ex.StackTrace}");
             }
         }
@@ -4255,24 +4260,29 @@ namespace Risk_Manager
         /// </remarks>
         private void LogBadgeUpdate(string caller, string accountNumber, string lockStatusString, bool? isLocked, bool? previousState, string message)
         {
-            var parts = new List<string> { $"[UpdateTradingStatusBadge] Caller={caller}" };
+            // Pre-allocate array for better performance (max 6 parts)
+            var parts = new string[6];
+            int index = 0;
+            
+            parts[index++] = $"[UpdateTradingStatusBadge] Caller={caller}";
             
             if (!string.IsNullOrEmpty(accountNumber))
-                parts.Add($"Account='{accountNumber}'");
+                parts[index++] = $"Account='{accountNumber}'";
             
             if (lockStatusString != null)
-                parts.Add($"LockStatus='{lockStatusString}'");
+                parts[index++] = $"LockStatus='{lockStatusString}'";
             
             if (isLocked.HasValue)
-                parts.Add($"IsLocked={isLocked.Value}");
+                parts[index++] = $"IsLocked={isLocked.Value}";
             
             if (previousState.HasValue)
-                parts.Add($"PreviousState={previousState.Value}");
+                parts[index++] = $"PreviousState={previousState.Value}";
             
             if (!string.IsNullOrEmpty(message))
-                parts.Add($"- {message}");
+                parts[index++] = $"- {message}";
             
-            System.Diagnostics.Debug.WriteLine(string.Join(", ", parts));
+            // Join only the used parts
+            System.Diagnostics.Debug.WriteLine(string.Join(", ", parts, 0, index));
         }
 
         private void UpdateTradingStatusBadgeUI(bool isLocked)
