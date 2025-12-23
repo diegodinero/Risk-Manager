@@ -144,6 +144,7 @@ namespace Risk_Manager
         
         // Lock status constants
         private const string LOCK_STATUS_UNLOCKED = "Unlocked";
+        private const int LOG_PARTS_MAX = 6; // Max parts in LogBadgeUpdate: Caller, Account, LockStatus, IsLocked, PreviousState, Message
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -4260,8 +4261,8 @@ namespace Risk_Manager
         /// </remarks>
         private void LogBadgeUpdate(string caller, string accountNumber, string lockStatusString, bool? isLocked, bool? previousState, string message)
         {
-            // Pre-allocate array for better performance (max 6 parts)
-            var parts = new string[6];
+            // Pre-allocate array for better performance
+            var parts = new string[LOG_PARTS_MAX];
             int index = 0;
             
             parts[index++] = $"[UpdateTradingStatusBadge] Caller={caller}";
@@ -4281,7 +4282,7 @@ namespace Risk_Manager
             if (!string.IsNullOrEmpty(message))
                 parts[index++] = $"- {message}";
             
-            // Join only the used parts
+            // Join only the used parts - string.Join is optimized for arrays
             System.Diagnostics.Debug.WriteLine(string.Join(", ", parts, 0, index));
         }
 
