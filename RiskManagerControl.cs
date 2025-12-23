@@ -5389,12 +5389,8 @@ namespace Risk_Manager
             );
             flowLayout.Controls.Add(symbolRestrictionsCard);
 
-            // Allowed Trading Times Card
-            var tradingTimesCard = CreateRiskOverviewCard(
-                "🕐 Allowed Trading Times",
-                new[] { "Trading Time Status:" },
-                new[] { GetTradingTimeRestrictions }
-            );
+            // Allowed Trading Times Card - Custom display with day/session grid
+            var tradingTimesCard = CreateTradingTimesOverviewCard();
             flowLayout.Controls.Add(tradingTimesCard);
 
             contentArea.Controls.Add(flowLayout);
@@ -5475,6 +5471,170 @@ namespace Risk_Manager
                 rowPanel.Controls.Add(valueControl);
 
                 cardLayout.Controls.Add(rowPanel);
+            }
+
+            cardPanel.Controls.Add(cardLayout);
+            return cardPanel;
+        }
+
+        /// <summary>
+        /// Creates a specialized Trading Times card showing days and sessions (Asia, London, New York).
+        /// </summary>
+        private Panel CreateTradingTimesOverviewCard()
+        {
+            var cardPanel = new Panel
+            {
+                Width = 480,
+                AutoSize = true,
+                BackColor = CardBackground,
+                Padding = new Padding(20),
+                Margin = new Padding(0, 0, 15, 15),
+                Tag = "TradingTimesCard" // Tag to identify this card for refresh
+            };
+
+            var cardLayout = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                BackColor = CardBackground
+            };
+
+            // Card title
+            var titleLabel = CreateEmojiLabel("🕐 Allowed Trading Times", 12, FontStyle.Bold, CardBackground);
+            titleLabel.Height = 30;
+            titleLabel.Width = 440;
+            titleLabel.Margin = new Padding(0, 0, 0, 10);
+            cardLayout.Controls.Add(titleLabel);
+
+            // Get trading time restrictions
+            var accountNumber = GetSelectedAccountNumber();
+            var settingsService = RiskManagerSettingsService.Instance;
+            
+            if (string.IsNullOrEmpty(accountNumber) || !settingsService.IsInitialized)
+            {
+                var noDataLabel = new Label
+                {
+                    Text = "⚠️ No account selected",
+                    Width = 440,
+                    Height = 25,
+                    Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+                    ForeColor = TextGray,
+                    BackColor = CardBackground,
+                    UseCompatibleTextRendering = false
+                };
+                cardLayout.Controls.Add(noDataLabel);
+            }
+            else
+            {
+                var settings = settingsService.GetSettings(accountNumber);
+                
+                // Define trading sessions with their time ranges
+                var sessions = new[]
+                {
+                    ("Asia", new TimeSpan(0, 0, 0), new TimeSpan(9, 0, 0)),      // 00:00-09:00
+                    ("London", new TimeSpan(8, 0, 0), new TimeSpan(16, 0, 0)),   // 08:00-16:00
+                    ("New York", new TimeSpan(13, 0, 0), new TimeSpan(21, 0, 0)) // 13:00-21:00
+                };
+
+                // Header row
+                var headerRow = new Panel
+                {
+                    Width = 440,
+                    Height = 25,
+                    BackColor = CardBackground,
+                    Margin = new Padding(0, 5, 0, 5)
+                };
+
+                var dayHeader = new Label
+                {
+                    Text = "Day",
+                    Left = 0,
+                    Top = 0,
+                    Width = 80,
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = TextWhite,
+                    BackColor = CardBackground
+                };
+                headerRow.Controls.Add(dayHeader);
+
+                int xPos = 100;
+                foreach (var (sessionName, _, _) in sessions)
+                {
+                    var sessionHeader = new Label
+                    {
+                        Text = sessionName,
+                        Left = xPos,
+                        Top = 0,
+                        Width = 80,
+                        Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                        ForeColor = TextWhite,
+                        BackColor = CardBackground,
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+                    headerRow.Controls.Add(sessionHeader);
+                    xPos += 95;
+                }
+                cardLayout.Controls.Add(headerRow);
+
+                // Day rows
+                var daysOfWeek = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, 
+                                        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+
+                foreach (var day in daysOfWeek)
+                {
+                    var dayRow = new Panel
+                    {
+                        Width = 440,
+                        Height = 25,
+                        BackColor = CardBackground,
+                        Margin = new Padding(0, 2, 0, 2)
+                    };
+
+                    var dayLabel = new Label
+                    {
+                        Text = day.ToString().Substring(0, 3), // Mon, Tue, Wed, etc.
+                        Left = 0,
+                        Top = 3,
+                        Width = 80,
+                        Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                        ForeColor = TextGray,
+                        BackColor = CardBackground
+                    };
+                    dayRow.Controls.Add(dayLabel);
+
+                    xPos = 100;
+                    foreach (var (_, startTime, endTime) in sessions)
+                    {
+                        // Check if this session is allowed for this day
+                        bool isAllowed = false;
+                        if (settings?.TradingTimeRestrictions != null)
+                        {
+                            isAllowed = settings.TradingTimeRestrictions.Any(r =>
+                                r.DayOfWeek == day &&
+                                r.IsAllowed &&
+                                r.StartTime <= startTime &&
+                                r.EndTime >= endTime);
+                        }
+
+                        var checkBox = new CheckBox
+                        {
+                            Left = xPos + 30,
+                            Top = 2,
+                            Width = 20,
+                            Height = 20,
+                            Checked = isAllowed,
+                            Enabled = false, // Read-only for overview
+                            BackColor = CardBackground,
+                            ForeColor = TextWhite
+                        };
+                        dayRow.Controls.Add(checkBox);
+                        xPos += 95;
+                    }
+
+                    cardLayout.Controls.Add(dayRow);
+                }
             }
 
             cardPanel.Controls.Add(cardLayout);
@@ -5649,6 +5809,22 @@ namespace Risk_Manager
         private void RefreshLabelsInControl(Control control)
         {
             if (control == null) return;
+
+            // Check if this is the Trading Times card - needs special refresh
+            if (control is Panel panel && panel.Tag as string == "TradingTimesCard")
+            {
+                // Clear and recreate the trading times card content
+                var parent = panel.Parent;
+                var index = parent?.Controls.GetChildIndex(panel) ?? -1;
+                if (parent != null && index >= 0)
+                {
+                    parent.Controls.Remove(panel);
+                    var newCard = CreateTradingTimesOverviewCard();
+                    parent.Controls.Add(newCard);
+                    parent.Controls.SetChildIndex(newCard, index);
+                }
+                return;
+            }
 
             // Check if this is a value label (has a Tag with getter function)
             if (control is Label label && label.Tag is Func<string> getter)
