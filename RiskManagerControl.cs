@@ -1215,7 +1215,7 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Creates a label with colored emoji support using custom painting
+        /// Creates a label with colored emoji support using Segoe UI Emoji font
         /// </summary>
         private Label CreateEmojiLabel(string text, int fontSize, FontStyle fontStyle = FontStyle.Regular, Color? backgroundColor = null)
         {
@@ -1224,32 +1224,13 @@ namespace Risk_Manager
                 Text = text,
                 Font = new Font("Segoe UI Emoji", fontSize, fontStyle),
                 ForeColor = TextWhite,
-                BackColor = backgroundColor ?? DarkBackground, // Use provided color or default to DarkBackground
-                AutoSize = false
+                BackColor = backgroundColor ?? DarkBackground,
+                AutoSize = false,
+                UseCompatibleTextRendering = false // Use GDI for better emoji support
             };
 
-            // Custom paint for colored emoji rendering
-            label.Paint += (s, e) =>
-            {
-                var lbl = (Label)s;
-                e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                
-                // Clear the background first to prevent double-rendering
-                e.Graphics.Clear(lbl.BackColor);
-                
-                // Draw text with GDI+ for colored emoji support
-                using (var brush = new SolidBrush(lbl.ForeColor))
-                {
-                    var sf = new StringFormat
-                    {
-                        LineAlignment = StringAlignment.Center,
-                        Alignment = StringAlignment.Near
-                    };
-                    e.Graphics.DrawString(lbl.Text, lbl.Font, brush, 
-                        new RectangleF(lbl.Padding.Left, 0, lbl.Width, lbl.Height), sf);
-                }
-            };
+            // No custom paint - let default rendering handle emojis properly
+            // The default label rendering supports colored emojis with Segoe UI Emoji font
 
             return label;
         }
