@@ -1,14 +1,14 @@
 # Daily Loss Limit Feature
 
 ## Overview
-The Daily Loss Limit feature provides critical risk management functionality by monitoring Gross Profit and Loss (P&L) in real-time and automatically locking accounts when configurable loss limits are breached. This feature ensures traders can better control their trading exposure and prevent catastrophic losses.
+The Daily Loss Limit feature provides critical risk management functionality by monitoring Net Profit and Loss (P&L) in real-time and automatically locking accounts when configurable loss limits are breached. This feature ensures traders can better control their trading exposure and prevent catastrophic losses.
 
 ## Key Features
 
-### 1. Real-Time Gross P&L Monitoring
-- Continuously monitors **Gross P&L** every 500ms (half second)
-- Uses account's `Gross P&L` or `GrossPnL` field from AdditionalInfo
-- Falls back to `TotalPnL` if Gross P&L is unavailable
+### 1. Real-Time Net P&L Monitoring
+- Continuously monitors **Net P&L** every 500ms (half second)
+- Uses account's `NetPnL` field from AdditionalInfo
+- Falls back to `TotalPnL` if Net P&L is unavailable
 - All monitoring activity is logged for audit purposes
 
 ### 2. Configurable Loss Limits
@@ -30,7 +30,7 @@ When an account reaches **80% of its daily loss limit**:
 ```
 ⚠️ Warning: Account ABC123 is approaching daily loss limit!
 
-Current Gross P&L: $-820.00
+Current Net P&L: $-820.00
 Daily Loss Limit: $-1000.00
 You are at 82% of your limit.
 
@@ -50,7 +50,7 @@ When the loss limit is breached:
 🔒 ACCOUNT LOCKED!
 
 Account: ABC123
-Current Gross P&L: $-1050.00
+Current Net P&L: $-1050.00
 Daily Loss Limit: $-1000.00
 
 Your account has been locked until 5 PM ET due to exceeding the daily loss limit.
@@ -72,7 +72,7 @@ All actions are logged to the Debug console with timestamps (UTC):
 
 **P&L Evaluation Logs:**
 ```
-[P&L Evaluation] Account: ABC123, Gross P&L: $-750.00, Loss Limit: $-1000.00, Profit Target: None
+[P&L Evaluation] Account: ABC123, Net P&L: $-750.00, Loss Limit: $-1000.00, Profit Target: None
 ```
 
 **Warning Notification Logs:**
@@ -83,7 +83,7 @@ All actions are logged to the Debug console with timestamps (UTC):
 
 **Account Lock Logs:**
 ```
-[ACCOUNT LOCK] Account: ABC123, Reason: Daily Loss Limit reached: Gross P&L $-1050.00 ≤ Limit $-1000.00, Timestamp: 2025-12-23 14:35:22 UTC
+[ACCOUNT LOCK] Account: ABC123, Reason: Daily Loss Limit reached: Net P&L $-1050.00 ≤ Limit $-1000.00, Timestamp: 2025-12-23 14:35:22 UTC
 [AUDIT LOG] Account ABC123 locked due to daily loss limit breach at $-1050.00
 ```
 
@@ -139,7 +139,7 @@ All actions are logged to the Debug console with timestamps (UTC):
 1. Timer triggers every 500ms
    ↓
 2. For each account:
-   - Get Gross P&L from AdditionalInfo
+   - Get Net P&L from AdditionalInfo
    - Compare against configured limits
    ↓
 3. If at 80% of limit:
@@ -151,6 +151,7 @@ All actions are logged to the Debug console with timestamps (UTC):
    - Lock account until 5 PM ET
    - Close all open positions
    - Send lock notification
+   - Update status badge to show locked state
    - Log all actions
 ```
 
@@ -217,11 +218,11 @@ public class AccountSettings
 
 ### Key Methods
 
-**Gross P&L Retrieval:**
+**Net P&L Retrieval:**
 ```csharp
-private double GetAccountGrossPnL(Account account)
+private double GetAccountNetPnL(Account account)
 ```
-- Searches for "Gross P&L" or "GrossPnL" in AdditionalInfo
+- Searches for "NetPnL" in AdditionalInfo
 - Falls back to TotalPnL if not found
 - Logs retrieval for audit
 
@@ -257,7 +258,7 @@ public void ResetDailyLossWarning(string accountNumber)
 - Ensure Feature Toggle is enabled
 
 ### Gross P&L Not Found
-- Check if account's AdditionalInfo contains "Gross P&L" or "GrossPnL" field
+- Check if account's AdditionalInfo contains "NetPnL" field
 - System will fallback to TotalPnL automatically
 - Review Debug logs for fallback messages
 - Contact broker if P&L fields are missing
