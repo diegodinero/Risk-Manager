@@ -916,7 +916,7 @@ namespace Risk_Manager
         }
         
         /// <summary>
-        /// Enables or disables all settings input controls based on whether settings are locked.
+        /// Enables or disables all settings input controls and navigation tabs based on whether settings are locked.
         /// When settings are locked, only the "Lock Trading" action remains available.
         /// </summary>
         private void UpdateSettingsControlsEnabledState()
@@ -926,8 +926,9 @@ namespace Risk_Manager
                 var accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
-                    // No account selected - disable all controls
+                    // No account selected - disable all controls and tabs
                     SetAllSettingsControlsEnabled(false);
+                    SetNavigationTabsEnabled(false);
                     return;
                 }
 
@@ -936,19 +937,70 @@ namespace Risk_Manager
                 {
                     // Service not initialized - enable controls by default
                     SetAllSettingsControlsEnabled(true);
+                    SetNavigationTabsEnabled(true);
                     return;
                 }
 
                 bool isLocked = settingsService.AreSettingsLocked(accountNumber);
                 
-                // Disable all settings controls if locked, enable if unlocked
+                // Disable all settings controls and tabs if locked, enable if unlocked
                 SetAllSettingsControlsEnabled(!isLocked);
+                SetNavigationTabsEnabled(!isLocked);
                 
-                System.Diagnostics.Debug.WriteLine($"UpdateSettingsControlsEnabledState: account='{accountNumber}', isLocked={isLocked}, controlsEnabled={!isLocked}");
+                System.Diagnostics.Debug.WriteLine($"UpdateSettingsControlsEnabledState: account='{accountNumber}', isLocked={isLocked}, controlsEnabled={!isLocked}, tabsEnabled={!isLocked}");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error updating settings controls enabled state: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Enables or disables navigation tabs that should be locked when settings are locked.
+        /// Tabs to disable: Feature Toggles, Positions, Limits, Symbols, Allowed Trading Times
+        /// </summary>
+        private void SetNavigationTabsEnabled(bool enabled)
+        {
+            try
+            {
+                // Define tabs that should be disabled when settings are locked
+                var tabsToDisable = new[]
+                {
+                    "⚙️ Feature Toggles",
+                    "📈 Positions",
+                    "📊 Limits",
+                    "🛡️ Symbols",
+                    "🕐 Allowed Trading Times"
+                };
+
+                foreach (var btn in navButtons)
+                {
+                    var itemName = btn.Tag as string;
+                    if (!string.IsNullOrEmpty(itemName) && tabsToDisable.Contains(itemName))
+                    {
+                        btn.Enabled = enabled;
+                        
+                        // Grey out disabled buttons by adjusting ForeColor
+                        if (!enabled)
+                        {
+                            btn.ForeColor = Color.FromArgb(100, 100, 100); // Dark grey
+                            btn.Cursor = Cursors.No;
+                        }
+                        else
+                        {
+                            btn.ForeColor = TextWhite;
+                            btn.Cursor = Cursors.Hand;
+                        }
+                        
+                        btn.Invalidate(); // Force repaint
+                    }
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"SetNavigationTabsEnabled: enabled={enabled}, affected {tabsToDisable.Length} tabs");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error setting navigation tabs enabled state: {ex.Message}");
             }
         }
         
@@ -1313,6 +1365,18 @@ namespace Risk_Manager
 
             button.Click += (s, e) =>
             {
+                var btn = (Button)s;
+                // Check if button is disabled (settings locked)
+                if (!btn.Enabled)
+                {
+                    MessageBox.Show(
+                        "This tab is currently disabled because settings are locked.\n\nPlease unlock settings first from the \"Lock Settings\" tab.",
+                        "Tab Locked",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+                
                 selectedNavItem = text;
                 UpdateNavButtonStates();
                 ShowPage(text);
@@ -3454,6 +3518,12 @@ namespace Risk_Manager
                 {
                     // Find and update all SettingsStatus labels
                     UpdateSettingsStatusLabelsRecursive(this);
+                    
+                    // Update navigation tabs enabled state for the selected account
+                    if (!string.IsNullOrEmpty(selectedAccountNumber))
+                    {
+                        UpdateSettingsControlsEnabledState();
+                    }
                 }
                 
                 // Update badge only if the selected account changed
