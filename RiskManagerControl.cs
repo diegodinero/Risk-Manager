@@ -168,7 +168,7 @@ namespace Risk_Manager
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
         private static readonly string[] NavItems = new[]
         {
-            "📊 Accounts Summary", "📈 Stats", "📋 Type", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
+            "📊 Accounts Summary", "📈 Stats", "📋 Type", "🔍 Risk Overview", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
             "🔒 Lock Settings", "🔒 Manual Lock"
         };
 
@@ -213,6 +213,8 @@ namespace Risk_Manager
                     placeholder = CreateAccountStatsPanel();
                 else if (name.EndsWith("Type"))
                     placeholder = CreateTypeSummaryPanel();
+                else if (name.EndsWith("Risk Overview"))
+                    placeholder = CreateRiskOverviewPanel();
                 else if (name.EndsWith("Feature Toggles"))
                     placeholder = CreateFeatureTogglesPanel();
                 else if (name.EndsWith("Copy Settings"))
@@ -5311,6 +5313,328 @@ namespace Risk_Manager
             mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
+        }
+
+        /// <summary>
+        /// Creates the "Risk Overview" panel displaying comprehensive risk settings for the selected account.
+        /// </summary>
+        private Control CreateRiskOverviewPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title with emoji rendering
+            var titleLabel = CreateEmojiLabel("🔍 Risk Overview", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Comprehensive risk settings overview for the selected account:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            // Content area with scroll
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground,
+                Padding = new Padding(15),
+                AutoScroll = true
+            };
+
+            // Create a flow layout for risk settings cards
+            var flowLayout = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 0, 15, 0) // Right padding for scrollbar
+            };
+
+            // Account Lock/Unlock Status Card
+            var lockStatusCard = CreateRiskOverviewCard(
+                "🔒 Account Status",
+                new[] { "Lock Status:", "Settings Lock:" },
+                new[] { GetAccountLockStatus, GetSettingsLockStatus }
+            );
+            flowLayout.Controls.Add(lockStatusCard);
+
+            // Position Limits Card
+            var positionLimitsCard = CreateRiskOverviewCard(
+                "📈 Position Limits",
+                new[] { "Loss Limit:", "Profit Target:" },
+                new[] { GetPositionLossLimit, GetPositionProfitTarget }
+            );
+            flowLayout.Controls.Add(positionLimitsCard);
+
+            // Daily Limits Card
+            var dailyLimitsCard = CreateRiskOverviewCard(
+                "📊 Daily Limits",
+                new[] { "Loss Limit:", "Profit Target:" },
+                new[] { GetDailyLossLimit, GetDailyProfitTarget }
+            );
+            flowLayout.Controls.Add(dailyLimitsCard);
+
+            // Symbol Restrictions Card
+            var symbolRestrictionsCard = CreateRiskOverviewCard(
+                "🛡️ Symbol Restrictions",
+                new[] { "Blacklisted Symbols:", "Default Contract Limit:", "Symbol-Specific Limits:" },
+                new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits }
+            );
+            flowLayout.Controls.Add(symbolRestrictionsCard);
+
+            // Allowed Trading Times Card
+            var tradingTimesCard = CreateRiskOverviewCard(
+                "🕐 Allowed Trading Times",
+                new[] { "Trading Time Status:" },
+                new[] { GetTradingTimeRestrictions }
+            );
+            flowLayout.Controls.Add(tradingTimesCard);
+
+            contentArea.Controls.Add(flowLayout);
+
+            // Add controls in correct order: Fill second, Top last
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(titleLabel);
+
+            return mainPanel;
+        }
+
+        /// <summary>
+        /// Creates a card panel for displaying risk overview information.
+        /// </summary>
+        private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters)
+        {
+            var cardPanel = new Panel
+            {
+                Width = 700,
+                AutoSize = true,
+                BackColor = CardBackground,
+                Padding = new Padding(20),
+                Margin = new Padding(0, 0, 0, 15)
+            };
+
+            var cardLayout = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                BackColor = CardBackground
+            };
+
+            // Card title with emoji
+            var titleLabel = CreateEmojiLabel(title, 12, FontStyle.Bold);
+            titleLabel.Height = 30;
+            titleLabel.Width = 650;
+            titleLabel.Margin = new Padding(0, 0, 0, 10);
+            cardLayout.Controls.Add(titleLabel);
+
+            // Add each label-value pair
+            for (int i = 0; i < labels.Length && i < valueGetters.Length; i++)
+            {
+                var rowPanel = new Panel
+                {
+                    Width = 650,
+                    Height = 30,
+                    BackColor = CardBackground,
+                    Margin = new Padding(0, 5, 0, 5)
+                };
+
+                var labelControl = new Label
+                {
+                    Text = labels[i],
+                    Left = 0,
+                    Top = 5,
+                    Width = 200,
+                    Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                    ForeColor = TextWhite,
+                    BackColor = CardBackground
+                };
+                rowPanel.Controls.Add(labelControl);
+
+                var valueControl = new Label
+                {
+                    Text = valueGetters[i](),
+                    Left = 210,
+                    Top = 5,
+                    Width = 430,
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    ForeColor = TextGray,
+                    BackColor = CardBackground
+                };
+                rowPanel.Controls.Add(valueControl);
+
+                cardLayout.Controls.Add(rowPanel);
+            }
+
+            cardPanel.Controls.Add(cardLayout);
+            return cardPanel;
+        }
+
+        // Helper methods to get risk setting values for Risk Overview
+        private string GetAccountLockStatus()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
+
+            var lockStatus = settingsService.GetLockStatusString(accountNumber);
+            return lockStatus == "Unlocked" ? "🔓 Unlocked" : "🔒 " + lockStatus;
+        }
+
+        private string GetSettingsLockStatus()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
+
+            var isLocked = settingsService.AreSettingsLocked(accountNumber);
+            return isLocked ? "🔒 Locked" : "🔓 Unlocked";
+        }
+
+        private string GetPositionLossLimit()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.PositionLossLimit.HasValue == true)
+                return $"💵 ${settings.PositionLossLimit.Value:N2} per position";
+            
+            return "❌ Not enabled";
+        }
+
+        private string GetPositionProfitTarget()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.PositionProfitTarget.HasValue == true)
+                return $"💵 ${settings.PositionProfitTarget.Value:N2} per position";
+            
+            return "❌ Not enabled";
+        }
+
+        private string GetDailyLossLimit()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.DailyLossLimit.HasValue == true)
+                return $"💵 ${settings.DailyLossLimit.Value:N2} per day";
+            
+            return "❌ Not enabled";
+        }
+
+        private string GetDailyProfitTarget()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.DailyProfitTarget.HasValue == true)
+                return $"💵 ${settings.DailyProfitTarget.Value:N2} per day";
+            
+            return "❌ Not enabled";
+        }
+
+        private string GetBlockedSymbols()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.BlockedSymbols != null && settings.BlockedSymbols.Any())
+                return $"⛔ {string.Join(", ", settings.BlockedSymbols)}";
+            
+            return "✅ None";
+        }
+
+        private string GetDefaultContractLimit()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.DefaultContractLimit.HasValue == true)
+                return $"📊 {settings.DefaultContractLimit.Value} contracts";
+            
+            return "❌ Not set";
+        }
+
+        private string GetSymbolContractLimits()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.SymbolContractLimits != null && settings.SymbolContractLimits.Any())
+            {
+                var limits = string.Join(", ", settings.SymbolContractLimits.Select(kvp => $"{kvp.Key}:{kvp.Value}"));
+                return $"📊 {limits}";
+            }
+            
+            return "✅ None";
+        }
+
+        private string GetTradingTimeRestrictions()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "Not set";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "Not set";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings?.TradingTimeRestrictions != null && settings.TradingTimeRestrictions.Any())
+            {
+                var allowedCount = settings.TradingTimeRestrictions.Count(r => r.IsAllowed);
+                return $"✅ {allowedCount} time slot(s) configured";
+            }
+            
+            return "⚠️ No restrictions (24/7 trading)";
         }
 
         /// <summary>
