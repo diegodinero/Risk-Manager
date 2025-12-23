@@ -3204,9 +3204,9 @@ namespace Risk_Manager
                     var selectedAccountNumber = GetSelectedAccountNumber();
                     if (!string.IsNullOrEmpty(selectedAccountNumber))
                     {
-                        bool selectedIsLocked = settingsService.IsTradingLocked(selectedAccountNumber);
-                        System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: State changed - updating badge. Account='{selectedAccountNumber}', IsLocked={selectedIsLocked}");
-                        UpdateTradingStatusBadgeUI(selectedIsLocked);
+                        System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: State changed - refreshing badge for selected account '{selectedAccountNumber}'");
+                        // Use UpdateTradingStatusBadge instead of UpdateTradingStatusBadgeUI to ensure proper validation and caching
+                        UpdateTradingStatusBadge();
                     }
                 }
             }
