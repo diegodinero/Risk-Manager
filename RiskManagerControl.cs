@@ -4306,6 +4306,10 @@ namespace Risk_Manager
                         tradingStatusBadge.BackColor = AccentGreen;
                     }
                     tradingStatusBadge.Refresh(); // Force immediate repaint
+                    
+                    // IMPORTANT: Update cache to keep it in sync with the badge state
+                    // This ensures that direct calls to this method don't desync the cache
+                    _previousTradingLockState = isLocked;
                 }
             }
             catch (Exception ex)
