@@ -5631,9 +5631,16 @@ namespace Risk_Manager
                             Height = 20,
                             Checked = isAllowed,
                             Enabled = false, // Read-only for overview
-                            BackColor = CardBackground,
-                            ForeColor = TextWhite
+                            BackColor = Color.Black,  // Black background for all themes
+                            ForeColor = Color.White,  // White checkmark for all themes
+                            FlatStyle = FlatStyle.Flat,
+                            UseVisualStyleBackColor = false
                         };
+                        
+                        // Simple flat appearance - black box with white check for all themes
+                        checkBox.FlatAppearance.BorderColor = Color.Black;
+                        checkBox.FlatAppearance.BorderSize = 1;
+                        checkBox.FlatAppearance.CheckedBackColor = Color.Black;
                         
                         dayRow.Controls.Add(checkBox);
                         xPos += 95;
