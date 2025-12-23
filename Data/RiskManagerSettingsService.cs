@@ -685,9 +685,14 @@ namespace Risk_Manager.Data
         /// <summary>
         /// Checks if a daily loss warning has already been sent today.
         /// Automatically resets if the date has changed.
-        /// Note: Uses UTC for date comparison to ensure consistent behavior across timezones.
-        /// While account locks use 5 PM ET, warning resets are based on UTC midnight for simplicity
-        /// and to prevent edge cases with timezone conversions.
+        /// 
+        /// TIMEZONE NOTE: Uses UTC for date comparison to ensure consistent behavior across timezones.
+        /// While account locks use 5 PM ET for expiration, warning resets are based on UTC midnight
+        /// for simplicity and to prevent edge cases with timezone conversions. This means:
+        /// - Warnings reset at UTC midnight (e.g., 7 PM ET / 4 PM PT in winter)
+        /// - Account locks expire at 5 PM ET (market close time)
+        /// This design is intentional to decouple warning resets from trading hours and ensure
+        /// warnings are cleared daily regardless of when trading occurs globally.
         /// </summary>
         public bool HasDailyLossWarningSent(string accountNumber)
         {

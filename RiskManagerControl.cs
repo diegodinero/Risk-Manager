@@ -3356,7 +3356,9 @@ namespace Risk_Manager
                         // Check if we've already sent a warning today
                         if (!settingsService.HasDailyLossWarningSent(accountId))
                         {
-                            // Calculate percentage safely (guard against division by zero)
+                            // Calculate percentage safely
+                            // Note: Although lossLimit is validated as negative, we keep this guard for defensive programming
+                            // in case this method is called from other contexts in the future
                             decimal percentOfLimit = 0;
                             if (lossLimit != 0)
                             {
@@ -3713,10 +3715,11 @@ namespace Risk_Manager
                 
                 // Fallback to TotalPnL if Gross P&L is not available
                 // WARNING: This fallback may not provide the same risk management protection as Gross P&L
-                System.Diagnostics.Debug.WriteLine($"[P&L Monitor] ⚠️ CRITICAL: Gross P&L not found for account {account.Id ?? account.Name}");
-                System.Diagnostics.Debug.WriteLine($"[P&L Monitor] Falling back to TotalPnL - consider verifying account configuration or broker P&L fields");
                 var fallbackPnL = GetAccountDailyPnL(account);
-                System.Diagnostics.Debug.WriteLine($"[P&L Monitor] Using TotalPnL fallback: ${fallbackPnL:F2} for loss limit monitoring");
+                System.Diagnostics.Debug.WriteLine(
+                    $"[P&L Monitor] ⚠️ CRITICAL: Gross P&L not found for account {account.Id ?? account.Name}\n" +
+                    $"  Falling back to TotalPnL - consider verifying account configuration or broker P&L fields\n" +
+                    $"  Using TotalPnL fallback: ${fallbackPnL:F2} for loss limit monitoring");
                 return fallbackPnL;
             }
             catch (Exception ex)
