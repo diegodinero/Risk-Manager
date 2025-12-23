@@ -5644,16 +5644,13 @@ namespace Risk_Manager
                         checkBox.FlatAppearance.BorderSize = 2; // Increased from 1 for better visibility
                         checkBox.FlatAppearance.CheckedBackColor = AccentGreen;
                         
-                        // Set background color for unchecked state based on theme
-                        if (!isAllowed)
-                        {
-                            // Make unchecked boxes slightly lighter than card background for visibility
-                            checkBox.BackColor = currentTheme == Theme.White 
-                                ? Color.FromArgb(240, 240, 240) 
-                                : Color.FromArgb(Math.Min(CardBackground.R + 15, 255), 
-                                                Math.Min(CardBackground.G + 15, 255), 
-                                                Math.Min(CardBackground.B + 15, 255));
-                        }
+                        // Set background color based on theme for better visibility
+                        // Make boxes slightly lighter than card background for definition
+                        checkBox.BackColor = currentTheme == Theme.White 
+                            ? Color.FromArgb(240, 240, 240) 
+                            : Color.FromArgb(Math.Min(CardBackground.R + 15, 255), 
+                                            Math.Min(CardBackground.G + 15, 255), 
+                                            Math.Min(CardBackground.B + 15, 255));
                         
                         dayRow.Controls.Add(checkBox);
                         xPos += 95;
