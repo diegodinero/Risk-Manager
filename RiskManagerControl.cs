@@ -5466,10 +5466,11 @@ namespace Risk_Manager
                     Left = 190, // Adjusted for new card width
                     Top = 5,
                     Width = 240, // Adjusted for new card width
-                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular), // Use Segoe UI Emoji for emoji support
                     ForeColor = TextGray,
                     BackColor = CardBackground,
-                    Tag = valueGetters[i] // Store the getter function for later refresh
+                    Tag = valueGetters[i], // Store the getter function for later refresh
+                    UseCompatibleTextRendering = false // Use GDI for proper emoji rendering
                 };
                 rowPanel.Controls.Add(valueControl);
 
