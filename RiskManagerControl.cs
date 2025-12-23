@@ -2657,6 +2657,22 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display - shows which account settings will be locked
+            var settingsAccountDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                Tag = "LockAccountDisplay" // Tag for identification - will be updated by UpdateLockAccountDisplay
+            };
+
             var contentArea = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -2699,7 +2715,8 @@ namespace Risk_Manager
             lockSettingsButton.Click += (s, e) => {
                 try
                 {
-                    var accountNumber = GetSelectedAccountNumber();
+                    // Use the cached account number to ensure we lock exactly what's displayed
+                    var accountNumber = displayedAccountNumber;
                     if (string.IsNullOrEmpty(accountNumber))
                     {
                         MessageBox.Show("Please select an account first.", "No Account Selected", 
@@ -2775,7 +2792,8 @@ namespace Risk_Manager
             unlockSettingsButton.Click += (s, e) => {
                 try
                 {
-                    var accountNumber = GetSelectedAccountNumber();
+                    // Use the cached account number to ensure we unlock exactly what's displayed
+                    var accountNumber = displayedAccountNumber;
                     if (string.IsNullOrEmpty(accountNumber))
                     {
                         MessageBox.Show("Please select an account first.", "No Account Selected", 
@@ -2815,8 +2833,12 @@ namespace Risk_Manager
             // Add controls in correct order: Fill second, Top last
             // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(settingsAccountDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(titleLabel);
+            
+            // Initialize the account display
+            UpdateLockAccountDisplay(settingsAccountDisplay);
 
             return mainPanel;
         }
