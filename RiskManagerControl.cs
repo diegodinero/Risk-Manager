@@ -5627,8 +5627,8 @@ namespace Risk_Manager
                         {
                             Left = xPos + 30,
                             Top = 2,
-                            Width = 20,
-                            Height = 20,
+                            Width = 10,  // Reduced from 20 to 10 (half size)
+                            Height = 10, // Reduced from 20 to 10 (half size)
                             Checked = isAllowed,
                             Enabled = false, // Read-only for overview
                             BackColor = Color.Black,
@@ -5663,18 +5663,18 @@ namespace Risk_Manager
                             // If checked, draw white checkmark
                             if (cb.Checked)
                             {
-                                using (var checkPen = new Pen(Color.White, 2))
+                                using (var checkPen = new Pen(Color.White, 1)) // Reduced thickness from 2 to 1
                                 {
                                     checkPen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
                                     checkPen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
                                     
-                                    // Draw checkmark (✓) 
-                                    var x1 = 4;
-                                    var y1 = 10;
-                                    var x2 = 8;
-                                    var y2 = 14;
-                                    var x3 = 16;
-                                    var y3 = 6;
+                                    // Draw checkmark (✓) - scaled down proportionally
+                                    var x1 = 2;  // Scaled from 4
+                                    var y1 = 5;  // Scaled from 10
+                                    var x2 = 4;  // Scaled from 8
+                                    var y2 = 7;  // Scaled from 14
+                                    var x3 = 8;  // Scaled from 16
+                                    var y3 = 3;  // Scaled from 6
                                     
                                     e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                                     e.Graphics.DrawLine(checkPen, x1, y1, x2, y2);
