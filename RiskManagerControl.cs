@@ -685,6 +685,15 @@ namespace Risk_Manager
                 if (statsDetailGrid != null)
                     RefreshAccountStats();
                 
+                // Refresh Risk Overview tab if it's currently displayed
+                if (selectedNavItem != null && selectedNavItem.EndsWith("Risk Overview"))
+                {
+                    if (pageContents.TryGetValue(selectedNavItem, out var riskOverviewPanel))
+                    {
+                        RefreshRiskOverviewPanel(riskOverviewPanel);
+                    }
+                }
+                
                 // Load settings for the selected account
                 LoadAccountSettings();
             }
@@ -1225,6 +1234,9 @@ namespace Risk_Manager
                 var lbl = (Label)s;
                 e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                // Clear the background first to prevent double-rendering
+                e.Graphics.Clear(lbl.BackColor);
                 
                 // Draw text with GDI+ for colored emoji support
                 using (var brush = new SolidBrush(lbl.ForeColor))
@@ -5475,7 +5487,8 @@ namespace Risk_Manager
                     Width = 430,
                     Font = new Font("Segoe UI", 10, FontStyle.Regular),
                     ForeColor = TextGray,
-                    BackColor = CardBackground
+                    BackColor = CardBackground,
+                    Tag = valueGetters[i] // Store the getter function for later refresh
                 };
                 rowPanel.Controls.Add(valueControl);
 
@@ -5635,6 +5648,37 @@ namespace Risk_Manager
             }
             
             return "⚠️ No restrictions (24/7 trading)";
+        }
+
+        /// <summary>
+        /// Refreshes the Risk Overview panel with current account data.
+        /// </summary>
+        private void RefreshRiskOverviewPanel(Control panel)
+        {
+            if (panel == null) return;
+
+            // Find all labels in the panel that display values
+            RefreshLabelsInControl(panel);
+        }
+
+        /// <summary>
+        /// Recursively refreshes all value labels in a control.
+        /// </summary>
+        private void RefreshLabelsInControl(Control control)
+        {
+            if (control == null) return;
+
+            // Check if this is a value label (has a Tag with getter function)
+            if (control is Label label && label.Tag is Func<string> getter)
+            {
+                label.Text = getter();
+            }
+
+            // Recursively refresh child controls
+            foreach (Control child in control.Controls)
+            {
+                RefreshLabelsInControl(child);
+            }
         }
 
         /// <summary>
@@ -6220,6 +6264,12 @@ namespace Risk_Manager
             {
                 ctrl.Dock = DockStyle.Fill;
                 contentPanel.Controls.Add(ctrl);
+                
+                // Refresh Risk Overview tab when it's shown
+                if (name.EndsWith("Risk Overview"))
+                {
+                    RefreshRiskOverviewPanel(ctrl);
+                }
             }
             else
             {
