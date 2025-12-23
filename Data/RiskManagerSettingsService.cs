@@ -200,10 +200,12 @@ namespace Risk_Manager.Data
 
         public void UpdateDailyLossLimit(string accountNumber, decimal? limit)
         {
-            // Validate that limit is not negative
-            if (limit.HasValue && limit.Value < 0)
+            // Note: Daily loss limits are stored as negative values internally
+            // The UI converts positive user input to negative before calling this method
+            // Validation: Ensure limit is not positive (should be negative or null)
+            if (limit.HasValue && limit.Value > 0)
             {
-                throw new ArgumentException("Daily loss limit cannot be negative.", nameof(limit));
+                throw new ArgumentException("Daily loss limit must be negative or zero for internal storage.", nameof(limit));
             }
             
             var settings = GetOrCreateSettings(accountNumber);
@@ -232,10 +234,12 @@ namespace Risk_Manager.Data
 
         public void UpdatePositionLossLimit(string accountNumber, decimal? limit)
         {
-            // Validate that limit is not negative
-            if (limit.HasValue && limit.Value < 0)
+            // Note: Position loss limits are stored as negative values internally
+            // The UI converts positive user input to negative before calling this method
+            // Validation: Ensure limit is not positive (should be negative or null)
+            if (limit.HasValue && limit.Value > 0)
             {
-                throw new ArgumentException("Position loss limit cannot be negative.", nameof(limit));
+                throw new ArgumentException("Position loss limit must be negative or zero for internal storage.", nameof(limit));
             }
             
             var settings = GetOrCreateSettings(accountNumber);
@@ -280,10 +284,12 @@ namespace Risk_Manager.Data
 
         public void UpdateWeeklyLossLimit(string accountNumber, decimal? limit)
         {
-            // Validate that limit is not negative
-            if (limit.HasValue && limit.Value < 0)
+            // Note: Weekly loss limits are stored as negative values internally
+            // The UI converts positive user input to negative before calling this method
+            // Validation: Ensure limit is not positive (should be negative or null)
+            if (limit.HasValue && limit.Value > 0)
             {
-                throw new ArgumentException("Weekly loss limit cannot be negative.", nameof(limit));
+                throw new ArgumentException("Weekly loss limit must be negative or zero for internal storage.", nameof(limit));
             }
             
             var settings = GetOrCreateSettings(accountNumber);
@@ -662,6 +668,72 @@ namespace Risk_Manager.Data
 
         #endregion
 
+        #region Daily Loss Warning Management
+
+        /// <summary>
+        /// Records that a daily loss warning notification has been sent.
+        /// </summary>
+        public void SetDailyLossWarningSent(string accountNumber, decimal pnlValue)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.DailyLossWarning = new DailyLossWarningInfo
+                {
+                    WarningNotificationSent = true,
+                    WarningDate = DateTime.UtcNow.Date,
+                    WarningPnLValue = pnlValue
+                };
+                SaveSettings(settings);
+            }
+        }
+
+        /// <summary>
+        /// Checks if a daily loss warning has already been sent today.
+        /// Automatically resets if the date has changed.
+        /// 
+        /// TIMEZONE NOTE: Uses UTC for date comparison to ensure consistent behavior across timezones.
+        /// While account locks use 5 PM ET for expiration, warning resets are based on UTC midnight
+        /// for simplicity and to prevent edge cases with timezone conversions. This means:
+        /// - Warnings reset at UTC midnight (e.g., 7 PM ET / 4 PM PT in winter)
+        /// - Account locks expire at 5 PM ET (market close time)
+        /// This design is intentional to decouple warning resets from trading hours and ensure
+        /// warnings are cleared daily regardless of when trading occurs globally.
+        /// </summary>
+        public bool HasDailyLossWarningSent(string accountNumber)
+        {
+            var settings = GetSettings(accountNumber);
+            if (settings?.DailyLossWarning == null)
+                return false;
+
+            // Reset warning if it's a new day (UTC-based for consistency)
+            var today = DateTime.UtcNow.Date;
+            if (settings.DailyLossWarning.WarningDate.HasValue &&
+                settings.DailyLossWarning.WarningDate.Value.Date != today)
+            {
+                // New day - reset the warning
+                ResetDailyLossWarning(accountNumber);
+                return false;
+            }
+
+            return settings.DailyLossWarning.WarningNotificationSent;
+        }
+
+        /// <summary>
+        /// Resets the daily loss warning state (called at the start of a new trading day).
+        /// </summary>
+        public void ResetDailyLossWarning(string accountNumber)
+        {
+            var settings = GetSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.DailyLossWarning = null;
+                SaveSettings(settings);
+            }
+        }
+
+        #endregion
+
         #region Cache Management
 
         public void InvalidateCache(string accountNumber)
@@ -738,6 +810,9 @@ namespace Risk_Manager.Data
         // Locks
         public LockInfo? TradingLock { get; set; }
         public LockInfo? SettingsLock { get; set; }
+        
+        // Daily Loss Limit Warning Tracking
+        public DailyLossWarningInfo? DailyLossWarning { get; set; }
     }
 
     /// <summary>
@@ -771,6 +846,28 @@ namespace Risk_Manager.Data
         /// The time when the lock will expire (optional). If null, lock is indefinite.
         /// </summary>
         public DateTime? LockExpirationTime { get; set; }
+    }
+
+    /// <summary>
+    /// Daily Loss Warning tracking data class.
+    /// Tracks when the 80% warning was last sent to prevent duplicate notifications.
+    /// </summary>
+    public class DailyLossWarningInfo
+    {
+        /// <summary>
+        /// Whether a warning has been sent for the current day
+        /// </summary>
+        public bool WarningNotificationSent { get; set; }
+        
+        /// <summary>
+        /// The date when the warning was sent (used to reset daily)
+        /// </summary>
+        public DateTime? WarningDate { get; set; }
+        
+        /// <summary>
+        /// The P&L value when the warning was sent (for audit purposes)
+        /// </summary>
+        public decimal? WarningPnLValue { get; set; }
     }
 
     #endregion

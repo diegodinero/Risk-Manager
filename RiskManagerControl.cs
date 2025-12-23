@@ -124,6 +124,7 @@ namespace Risk_Manager
         // P&L monitoring constants
         private const int PNL_MONITOR_INTERVAL_MS = 500; // Check P&L every half second
         private const int FALLBACK_LOCK_HOURS = 8; // Fallback lock duration if timezone calculation fails
+        private const decimal DAILY_LOSS_WARNING_THRESHOLD = 0.80m; // 80% of loss limit triggers warning
 
         // Account type constants
         private const string ACCOUNT_TYPE_PA = "PA";
@@ -814,7 +815,10 @@ namespace Risk_Manager
                 if (dailyLossLimitEnabled != null && dailyLossLimitInput != null)
                 {
                     dailyLossLimitEnabled.Checked = settings.DailyLossLimit.HasValue;
-                    dailyLossLimitInput.Text = settings.DailyLossLimit?.ToString() ?? "0";
+                    // Display as positive value for user-friendly input (stored as negative internally)
+                    dailyLossLimitInput.Text = settings.DailyLossLimit.HasValue 
+                        ? Math.Abs(settings.DailyLossLimit.Value).ToString() 
+                        : "0";
                 }
 
                 if (dailyProfitTargetEnabled != null && dailyProfitTargetInput != null)
@@ -827,7 +831,10 @@ namespace Risk_Manager
                 if (positionLossLimitEnabled != null && positionLossLimitInput != null)
                 {
                     positionLossLimitEnabled.Checked = settings.PositionLossLimit.HasValue;
-                    positionLossLimitInput.Text = settings.PositionLossLimit?.ToString() ?? "0";
+                    // Display as positive value for user-friendly input (stored as negative internally)
+                    positionLossLimitInput.Text = settings.PositionLossLimit.HasValue 
+                        ? Math.Abs(settings.PositionLossLimit.Value).ToString() 
+                        : "0";
                 }
 
                 if (positionProfitTargetEnabled != null && positionProfitTargetInput != null)
@@ -840,7 +847,10 @@ namespace Risk_Manager
                 if (weeklyLossLimitEnabled != null && weeklyLossLimitInput != null)
                 {
                     weeklyLossLimitEnabled.Checked = settings.WeeklyLossLimit.HasValue;
-                    weeklyLossLimitInput.Text = settings.WeeklyLossLimit?.ToString() ?? DEFAULT_WEEKLY_LOSS_LIMIT.ToString();
+                    // Display as positive value for user-friendly input (stored as negative internally)
+                    weeklyLossLimitInput.Text = settings.WeeklyLossLimit.HasValue 
+                        ? Math.Abs(settings.WeeklyLossLimit.Value).ToString() 
+                        : DEFAULT_WEEKLY_LOSS_LIMIT.ToString();
                 }
 
                 if (weeklyProfitTargetEnabled != null && weeklyProfitTargetInput != null)
@@ -2871,6 +2881,15 @@ namespace Risk_Manager
                     {
                         string reason = $"Manual lock via Lock Trading button for {durationText}";
                         System.Diagnostics.Debug.WriteLine($"LockTradingButton: Locking account='{accountNumber}' for {duration?.TotalMinutes ?? 0} minutes");
+                        
+                        // Enhanced audit logging for admin lock action
+                        System.Diagnostics.Debug.WriteLine($"[ADMIN ACTION] Account: {accountNumber}, " +
+                            $"Action: Manual Lock, " +
+                            $"Duration: {durationText}, " +
+                            $"User: Admin, " +
+                            $"Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC, " +
+                            $"Reason: {reason}");
+                        
                         settingsService.SetTradingLock(accountNumber, true, reason, duration);
                     }
                     
@@ -2897,6 +2916,7 @@ namespace Risk_Manager
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Error locking account: {ex.Message}\n{ex.StackTrace}");
                 MessageBox.Show($"Error locking the account: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -2939,6 +2959,13 @@ namespace Risk_Manager
                     if (settingsService.IsInitialized)
                     {
                         settingsService.SetTradingLock(accountNumber, false, "Manual unlock via Unlock Trading button");
+                        
+                        // Enhanced audit logging for admin override
+                        System.Diagnostics.Debug.WriteLine($"[ADMIN OVERRIDE] Account: {accountNumber}, " +
+                            $"Action: Manual Unlock, " +
+                            $"User: Admin, " +
+                            $"Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC, " +
+                            $"Reason: Manual override via Unlock Trading button");
                     }
                     
                     // Always update the trading status badge immediately (no conditional check)
@@ -2960,6 +2987,7 @@ namespace Risk_Manager
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Error unlocking account: {ex.Message}\n{ex.StackTrace}");
                 MessageBox.Show($"Error unlocking the account: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -3284,26 +3312,104 @@ namespace Risk_Manager
 
         /// <summary>
         /// Checks if daily P&L has exceeded limits and locks account if necessary.
+        /// Monitors Gross P&L per requirements and sends warning notifications at 80% threshold.
         /// </summary>
         private void CheckDailyPnLLimits(Account account, string accountId, AccountSettings settings, Core core)
         {
             try
             {
-                // Get daily P&L from account
-                double dailyPnL = GetAccountDailyPnL(account);
+                var settingsService = RiskManagerSettingsService.Instance;
+                
+                // IMPORTANT: Check if account is already locked first to prevent any further processing
+                // This prevents infinite notifications by ensuring we don't re-process already locked accounts
+                if (settingsService.IsTradingLocked(accountId))
+                {
+                    return;
+                }
+                
+                // Get Net P&L from account for daily loss/profit monitoring
+                double netPnL = GetAccountNetPnL(account);
+                
+                // Log P&L evaluation for audit purposes
+                System.Diagnostics.Debug.WriteLine($"[P&L Evaluation] Account: {accountId}, Net P&L: ${netPnL:F2}, " +
+                    $"Loss Limit: {(settings.DailyLossLimit.HasValue ? $"${settings.DailyLossLimit.Value:F2}" : "None")}, " +
+                    $"Profit Target: {(settings.DailyProfitTarget.HasValue ? $"${settings.DailyProfitTarget.Value:F2}" : "None")}");
 
                 // Check Daily Loss Limit (negative value)
                 if (settings.DailyLossLimit.HasValue && settings.DailyLossLimit.Value < 0)
                 {
                     decimal lossLimit = settings.DailyLossLimit.Value;
-                    if ((decimal)dailyPnL <= lossLimit)
+                    decimal currentPnL = (decimal)netPnL;
+                    
+                    // Calculate warning threshold using configurable constant
+                    decimal warningThreshold = lossLimit * DAILY_LOSS_WARNING_THRESHOLD;
+                    
+                    // Check if loss limit is breached
+                    if (currentPnL <= lossLimit)
                     {
                         // Loss limit exceeded - lock account until 5 PM ET
-                        string reason = $"Daily Loss Limit reached: P&L ${dailyPnL:F2} ≤ Limit ${lossLimit:F2}";
+                        string reason = $"Daily Loss Limit reached: Net P&L ${netPnL:F2} ≤ Limit ${lossLimit:F2}";
+                        
+                        // Enhanced logging
+                        System.Diagnostics.Debug.WriteLine($"[ACCOUNT LOCK] Account: {accountId}, Reason: {reason}, " +
+                            $"Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+                        
                         LockAccountUntil5PMET(accountId, reason, core, account);
                         CloseAllPositionsForAccount(account, core);
-                        System.Diagnostics.Debug.WriteLine($"Account {accountId} locked due to daily loss limit");
+                        
+                        // Send notification to user (only once, when first locking)
+                        NotifyUserAccountLocked(accountId, netPnL, lossLimit);
+                        
+                        // Reset warning state since we've breached the limit
+                        settingsService.ResetDailyLossWarning(accountId);
+                        
+                        System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily loss limit breach at ${netPnL:F2}");
                         return; // Exit after locking
+                    }
+                    // Check if warning threshold is reached
+                    else if (currentPnL <= warningThreshold)
+                    {
+                        // Check if we've already sent a warning today
+                        if (!settingsService.HasDailyLossWarningSent(accountId))
+                        {
+                            // Calculate percentage safely
+                            // Note: Although lossLimit is validated as negative, we keep this guard for defensive programming
+                            // in case this method is called from other contexts in the future
+                            decimal percentOfLimit = 0;
+                            if (lossLimit != 0)
+                            {
+                                percentOfLimit = Math.Abs((currentPnL / lossLimit) * 100);
+                            }
+                            
+                            // Send warning notification
+                            string warningMessage = $"⚠️ Warning: Account {accountId} is approaching daily loss limit!\n\n" +
+                                $"Current Net P&L: ${netPnL:F2}\n" +
+                                $"Daily Loss Limit: ${lossLimit:F2}\n" +
+                                $"You are at {percentOfLimit:F0}% of your limit.\n\n" +
+                                $"Account will be locked if limit is reached.";
+                            
+                            // Log the warning
+                            System.Diagnostics.Debug.WriteLine($"[WARNING NOTIFICATION] Account: {accountId}, " +
+                                $"Current P&L: ${netPnL:F2}, Limit: ${lossLimit:F2}, " +
+                                $"Threshold: {DAILY_LOSS_WARNING_THRESHOLD * 100:F0}%, Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+                            
+                            // Show warning notification
+                            try
+                            {
+                                PlayAlertSound();
+                                MessageBox.Show(warningMessage, "Daily Loss Limit Warning", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            }
+                            catch (Exception notifEx)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[WARNING] Failed to show notification: {notifEx.Message}");
+                            }
+                            
+                            // Mark warning as sent
+                            settingsService.SetDailyLossWarningSent(accountId, currentPnL);
+                            
+                            System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Warning notification sent to account {accountId} at 80% threshold");
+                        }
                     }
                 }
 
@@ -3311,19 +3417,25 @@ namespace Risk_Manager
                 if (settings.DailyProfitTarget.HasValue && settings.DailyProfitTarget.Value > 0)
                 {
                     decimal profitTarget = settings.DailyProfitTarget.Value;
-                    if ((decimal)dailyPnL >= profitTarget)
+                    if ((decimal)netPnL >= profitTarget)
                     {
                         // Profit target reached - lock account until 5 PM ET
-                        string reason = $"Daily Profit Target reached: P&L ${dailyPnL:F2} ≥ Target ${profitTarget:F2}";
+                        string reason = $"Daily Profit Target reached: Net P&L ${netPnL:F2} ≥ Target ${profitTarget:F2}";
+                        
+                        // Enhanced logging
+                        System.Diagnostics.Debug.WriteLine($"[ACCOUNT LOCK] Account: {accountId}, Reason: {reason}, " +
+                            $"Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+                        
                         LockAccountUntil5PMET(accountId, reason, core, account);
                         CloseAllPositionsForAccount(account, core);
-                        System.Diagnostics.Debug.WriteLine($"Account {accountId} locked due to daily profit target");
+                        
+                        System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily profit target at ${netPnL:F2}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error checking daily P&L limits for account {accountId}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Error checking daily P&L limits for account {accountId}: {ex.Message}\n{ex.StackTrace}");
             }
         }
 
@@ -3588,6 +3700,92 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Gets the Net P&L for an account from AdditionalInfo.
+        /// This is used for monitoring daily loss limits and profit targets.
+        /// </summary>
+        private double GetAccountNetPnL(Account account)
+        {
+            try
+            {
+                if (account?.AdditionalInfo == null)
+                    return 0;
+
+                foreach (var info in account.AdditionalInfo)
+                {
+                    if (info == null)
+                        continue;
+
+                    string id = info.Id ?? string.Empty;
+
+                    // Net P&L field
+                    if (string.Equals(id, "NetPnL", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (info.Value is double netPnL)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[P&L Monitor] Net P&L retrieved: ${netPnL:F2} for account {account.Id ?? account.Name}");
+                            return netPnL;
+                        }
+                    }
+                }
+                
+                // Fallback to TotalPnL if Net P&L is not available
+                System.Diagnostics.Debug.WriteLine($"[P&L Monitor] ⚠️ WARNING: Net P&L not found for account {account.Id ?? account.Name}, falling back to TotalPnL");
+                return GetAccountDailyPnL(account);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting Net P&L: {ex.Message}");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets the Gross P&L for an account from AdditionalInfo.
+        /// This is the primary method for monitoring daily loss limits per requirements.
+        /// </summary>
+        private double GetAccountGrossPnL(Account account)
+        {
+            try
+            {
+                if (account?.AdditionalInfo == null)
+                    return 0;
+
+                foreach (var info in account.AdditionalInfo)
+                {
+                    if (info == null)
+                        continue;
+
+                    string id = info.Id ?? string.Empty;
+
+                    // Gross P&L can be in "Gross P&L" or "GrossPnL" field
+                    if (string.Equals(id, "Gross P&L", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(id, "GrossPnL", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (info.Value is double grossPnL)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[P&L Monitor] Gross P&L retrieved: ${grossPnL:F2} for account {account.Id ?? account.Name}");
+                            return grossPnL;
+                        }
+                    }
+                }
+                
+                // Fallback to TotalPnL if Gross P&L is not available
+                // WARNING: This fallback may not provide the same risk management protection as Gross P&L
+                var fallbackPnL = GetAccountDailyPnL(account);
+                System.Diagnostics.Debug.WriteLine(
+                    $"[P&L Monitor] ⚠️ CRITICAL: Gross P&L not found for account {account.Id ?? account.Name}\n" +
+                    $"  Falling back to TotalPnL - consider verifying account configuration or broker P&L fields\n" +
+                    $"  Using TotalPnL fallback: ${fallbackPnL:F2} for loss limit monitoring");
+                return fallbackPnL;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting Gross P&L: {ex.Message}");
+                return 0;
+            }
+        }
+
+        /// <summary>
         /// Gets the open P&L for a position.
         /// </summary>
         private double GetPositionOpenPnL(Position position)
@@ -3607,6 +3805,31 @@ namespace Risk_Manager
             {
                 System.Diagnostics.Debug.WriteLine($"Error getting position open P&L: {ex.Message}");
                 return 0;
+            }
+        }
+
+        /// <summary>
+        /// Notifies the user when their account is locked due to loss limit breach.
+        /// </summary>
+        private void NotifyUserAccountLocked(string accountId, double netPnL, decimal lossLimit)
+        {
+            try
+            {
+                string lockMessage = $"🔒 ACCOUNT LOCKED!\n\n" +
+                    $"Account: {accountId}\n" +
+                    $"Current Net P&L: ${netPnL:F2}\n" +
+                    $"Daily Loss Limit: ${lossLimit:F2}\n\n" +
+                    $"Your account has been locked until 5 PM ET due to exceeding the daily loss limit.\n" +
+                    $"All positions have been closed.\n\n" +
+                    $"Please contact an administrator if you need to unlock the account before the scheduled time.";
+                
+                PlayAlertSound();
+                MessageBox.Show(lockMessage, "Account Locked - Daily Loss Limit", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to show lock notification: {ex.Message}");
             }
         }
 
@@ -4631,7 +4854,8 @@ namespace Risk_Manager
                                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
                             }
-                            service.UpdateDailyLossLimit(accountNumber, lossLimit);
+                            // Convert positive UI value to negative for internal storage (loss limits are negative)
+                            service.UpdateDailyLossLimit(accountNumber, -lossLimit);
                         }
                         else
                         {
@@ -4681,7 +4905,8 @@ namespace Risk_Manager
                                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
                             }
-                            service.UpdatePositionLossLimit(accountNumber, posLossLimit);
+                            // Convert positive UI value to negative for internal storage (loss limits are negative)
+                            service.UpdatePositionLossLimit(accountNumber, -posLossLimit);
                         }
                         else
                         {
@@ -4731,7 +4956,8 @@ namespace Risk_Manager
                                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
                             }
-                            service.UpdateWeeklyLossLimit(accountNumber, weeklyLossLimit);
+                            // Convert positive UI value to negative for internal storage (loss limits are negative)
+                            service.UpdateWeeklyLossLimit(accountNumber, -weeklyLossLimit);
                         }
                         else
                         {
