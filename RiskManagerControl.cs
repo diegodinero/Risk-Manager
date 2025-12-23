@@ -141,6 +141,9 @@ namespace Risk_Manager
 
         // P&L field identifiers
         private const string TOTAL_PNL_ID = "TotalPnL";
+        
+        // Lock status constants
+        private const string LOCK_STATUS_UNLOCKED = "Unlocked";
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -4156,26 +4159,21 @@ namespace Risk_Manager
             return true;
         }
 
-        private void UpdateTradingStatusBadge()
+        private void UpdateTradingStatusBadge([System.Runtime.CompilerServices.CallerMemberName] string callerName = "")
         {
             try
             {
-                // Get invocation source for debugging
-                var stackTrace = new System.Diagnostics.StackTrace(1, false);
-                var callerMethod = stackTrace.GetFrame(0)?.GetMethod();
-                var callerName = callerMethod != null ? $"{callerMethod.DeclaringType?.Name}.{callerMethod.Name}" : "Unknown";
-                
                 var accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
-                    System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadge: Called from '{callerName}' - No account selected, skipping update");
+                    LogBadgeUpdate(callerName, accountNumber, null, null, null, "No account selected, skipping update");
                     return;
                 }
 
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (!settingsService.IsInitialized)
                 {
-                    System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadge: Called from '{callerName}' - Settings service not initialized, skipping update");
+                    LogBadgeUpdate(callerName, accountNumber, null, null, null, "Settings service not initialized, skipping update");
                     return;
                 }
 
@@ -4185,36 +4183,61 @@ namespace Risk_Manager
                 // Validate lockStatusString for null/empty/unexpected values
                 if (string.IsNullOrWhiteSpace(lockStatusString))
                 {
-                    System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadge: Called from '{callerName}' - Account='{accountNumber}', LockStatusString is null or empty, treating as unlocked");
-                    lockStatusString = "Unlocked"; // Default to unlocked for safety
+                    LogBadgeUpdate(callerName, accountNumber, null, null, null, "LockStatusString is null or empty, treating as unlocked");
+                    lockStatusString = LOCK_STATUS_UNLOCKED; // Default to unlocked for safety
                 }
                 
                 // Sanitize and determine lock status
                 // The lockStatusString can be: "Unlocked", "Locked", "Locked (2h 30m)", etc.
-                bool isLocked = !lockStatusString.Equals("Unlocked", StringComparison.OrdinalIgnoreCase);
+                bool isLocked = !lockStatusString.Equals(LOCK_STATUS_UNLOCKED, StringComparison.OrdinalIgnoreCase);
                 
                 // Log the determination with all relevant context
-                System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadge: Called from '{callerName}' - Account='{accountNumber}', LockStatusString='{lockStatusString}', IsLocked={isLocked}, PreviousState={(_previousTradingLockState.HasValue ? _previousTradingLockState.Value.ToString() : "null")}");
+                LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, _previousTradingLockState, null);
 
                 // Only update UI if state has actually changed to avoid redundant updates
                 if (_previousTradingLockState.HasValue && _previousTradingLockState.Value == isLocked)
                 {
-                    System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadge: State unchanged (IsLocked={isLocked}), skipping UI update to prevent redundant refresh");
+                    LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, _previousTradingLockState, "State unchanged, skipping UI update to prevent redundant refresh");
                     return;
                 }
                 
                 // Cache the new state before updating UI
                 _previousTradingLockState = isLocked;
                 
-                System.Diagnostics.Debug.WriteLine($"UpdateTradingStatusBadge: State changed, updating UI to IsLocked={isLocked}");
+                LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, null, "State changed, updating UI");
                 UpdateTradingStatusBadgeUI(isLocked);
             }
             catch (Exception ex)
             {
                 // Log error with full context but don't interrupt UI flow
-                System.Diagnostics.Debug.WriteLine($"Error updating trading status badge: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadge] Error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadge] Stack trace: {ex.StackTrace}");
             }
+        }
+        
+        /// <summary>
+        /// Helper method for consistent logging of badge update operations.
+        /// </summary>
+        private void LogBadgeUpdate(string caller, string accountNumber, string lockStatusString, bool? isLocked, bool? previousState, string message)
+        {
+            var parts = new List<string> { $"[UpdateTradingStatusBadge] Caller={caller}" };
+            
+            if (!string.IsNullOrEmpty(accountNumber))
+                parts.Add($"Account='{accountNumber}'");
+            
+            if (lockStatusString != null)
+                parts.Add($"LockStatus='{lockStatusString}'");
+            
+            if (isLocked.HasValue)
+                parts.Add($"IsLocked={isLocked.Value}");
+            
+            if (previousState.HasValue)
+                parts.Add($"PreviousState={previousState.Value}");
+            
+            if (!string.IsNullOrEmpty(message))
+                parts.Add($"- {message}");
+            
+            System.Diagnostics.Debug.WriteLine(string.Join(", ", parts));
         }
 
         private void UpdateTradingStatusBadgeUI(bool isLocked)
