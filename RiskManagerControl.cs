@@ -3125,6 +3125,10 @@ namespace Risk_Manager
                 int accountIndex = 0;
                 bool anyUnlocked = false;
                 bool anyLocked = false;
+                bool selectedAccountChanged = false; // Track if the selected account's state changed
+
+                // Get the currently selected account to check if its state changed
+                var selectedAccountNumber = GetSelectedAccountNumber();
 
                 foreach (var account in core.Accounts)
                 {
@@ -3149,6 +3153,12 @@ namespace Risk_Manager
                         {
                             anyUnlocked = true;
                             
+                            // Check if this is the selected account
+                            if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == uniqueAccountId)
+                            {
+                                selectedAccountChanged = true;
+                            }
+                            
                             // Unlock the account in Core API
                             try
                             {
@@ -3169,6 +3179,9 @@ namespace Risk_Manager
                         {
                             anyLocked = true;
                             
+                            // Check if this is the selected account and it's being locked
+                            // (Note: we only set selectedAccountChanged for unlocking, not for enforcing existing locks)
+                            
                             // Ensure the account remains locked in Core API
                             try
                             {
@@ -3188,26 +3201,25 @@ namespace Risk_Manager
                     accountIndex++;
                 }
 
-                // Update button states and refresh displays only if state changed
-                if (anyUnlocked || anyLocked)
+                // Update button states only if the selected account's state changed
+                if (selectedAccountChanged)
                 {
                     UpdateLockButtonStates();
-                    
-                    // Refresh account summary and stats displays
-                    if (anyUnlocked)
-                    {
-                        RefreshAccountsSummary();
-                        RefreshAccountStats();
-                    }
-                    
-                    // Update badge only when state changes are detected
-                    var selectedAccountNumber = GetSelectedAccountNumber();
-                    if (!string.IsNullOrEmpty(selectedAccountNumber))
-                    {
-                        System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: State changed - refreshing badge for selected account '{selectedAccountNumber}'");
-                        // Use UpdateTradingStatusBadge instead of UpdateTradingStatusBadgeUI to ensure proper validation and caching
-                        UpdateTradingStatusBadge();
-                    }
+                }
+                
+                // Refresh account summary and stats displays if any account changed
+                if (anyUnlocked)
+                {
+                    RefreshAccountsSummary();
+                    RefreshAccountStats();
+                }
+                
+                // Update badge only if the selected account changed
+                if (selectedAccountChanged && !string.IsNullOrEmpty(selectedAccountNumber))
+                {
+                    System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: Selected account '{selectedAccountNumber}' state changed - refreshing badge");
+                    // Use UpdateTradingStatusBadge instead of UpdateTradingStatusBadgeUI to ensure proper validation and caching
+                    UpdateTradingStatusBadge();
                 }
             }
             catch (Exception ex)
