@@ -1236,7 +1236,11 @@ namespace Risk_Manager
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 
                 // Clear the background first to prevent double-rendering
-                e.Graphics.Clear(lbl.BackColor);
+                // Use parent's background if label is transparent
+                var bgColor = lbl.BackColor == Color.Transparent && lbl.Parent != null 
+                    ? lbl.Parent.BackColor 
+                    : lbl.BackColor;
+                e.Graphics.Clear(bgColor);
                 
                 // Draw text with GDI+ for colored emoji support
                 using (var brush = new SolidBrush(lbl.ForeColor))
@@ -5671,7 +5675,16 @@ namespace Risk_Manager
             // Check if this is a value label (has a Tag with getter function)
             if (control is Label label && label.Tag is Func<string> getter)
             {
-                label.Text = getter();
+                try
+                {
+                    label.Text = getter();
+                }
+                catch (Exception ex)
+                {
+                    // If getter fails, show error message instead of crashing
+                    label.Text = "⚠️ Error loading data";
+                    System.Diagnostics.Debug.WriteLine($"Error refreshing Risk Overview label: {ex.Message}");
+                }
             }
 
             // Recursively refresh child controls
