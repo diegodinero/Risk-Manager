@@ -957,7 +957,7 @@ namespace Risk_Manager
         
         /// <summary>
         /// Enables or disables navigation tabs that should be locked when settings are locked.
-        /// Tabs to disable: Feature Toggles, Positions, Limits, Symbols, Allowed Trading Times
+        /// Tabs to disable: Feature Toggles, Positions, Limits, Symbols, Allowed Trading Times, Copy Settings
         /// </summary>
         private void SetNavigationTabsEnabled(bool enabled)
         {
@@ -970,7 +970,8 @@ namespace Risk_Manager
                     "📈 Positions",
                     "📊 Limits",
                     "🛡️ Symbols",
-                    "🕐 Allowed Trading Times"
+                    "🕐 Allowed Trading Times",
+                    "📋 Copy Settings"
                 };
 
                 foreach (var btn in navButtons)
@@ -3565,6 +3566,7 @@ namespace Risk_Manager
         /// <summary>
         /// Monitors P&L limits for all accounts and enforces automatic lockouts and position closures.
         /// Checks daily P&L against daily limits and position P&L against position limits.
+        /// Stops monitoring 1 minute before 5 PM ET to prevent re-locking accounts at market close.
         /// </summary>
         private void MonitorPnLLimits()
         {
@@ -3577,6 +3579,14 @@ namespace Risk_Manager
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (!settingsService.IsInitialized)
                     return;
+
+                // Check if we're within 1 minute of 5 PM ET - if so, stop P&L monitoring
+                // This prevents accounts from being re-locked immediately after unlocking at market close
+                if (IsNearMarketClose())
+                {
+                    System.Diagnostics.Debug.WriteLine("[P&L Monitor] Near market close (4:59 PM ET or later), skipping P&L checks to prevent re-locking at 5 PM ET");
+                    return;
+                }
 
                 // Use indexed enumeration for cleaner code
                 var accountsWithIndex = core.Accounts.Select((account, index) => new { account, index });
@@ -4224,6 +4234,46 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"Error calculating time until 5 PM ET: {ex.Message}");
                 // Fallback: lock for rest of trading day
                 return TimeSpan.FromHours(FALLBACK_LOCK_HOURS);
+            }
+        }
+        
+        /// <summary>
+        /// Checks if current time is within 1 minute of 5 PM ET (market close).
+        /// Used to prevent P&L monitoring from re-locking accounts at market close.
+        /// </summary>
+        private bool IsNearMarketClose()
+        {
+            try
+            {
+                // Get current time in ET (Eastern Time)
+                TimeZoneInfo etZone;
+                try
+                {
+                    etZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                    etZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                }
+                
+                DateTime nowET = TimeZoneInfo.ConvertTime(DateTime.Now, etZone);
+                
+                // Market close is 5 PM ET (17:00)
+                // Check if we're at or after 4:59 PM ET (16:59)
+                TimeSpan currentTime = nowET.TimeOfDay;
+                TimeSpan marketCloseTime = new TimeSpan(17, 0, 0); // 5:00 PM
+                TimeSpan oneMinuteBeforeClose = new TimeSpan(16, 59, 0); // 4:59 PM
+                
+                // Return true if between 4:59 PM and 5:00 PM (inclusive)
+                bool isNearClose = currentTime >= oneMinuteBeforeClose && currentTime <= marketCloseTime;
+                
+                return isNearClose;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error checking if near market close: {ex.Message}");
+                // On error, allow monitoring to continue
+                return false;
             }
         }
 
