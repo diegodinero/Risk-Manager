@@ -4616,9 +4616,10 @@ namespace Risk_Manager
         /// </remarks>
         private void UpdateSettingsStatusBadge([System.Runtime.CompilerServices.CallerMemberName] string callerName = "")
         {
+            string accountNumber = null; // Declare outside try block for error logging
             try
             {
-                var accountNumber = GetSelectedAccountNumber();
+                accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
                     LogSettingsBadgeUpdate(callerName, accountNumber, null, null, "No account selected, skipping update");
@@ -4668,8 +4669,8 @@ namespace Risk_Manager
             }
             catch (Exception ex)
             {
-                // Log error using the structured format
-                LogSettingsBadgeUpdate(callerName ?? "Unknown", null, null, null, $"ERROR: {ex.Message}");
+                // Log error using the structured format with available context
+                LogSettingsBadgeUpdate(callerName ?? "Unknown", accountNumber, null, null, $"ERROR: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Stack trace: {ex.StackTrace}");
             }
         }
