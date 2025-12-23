@@ -682,6 +682,9 @@ namespace Risk_Manager
                 UpdateAccountNumberDisplay();
                 UpdateAllLockAccountDisplays();
                 
+                // Update settings lock status labels and badge for the new account
+                UpdateSettingsStatusLabelsRecursive(this);
+                
                 // Refresh Stats tab if visible
                 if (statsDetailGrid != null)
                     RefreshAccountStats();
