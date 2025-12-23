@@ -900,7 +900,14 @@ namespace Risk_Manager
                 }
                 
                 // Enable/disable controls based on settings lock status
-                UpdateSettingsControlsEnabledState();
+                try
+                {
+                    UpdateSettingsControlsEnabledState();
+                }
+                catch (Exception updateEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error updating settings controls enabled state: {updateEx.Message}");
+                }
             }
             catch (Exception ex)
             {
@@ -947,12 +954,15 @@ namespace Risk_Manager
         
         /// <summary>
         /// Recursively enables or disables all settings input controls.
+        /// Trading lock controls are intentionally excluded to remain functional during settings lock.
         /// </summary>
         private void SetAllSettingsControlsEnabled(bool enabled)
         {
             try
             {
                 // List of controls to enable/disable
+                // Note: tradingLockCheckBox is intentionally excluded so trading can still be locked/unlocked
+                // even when settings are locked
                 var controls = new Control[]
                 {
                     dailyLossLimitEnabled,
@@ -972,7 +982,7 @@ namespace Risk_Manager
                     symbolContractLimitsEnabled,
                     defaultContractLimitInput,
                     symbolContractLimitsInput,
-                    tradingLockCheckBox,
+                    // tradingLockCheckBox deliberately excluded
                     featureToggleEnabledCheckbox
                 };
 
@@ -3352,7 +3362,7 @@ namespace Risk_Manager
                         // Get current settings before checking lock status
                         var settings = settingsService.GetSettings(uniqueAccountId);
                         var wasLocked = settings?.TradingLock?.IsLocked == true;
-                        var wasSettingsLocked = settings?.SettingsLock?.IsLocked == true;
+                        var wasSettingsLocked = settingsService.AreSettingsLocked(uniqueAccountId);
                         
                         // IsTradingLocked checks expiration and auto-unlocks if expired
                         var isLocked = settingsService.IsTradingLocked(uniqueAccountId);

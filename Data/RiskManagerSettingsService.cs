@@ -679,8 +679,23 @@ namespace Risk_Manager.Data
             {
                 if (DateTime.UtcNow >= settings.SettingsLock.LockExpirationTime.Value)
                 {
-                    // Lock has expired, auto-unlock
-                    SetSettingsLock(accountNumber, false, "Auto-unlocked after duration expired");
+                    // Lock has expired, auto-unlock in a separate call to avoid side effects
+                    // This ensures we return false for this call and the unlock happens asynchronously
+                    System.Diagnostics.Debug.WriteLine($"Settings lock expired for account '{accountNumber}', scheduling auto-unlock");
+                    
+                    // Use Task.Run to avoid blocking this method with file I/O
+                    System.Threading.Tasks.Task.Run(() =>
+                    {
+                        try
+                        {
+                            SetSettingsLock(accountNumber, false, "Auto-unlocked after duration expired");
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error auto-unlocking settings: {ex.Message}");
+                        }
+                    });
+                    
                     return false;
                 }
             }
@@ -761,14 +776,26 @@ namespace Risk_Manager.Data
             catch (TimeZoneNotFoundException)
             {
                 // Fallback: If Eastern Time zone not found, calculate based on UTC offset
-                // EST is UTC-5, EDT is UTC-4. We'll use a simple heuristic.
-                System.Diagnostics.Debug.WriteLine("Eastern Time zone not found, using UTC offset fallback");
+                // This is a rough approximation and may be incorrect during DST transition weeks
+                System.Diagnostics.Debug.WriteLine("Eastern Time zone not found, using UTC offset fallback (may be inaccurate during DST transitions)");
                 
                 var nowUtc = DateTime.UtcNow;
-                // Assume EDT (UTC-4) during DST months (roughly March-November)
-                var isDST = nowUtc.Month >= 3 && nowUtc.Month <= 11;
-                var offsetHours = isDST ? -4 : -5;
                 
+                // More accurate DST detection: DST typically runs from 2nd Sunday in March to 1st Sunday in November
+                // This is still an approximation as the exact dates vary by year
+                bool isDST = false;
+                if (nowUtc.Month > 3 && nowUtc.Month < 11)
+                {
+                    isDST = true; // Definitely DST between April and October
+                }
+                else if (nowUtc.Month == 3 || nowUtc.Month == 11)
+                {
+                    // During March or November, use a conservative estimate
+                    // Real DST calculation requires checking specific Sunday rules
+                    isDST = nowUtc.Month == 3 ? nowUtc.Day >= 10 : nowUtc.Day < 7;
+                }
+                
+                var offsetHours = isDST ? -4 : -5;
                 var nowET = nowUtc.AddHours(offsetHours);
                 var target5PMET = nowET.Date.AddHours(17);
                 
@@ -776,6 +803,8 @@ namespace Risk_Manager.Data
                 {
                     target5PMET = target5PMET.AddDays(1);
                 }
+                
+                System.Diagnostics.Debug.WriteLine($"Fallback calculation: UTC={nowUtc:yyyy-MM-dd HH:mm:ss}, isDST={isDST}, offset={offsetHours}, ET={nowET:yyyy-MM-dd HH:mm:ss}");
                 
                 return target5PMET - nowET;
             }
