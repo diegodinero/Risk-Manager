@@ -3566,7 +3566,7 @@ namespace Risk_Manager
         /// <summary>
         /// Monitors P&L limits for all accounts and enforces automatic lockouts and position closures.
         /// Checks daily P&L against daily limits and position P&L against position limits.
-        /// Stops monitoring 1 minute before 5 PM ET to prevent re-locking accounts at market close.
+        /// Stops monitoring from 4:59 PM to 6:00 PM ET to prevent re-locking accounts at market close.
         /// </summary>
         private void MonitorPnLLimits()
         {
@@ -3580,11 +3580,11 @@ namespace Risk_Manager
                 if (!settingsService.IsInitialized)
                     return;
 
-                // Check if we're within 1 minute of 5 PM ET - if so, stop P&L monitoring
+                // Check if we're between 4:59 PM and 6:00 PM ET - if so, stop P&L monitoring
                 // This prevents accounts from being re-locked immediately after unlocking at market close
                 if (IsNearMarketClose())
                 {
-                    System.Diagnostics.Debug.WriteLine("[P&L Monitor] Near market close (4:59 PM ET or later), skipping P&L checks to prevent re-locking at 5 PM ET");
+                    System.Diagnostics.Debug.WriteLine("[P&L Monitor] Near/after market close (4:59 PM - 6:00 PM ET), skipping P&L checks to prevent re-locking");
                     return;
                 }
 
@@ -4238,8 +4238,9 @@ namespace Risk_Manager
         }
         
         /// <summary>
-        /// Checks if current time is within 1 minute of 5 PM ET (market close).
+        /// Checks if current time is near market close (4:59 PM to 6:00 PM ET).
         /// Used to prevent P&L monitoring from re-locking accounts at market close.
+        /// P&L monitoring resumes at 6:00 PM ET to allow accounts to unlock cleanly at 5:00 PM.
         /// </summary>
         private bool IsNearMarketClose()
         {
@@ -4258,14 +4259,14 @@ namespace Risk_Manager
                 
                 DateTime nowET = TimeZoneInfo.ConvertTime(DateTime.Now, etZone);
                 
-                // Market close is 5 PM ET (17:00)
-                // Check if we're at or after 4:59 PM ET (16:59) and before 5:00 PM ET
+                // Market close is 5 PM ET (17:00), P&L monitoring resumes at 6 PM ET (18:00)
+                // Check if we're at or after 4:59 PM ET (16:59) and before 6:00 PM ET (18:00)
                 TimeSpan currentTime = nowET.TimeOfDay;
-                TimeSpan marketCloseTime = new TimeSpan(17, 0, 0); // 5:00 PM
+                TimeSpan monitoringResumeTime = new TimeSpan(18, 0, 0); // 6:00 PM
                 TimeSpan oneMinuteBeforeClose = new TimeSpan(16, 59, 0); // 4:59 PM
                 
-                // Return true if between 4:59 PM (inclusive) and 5:00 PM (exclusive)
-                bool isNearClose = currentTime >= oneMinuteBeforeClose && currentTime < marketCloseTime;
+                // Return true if between 4:59 PM (inclusive) and 6:00 PM (exclusive)
+                bool isNearClose = currentTime >= oneMinuteBeforeClose && currentTime < monitoringResumeTime;
                 
                 return isNearClose;
             }
