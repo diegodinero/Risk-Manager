@@ -4159,6 +4159,24 @@ namespace Risk_Manager
             return true;
         }
 
+        /// <summary>
+        /// Updates the trading status badge based on the current lock state of the selected account.
+        /// Uses state caching to prevent redundant UI updates when the lock state hasn't changed.
+        /// </summary>
+        /// <param name="callerName">The name of the calling method (automatically populated by CallerMemberName attribute)</param>
+        /// <remarks>
+        /// This method:
+        /// - Validates the lock status string from the settings service
+        /// - Caches the previous state to avoid unnecessary UI updates
+        /// - Logs all state transitions and validation issues for debugging
+        /// - Defaults to "Unlocked" state if lock status cannot be determined
+        /// 
+        /// Expected lockStatusString values:
+        /// - "Unlocked" - Trading is allowed
+        /// - "Locked" - Trading is locked indefinitely
+        /// - "Locked (Xd Xh Xm)" - Trading is locked with time remaining (e.g., "Locked (2h 30m)")
+        /// - null/empty - Treated as "Unlocked" for safety
+        /// </remarks>
         private void UpdateTradingStatusBadge([System.Runtime.CompilerServices.CallerMemberName] string callerName = "")
         {
             try
@@ -4216,8 +4234,25 @@ namespace Risk_Manager
         }
         
         /// <summary>
-        /// Helper method for consistent logging of badge update operations.
+        /// Helper method for consistent, structured logging of badge update operations.
+        /// Formats log messages with contextual information for debugging and tracing.
         /// </summary>
+        /// <param name="caller">The name of the calling method</param>
+        /// <param name="accountNumber">The account number being processed (or null if not available)</param>
+        /// <param name="lockStatusString">The raw lock status string from settings service (or null if not available)</param>
+        /// <param name="isLocked">The determined lock state (true=locked, false=unlocked, null=not yet determined)</param>
+        /// <param name="previousState">The cached previous lock state (true=locked, false=unlocked, null=not cached/first call)</param>
+        /// <param name="message">Additional context or reason for the log entry (or null if general state logging)</param>
+        /// <remarks>
+        /// This method creates structured log messages with only the relevant fields for each scenario:
+        /// - Always includes caller name for traceability
+        /// - Conditionally includes account, lock status, state, and previous state if available
+        /// - Appends custom message if provided
+        /// 
+        /// Example outputs:
+        /// - "[UpdateTradingStatusBadge] Caller=LoadAccountSettings, Account='123456', LockStatus='Unlocked', IsLocked=False, PreviousState=True"
+        /// - "[UpdateTradingStatusBadge] Caller=CheckExpiredLocks - No account selected, skipping update"
+        /// </remarks>
         private void LogBadgeUpdate(string caller, string accountNumber, string lockStatusString, bool? isLocked, bool? previousState, string message)
         {
             var parts = new List<string> { $"[UpdateTradingStatusBadge] Caller={caller}" };
