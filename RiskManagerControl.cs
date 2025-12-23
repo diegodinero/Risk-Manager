@@ -1217,14 +1217,14 @@ namespace Risk_Manager
         /// <summary>
         /// Creates a label with colored emoji support using custom painting
         /// </summary>
-        private Label CreateEmojiLabel(string text, int fontSize, FontStyle fontStyle = FontStyle.Regular)
+        private Label CreateEmojiLabel(string text, int fontSize, FontStyle fontStyle = FontStyle.Regular, Color? backgroundColor = null)
         {
             var label = new Label
             {
                 Text = text,
                 Font = new Font("Segoe UI Emoji", fontSize, fontStyle),
                 ForeColor = TextWhite,
-                BackColor = DarkBackground, // Use DarkBackground instead of Transparent
+                BackColor = backgroundColor ?? DarkBackground, // Use provided color or default to DarkBackground
                 AutoSize = false
             };
 
@@ -5449,12 +5449,11 @@ namespace Risk_Manager
                 BackColor = CardBackground
             };
 
-            // Card title with emoji - use CardBackground instead of Transparent
-            var titleLabel = CreateEmojiLabel(title, 12, FontStyle.Bold);
+            // Card title with emoji - use CardBackground for consistency
+            var titleLabel = CreateEmojiLabel(title, 12, FontStyle.Bold, CardBackground);
             titleLabel.Height = 30;
             titleLabel.Width = 440; // Adjusted for new card width
             titleLabel.Margin = new Padding(0, 0, 0, 10);
-            titleLabel.BackColor = CardBackground; // Set explicit background color
             cardLayout.Controls.Add(titleLabel);
 
             // Add each label-value pair
