@@ -5594,7 +5594,7 @@ namespace Risk_Manager
 
                     var dayLabel = new Label
                     {
-                        Text = day.ToString().Substring(0, 3), // Mon, Tue, Wed, etc.
+                        Text = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(day),
                         Left = 0,
                         Top = 3,
                         Width = 80,
@@ -5608,14 +5608,19 @@ namespace Risk_Manager
                     foreach (var (_, startTime, endTime) in sessions)
                     {
                         // Check if this session is allowed for this day
+                        // Session is allowed if there's ANY time restriction that:
+                        // 1. Is for this day of week
+                        // 2. Is marked as allowed
+                        // 3. Overlaps with the session time range
                         bool isAllowed = false;
                         if (settings?.TradingTimeRestrictions != null)
                         {
                             isAllowed = settings.TradingTimeRestrictions.Any(r =>
                                 r.DayOfWeek == day &&
                                 r.IsAllowed &&
-                                r.StartTime <= startTime &&
-                                r.EndTime >= endTime);
+                                // Check for any overlap between restriction and session
+                                r.StartTime < endTime &&
+                                r.EndTime > startTime);
                         }
 
                         var checkBox = new CheckBox
