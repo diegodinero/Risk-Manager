@@ -2846,7 +2846,7 @@ namespace Risk_Manager
                     UpdateSettingsControlsEnabledState(accountNumber);
                     
                     // Explicitly update the Settings Lock Badge to ensure immediate visual feedback
-                    UpdateSettingsStatusBadge(true);
+                    UpdateSettingsStatusBadge();
                     
                     MessageBox.Show($"Settings locked until 5:00 PM ET.\nDuration: {duration.Hours}h {duration.Minutes}m", 
                         "Settings Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -2905,7 +2905,7 @@ namespace Risk_Manager
                     UpdateSettingsControlsEnabledState(accountNumber);
                     
                     // Explicitly update the Settings Lock Badge to ensure immediate visual feedback
-                    UpdateSettingsStatusBadge(false);
+                    UpdateSettingsStatusBadge();
                     
                     MessageBox.Show("Settings unlocked successfully.", "Settings Unlocked", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -3667,9 +3667,8 @@ namespace Risk_Manager
                         // Reuse settingsService from outer scope (line 3535)
                         if (settingsService.IsInitialized)
                         {
-                            bool isLocked = settingsService.AreSettingsLocked(selectedAccountNumber);
-                            UpdateSettingsStatusBadge(isLocked);
-                            System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: Explicitly updated Settings Lock Badge for account '{selectedAccountNumber}', isLocked={isLocked}");
+                            UpdateSettingsStatusBadge();
+                            System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: Explicitly updated Settings Lock Badge for account '{selectedAccountNumber}'");
                         }
                     }
                 }
