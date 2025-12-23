@@ -1224,7 +1224,7 @@ namespace Risk_Manager
                 Text = text,
                 Font = new Font("Segoe UI Emoji", fontSize, fontStyle),
                 ForeColor = TextWhite,
-                BackColor = Color.Transparent,
+                BackColor = DarkBackground, // Use DarkBackground instead of Transparent
                 AutoSize = false
             };
 
@@ -1236,11 +1236,7 @@ namespace Risk_Manager
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 
                 // Clear the background first to prevent double-rendering
-                // Use parent's background if label is transparent
-                var bgColor = lbl.BackColor == Color.Transparent && lbl.Parent != null 
-                    ? lbl.Parent.BackColor 
-                    : lbl.BackColor;
-                e.Graphics.Clear(bgColor);
+                e.Graphics.Clear(lbl.BackColor);
                 
                 // Draw text with GDI+ for colored emoji support
                 using (var brush = new SolidBrush(lbl.ForeColor))
@@ -5369,12 +5365,12 @@ namespace Risk_Manager
                 AutoScroll = true
             };
 
-            // Create a flow layout for risk settings cards
+            // Create a flow layout for risk settings cards in 2-column grid (3 rows x 2 columns)
             var flowLayout = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight, // Changed from TopDown to LeftToRight for columns
+                WrapContents = true, // Changed to true to allow wrapping to next row
                 AutoSize = true,
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 0, 15, 0) // Right padding for scrollbar
@@ -5437,11 +5433,11 @@ namespace Risk_Manager
         {
             var cardPanel = new Panel
             {
-                Width = 700,
+                Width = 480, // Adjusted width for 2-column layout
                 AutoSize = true,
                 BackColor = CardBackground,
                 Padding = new Padding(20),
-                Margin = new Padding(0, 0, 0, 15)
+                Margin = new Padding(0, 0, 15, 15) // Add right and bottom margin for spacing
             };
 
             var cardLayout = new FlowLayoutPanel
@@ -5453,11 +5449,12 @@ namespace Risk_Manager
                 BackColor = CardBackground
             };
 
-            // Card title with emoji
+            // Card title with emoji - use CardBackground instead of Transparent
             var titleLabel = CreateEmojiLabel(title, 12, FontStyle.Bold);
             titleLabel.Height = 30;
-            titleLabel.Width = 650;
+            titleLabel.Width = 440; // Adjusted for new card width
             titleLabel.Margin = new Padding(0, 0, 0, 10);
+            titleLabel.BackColor = CardBackground; // Set explicit background color
             cardLayout.Controls.Add(titleLabel);
 
             // Add each label-value pair
@@ -5465,7 +5462,7 @@ namespace Risk_Manager
             {
                 var rowPanel = new Panel
                 {
-                    Width = 650,
+                    Width = 440, // Adjusted for new card width
                     Height = 30,
                     BackColor = CardBackground,
                     Margin = new Padding(0, 5, 0, 5)
@@ -5476,7 +5473,7 @@ namespace Risk_Manager
                     Text = labels[i],
                     Left = 0,
                     Top = 5,
-                    Width = 200,
+                    Width = 180, // Adjusted for new card width
                     Font = new Font("Segoe UI", 10, FontStyle.Bold),
                     ForeColor = TextWhite,
                     BackColor = CardBackground
@@ -5486,9 +5483,9 @@ namespace Risk_Manager
                 var valueControl = new Label
                 {
                     Text = valueGetters[i](),
-                    Left = 210,
+                    Left = 190, // Adjusted for new card width
                     Top = 5,
-                    Width = 430,
+                    Width = 240, // Adjusted for new card width
                     Font = new Font("Segoe UI", 10, FontStyle.Regular),
                     ForeColor = TextGray,
                     BackColor = CardBackground,
