@@ -3577,6 +3577,18 @@ namespace Risk_Manager
                     {
                         UpdateSettingsControlsEnabledState();
                     }
+                    
+                    // Explicitly update the Settings Lock Badge if the selected account's settings were unlocked
+                    if (selectedAccountChanged)
+                    {
+                        var settingsService = RiskManagerSettingsService.Instance;
+                        if (settingsService.IsInitialized)
+                        {
+                            bool isLocked = settingsService.AreSettingsLocked(selectedAccountNumber);
+                            UpdateSettingsStatusBadge(isLocked);
+                            System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: Explicitly updated Settings Lock Badge for account '{selectedAccountNumber}', isLocked={isLocked}");
+                        }
+                    }
                 }
                 
                 // Update badge only if the selected account changed
