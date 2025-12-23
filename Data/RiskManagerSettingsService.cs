@@ -584,17 +584,25 @@ namespace Risk_Manager.Data
             }
         }
 
-        public void SetSettingsLock(string accountNumber, bool isLocked, string? reason = null)
+        public void SetSettingsLock(string accountNumber, bool isLocked, string? reason = null, TimeSpan? duration = null)
         {
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
+                DateTime? expirationTime = null;
+                if (isLocked && duration.HasValue)
+                {
+                    expirationTime = DateTime.UtcNow.Add(duration.Value);
+                }
+
                 settings.SettingsLock = new LockInfo
                 {
                     IsLocked = isLocked,
                     LockTime = isLocked ? DateTime.UtcNow : null,
                     LockDayOfWeek = isLocked ? DateTime.UtcNow.DayOfWeek : null,
-                    LockReason = reason
+                    LockReason = reason,
+                    LockDuration = duration,
+                    LockExpirationTime = expirationTime
                 };
                 SaveSettings(settings);
             }
@@ -663,7 +671,114 @@ namespace Risk_Manager.Data
         public bool AreSettingsLocked(string accountNumber)
         {
             var settings = GetSettings(accountNumber);
-            return settings?.SettingsLock?.IsLocked == true;
+            if (settings?.SettingsLock == null || !settings.SettingsLock.IsLocked)
+                return false;
+
+            // Check if lock has expired
+            if (settings.SettingsLock.LockExpirationTime.HasValue)
+            {
+                if (DateTime.UtcNow >= settings.SettingsLock.LockExpirationTime.Value)
+                {
+                    // Lock has expired, auto-unlock
+                    SetSettingsLock(accountNumber, false, "Auto-unlocked after duration expired");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        
+        /// <summary>
+        /// Gets the remaining settings lock time for an account. Returns null if not locked or lock is indefinite.
+        /// </summary>
+        public TimeSpan? GetRemainingSettingsLockTime(string accountNumber)
+        {
+            var settings = GetSettings(accountNumber);
+            if (settings?.SettingsLock == null || !settings.SettingsLock.IsLocked)
+                return null;
+
+            if (!settings.SettingsLock.LockExpirationTime.HasValue)
+                return null; // Indefinite lock
+
+            var remaining = settings.SettingsLock.LockExpirationTime.Value - DateTime.UtcNow;
+            return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+        }
+        
+        /// <summary>
+        /// Gets the settings lock status string with remaining time.
+        /// </summary>
+        public string GetSettingsLockStatusString(string accountNumber)
+        {
+            if (!AreSettingsLocked(accountNumber))
+                return "Unlocked";
+
+            var remainingTime = GetRemainingSettingsLockTime(accountNumber);
+            if (!remainingTime.HasValue)
+                return "Locked";
+
+            // Format remaining time
+            var ts = remainingTime.Value;
+            if (ts.TotalDays >= 1)
+                return $"Locked ({ts.Days}d {ts.Hours}h {ts.Minutes}m)";
+            else if (ts.TotalHours >= 1)
+                return $"Locked ({ts.Hours}h {ts.Minutes}m)";
+            else if (ts.TotalMinutes >= 1)
+                return $"Locked ({ts.Minutes}m)";
+            else
+                return "Locked (<1m)"; // Less than 1 minute remaining
+        }
+        
+        /// <summary>
+        /// Calculates the duration until 5:00 PM ET today. If it's already past 5 PM ET, returns duration until 5 PM ET tomorrow.
+        /// Uses TimeZoneInfo for accurate Eastern Time conversion, handling DST automatically.
+        /// </summary>
+        public static TimeSpan CalculateDurationUntil5PMET()
+        {
+            try
+            {
+                // Get Eastern Time zone info (handles DST automatically)
+                var easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                
+                // Convert current UTC time to Eastern Time
+                var nowET = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
+                
+                // Target is 5:00 PM (17:00) ET today
+                var target5PMET = nowET.Date.AddHours(17);
+                
+                // If we're already past 5 PM ET today, target tomorrow's 5 PM ET
+                if (nowET >= target5PMET)
+                {
+                    target5PMET = target5PMET.AddDays(1);
+                }
+                
+                // Calculate duration from now (in ET) to target 5 PM ET
+                var duration = target5PMET - nowET;
+                
+                System.Diagnostics.Debug.WriteLine($"CalculateDurationUntil5PMET: Now ET={nowET:yyyy-MM-dd HH:mm:ss}, Target={target5PMET:yyyy-MM-dd HH:mm:ss}, Duration={duration}");
+                
+                return duration;
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                // Fallback: If Eastern Time zone not found, calculate based on UTC offset
+                // EST is UTC-5, EDT is UTC-4. We'll use a simple heuristic.
+                System.Diagnostics.Debug.WriteLine("Eastern Time zone not found, using UTC offset fallback");
+                
+                var nowUtc = DateTime.UtcNow;
+                // Assume EDT (UTC-4) during DST months (roughly March-November)
+                var isDST = nowUtc.Month >= 3 && nowUtc.Month <= 11;
+                var offsetHours = isDST ? -4 : -5;
+                
+                var nowET = nowUtc.AddHours(offsetHours);
+                var target5PMET = nowET.Date.AddHours(17);
+                
+                if (nowET >= target5PMET)
+                {
+                    target5PMET = target5PMET.AddDays(1);
+                }
+                
+                return target5PMET - nowET;
+            }
         }
 
         #endregion

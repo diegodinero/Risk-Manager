@@ -2403,7 +2403,7 @@ namespace Risk_Manager
             // Subtitle
             var subtitleLabel = new Label
             {
-                Text = "Select which sessions the trader is allowed to participate in:",
+                Text = "Select which sessions the trader is allowed to participate in (Monday-Friday only):",
                 Dock = DockStyle.Top,
                 Height = 30,
                 TextAlign = ContentAlignment.TopLeft,
@@ -2474,7 +2474,7 @@ namespace Risk_Manager
             // Subtitle
             var subtitleLabel = new Label
             {
-                Text = "Prevent changes to settings.",
+                Text = "Prevent changes to settings until 5:00 PM ET.",
                 Dock = DockStyle.Top,
                 Height = 30,
                 TextAlign = ContentAlignment.TopLeft,
@@ -2489,33 +2489,19 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
-                Padding = new Padding(15)
+                Padding = new Padding(15),
+                AutoScroll = true
             };
 
-            var lockCheckbox = new CheckBox
-            {
-                Text = "Enable Settings Lock",
-                Left = 0,
-                Top = 0,
-                Width = 250,
-                Height = 30,
-                Checked = false,
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                ForeColor = TextWhite,
-                BackColor = CardBackground
-            };
-            contentArea.Controls.Add(lockCheckbox);
-            settingsLockCheckBox = lockCheckbox;
-
-            // Status label to show lock state with color
+            // Status label to show lock state with color and remaining time
             var lblSettingsStatus = new Label
             {
                 Text = "Settings Unlocked",
-                Left = 270,
-                Top = 5,
-                Width = 150,
+                Left = 0,
+                Top = 0,
+                Width = 400,
                 Height = 30,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
                 ForeColor = AccentGreen,
                 BackColor = CardBackground,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -2523,17 +2509,118 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(lblSettingsStatus);
 
+            // Lock Settings Button
+            var lockSettingsButton = new Button
+            {
+                Text = "LOCK SETTINGS FOR REST OF DAY (Until 5 PM ET)",
+                Width = 400,
+                Height = 40,
+                Left = 0,
+                Top = 50,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = AccentAmber,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            lockSettingsButton.FlatAppearance.BorderSize = 0;
+            lockSettingsButton.Click += (s, e) => {
+                try
+                {
+                    var accountNumber = GetSelectedAccountNumber();
+                    if (string.IsNullOrEmpty(accountNumber))
+                    {
+                        MessageBox.Show("Please select an account first.", "No Account Selected", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (!settingsService.IsInitialized)
+                    {
+                        MessageBox.Show("Settings service is not initialized.", "Service Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    // Calculate duration until 5 PM ET
+                    var duration = RiskManagerSettingsService.CalculateDurationUntil5PMET();
+                    
+                    // Lock settings with calculated duration
+                    settingsService.SetSettingsLock(accountNumber, true, "Locked until 5 PM ET", duration);
+                    
+                    // Update status display
+                    UpdateSettingsLockStatus(lblSettingsStatus);
+                    
+                    MessageBox.Show($"Settings locked until 5:00 PM ET.\nDuration: {duration.Hours}h {duration.Minutes}m", 
+                        "Settings Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error locking settings: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    System.Diagnostics.Debug.WriteLine($"Error in Lock Settings button: {ex}");
+                }
+            };
+            contentArea.Controls.Add(lockSettingsButton);
+
+            // Unlock Settings Button
+            var unlockSettingsButton = new Button
+            {
+                Text = "UNLOCK SETTINGS",
+                Width = 200,
+                Height = 40,
+                Left = 0,
+                Top = 110,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = AccentGreen,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            unlockSettingsButton.FlatAppearance.BorderSize = 0;
+            unlockSettingsButton.Click += (s, e) => {
+                try
+                {
+                    var accountNumber = GetSelectedAccountNumber();
+                    if (string.IsNullOrEmpty(accountNumber))
+                    {
+                        MessageBox.Show("Please select an account first.", "No Account Selected", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (!settingsService.IsInitialized)
+                    {
+                        MessageBox.Show("Settings service is not initialized.", "Service Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    // Unlock settings
+                    settingsService.SetSettingsLock(accountNumber, false, "Manually unlocked");
+                    
+                    // Update status display
+                    UpdateSettingsLockStatus(lblSettingsStatus);
+                    
+                    MessageBox.Show("Settings unlocked successfully.", "Settings Unlocked", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error unlocking settings: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    System.Diagnostics.Debug.WriteLine($"Error in Unlock Settings button: {ex}");
+                }
+            };
+            contentArea.Controls.Add(unlockSettingsButton);
+
             // Initialize status from settings service
             UpdateSettingsLockStatus(lblSettingsStatus);
 
-            // Store reference to status label for use in save button
-            lockCheckbox.Tag = lblSettingsStatus;
-
-            var saveButton = CreateDarkSaveButton();
-
-            // Add controls in correct order: Bottom first, Fill second, Top last
+            // Add controls in correct order: Fill second, Top last
             // In WinForms, docking is processed in reverse Z-order
-            mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(titleLabel);
@@ -3148,6 +3235,7 @@ namespace Risk_Manager
                 int accountIndex = 0;
                 bool anyUnlocked = false;
                 bool anyLocked = false;
+                bool anySettingsUnlocked = false; // Track if any settings locks expired
                 bool selectedAccountChanged = false; // Track if the selected account's state changed
 
                 // Get the currently selected account to check if its state changed
@@ -3167,9 +3255,13 @@ namespace Risk_Manager
                         // Get current settings before checking lock status
                         var settings = settingsService.GetSettings(uniqueAccountId);
                         var wasLocked = settings?.TradingLock?.IsLocked == true;
+                        var wasSettingsLocked = settings?.SettingsLock?.IsLocked == true;
                         
                         // IsTradingLocked checks expiration and auto-unlocks if expired
                         var isLocked = settingsService.IsTradingLocked(uniqueAccountId);
+                        
+                        // AreSettingsLocked checks expiration and auto-unlocks if expired
+                        var isSettingsLocked = settingsService.AreSettingsLocked(uniqueAccountId);
                         
                         // If was locked but now unlocked, the lock expired and was auto-unlocked
                         if (wasLocked && !isLocked)
@@ -3219,6 +3311,19 @@ namespace Risk_Manager
                                 System.Diagnostics.Debug.WriteLine($"Error enforcing lock on account {uniqueAccountId}: {ex.Message}");
                             }
                         }
+                        
+                        // Check if settings lock expired
+                        if (wasSettingsLocked && !isSettingsLocked)
+                        {
+                            anySettingsUnlocked = true;
+                            
+                            // Check if this is the selected account
+                            if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == uniqueAccountId)
+                            {
+                                selectedAccountChanged = true;
+                                System.Diagnostics.Debug.WriteLine($"Settings lock expired for selected account: {uniqueAccountId}");
+                            }
+                        }
                     }
 
                     accountIndex++;
@@ -3237,6 +3342,13 @@ namespace Risk_Manager
                     RefreshAccountStats();
                 }
                 
+                // Update settings lock status display if any settings locks expired
+                if (anySettingsUnlocked)
+                {
+                    // Find and update all SettingsStatus labels
+                    UpdateSettingsStatusLabelsRecursive(this);
+                }
+                
                 // Update badge only if the selected account changed
                 if (selectedAccountChanged && !string.IsNullOrEmpty(selectedAccountNumber))
                 {
@@ -3248,6 +3360,28 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error checking expired locks: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Recursively finds and updates all SettingsStatus labels in the control tree.
+        /// </summary>
+        private void UpdateSettingsStatusLabelsRecursive(Control parent)
+        {
+            if (parent == null) return;
+            
+            foreach (Control control in parent.Controls)
+            {
+                if (control is Label label && label.Tag?.ToString() == "SettingsStatus")
+                {
+                    UpdateSettingsLockStatus(label);
+                }
+                
+                // Recursively check child controls
+                if (control.Controls.Count > 0)
+                {
+                    UpdateSettingsStatusLabelsRecursive(control);
+                }
             }
         }
 
@@ -4611,7 +4745,9 @@ namespace Risk_Manager
 
                 if (isLocked)
                 {
-                    lblSettingsStatus.Text = "Settings Locked";
+                    // Get remaining time and display it
+                    var statusString = settingsService.GetSettingsLockStatusString(accountNumber);
+                    lblSettingsStatus.Text = $"Settings {statusString}";
                     lblSettingsStatus.ForeColor = Color.Red;
                 }
                 else
@@ -5804,9 +5940,9 @@ namespace Risk_Manager
                 }
                 cardLayout.Controls.Add(headerRow);
 
-                // Day rows
+                // Day rows - Only Monday through Friday
                 var daysOfWeek = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, 
-                                        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+                                        DayOfWeek.Thursday, DayOfWeek.Friday };
 
                 foreach (var day in daysOfWeek)
                 {
