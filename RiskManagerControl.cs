@@ -815,7 +815,10 @@ namespace Risk_Manager
                 if (dailyLossLimitEnabled != null && dailyLossLimitInput != null)
                 {
                     dailyLossLimitEnabled.Checked = settings.DailyLossLimit.HasValue;
-                    dailyLossLimitInput.Text = settings.DailyLossLimit?.ToString() ?? "0";
+                    // Display as positive value for user-friendly input (stored as negative internally)
+                    dailyLossLimitInput.Text = settings.DailyLossLimit.HasValue 
+                        ? Math.Abs(settings.DailyLossLimit.Value).ToString() 
+                        : "0";
                 }
 
                 if (dailyProfitTargetEnabled != null && dailyProfitTargetInput != null)
@@ -4798,7 +4801,8 @@ namespace Risk_Manager
                                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                                 return;
                             }
-                            service.UpdateDailyLossLimit(accountNumber, lossLimit);
+                            // Convert positive UI value to negative for internal storage (loss limits are negative)
+                            service.UpdateDailyLossLimit(accountNumber, -lossLimit);
                         }
                         else
                         {

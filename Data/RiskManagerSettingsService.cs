@@ -200,10 +200,12 @@ namespace Risk_Manager.Data
 
         public void UpdateDailyLossLimit(string accountNumber, decimal? limit)
         {
-            // Validate that limit is not negative
-            if (limit.HasValue && limit.Value < 0)
+            // Note: Daily loss limits are stored as negative values internally
+            // The UI converts positive user input to negative before calling this method
+            // Validation: Ensure limit is not positive (should be negative or null)
+            if (limit.HasValue && limit.Value > 0)
             {
-                throw new ArgumentException("Daily loss limit cannot be negative.", nameof(limit));
+                throw new ArgumentException("Daily loss limit must be negative or zero for internal storage.", nameof(limit));
             }
             
             var settings = GetOrCreateSettings(accountNumber);

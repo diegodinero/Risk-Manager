@@ -103,7 +103,9 @@ All actions are logged to the Debug console with timestamps (UTC):
 
 2. **Configure Daily Loss Limit:**
    - Enable "Daily Loss Limit"
-   - Enter a **negative value** (e.g., -1000 for $1000 loss limit)
+   - Enter a **positive value** (e.g., 1000 for $1000 loss limit)
+   - The UI accepts positive numbers for user-friendly input
+   - The system automatically converts this to a negative value internally
    - Click "Save Settings"
 
 3. **Verify Configuration:**
@@ -127,6 +129,8 @@ All actions are logged to the Debug console with timestamps (UTC):
   "updatedAt": "2025-12-23T14:30:15Z"
 }
 ```
+
+**Note:** The UI accepts positive values (1000), but the system stores loss limits as negative values (-1000) internally. This ensures the loss limit monitoring works correctly.
 
 ## How It Works
 
