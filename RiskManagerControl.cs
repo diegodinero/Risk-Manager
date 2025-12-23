@@ -4522,6 +4522,44 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine(string.Join(", ", parts, 0, index));
         }
 
+        /// <summary>
+        /// Helper method for consistent, structured logging of settings badge update operations.
+        /// Formats log messages with contextual information for debugging and tracing.
+        /// </summary>
+        /// <param name="caller">The name of the calling method</param>
+        /// <param name="accountNumber">The account number being processed (or null if not available)</param>
+        /// <param name="isLocked">The determined lock state (true=locked, false=unlocked, null=not yet determined)</param>
+        /// <param name="previousState">The cached previous lock state (true=locked, false=unlocked, null=not cached/first call)</param>
+        /// <param name="message">Additional context or reason for the log entry (or null if general state logging)</param>
+        /// <remarks>
+        /// Example outputs:
+        /// - "[UpdateSettingsStatusBadge] Caller=LoadAccountSettings, Account='123456', IsLocked=False, PreviousState=True"
+        /// - "[UpdateSettingsStatusBadge] Caller=UpdateSettingsLockStatus - No account selected, skipping update"
+        /// </remarks>
+        private void LogSettingsBadgeUpdate(string caller, string accountNumber, bool? isLocked, bool? previousState, string message)
+        {
+            // Pre-allocate array for better performance
+            var parts = new string[LOG_PARTS_MAX];
+            int index = 0;
+            
+            parts[index++] = $"[UpdateSettingsStatusBadge] Caller={caller}";
+            
+            if (!string.IsNullOrEmpty(accountNumber))
+                parts[index++] = $"Account='{accountNumber}'";
+            
+            if (isLocked.HasValue)
+                parts[index++] = $"IsLocked={isLocked.Value}";
+            
+            if (previousState.HasValue)
+                parts[index++] = $"PreviousState={previousState.Value}";
+            
+            if (!string.IsNullOrEmpty(message))
+                parts[index++] = $"- {message}";
+            
+            // Join only the used parts - string.Join is optimized for arrays
+            System.Diagnostics.Debug.WriteLine(string.Join(", ", parts, 0, index));
+        }
+
         private void UpdateTradingStatusBadgeUI(bool isLocked)
         {
             try
@@ -4583,14 +4621,14 @@ namespace Risk_Manager
                 var accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
-                    System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Caller={callerName} - No account selected, skipping update");
+                    LogSettingsBadgeUpdate(callerName, accountNumber, null, null, "No account selected, skipping update");
                     return;
                 }
 
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (!settingsService.IsInitialized)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Caller={callerName} - Settings service not initialized, skipping update");
+                    LogSettingsBadgeUpdate(callerName, accountNumber, null, null, "Settings service not initialized, skipping update");
                     return;
                 }
 
@@ -4598,19 +4636,19 @@ namespace Risk_Manager
                 bool isLocked = settingsService.AreSettingsLocked(accountNumber);
                 
                 // Log the determination with all relevant context
-                System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Caller={callerName}, Account='{accountNumber}', IsLocked={isLocked}, PreviousState={(_previousSettingsLockState.HasValue ? _previousSettingsLockState.Value.ToString() : "null")}");
+                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, _previousSettingsLockState, null);
 
                 // Only update UI if state has actually changed to avoid redundant updates
                 if (_previousSettingsLockState.HasValue && _previousSettingsLockState.Value == isLocked)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] State unchanged (IsLocked={isLocked}), skipping UI update to prevent redundant refresh");
+                    LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, _previousSettingsLockState, "State unchanged, skipping UI update to prevent redundant refresh");
                     return;
                 }
                 
                 // Cache the new state before updating UI
                 _previousSettingsLockState = isLocked;
                 
-                System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] State changed, updating UI to IsLocked={isLocked}");
+                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "State changed, updating UI");
                 
                 // Update the badge UI
                 if (settingsStatusBadge != null)
@@ -4630,8 +4668,8 @@ namespace Risk_Manager
             }
             catch (Exception ex)
             {
-                // Log error but don't interrupt UI flow
-                System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] ERROR in caller={callerName}: {ex.Message}");
+                // Log error using the structured format
+                LogSettingsBadgeUpdate(callerName ?? "Unknown", null, null, null, $"ERROR: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Stack trace: {ex.StackTrace}");
             }
         }
