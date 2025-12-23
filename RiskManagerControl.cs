@@ -3320,6 +3320,13 @@ namespace Risk_Manager
             {
                 var settingsService = RiskManagerSettingsService.Instance;
                 
+                // IMPORTANT: Check if account is already locked first to prevent any further processing
+                // This prevents infinite notifications by ensuring we don't re-process already locked accounts
+                if (settingsService.IsTradingLocked(accountId))
+                {
+                    return;
+                }
+                
                 // Get Gross P&L from account (per requirements)
                 double grossPnL = GetAccountGrossPnL(account);
                 
@@ -3340,13 +3347,6 @@ namespace Risk_Manager
                     // Check if loss limit is breached
                     if (currentPnL <= lossLimit)
                     {
-                        // Check if account is already locked to prevent duplicate notifications
-                        if (settingsService.IsTradingLocked(accountId))
-                        {
-                            // Account is already locked, don't send notification again
-                            return;
-                        }
-                        
                         // Loss limit exceeded - lock account until 5 PM ET
                         string reason = $"Daily Loss Limit reached: Gross P&L ${grossPnL:F2} ≤ Limit ${lossLimit:F2}";
                         
