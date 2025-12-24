@@ -94,6 +94,11 @@ namespace Risk_Manager
         private PropertyInfo cachedLeftProperty;
         private PropertyInfo cachedTopProperty;
 
+        private readonly Dictionary<string, Image> IconMap = new();
+        private Image DollarImage;
+
+        private Image themeButtonScaledImage;
+
         /// <summary>
         /// Sets the WPF window reference for dragging functionality
         /// </summary>
@@ -183,7 +188,9 @@ namespace Risk_Manager
             // Load saved theme preference or use default (Blue)
             var savedTheme = LoadThemePreference();
             ApplyTheme(savedTheme);
-            
+
+            LoadIcons();
+
             Dock = DockStyle.Fill;
             BackColor = DarkBackground;
             DoubleBuffered = true;
@@ -459,7 +466,16 @@ namespace Risk_Manager
                 {
                     label.BackColor = CardBackground;
                 }
-                
+                if (!string.IsNullOrEmpty(label.Text) && label.Text.StartsWith("$") && DollarImage != null)
+                {
+                    // Remove leading dollar sign from text and set image
+                    label.Text = label.Text.TrimStart('$', ' ');
+                    label.Image = DollarImage;
+                    label.ImageAlign = ContentAlignment.MiddleLeft;
+                    label.Padding = new Padding(24, 0, 0, 0);
+                    label.TextAlign = ContentAlignment.MiddleRight;
+                }
+
                 label.Invalidate();
             }
             else if (control is TextBox textBox)
@@ -1181,6 +1197,123 @@ namespace Risk_Manager
             if (featureToggleEnabledCheckbox != null) featureToggleEnabledCheckbox.Checked = true;
         }
 
+        // Add this helper method in the RiskManagerControl class (anywhere above CreateTopPanel)
+        // LoadIcons and helper
+        private void LoadIcons()
+        {
+            try
+            {
+                // Map by plain title (no leading emoji) and fallback single-emoji keys.
+                IconMap.Clear();
+
+                IconMap["Accounts Summary"] = Properties.Resources.summary;
+                IconMap["Stats"] = Properties.Resources.stats;
+                IconMap["Type"] = Properties.Resources.type;
+                IconMap["Risk Overview"] = Properties.Resources.riskoverview;
+                IconMap["Positions"] = Properties.Resources.positions;
+                IconMap["Feature Toggles"] = Properties.Resources.featuretoggles;
+                IconMap["Copy Settings"] = Properties.Resources.copy;
+                IconMap["Limits"] = Properties.Resources.limit;
+                IconMap["Position Loss Limit"] = Properties.Resources.positionloss;
+                IconMap["Position Profit Target"] = Properties.Resources.positionprofit;
+                IconMap["Daily Loss Limit"] = Properties.Resources.dailyloss;
+                IconMap["Daily Profit Target"] = Properties.Resources.dailyprofit;
+                IconMap["Symbols"] = Properties.Resources.blocked;
+                IconMap["Locked"] = Properties.Resources._lock; // resource named _lock in project
+                IconMap["Unlocked"] = Properties.Resources.unlock;
+                IconMap["Allowed Trading Times"] = Properties.Resources.clock;
+
+                // Add title variants that should use the lock icon
+                IconMap["Lock Settings"] = Properties.Resources._lock;
+                IconMap["Settings Lock"] = Properties.Resources._lock;
+                IconMap["Manual Lock"] = Properties.Resources._lock;
+                IconMap["Trading Lock"] = Properties.Resources._lock;
+
+                // Also keep single-emoji fallbacks (if used elsewhere)
+                IconMap["📊"] = Properties.Resources.summary;
+                IconMap["📈"] = Properties.Resources.stats;
+                IconMap["📋"] = Properties.Resources.type;
+                IconMap["🔍"] = Properties.Resources.riskoverview;
+                IconMap["⚙️"] = Properties.Resources.featuretoggles;
+                IconMap["🛡️"] = Properties.Resources.blocked;
+                IconMap["🔒"] = Properties.Resources._lock;
+                IconMap["🔓"] = Properties.Resources.unlock;
+                IconMap["🕐"] = Properties.Resources.clock;
+                IconMap["💵"] = Properties.Resources.dollar;
+
+                if (Properties.Resources.ResourceManager.GetObject("themeswitcher2") is Image themeImg)
+                    IconMap["ThemeSwitcher"] = themeImg;
+
+                DollarImage = Properties.Resources.dollar;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadIcons failed: {ex.Message}");
+            }
+        }
+
+        private Image GetIconForTitle(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                return null;
+
+            var trimmed = raw.Trim();
+
+            // If the string starts with an emoji token, try to remove it and use remainder as key:
+            // find first space — assumes "EMOJI Title" format used across the app
+            var after = trimmed;
+            var idx = trimmed.IndexOf(' ');
+            if (idx >= 0 && idx + 1 < trimmed.Length)
+                after = trimmed.Substring(idx + 1).Trim();
+
+            // Try exact title lookup (case-insensitive)
+            foreach (var key in IconMap.Keys)
+            {
+                if (string.Equals(key, after, StringComparison.OrdinalIgnoreCase))
+                    return IconMap[key];
+            }
+
+            // Try exact raw lookup (in case resource keyed to raw string)
+            foreach (var key in IconMap.Keys)
+            {
+                if (string.Equals(key, trimmed, StringComparison.OrdinalIgnoreCase))
+                    return IconMap[key];
+            }
+
+            // Fallback: first char (emoji) mapping
+            var first = trimmed.Length > 0 ? trimmed[0].ToString() : null;
+            if (!string.IsNullOrEmpty(first) && IconMap.TryGetValue(first, out var img))
+                return img;
+
+            return null;
+        }
+
+        // add helper method in RiskManagerControl class (anywhere above CreateTopPanel)
+        private Image ScaleImageToFit(Image src, int maxWidth, int maxHeight)
+        {
+            if (src == null) return null;
+
+            // Determine scale preserving aspect ratio
+            double ratioX = (double)maxWidth / src.Width;
+            double ratioY = (double)maxHeight / src.Height;
+            double ratio = Math.Min(ratioX, ratioY);
+            if (ratio <= 0) ratio = 1.0;
+
+            int newWidth = Math.Max(1, (int)(src.Width * ratio));
+            int newHeight = Math.Max(1, (int)(src.Height * ratio));
+
+            var bmp = new Bitmap(newWidth, newHeight);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.SmoothingMode = SmoothingMode.HighQuality;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.Clear(Color.Transparent);
+                g.DrawImage(src, 0, 0, newWidth, newHeight);
+            }
+            return bmp;
+        }
+
         private Panel CreateTopPanel()
         {
             topPanel = new Panel
@@ -1273,20 +1406,51 @@ namespace Risk_Manager
             // Theme Changer button (replaces the X button)
             var themeButton = new Button
             {
-                Text = "🎨",
-                Width = 40,
-                Height = 32,
-                Font = new Font("Segoe UI Emoji", 16, FontStyle.Bold),
-                BackColor = Color.FromArgb(52, 152, 219),  // Nice blue color
+                Text = "", // we use the image instead of emoji text
+                Width = 44,
+                Height = 36,
+                BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(5, 0, 0, 0),
                 Padding = new Padding(0),
-                UseCompatibleTextRendering = true  // Better emoji support
+                UseCompatibleTextRendering = true
             };
             themeButton.FlatAppearance.BorderSize = 0;
             themeButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(41, 128, 185);
+
+            // Set image if available (prefer loaded IconMap entry "ThemeSwitcher", fallback to resource)
+            // In CreateTopPanel(), replace the theme image assignment block with this scaled image logic
+            Image themeImg = null;
+            if (IconMap.TryGetValue("ThemeSwitcher", out var img) && img != null)
+                themeImg = img;
+            else
+            {
+                try { themeImg = Properties.Resources.themeswitcher2; } catch { themeImg = null; }
+            }
+
+            if (themeImg != null)
+            {
+                // Dispose previous scaled image to avoid leaks
+                themeButtonScaledImage?.Dispose();
+
+                // Scale to fit inside button with small padding
+                int pad = 6; // padding inside button
+                themeButtonScaledImage = ScaleImageToFit(themeImg, Math.Max(8, themeButton.Width - pad), Math.Max(8, themeButton.Height - pad));
+
+                themeButton.Image = themeButtonScaledImage;
+                themeButton.ImageAlign = ContentAlignment.MiddleCenter;
+                themeButton.Text = "";
+                themeButton.TextImageRelation = TextImageRelation.ImageBeforeText;
+            }
+            else
+            {
+                // fallback to emoji if resource is missing
+                themeButton.Text = "🎨";
+                themeButton.Font = new Font("Segoe UI Emoji", 16, FontStyle.Bold);
+            }
+
             themeButton.Click += (s, e) =>
             {
                 // Cycle through themes: Blue -> Black -> White -> Blue
@@ -1427,20 +1591,41 @@ namespace Risk_Manager
                 var btn = (Button)s;
                 e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                
-                // Draw background
+
                 e.Graphics.Clear(btn.BackColor);
-                
-                // Use Graphics.DrawString for colored emoji support (GDI+)
+
+                var tag = btn.Tag as string ?? btn.Text ?? string.Empty;
+                var icon = GetIconForTitle(tag);
+
+                float xOffset = btn.Padding.Left;
+                if (icon != null)
+                {
+                    var imgHeight = Math.Min(btn.Height - 8, icon.Height);
+                    var imgWidth = (int)(icon.Width * (imgHeight / (float)icon.Height));
+                    var imgRect = new Rectangle(btn.Padding.Left, (btn.Height - imgHeight) / 2, imgWidth, imgHeight);
+                    e.Graphics.DrawImage(icon, imgRect);
+                    xOffset += imgWidth + 8;
+                }
+
+                // Display text without leading emoji token
+                var raw = (btn.Text ?? string.Empty).Trim();
+                string displayText = raw;
+                var idx = raw.IndexOf(' ');
+                if (idx >= 0 && IconMap.Any(k => k.Key.Equals(raw.Substring(0, idx), StringComparison.OrdinalIgnoreCase) || k.Key.Equals(raw.Substring(idx + 1), StringComparison.OrdinalIgnoreCase)))
+                {
+                    displayText = raw.Substring(idx + 1);
+                }
+                else if (icon != null)
+                {
+                    // remove leading token if present
+                    if (idx >= 0)
+                        displayText = raw.Substring(idx + 1);
+                }
+
                 using (var brush = new SolidBrush(btn.ForeColor))
                 {
-                    var sf = new StringFormat
-                    {
-                        LineAlignment = StringAlignment.Center,
-                        Alignment = StringAlignment.Near
-                    };
-                    e.Graphics.DrawString(btn.Text, btn.Font, brush, 
-                        new RectangleF(btn.Padding.Left, 0, btn.Width, btn.Height), sf);
+                    var sf = new StringFormat { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Near };
+                    e.Graphics.DrawString(displayText, btn.Font, brush, new RectangleF(xOffset, 0, btn.Width - xOffset, btn.Height), sf);
                 }
             };
 
@@ -1479,6 +1664,8 @@ namespace Risk_Manager
         /// <summary>
         /// Creates a label with colored emoji support using Segoe UI Emoji font
         /// </summary>
+        // Replace CreateEmojiLabel implementation with the below (keeps label but shows image when available)
+        // Replace CreateEmojiLabel with this version that uses GetIconForTitle
         private Label CreateEmojiLabel(string text, int fontSize, FontStyle fontStyle = FontStyle.Regular, Color? backgroundColor = null)
         {
             var label = new Label
@@ -1488,11 +1675,24 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 BackColor = backgroundColor ?? DarkBackground,
                 AutoSize = false,
-                UseCompatibleTextRendering = false // Use GDI for better emoji support
+                UseCompatibleTextRendering = false
             };
 
-            // No custom paint - let default rendering handle emojis properly
-            // The default label rendering supports colored emojis with Segoe UI Emoji font
+            var icon = GetIconForTitle(text);
+            if (icon != null)
+            {
+                // remove leading emoji token if present
+                var trimmed = text.Trim();
+                var idx = trimmed.IndexOf(' ');
+                if (idx >= 0 && idx + 1 < trimmed.Length)
+                    label.Text = trimmed.Substring(idx + 1).Trim();
+                else if (trimmed.Length > 1)
+                    label.Text = trimmed;
+
+                label.Image = icon;
+                label.ImageAlign = ContentAlignment.MiddleLeft;
+                label.Padding = new Padding(36, 0, 0, 0);
+            }
 
             return label;
         }
@@ -6738,15 +6938,48 @@ namespace Risk_Manager
             }
 
             // Check if this is a value label (has a Tag with getter function)
+            // In RefreshLabelsInControl, update label handling to use GetIconForTitle (replace the inner label-handling block)
             if (control is Label label && label.Tag is Func<string> getter)
             {
                 try
                 {
-                    label.Text = getter();
+                    var val = getter();
+                    if (string.IsNullOrEmpty(val))
+                    {
+                        label.Text = "Not set";
+                        label.Image = null;
+                        // continue with recursion
+                    }
+                    else if (val.StartsWith("$") && DollarImage != null)
+                    {
+                        label.Image = DollarImage;
+                        label.ImageAlign = ContentAlignment.MiddleLeft;
+                        label.Padding = new Padding(24, 0, 0, 0);
+                        label.Text = val.TrimStart('$', ' ');
+                        label.ForeColor = TextGray;
+                    }
+                    else
+                    {
+                        var icon = GetIconForTitle(val);
+                        if (icon != null)
+                        {
+                            var trimmed = val.Trim();
+                            var idx = trimmed.IndexOf(' ');
+                            label.Image = icon;
+                            label.ImageAlign = ContentAlignment.MiddleLeft;
+                            label.Padding = new Padding(36, 0, 0, 0);
+                            label.Text = (idx >= 0) ? trimmed.Substring(idx + 1) : (trimmed.Length > 1 ? trimmed.Substring(1) : trimmed);
+                            label.ForeColor = TextGray;
+                        }
+                        else
+                        {
+                            label.Image = null;
+                            label.Text = val;
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
-                    // If getter fails, show error message instead of crashing
                     label.Text = "⚠️ Error loading data";
                     System.Diagnostics.Debug.WriteLine($"Error refreshing Risk Overview label: {ex.Message}");
                 }

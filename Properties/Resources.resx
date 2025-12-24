@@ -169,6 +169,12 @@
   <data name="summary" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\summary.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="themeswitcher" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\themeswitcher.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="themeswitcher2" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\themeswitcher2.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="type" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\type.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
