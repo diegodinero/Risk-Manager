@@ -2845,7 +2845,8 @@ namespace Risk_Manager
                     // Update controls and navigation tabs to disable them immediately (using explicit account)
                     UpdateSettingsControlsEnabledState(accountNumber);
                     
-                    // Explicitly update the Settings Lock Badge to ensure immediate visual feedback
+                    // Clear cache and explicitly update the Settings Lock Badge to ensure immediate visual feedback
+                    _previousSettingsLockState = null;
                     UpdateSettingsStatusBadge();
                     
                     MessageBox.Show($"Settings locked until 5:00 PM ET.\nDuration: {duration.Hours}h {duration.Minutes}m", 
@@ -2904,7 +2905,8 @@ namespace Risk_Manager
                     // Update controls and navigation tabs to enable them immediately (using explicit account)
                     UpdateSettingsControlsEnabledState(accountNumber);
                     
-                    // Explicitly update the Settings Lock Badge to ensure immediate visual feedback
+                    // Clear cache and explicitly update the Settings Lock Badge to ensure immediate visual feedback
+                    _previousSettingsLockState = null;
                     UpdateSettingsStatusBadge();
                     
                     MessageBox.Show("Settings unlocked successfully.", "Settings Unlocked", 
