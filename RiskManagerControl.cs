@@ -47,6 +47,7 @@ namespace Risk_Manager
         
         // State caching for badge updates
         private bool? _previousTradingLockState = null; // Cache previous lock state to avoid redundant UI updates
+        private bool? _previousSettingsLockState = null; // Cache previous settings lock state to avoid redundant UI updates
 
         // Settings input control references for persistence
         private TextBox dailyLossLimitInput;
@@ -147,7 +148,7 @@ namespace Risk_Manager
         
         // Lock status constants
         private const string LOCK_STATUS_UNLOCKED = "Unlocked";
-        private const int LOG_PARTS_MAX = 6; // Max parts in LogBadgeUpdate: Caller, Account, LockStatus, IsLocked, PreviousState, Message
+        private const int LOG_PARTS_MAX = 6; // Max parts in badge logging helpers (LogBadgeUpdate, LogSettingsBadgeUpdate): Caller, Account, LockStatus/IsLocked, PreviousState, Message
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -674,6 +675,7 @@ namespace Risk_Manager
                 
                 // Reset cached badge state when account changes to force a fresh evaluation
                 _previousTradingLockState = null;
+                _previousSettingsLockState = null;
                 
                 // Debug logging to help identify account selection issues
                 var accountId = account.Id ?? "NULL";
@@ -899,6 +901,7 @@ namespace Risk_Manager
 
                 // Update status displays
                 UpdateTradingStatusBadge();
+                UpdateSettingsStatusBadge();
                 if (settingsLockCheckBox?.Tag is Label statusLabel)
                 {
                     UpdateSettingsLockStatus(statusLabel);
@@ -2836,14 +2839,14 @@ namespace Risk_Manager
                     // Lock settings with calculated duration
                     settingsService.SetSettingsLock(accountNumber, true, "Locked until 5 PM ET", duration);
                     
+                    // Clear cache first to ensure the next update will refresh the badge
+                    _previousSettingsLockState = null;
+                    
                     // Update status display for the account we just locked
                     UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
                     
                     // Update controls and navigation tabs to disable them immediately (using explicit account)
                     UpdateSettingsControlsEnabledState(accountNumber);
-                    
-                    // Explicitly update the Settings Lock Badge to ensure immediate visual feedback
-                    UpdateSettingsStatusBadge(true);
                     
                     MessageBox.Show($"Settings locked until 5:00 PM ET.\nDuration: {duration.Hours}h {duration.Minutes}m", 
                         "Settings Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -2895,14 +2898,14 @@ namespace Risk_Manager
                     // Unlock settings
                     settingsService.SetSettingsLock(accountNumber, false, "Manually unlocked");
                     
+                    // Clear cache first to ensure the next update will refresh the badge
+                    _previousSettingsLockState = null;
+                    
                     // Update status display for the account we just unlocked
                     UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
                     
                     // Update controls and navigation tabs to enable them immediately (using explicit account)
                     UpdateSettingsControlsEnabledState(accountNumber);
-                    
-                    // Explicitly update the Settings Lock Badge to ensure immediate visual feedback
-                    UpdateSettingsStatusBadge(false);
                     
                     MessageBox.Show("Settings unlocked successfully.", "Settings Unlocked", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -3664,9 +3667,8 @@ namespace Risk_Manager
                         // Reuse settingsService from outer scope (line 3535)
                         if (settingsService.IsInitialized)
                         {
-                            bool isLocked = settingsService.AreSettingsLocked(selectedAccountNumber);
-                            UpdateSettingsStatusBadge(isLocked);
-                            System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: Explicitly updated Settings Lock Badge for account '{selectedAccountNumber}', isLocked={isLocked}");
+                            UpdateSettingsStatusBadge();
+                            System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: Explicitly updated Settings Lock Badge for account '{selectedAccountNumber}'");
                         }
                     }
                 }
@@ -5025,6 +5027,44 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine(string.Join(", ", parts, 0, index));
         }
 
+        /// <summary>
+        /// Helper method for consistent, structured logging of settings badge update operations.
+        /// Formats log messages with contextual information for debugging and tracing.
+        /// </summary>
+        /// <param name="caller">The name of the calling method</param>
+        /// <param name="accountNumber">The account number being processed (or null if not available)</param>
+        /// <param name="isLocked">The determined lock state (true=locked, false=unlocked, null=not yet determined)</param>
+        /// <param name="previousState">The cached previous lock state (true=locked, false=unlocked, null=not cached/first call)</param>
+        /// <param name="message">Additional context or reason for the log entry (or null if general state logging)</param>
+        /// <remarks>
+        /// Example outputs:
+        /// - "[UpdateSettingsStatusBadge] Caller=LoadAccountSettings, Account='123456', IsLocked=False, PreviousState=True"
+        /// - "[UpdateSettingsStatusBadge] Caller=UpdateSettingsLockStatus - No account selected, skipping update"
+        /// </remarks>
+        private void LogSettingsBadgeUpdate(string caller, string accountNumber, bool? isLocked, bool? previousState, string message)
+        {
+            // Pre-allocate array for better performance
+            var parts = new string[LOG_PARTS_MAX];
+            int index = 0;
+            
+            parts[index++] = $"[UpdateSettingsStatusBadge] Caller={caller}";
+            
+            if (!string.IsNullOrEmpty(accountNumber))
+                parts[index++] = $"Account='{accountNumber}'";
+            
+            if (isLocked.HasValue)
+                parts[index++] = $"IsLocked={isLocked.Value}";
+            
+            if (previousState.HasValue)
+                parts[index++] = $"PreviousState={previousState.Value}";
+            
+            if (!string.IsNullOrEmpty(message))
+                parts[index++] = $"- {message}";
+            
+            // Join only the used parts - string.Join is optimized for arrays
+            System.Diagnostics.Debug.WriteLine(string.Join(", ", parts, 0, index));
+        }
+
         private void UpdateTradingStatusBadgeUI(bool isLocked)
         {
             try
@@ -5067,10 +5107,56 @@ namespace Risk_Manager
             }
         }
 
-        private void UpdateSettingsStatusBadge(bool isLocked)
+        /// <summary>
+        /// Updates the settings status badge based on the current lock state of the selected account.
+        /// Uses state caching to prevent redundant UI updates when the lock state hasn't changed.
+        /// </summary>
+        /// <param name="callerName">The name of the calling method (automatically populated by CallerMemberName attribute)</param>
+        /// <remarks>
+        /// This method:
+        /// - Validates account selection and service initialization
+        /// - Caches the previous state to avoid unnecessary UI updates
+        /// - Logs all state transitions and validation issues for debugging
+        /// - Only updates the UI when the state actually changes
+        /// </remarks>
+        private void UpdateSettingsStatusBadge([System.Runtime.CompilerServices.CallerMemberName] string callerName = "")
         {
+            string accountNumber = null; // Declare outside try block for error logging
             try
             {
+                accountNumber = GetSelectedAccountNumber();
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    LogSettingsBadgeUpdate(callerName, accountNumber, null, null, "No account selected, skipping update");
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    LogSettingsBadgeUpdate(callerName, accountNumber, null, null, "Settings service not initialized, skipping update");
+                    return;
+                }
+
+                // Get current lock status from service
+                bool isLocked = settingsService.AreSettingsLocked(accountNumber);
+                
+                // Log the determination with all relevant context
+                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, _previousSettingsLockState, null);
+
+                // Only update UI if state has actually changed to avoid redundant updates
+                if (_previousSettingsLockState.HasValue && _previousSettingsLockState.Value == isLocked)
+                {
+                    LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, _previousSettingsLockState, "State unchanged, skipping UI update to prevent redundant refresh");
+                    return;
+                }
+                
+                // Cache the new state before updating UI
+                _previousSettingsLockState = isLocked;
+                
+                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "State changed, updating UI");
+                
+                // Update the badge UI
                 if (settingsStatusBadge != null)
                 {
                     if (isLocked)
@@ -5088,8 +5174,9 @@ namespace Risk_Manager
             }
             catch (Exception ex)
             {
-                // Log error but don't interrupt UI flow
-                System.Diagnostics.Debug.WriteLine($"Error updating settings status badge: {ex.Message}");
+                // Log error using the structured format with available context
+                LogSettingsBadgeUpdate(callerName ?? "Unknown", accountNumber, null, null, $"ERROR: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Stack trace: {ex.StackTrace}");
             }
         }
 
@@ -5153,7 +5240,7 @@ namespace Risk_Manager
                 }
 
                 // Update top badge as well
-                UpdateSettingsStatusBadge(isLocked);
+                UpdateSettingsStatusBadge();
             }
             catch (Exception ex)
             {
