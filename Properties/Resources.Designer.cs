@@ -152,6 +152,16 @@ namespace Risk_Manager.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap limit {
+            get {
+                object obj = ResourceManager.GetObject("limit", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap positionloss {
             get {
                 object obj = ResourceManager.GetObject("positionloss", resourceCulture);
