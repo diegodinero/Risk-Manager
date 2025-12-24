@@ -2839,15 +2839,14 @@ namespace Risk_Manager
                     // Lock settings with calculated duration
                     settingsService.SetSettingsLock(accountNumber, true, "Locked until 5 PM ET", duration);
                     
+                    // Clear cache first to ensure the next update will refresh the badge
+                    _previousSettingsLockState = null;
+                    
                     // Update status display for the account we just locked
                     UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
                     
                     // Update controls and navigation tabs to disable them immediately (using explicit account)
                     UpdateSettingsControlsEnabledState(accountNumber);
-                    
-                    // Clear cache and explicitly update the Settings Lock Badge to ensure immediate visual feedback
-                    _previousSettingsLockState = null;
-                    UpdateSettingsStatusBadge();
                     
                     MessageBox.Show($"Settings locked until 5:00 PM ET.\nDuration: {duration.Hours}h {duration.Minutes}m", 
                         "Settings Locked", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -2899,15 +2898,14 @@ namespace Risk_Manager
                     // Unlock settings
                     settingsService.SetSettingsLock(accountNumber, false, "Manually unlocked");
                     
+                    // Clear cache first to ensure the next update will refresh the badge
+                    _previousSettingsLockState = null;
+                    
                     // Update status display for the account we just unlocked
                     UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
                     
                     // Update controls and navigation tabs to enable them immediately (using explicit account)
                     UpdateSettingsControlsEnabledState(accountNumber);
-                    
-                    // Clear cache and explicitly update the Settings Lock Badge to ensure immediate visual feedback
-                    _previousSettingsLockState = null;
-                    UpdateSettingsStatusBadge();
                     
                     MessageBox.Show("Settings unlocked successfully.", "Settings Unlocked", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
