@@ -2220,7 +2220,12 @@ namespace Risk_Manager
             finally
             {
                 statsGrid.ResumeLayout();
-                // Ensure other UI value labels are refreshed. statsDetailGrid is colored selectively in RefreshAccountStats().
+                // Re-apply numeric coloring for the accounts summary *after* rows were rebuilt
+                if (currentTheme == Theme.YellowBlueBlack)
+                {
+                    ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
+                }
+                // Refresh risk-overview/value labels around the grid
                 ApplyValueLabelColoring(statsGrid.Parent ?? this);
             }        
         }
