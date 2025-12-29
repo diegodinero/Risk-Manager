@@ -1200,13 +1200,14 @@ namespace Risk_Manager
 
         // Add this helper method in the RiskManagerControl class (anywhere above CreateTopPanel)
         // LoadIcons and helper
+        // LoadIcons and helper
         private void LoadIcons()
         {
             try
             {
-                // Map by plain title (no leading emoji) and fallback single-emoji keys.
                 IconMap.Clear();
 
+                // Tab / header mappings (exact title keys, case-insensitive)
                 IconMap["Accounts Summary"] = Properties.Resources.summary;
                 IconMap["Stats"] = Properties.Resources.stats;
                 IconMap["Type"] = Properties.Resources.type;
@@ -1220,17 +1221,24 @@ namespace Risk_Manager
                 IconMap["Daily Loss Limit"] = Properties.Resources.dailyloss;
                 IconMap["Daily Profit Target"] = Properties.Resources.dailyprofit;
                 IconMap["Symbols"] = Properties.Resources.blocked;
-                IconMap["Locked"] = Properties.Resources._lock; // resource named _lock in project
+                IconMap["Locked"] = Properties.Resources._lock; // resource named _lock
                 IconMap["Unlocked"] = Properties.Resources.unlock;
                 IconMap["Allowed Trading Times"] = Properties.Resources.clock;
 
-                // Add title variants that should use the lock icon
+                // Explicit card header mappings for Risk Overview
+                IconMap["Account Status"] = Properties.Resources._lock;          // lock.png
+                IconMap["Position Limits"] = Properties.Resources.positions;     // positions.png
+                IconMap["Daily Limits"] = Properties.Resources.limit;            // limit.png
+                IconMap["Symbol Restrictions"] = Properties.Resources.blocked;   // blocked.png
+                IconMap["Allowed Trading Times"] = Properties.Resources.clock;   // clock.png
+
+                // Additional lock-related title variants
                 IconMap["Lock Settings"] = Properties.Resources._lock;
                 IconMap["Settings Lock"] = Properties.Resources._lock;
                 IconMap["Manual Lock"] = Properties.Resources._lock;
                 IconMap["Trading Lock"] = Properties.Resources._lock;
 
-                // Also keep single-emoji fallbacks (if used elsewhere)
+                // Emoji fallbacks (if any code passes raw emoji tokens)
                 IconMap["📊"] = Properties.Resources.summary;
                 IconMap["📈"] = Properties.Resources.stats;
                 IconMap["📋"] = Properties.Resources.type;
@@ -1242,6 +1250,7 @@ namespace Risk_Manager
                 IconMap["🕐"] = Properties.Resources.clock;
                 IconMap["💵"] = Properties.Resources.dollar;
 
+                // Theme switcher image (optional)
                 if (Properties.Resources.ResourceManager.GetObject("themeswitcher2") is Image themeImg)
                     IconMap["ThemeSwitcher"] = themeImg;
 
