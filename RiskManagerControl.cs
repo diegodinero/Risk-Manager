@@ -2187,8 +2187,9 @@ namespace Risk_Manager
             // Title with colored emoji rendering (ensure key matches IconMap -> "Type")
             var titleLabel = CreateEmojiLabel("📋 Type", 14, FontStyle.Bold);
             titleLabel.Dock = DockStyle.Left;
-            titleLabel.Width = 200;
+            
             titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
             titleLabel.BackColor = DarkBackground;
 
             // Filter label
