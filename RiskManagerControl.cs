@@ -7391,7 +7391,7 @@ namespace Risk_Manager
             // Section header with toggle
             var sectionHeader = new CheckBox
             {
-                Text = "🛡️ Symbol Blacklist",
+                Text = "Symbol Blacklist",
                 Left = 0,
                 Top = 0,
                 Width = 300,
@@ -7402,35 +7402,59 @@ namespace Risk_Manager
                 BackColor = CardBackground,
                 UseCompatibleTextRendering = false
             };
-            
-            // Custom paint for colored emoji rendering in checkbox
+
+            // Prepare scaled icon for header (blocked.png -> IconMap["Symbols"])
+            Image headerIcon = GetIconForTitle("Symbols");
+            Bitmap scaledHeaderIcon = null;
+            if (headerIcon != null)
+            {
+                int targetHeight = Math.Max(14, (int)(sectionHeader.Font.Height * 1.2));
+                scaledHeaderIcon = ScaleImageToFit(headerIcon, targetHeight, targetHeight) as Bitmap;
+                // Ensure disposal when control is disposed
+                sectionHeader.Disposed += (s, e) =>
+                {
+                    try { scaledHeaderIcon?.Dispose(); } catch { }
+                };
+            }
+
+            // Custom paint for colored emoji and icon rendering in checkbox
             sectionHeader.Paint += (s, e) =>
             {
                 var cb = (CheckBox)s;
                 e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                
+
                 // Draw background
                 e.Graphics.Clear(cb.BackColor);
-                
-                // Draw checkbox
+
+                // Layout metrics
+                int yCenter = cb.Height / 2;
+
+                // Draw icon if available
+                int x = 0;
+                if (scaledHeaderIcon != null)
+                {
+                    int iconY = (cb.Height - scaledHeaderIcon.Height) / 2;
+                    var iconRect = new Rectangle(x, iconY, scaledHeaderIcon.Width, scaledHeaderIcon.Height);
+                    e.Graphics.DrawImage(scaledHeaderIcon, iconRect);
+                    x += scaledHeaderIcon.Width + 6; // gap after icon
+                }
+
+                // Draw checkbox next to icon
                 var checkBoxSize = 13;
-                var checkBoxRect = new Rectangle(0, (cb.Height - checkBoxSize) / 2, checkBoxSize, checkBoxSize);
+                var checkBoxRect = new Rectangle(x, (cb.Height - checkBoxSize) / 2, checkBoxSize, checkBoxSize);
                 ControlPaint.DrawCheckBox(e.Graphics, checkBoxRect, cb.Checked ? ButtonState.Checked : ButtonState.Normal);
-                
-                // Draw text with GDI+ for colored emoji support
+                x += checkBoxSize + 6; // gap after checkbox
+
+                // Draw text
                 using (var brush = new SolidBrush(cb.ForeColor))
                 {
-                    var sf = new StringFormat
-                    {
-                        LineAlignment = StringAlignment.Center,
-                        Alignment = StringAlignment.Near
-                    };
-                    var textRect = new RectangleF(checkBoxSize + 5, 0, cb.Width - checkBoxSize - 5, cb.Height);
+                    var sf = new StringFormat { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Near };
+                    var textRect = new RectangleF(x, 0, cb.Width - x, cb.Height);
                     e.Graphics.DrawString(cb.Text, cb.Font, brush, textRect, sf);
                 }
             };
-            
+
             sectionPanel.Controls.Add(sectionHeader);
             enabledCheckbox = sectionHeader;
 
@@ -7486,7 +7510,7 @@ namespace Risk_Manager
             // Section header with toggle
             var sectionHeader = new CheckBox
             {
-                Text = "🛡️ Symbol Contract Limits",
+                Text = "Symbol Contract Limits",
                 Left = 0,
                 Top = 0,
                 Width = 300,
@@ -7497,35 +7521,55 @@ namespace Risk_Manager
                 BackColor = CardBackground,
                 UseCompatibleTextRendering = false
             };
-            
-            // Custom paint for colored emoji rendering in checkbox
+
+            // Prepare scaled icon for header (blocked.png -> IconMap["Symbols"])
+            Image contractHeaderIcon = GetIconForTitle("Symbols");
+            Bitmap scaledContractIcon = null;
+            if (contractHeaderIcon != null)
+            {
+                int targetHeight = Math.Max(14, (int)(sectionHeader.Font.Height * 1.2));
+                scaledContractIcon = ScaleImageToFit(contractHeaderIcon, targetHeight, targetHeight) as Bitmap;
+                sectionHeader.Disposed += (s, e) =>
+                {
+                    try { scaledContractIcon?.Dispose(); } catch { }
+                };
+            }
+
+            // Custom paint for colored emoji and icon rendering in checkbox
             sectionHeader.Paint += (s, e) =>
             {
                 var cb = (CheckBox)s;
                 e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                
+
                 // Draw background
                 e.Graphics.Clear(cb.BackColor);
-                
-                // Draw checkbox
+
+                int x = 0;
+                // Draw icon if available
+                if (scaledContractIcon != null)
+                {
+                    int iconY = (cb.Height - scaledContractIcon.Height) / 2;
+                    var iconRect = new Rectangle(x, iconY, scaledContractIcon.Width, scaledContractIcon.Height);
+                    e.Graphics.DrawImage(scaledContractIcon, iconRect);
+                    x += scaledContractIcon.Width + 6;
+                }
+
+                // Draw checkbox next to icon
                 var checkBoxSize = 13;
-                var checkBoxRect = new Rectangle(0, (cb.Height - checkBoxSize) / 2, checkBoxSize, checkBoxSize);
+                var checkBoxRect = new Rectangle(x, (cb.Height - checkBoxSize) / 2, checkBoxSize, checkBoxSize);
                 ControlPaint.DrawCheckBox(e.Graphics, checkBoxRect, cb.Checked ? ButtonState.Checked : ButtonState.Normal);
-                
-                // Draw text with GDI+ for colored emoji support
+                x += checkBoxSize + 6;
+
+                // Draw text
                 using (var brush = new SolidBrush(cb.ForeColor))
                 {
-                    var sf = new StringFormat
-                    {
-                        LineAlignment = StringAlignment.Center,
-                        Alignment = StringAlignment.Near
-                    };
-                    var textRect = new RectangleF(checkBoxSize + 5, 0, cb.Width - checkBoxSize - 5, cb.Height);
+                    var sf = new StringFormat { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Near };
+                    var textRect = new RectangleF(x, 0, cb.Width - x, cb.Height);
                     e.Graphics.DrawString(cb.Text, cb.Font, brush, textRect, sf);
                 }
             };
-            
+
             sectionPanel.Controls.Add(sectionHeader);
             enabledCheckbox = sectionHeader;
 
