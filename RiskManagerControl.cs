@@ -124,11 +124,16 @@ namespace Risk_Manager
         {
             Blue,
             Black,
-            White
+            White,
+            YellowBlueBlack   // New Black variant with yellow negatives / blue positives
         }
         
         private Theme currentTheme = Theme.Blue;  // Default theme
         private bool isInitializing = true;  // Flag to prevent saving during initialization
+
+        // Per-value accent colors (used by YellowBlueBlack)
+        private Color PositiveValueColor;
+        private Color NegativeValueColor;
 
         // Default values for settings
         private const decimal DEFAULT_WEEKLY_LOSS_LIMIT = 1000m;
@@ -294,55 +299,142 @@ namespace Risk_Manager
         private void ApplyTheme(Theme theme)
         {
             currentTheme = theme;
-            
-            // Set theme colors based on selection
+
+            // Default mapping: use Blue theme values as "dark" baseline
             switch (theme)
             {
                 case Theme.Blue:
-                    // Blue theme (original dark theme)
-                    DarkBackground = Color.FromArgb(45, 62, 80);      // #2D3E50
-                    DarkerBackground = Color.FromArgb(35, 52, 70);    // Slightly darker for sidebar
-                    CardBackground = Color.FromArgb(55, 72, 90);      // Card/panel background
-                    AccentGreen = Color.FromArgb(39, 174, 96);        // #27AE60 - Green for badges
-                    AccentAmber = Color.FromArgb(243, 156, 18);       // #F39C12 - Amber for warnings
+                    DarkBackground = Color.FromArgb(45, 62, 80);
+                    DarkerBackground = Color.FromArgb(35, 52, 70);
+                    CardBackground = Color.FromArgb(55, 72, 90);
+                    AccentGreen = Color.FromArgb(39, 174, 96);
+                    AccentAmber = Color.FromArgb(243, 156, 18);
                     TextWhite = Color.White;
-                    TextGray = Color.FromArgb(189, 195, 199);         // #BDC3C7
-                    HoverColor = Color.FromArgb(65, 82, 100);         // Hover state
-                    SelectedColor = Color.FromArgb(75, 92, 110);      // Selected state
+                    TextGray = Color.FromArgb(189, 195, 199);
+                    HoverColor = Color.FromArgb(65, 82, 100);
+                    SelectedColor = Color.FromArgb(75, 92, 110);
+                    PositiveValueColor = TextWhite;
+                    NegativeValueColor = Color.Red;
                     break;
-                    
+
                 case Theme.Black:
-                    // Black theme (pure dark)
-                    DarkBackground = Color.FromArgb(20, 20, 20);      // Very dark gray
-                    DarkerBackground = Color.FromArgb(10, 10, 10);    // Almost black sidebar
-                    CardBackground = Color.FromArgb(30, 30, 30);      // Dark gray for cards
-                    AccentGreen = Color.FromArgb(0, 200, 83);         // Brighter green
-                    AccentAmber = Color.FromArgb(255, 185, 0);        // Bright amber
+                    DarkBackground = Color.FromArgb(20, 20, 20);
+                    DarkerBackground = Color.FromArgb(10, 10, 10);
+                    CardBackground = Color.FromArgb(30, 30, 30);
+                    AccentGreen = Color.FromArgb(0, 200, 83);
+                    AccentAmber = Color.FromArgb(255, 185, 0);
                     TextWhite = Color.White;
-                    TextGray = Color.FromArgb(160, 160, 160);         // Medium gray
-                    HoverColor = Color.FromArgb(50, 50, 50);          // Hover state
-                    SelectedColor = Color.FromArgb(60, 60, 60);       // Selected state
+                    TextGray = Color.FromArgb(160, 160, 160);
+                    HoverColor = Color.FromArgb(50, 50, 50);
+                    SelectedColor = Color.FromArgb(60, 60, 60);
+                    PositiveValueColor = TextWhite;
+                    NegativeValueColor = Color.Red;
                     break;
-                    
+
                 case Theme.White:
-                    // White theme (light)
-                    DarkBackground = Color.FromArgb(245, 245, 245);   // Light gray
-                    DarkerBackground = Color.FromArgb(220, 220, 220); // Slightly darker sidebar
-                    CardBackground = Color.White;                      // White cards
-                    AccentGreen = Color.FromArgb(39, 174, 96);        // Keep green accent
-                    AccentAmber = Color.FromArgb(243, 156, 18);       // Keep amber accent
-                    TextWhite = Color.FromArgb(30, 30, 30);           // Dark text for contrast
-                    TextGray = Color.FromArgb(90, 90, 90);            // Dark gray for secondary text
-                    HoverColor = Color.FromArgb(230, 230, 230);       // Light hover
-                    SelectedColor = Color.FromArgb(210, 210, 210);    // Light selected
+                    DarkBackground = Color.FromArgb(245, 245, 245);
+                    DarkerBackground = Color.FromArgb(220, 220, 220);
+                    CardBackground = Color.White;
+                    AccentGreen = Color.FromArgb(39, 174, 96);
+                    AccentAmber = Color.FromArgb(243, 156, 18);
+                    TextWhite = Color.FromArgb(30, 30, 30);
+                    TextGray = Color.FromArgb(90, 90, 90);
+                    HoverColor = Color.FromArgb(230, 230, 230);
+                    SelectedColor = Color.FromArgb(210, 210, 210);
+                    PositiveValueColor = TextWhite;
+                    NegativeValueColor = Color.Red;
+                    break;
+
+                case Theme.YellowBlueBlack:
+                    DarkBackground = Color.FromArgb(20, 20, 20);
+                    DarkerBackground = Color.FromArgb(10, 10, 10);
+                    CardBackground = Color.FromArgb(30, 30, 30);
+                    AccentGreen = Color.FromArgb(0, 200, 83);
+                    AccentAmber = Color.FromArgb(255, 185, 0);
+                    TextWhite = Color.White;
+                    TextGray = Color.FromArgb(160, 160, 160);
+                    HoverColor = Color.FromArgb(50, 50, 50);
+                    SelectedColor = Color.FromArgb(60, 60, 60);
+                    // Use requested colors
+                    PositiveValueColor = ColorTranslator.FromHtml("#3179f5"); // blue
+                    NegativeValueColor = ColorTranslator.FromHtml("#fbc02d"); // yellow
                     break;
             }
-            
+
             // Save theme preference
             SaveThemePreference();
-            
+
             // Apply theme to all controls
             UpdateAllControlColors();
+
+            // Re-apply numeric and risk-overview specific coloring after the recursive updates
+            // so YellowBlueBlack colors are not overwritten by generic label updates.
+            try
+            {
+                // Colorize grids again (ensures per-cell styles are set last)
+                ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
+                ColorizeNumericCells(typeSummaryGrid, "OpenPnL", "ClosedPnL", "TotalPnL");
+
+                // Refresh Risk Overview values (applies label.Tag based coloring)
+                if (!string.IsNullOrEmpty(selectedNavItem) && selectedNavItem.EndsWith("Risk Overview") && pageContents.TryGetValue(selectedNavItem, out var panel))
+                {
+                    RefreshRiskOverviewPanel(panel);
+                }
+
+                // Refresh the stats detail grid coloring (RefreshAccountStats applies the row-level coloring)
+                RefreshAccountStats();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ApplyTheme post-refresh: {ex.Message}");
+            }
+        }
+
+        // Helper: returns true if string represents a negative numeric (parentheses or leading '-')
+        private static bool IsNegativeNumericString(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return false;
+            s = s.Trim();
+            if (s.StartsWith("(") && s.EndsWith(")")) return true;
+            if (s.StartsWith("-") || s.StartsWith("−")) return true;
+            return false;
+        }
+
+        // Color numeric cells for specified column keys when YellowBlueBlack theme active
+        private void ColorizeNumericCells(DataGridView grid, params string[] columnNames)
+        {
+            if (grid == null || columnNames == null || columnNames.Length == 0) return;
+            try
+            {
+                bool applySpecial = currentTheme == Theme.YellowBlueBlack;
+                for (int r = 0; r < grid.Rows.Count; r++)
+                {
+                    var row = grid.Rows[r];
+                    foreach (var colName in columnNames)
+                    {
+                        if (!grid.Columns.Contains(colName)) continue;
+                        var cell = row.Cells[colName];
+                        if (cell == null) continue;
+                        var raw = (cell.Value ?? string.Empty).ToString();
+                        if (applySpecial)
+                        {
+                            if (IsNegativeNumericString(raw))
+                                cell.Style.ForeColor = NegativeValueColor;
+                            else
+                                cell.Style.ForeColor = PositiveValueColor;
+                        }
+                        else
+                        {
+                            // Reset to default readable color per theme
+                            cell.Style.ForeColor = TextWhite;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ColorizeNumericCells error: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -399,22 +491,43 @@ namespace Risk_Manager
             {
                 UpdateControlRecursively(topPanel);
             }
-            
+
+            // After recursive updates and invalidation, color numeric columns for special theme
+            // Accounts Summary: OpenPnL, ClosedPnL, DailyPnL, GrossPnL (column keys match grid.Columns.Add names)
+            ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
+
+
+            // Type summary: OpenPnL, ClosedPnL, TotalPnL (column keys added earlier)
+            ColorizeNumericCells(typeSummaryGrid, "OpenPnL", "ClosedPnL", "TotalPnL");
+
+            // After numeric/grid coloring, re-apply value-label coloring so special-theme colors persist
+            try
+            {
+                // apply to entire content area and topPanel so all risk overview/value labels are handled
+                ApplyValueLabelColoring(this);
+                if (contentPanel != null) ApplyValueLabelColoring(contentPanel);
+                if (topPanel != null) ApplyValueLabelColoring(topPanel);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ApplyValueLabelColoring error: {ex.Message}");
+            }
+
             // Refresh current page
             this.Invalidate(true);
         }
-        
+
         /// <summary>
         /// Recursively updates colors for a control and its children
         /// </summary>
         private void UpdateControlRecursively(Control control)
         {
             if (control == null) return;
-            
+
             // Update background colors based on control type
             if (control is Panel)
             {
-                if (control.BackColor == Color.FromArgb(45, 62, 80) || 
+                if (control.BackColor == Color.FromArgb(45, 62, 80) ||
                     control.BackColor == Color.FromArgb(20, 20, 20) ||
                     control.BackColor == Color.FromArgb(245, 245, 245))
                 {
@@ -446,20 +559,26 @@ namespace Risk_Manager
             }
             else if (control is Label label)
             {
-                // Update text color for labels
-                if (label.ForeColor == Color.White || 
-                    label.ForeColor == Color.FromArgb(30, 30, 30))
+                // If label.Tag is a getter delegate (used by Risk Overview value labels),
+                // skip overriding ForeColor here so specialized coloring (YellowBlueBlack) persists.
+                bool isValueGetterLabel = label.Tag is Func<string>;
+
+                if (!isValueGetterLabel)
                 {
-                    label.ForeColor = TextWhite;
+                    // Update text color for labels (only if not a bound value label)
+                    if (label.ForeColor == Color.White ||
+                        label.ForeColor == Color.FromArgb(30, 30, 30))
+                    {
+                        label.ForeColor = TextWhite;
+                    }
+                    else if (label.ForeColor == Color.FromArgb(189, 195, 199) ||
+                             label.ForeColor == Color.FromArgb(160, 160, 160) ||
+                             label.ForeColor == Color.FromArgb(90, 90, 90))
+                    {
+                        label.ForeColor = TextGray;
+                    }
                 }
-                else if (label.ForeColor == Color.FromArgb(189, 195, 199) ||
-                         label.ForeColor == Color.FromArgb(160, 160, 160) ||
-                         label.ForeColor == Color.FromArgb(90, 90, 90))
-                {
-                    label.ForeColor = TextGray;
-                }
-                
-                // Update background
+                // Update background (safe to do for all labels)
                 if (label.BackColor == Color.FromArgb(45, 62, 80) ||
                     label.BackColor == Color.FromArgb(20, 20, 20) ||
                     label.BackColor == Color.FromArgb(245, 245, 245))
@@ -472,6 +591,7 @@ namespace Risk_Manager
                 {
                     label.BackColor = CardBackground;
                 }
+
                 if (!string.IsNullOrEmpty(label.Text) && label.Text.StartsWith("$") && DollarImage != null)
                 {
                     // Remove leading dollar sign from text and set image
@@ -525,14 +645,14 @@ namespace Risk_Manager
             else if (control is Button button)
             {
                 // Only update non-accent buttons
-                if (button.BackColor != AccentGreen && 
+                if (button.BackColor != AccentGreen &&
                     button.BackColor != AccentAmber &&
                     button.BackColor != Color.Red)
                 {
                     button.ForeColor = TextWhite;
                 }
             }
-            
+
             // Recursively update children
             foreach (Control child in control.Controls)
             {
@@ -1571,6 +1691,12 @@ namespace Risk_Manager
                         ApplyTheme(Theme.White);
                         break;
                     case Theme.White:
+                        ApplyTheme(Theme.YellowBlueBlack);
+                        break;
+                    case Theme.YellowBlueBlack:
+                        ApplyTheme(Theme.Blue);
+                        break;
+                    default:
                         ApplyTheme(Theme.Blue);
                         break;
                 }
@@ -2094,7 +2220,15 @@ namespace Risk_Manager
             finally
             {
                 statsGrid.ResumeLayout();
+                // Ensure other UI value labels are refreshed. statsDetailGrid is colored selectively in RefreshAccountStats().
+                ApplyValueLabelColoring(statsGrid.Parent ?? this);
             }
+            // Re-apply grid and label coloring after rows were rebuilt
+            if (currentTheme == Theme.YellowBlueBlack)
+            {
+                ColorizeNumericCells(statsDetailGrid, "Value");
+            }
+            ApplyValueLabelColoring(statsDetailGrid.Parent ?? this);
         }
 
         private Control CreateAccountStatsPanel()
@@ -2263,6 +2397,28 @@ namespace Risk_Manager
                 statsDetailGrid.Rows.Add("Positions", positionsCount.ToString());
                 statsDetailGrid.Rows.Add("Connection Status", connectionStatus);
                 statsDetailGrid.Rows.Add("Trading Lock Status", lockStatus);
+
+                // Apply special coloring for metrics when theme requires it
+                if (currentTheme == Theme.YellowBlueBlack)
+                {
+                    for (int i = 0; i < statsDetailGrid.Rows.Count; i++)
+                    {
+                        var metric = statsDetailGrid.Rows[i].Cells[0].Value?.ToString() ?? "";
+                        var valueCell = statsDetailGrid.Rows[i].Cells[1];
+                        var raw = (valueCell.Value ?? string.Empty).ToString();
+                        if (metric == "Open P&L" || metric == "Daily P&L" || metric == "Gross P&L")
+                        {
+                            if (IsNegativeNumericString(raw))
+                                valueCell.Style.ForeColor = NegativeValueColor;
+                            else
+                                valueCell.Style.ForeColor = PositiveValueColor;
+                        }
+                        else
+                        {
+                            valueCell.Style.ForeColor = TextWhite;
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -2286,6 +2442,10 @@ namespace Risk_Manager
             finally
             {
                 statsDetailGrid.ResumeLayout();
+                // re-apply theme-specific coloring after the stats detail rows were rebuilt
+                // Per-metric coloring already applied above (Open P&L, Daily P&L, Gross P&L).
+                // Do NOT color the entire statsDetailGrid here.
+                ApplyValueLabelColoring(statsDetailGrid.Parent ?? this);
             }
         }
 
@@ -2535,7 +2695,16 @@ namespace Risk_Manager
             finally
             {
                 typeSummaryGrid.ResumeLayout();
+                // re-apply theme-specific coloring after the stats detail rows were rebuilt
+                ReapplyThemeColoringAfterRefresh();
             }
+
+            // Re-apply grid and label coloring after rows were rebuilt
+            if (currentTheme == Theme.YellowBlueBlack)
+            {
+                ColorizeNumericCells(statsDetailGrid, "Value");
+            }
+            ApplyValueLabelColoring(statsDetailGrid.Parent ?? this);
         }
 
         // Helper class to aggregate type summary data
@@ -2546,6 +2715,31 @@ namespace Risk_Manager
             public double OpenPnL { get; set; }
             public double ClosedPnL { get; set; }
             public double TrailingDrawdown { get; set; }
+        }
+
+        // Replace body of ReapplyThemeColoringAfterRefresh to omit statsDetailGrid full-column coloring
+        private void ReapplyThemeColoringAfterRefresh()
+        {
+            try
+            {
+                if (currentTheme == Theme.YellowBlueBlack)
+                {
+                    // Accounts summary columns
+                    ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
+
+                    // Type summary
+                    ColorizeNumericCells(typeSummaryGrid, "OpenPnL", "ClosedPnL", "TotalPnL");
+                }
+
+                // Re-apply label coloring for Risk Overview value labels and the rest of UI
+                ApplyValueLabelColoring(this);
+                if (contentPanel != null) ApplyValueLabelColoring(contentPanel);
+                if (topPanel != null) ApplyValueLabelColoring(topPanel);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ReapplyThemeColoringAfterRefresh error: {ex.Message}");
+            }
         }
 
         private Panel CreateStatisticsOverviewPanel()
@@ -7132,7 +7326,25 @@ namespace Risk_Manager
                             }
 
                             label.Text = display;
+                            // default color
                             label.ForeColor = TextGray;
+
+                            // If the special theme is active and this label corresponds to certain getters, color by sign
+                            if (currentTheme == Theme.YellowBlueBlack && label.Tag is Func<string> lblGetter)
+                            {
+                                var getterName = lblGetter.Method.Name;
+                                if (getterName == nameof(GetPositionLossLimit) ||
+                                    getterName == nameof(GetDailyLossLimit) ||
+                                    getterName == nameof(GetDailyProfitTarget) ||
+                                    getterName == nameof(GetPositionProfitTarget))
+                                {
+                                    // Determine positive/negative from display text
+                                    if (IsNegativeNumericString(display))
+                                        label.ForeColor = NegativeValueColor;
+                                    else
+                                        label.ForeColor = PositiveValueColor;
+                                }
+                            }
                         }
                         else if (val.StartsWith("$") && DollarImage != null)
                         {
@@ -8263,6 +8475,54 @@ namespace Risk_Manager
             {
                 lastPoint = Point.Empty;
             };
+        }
+        private void ApplyValueLabelColoring(Control root)
+        {
+            if (root == null) return;
+            foreach (Control child in root.Controls)
+            {
+                if (child is Label lbl && lbl.Tag is Func<string> getter)
+                {
+                    try
+                    {
+                        var display = (getter() ?? string.Empty).Trim();
+
+                        // Default label color for value labels
+                        Color colorToApply = TextGray;
+
+                        if (currentTheme == Theme.YellowBlueBlack)
+                        {
+                            // Only these getters should get the positive/negative color mapping
+                            var name = getter.Method.Name;
+                            if (name == nameof(GetPositionLossLimit) ||
+                                name == nameof(GetDailyLossLimit) ||
+                                name == nameof(GetDailyProfitTarget) ||
+                                name == nameof(GetPositionProfitTarget))
+                            {
+                                // Determine sign from formatted display (FormatNumeric/FormatLossLimit use parentheses for negatives)
+                                if (IsNegativeNumericString(display))
+                                    colorToApply = NegativeValueColor;
+                                else
+                                    colorToApply = PositiveValueColor;
+                            }
+                        }
+
+                        // Assign and ensure label is redrawn; do not change other label properties
+                        if (lbl.ForeColor != colorToApply)
+                        {
+                            lbl.ForeColor = colorToApply;
+                            lbl.Invalidate();
+                        }
+                    }
+                    catch
+                    {
+                        // swallow - best effort coloring only
+                    }
+                }
+
+                // recurse
+                ApplyValueLabelColoring(child);
+            }
         }
     }
 }
