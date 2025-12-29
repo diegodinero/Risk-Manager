@@ -1,7 +1,9 @@
-﻿using System;
+﻿using Risk_Manager.Data;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Media;
@@ -10,7 +12,6 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
-using Risk_Manager.Data;
 using DockStyle = System.Windows.Forms.DockStyle;
 
 namespace Risk_Manager
@@ -1664,8 +1665,6 @@ namespace Risk_Manager
         /// <summary>
         /// Creates a label with colored emoji support using Segoe UI Emoji font
         /// </summary>
-        // Replace CreateEmojiLabel implementation with the below (keeps label but shows image when available)
-        // Replace CreateEmojiLabel with this version that uses GetIconForTitle
         private Label CreateEmojiLabel(string text, int fontSize, FontStyle fontStyle = FontStyle.Regular, Color? backgroundColor = null)
         {
             var label = new Label
@@ -1689,9 +1688,22 @@ namespace Risk_Manager
                 else if (trimmed.Length > 1)
                     label.Text = trimmed;
 
-                label.Image = icon;
+                // Determine sensible target size from font height (keeps consistent across headers)
+                int targetHeight = Math.Max(16, (int)(label.Font.Height * 1.4));
+                int targetWidth = targetHeight; // square icon area
+
+                // Dispose previously created image if it's a Bitmap we created earlier
+                if (label.Image != null && !(label.Image is Metafile) && label.Image != icon && label.Image is Bitmap bmpPrev)
+                {
+                    try { bmpPrev.Dispose(); } catch { /* ignore */ }
+                }
+
+                // Create and assign scaled bitmap so Label draws correctly
+                var scaled = ScaleImageToFit(icon, targetWidth, targetHeight);
+                label.Image = scaled;
                 label.ImageAlign = ContentAlignment.MiddleLeft;
-                label.Padding = new Padding(36, 0, 0, 0);
+                // Increased left padding so text doesn't sit on top of the icon
+                label.Padding = new Padding(targetWidth + 18, 0, 0, 0);
             }
 
             return label;
@@ -1973,18 +1985,13 @@ namespace Risk_Manager
         {
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
-            // Title
-            var titleLabel = new Label
-            {
-                Text = "Account Stats",
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                Padding = new Padding(10, 0, 0, 0),
-                BackColor = DarkBackground,
-                ForeColor = TextWhite
-            };
+            // Title (use emoji label so header PNG is used)
+            var titleLabel = CreateEmojiLabel("📈 Stats", 14, FontStyle.Bold);
+            titleLabel.Dock = DockStyle.Top;
+            titleLabel.Height = 40;
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.Padding = new Padding(10, 0, 0, 0);
+            titleLabel.BackColor = DarkBackground;
 
             // Stats display grid
             statsDetailGrid = new DataGridView
@@ -2169,7 +2176,6 @@ namespace Risk_Manager
         private Control CreateTypeSummaryPanel()
         {
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
-
             // Title and filter row
             var topPanel = new Panel
             {
@@ -2178,9 +2184,8 @@ namespace Risk_Manager
                 BackColor = DarkBackground,
                 Padding = new Padding(10, 5, 10, 5)
             };
-
-            // Title with colored emoji rendering
-            var titleLabel = CreateEmojiLabel("📋 Type Summary", 14, FontStyle.Bold);
+            // Title with colored emoji rendering (ensure key matches IconMap -> "Type")
+            var titleLabel = CreateEmojiLabel("📋 Type", 14, FontStyle.Bold);
             titleLabel.Dock = DockStyle.Left;
             titleLabel.Width = 200;
             titleLabel.TextAlign = ContentAlignment.MiddleLeft;
@@ -2844,8 +2849,8 @@ namespace Risk_Manager
         {
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
-            // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel("🕐 Trading Time Restrictions", 14, FontStyle.Bold);
+            // Title with emoji rendering (use the mapped key "Allowed Trading Times" so clock.png is used)
+            var titleLabel = CreateEmojiLabel("🕐 Allowed Trading Times", 14, FontStyle.Bold);
             titleLabel.Dock = DockStyle.Top;
             titleLabel.Height = 40;
             titleLabel.TextAlign = ContentAlignment.MiddleLeft;
@@ -5958,8 +5963,8 @@ namespace Risk_Manager
         {
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
-            // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel("⚙️ Advanced", 14, FontStyle.Bold);
+            // Title (use exact key "Feature Toggles" so IconMap resolves to featuretoggles.png)
+            var titleLabel = CreateEmojiLabel("⚙️ Feature Toggles", 14, FontStyle.Bold);
             titleLabel.Dock = DockStyle.Top;
             titleLabel.Height = 40;
             titleLabel.TextAlign = ContentAlignment.MiddleLeft;
@@ -6938,7 +6943,6 @@ namespace Risk_Manager
             }
 
             // Check if this is a value label (has a Tag with getter function)
-            // In RefreshLabelsInControl, update label handling to use GetIconForTitle (replace the inner label-handling block)
             if (control is Label label && label.Tag is Func<string> getter)
             {
                 try
@@ -6946,15 +6950,26 @@ namespace Risk_Manager
                     var val = getter();
                     if (string.IsNullOrEmpty(val))
                     {
+                        // Dispose previously created image if needed
+                        if (label.Image != null && label.Image is Bitmap bmpPrev)
+                        {
+                            try { bmpPrev.Dispose(); } catch { }
+                        }
                         label.Text = "Not set";
                         label.Image = null;
-                        // continue with recursion
                     }
                     else if (val.StartsWith("$") && DollarImage != null)
                     {
-                        label.Image = DollarImage;
+                        // Dispose previously created image if needed
+                        if (label.Image != null && label.Image is Bitmap bmpPrev)
+                        {
+                            try { bmpPrev.Dispose(); } catch { }
+                        }
+
+                        int targetHeight = Math.Max(14, (int)(label.Font.Height * 1.2));
+                        label.Image = ScaleImageToFit(DollarImage, targetHeight, targetHeight);
                         label.ImageAlign = ContentAlignment.MiddleLeft;
-                        label.Padding = new Padding(24, 0, 0, 0);
+                        label.Padding = new Padding(targetHeight + 8, 0, 0, 0);
                         label.Text = val.TrimStart('$', ' ');
                         label.ForeColor = TextGray;
                     }
@@ -6963,16 +6978,29 @@ namespace Risk_Manager
                         var icon = GetIconForTitle(val);
                         if (icon != null)
                         {
+                            // Dispose previously created image if needed
+                            if (label.Image != null && label.Image is Bitmap bmpPrev)
+                            {
+                                try { bmpPrev.Dispose(); } catch { }
+                            }
+
                             var trimmed = val.Trim();
                             var idx = trimmed.IndexOf(' ');
-                            label.Image = icon;
+                            int targetHeight = Math.Max(14, (int)(label.Font.Height * 1.2));
+                            label.Image = ScaleImageToFit(icon, targetHeight, targetHeight);
                             label.ImageAlign = ContentAlignment.MiddleLeft;
-                            label.Padding = new Padding(36, 0, 0, 0);
+                            label.Padding = new Padding(targetHeight + 8, 0, 0, 0);
                             label.Text = (idx >= 0) ? trimmed.Substring(idx + 1) : (trimmed.Length > 1 ? trimmed.Substring(1) : trimmed);
                             label.ForeColor = TextGray;
                         }
                         else
                         {
+                            // Dispose previously created image if needed
+                            if (label.Image != null && label.Image is Bitmap bmpPrev)
+                            {
+                                try { bmpPrev.Dispose(); } catch { }
+                            }
+
                             label.Image = null;
                             label.Text = val;
                         }
