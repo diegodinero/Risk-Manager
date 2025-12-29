@@ -102,6 +102,9 @@ namespace Risk_Manager
 
         private Image cautionButtonScaledImage;
 
+        // add near other private Image fields in RiskManagerControl class
+        private Image cautionButtonBgImage;
+
         /// <summary>
         /// Sets the WPF window reference for dragging functionality
         /// </summary>
@@ -1203,6 +1206,7 @@ namespace Risk_Manager
         // Add this helper method in the RiskManagerControl class (anywhere above CreateTopPanel)
         // LoadIcons and helper
         // LoadIcons and helper
+        // LoadIcons and helper
         private void LoadIcons()
         {
             try
@@ -1223,9 +1227,33 @@ namespace Risk_Manager
                 IconMap["Daily Loss Limit"] = Properties.Resources.dailyloss;
                 IconMap["Daily Profit Target"] = Properties.Resources.dailyprofit;
                 IconMap["Symbols"] = Properties.Resources.blocked;
-                IconMap["Locked"] = Properties.Resources._lock; // resource named _lock
+                IconMap["Locked"] = Properties.Resources._lock; // fallback or generic lock
                 IconMap["Unlocked"] = Properties.Resources.unlock;
                 IconMap["Allowed Trading Times"] = Properties.Resources.clock;
+
+                // Use specific PNGs for Lock tabs per request
+                // "Lock Settings" header/tab uses locksettins.png resource (identifier: locksettins)
+                // "Manual Lock" header/tab uses locktrading.png resource (identifier: locktrading)
+                // Make sure these resources exist in Properties.Resources with these exact identifiers.
+                try
+                {
+                    IconMap["Lock Settings"] = Properties.Resources.locksettings;
+                }
+                catch
+                {
+                    // fallback to generic lock if specific resource missing
+                    IconMap["Lock Settings"] = Properties.Resources._lock;
+                }
+
+                try
+                {
+                    IconMap["Manual Lock"] = Properties.Resources.locktrading;
+                }
+                catch
+                {
+                    // fallback to generic lock if specific resource missing
+                    IconMap["Manual Lock"] = Properties.Resources._lock;
+                }
 
                 // Explicit card header mappings for Risk Overview
                 IconMap["Account Status"] = Properties.Resources._lock;          // lock.png
@@ -1234,10 +1262,8 @@ namespace Risk_Manager
                 IconMap["Symbol Restrictions"] = Properties.Resources.blocked;   // blocked.png
                 IconMap["Allowed Trading Times"] = Properties.Resources.clock;   // clock.png
 
-                // Additional lock-related title variants
-                IconMap["Lock Settings"] = Properties.Resources._lock;
+                // Additional lock-related title variants (keep fallback)
                 IconMap["Settings Lock"] = Properties.Resources._lock;
-                IconMap["Manual Lock"] = Properties.Resources._lock;
                 IconMap["Trading Lock"] = Properties.Resources._lock;
 
                 // Emoji fallbacks (if any code passes raw emoji tokens)
@@ -1381,9 +1407,10 @@ namespace Risk_Manager
             topPanel.Controls.Add(accountSelector);
 
             // Emergency Flatten button next to Account Selector       
+            // Emergency Flatten button (image-left + image-right, centered text)
             var emergencyFlattenButton = new Button
             {
-                Text = "", // image + text handled below
+                Text = "", // painted manually
                 Location = new Point(340, 37),
                 Width = 250,
                 Height = 26,
@@ -1405,29 +1432,64 @@ namespace Risk_Manager
                 try { cautionImg = Properties.Resources.caution; } catch { cautionImg = null; }
             }
 
+            // Prepare a single scaled icon used on both sides (dispose previous if any)
             if (cautionImg != null)
             {
-                // Dispose previous scaled image to avoid memory leaks
-                cautionButtonScaledImage?.Dispose();
-
-                // Scale to fit inside button with small vertical padding
+                try { cautionButtonScaledImage?.Dispose(); } catch { }
                 int pad = 6;
-                cautionButtonScaledImage = ScaleImageToFit(cautionImg, Math.Max(8, emergencyFlattenButton.Height - pad), Math.Max(8, emergencyFlattenButton.Height - pad));
-
-                emergencyFlattenButton.Image = cautionButtonScaledImage;
-                emergencyFlattenButton.ImageAlign = ContentAlignment.MiddleLeft;
-                emergencyFlattenButton.Text = "EMERGENCY FLATTEN";
-                emergencyFlattenButton.TextImageRelation = TextImageRelation.ImageBeforeText;
-
-                // Leave room for the image so the text doesn't overlap
-                emergencyFlattenButton.Padding = new Padding(cautionButtonScaledImage.Width + 12, 0, 0, 0);
+                int iconSize = Math.Max(8, emergencyFlattenButton.Height - pad);
+                cautionButtonScaledImage = ScaleImageToFit(cautionImg, iconSize, iconSize);
             }
-            else
+
+            // Custom paint: draw left icon, right icon, centered text
+            emergencyFlattenButton.Paint += (s, e) =>
             {
-                // Fallback to emoji text if resource missing
-                emergencyFlattenButton.Text = "⚠️ EMERGENCY FLATTEN ⚠️";
-                emergencyFlattenButton.Font = new Font("Segoe UI Emoji", 9, FontStyle.Bold);
-            }
+                var btn = (Button)s;
+                e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                // Fill background
+                using (var bg = new SolidBrush(btn.BackColor))
+                    e.Graphics.FillRectangle(bg, 0, 0, btn.Width, btn.Height);
+
+                int leftPadding = 8;
+                int rightPadding = 8;
+                int xLeft = leftPadding;
+                int xRight = btn.Width - rightPadding;
+
+                int leftIconWidth = 0;
+                int rightIconWidth = 0;
+
+                if (cautionButtonScaledImage is Bitmap leftBmp)
+                {
+                    leftIconWidth = leftBmp.Width;
+                    int iconY = (btn.Height - leftBmp.Height) / 2;
+                    e.Graphics.DrawImage(leftBmp, new Rectangle(xLeft, iconY, leftBmp.Width, leftBmp.Height));
+                    xLeft += leftIconWidth + 8;
+                }
+
+                if (cautionButtonScaledImage is Bitmap rightBmp)
+                {
+                    rightIconWidth = rightBmp.Width;
+                    int iconY = (btn.Height - rightBmp.Height) / 2;
+                    int drawX = btn.Width - rightPadding - rightIconWidth;
+                    e.Graphics.DrawImage(rightBmp, new Rectangle(drawX, iconY, rightBmp.Width, rightBmp.Height));
+                    xRight = drawX - 8;
+                }
+
+                // Compute available rect between left and right icons
+                int availableX = xLeft;
+                int availableWidth = Math.Max(0, xRight - availableX);
+
+                // Center the text within available rect
+                string text = "EMERGENCY FLATTEN";
+                using (var brush = new SolidBrush(btn.ForeColor))
+                {
+                    var sf = new StringFormat { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Center };
+                    var textRect = new RectangleF(availableX, 0, availableWidth, btn.Height);
+                    e.Graphics.DrawString(text, btn.Font, brush, textRect, sf);
+                }
+            };
 
             topPanel.Controls.Add(emergencyFlattenButton);
 
@@ -1732,6 +1794,15 @@ namespace Risk_Manager
                     label.Text = trimmed.Substring(idx + 1).Trim();
                 else if (trimmed.Length > 1)
                     label.Text = trimmed;
+
+                var key = (idx >= 0 && idx + 1 < trimmed.Length) ? trimmed.Substring(idx + 1).Trim() : trimmed;
+
+                // Choose a larger multiplier for Manual Lock / Trading Lock headers
+                double multiplier = 1.4;
+                if ( string.Equals(key, "Trading Lock", StringComparison.OrdinalIgnoreCase) )
+                {
+                    multiplier = 5; // make the icon larger
+                }
 
                 // Determine sensible target size from font height (keeps consistent across headers)
                 int targetHeight = Math.Max(16, (int)(label.Font.Height * 1.4));
@@ -6993,62 +7064,109 @@ namespace Risk_Manager
             {
                 try
                 {
-                    var val = getter();
+                    var rawVal = getter() ?? string.Empty;
+                    var val = rawVal.Trim();
+
+                    // Dispose previously created image if needed
+                    if (label.Image != null && label.Image is Bitmap bmpPrev)
+                    {
+                        try { bmpPrev.Dispose(); } catch { }
+                    }
+
                     if (string.IsNullOrEmpty(val))
                     {
-                        // Dispose previously created image if needed
-                        if (label.Image != null && label.Image is Bitmap bmpPrev)
-                        {
-                            try { bmpPrev.Dispose(); } catch { }
-                        }
                         label.Text = "Not set";
                         label.Image = null;
                     }
-                    else if (val.StartsWith("$") && DollarImage != null)
-                    {
-                        // Dispose previously created image if needed
-                        if (label.Image != null && label.Image is Bitmap bmpPrev)
-                        {
-                            try { bmpPrev.Dispose(); } catch { }
-                        }
-
-                        int targetHeight = Math.Max(14, (int)(label.Font.Height * 1.2));
-                        label.Image = ScaleImageToFit(DollarImage, targetHeight, targetHeight);
-                        label.ImageAlign = ContentAlignment.MiddleLeft;
-                        label.Padding = new Padding(targetHeight + 8, 0, 0, 0);
-                        label.Text = val.TrimStart('$', ' ');
-                        label.ForeColor = TextGray;
-                    }
                     else
                     {
-                        var icon = GetIconForTitle(val);
-                        if (icon != null)
-                        {
-                            // Dispose previously created image if needed
-                            if (label.Image != null && label.Image is Bitmap bmpPrev)
-                            {
-                                try { bmpPrev.Dispose(); } catch { }
-                            }
+                        // Detect special emoji tokens and choose icons accordingly
+                        Image overrideIcon = null;
+                        bool isDollar = false;
 
-                            var trimmed = val.Trim();
-                            var idx = trimmed.IndexOf(' ');
+                        if (val.Contains("💵"))
+                        {
+                            overrideIcon = DollarImage;
+                            isDollar = true;
+                        }
+                        else if (val.Contains("⛔"))
+                        {
+                            // Use the Symbols/blocked icon
+                            overrideIcon = GetIconForTitle("Symbols") ?? (IconMap.TryGetValue("Symbols", out var img) ? img : null);
+                        }
+                        else if (val.Contains("📊"))
+                        {
+                            // Use the limits/icon for contract-limit style values
+                            overrideIcon = GetIconForTitle("Limits") ?? (IconMap.TryGetValue("Limits", out var img) ? img : null);
+                        }
+
+                        if (overrideIcon != null)
+                        {
                             int targetHeight = Math.Max(14, (int)(label.Font.Height * 1.2));
-                            label.Image = ScaleImageToFit(icon, targetHeight, targetHeight);
+                            label.Image = ScaleImageToFit(overrideIcon, targetHeight, targetHeight);
                             label.ImageAlign = ContentAlignment.MiddleLeft;
                             label.Padding = new Padding(targetHeight + 8, 0, 0, 0);
-                            label.Text = (idx >= 0) ? trimmed.Substring(idx + 1) : (trimmed.Length > 1 ? trimmed.Substring(1) : trimmed);
+
+                            // Remove leading emoji/currency tokens for display text
+                            var display = val;
+
+                            // Remove the dollar emoji and any leading $ signs
+                            if (isDollar)
+                            {
+                                display = display.Replace("💵", "").Trim();
+                                if (display.StartsWith("$"))
+                                    display = display.Substring(1).Trim();
+                            }
+                            else
+                            {
+                                // Remove a leading emoji token (up to first space) if present
+                                var idx = display.IndexOf(' ');
+                                if (idx >= 0 && idx + 1 < display.Length)
+                                    display = display.Substring(idx + 1).Trim();
+                                else if (display.Length > 1)
+                                {
+                                    // If only emoji + short text, try to remove the leading char
+                                    if (char.IsSurrogate(display[0]) || char.IsSymbol(display[0]) || char.IsPunctuation(display[0]))
+                                        display = display.Length > 1 ? display.Substring(1).Trim() : display;
+                                }
+                            }
+
+                            label.Text = display;
+                            label.ForeColor = TextGray;
+                        }
+                        else if (val.StartsWith("$") && DollarImage != null)
+                        {
+                            // Legacy: value starts with '$' without emoji
+                            int targetHeight = Math.Max(14, (int)(label.Font.Height * 1.2));
+                            label.Image = ScaleImageToFit(DollarImage, targetHeight, targetHeight);
+                            label.ImageAlign = ContentAlignment.MiddleLeft;
+                            label.Padding = new Padding(targetHeight + 8, 0, 0, 0);
+                            label.Text = val.TrimStart('$', ' ');
                             label.ForeColor = TextGray;
                         }
                         else
                         {
-                            // Dispose previously created image if needed
-                            if (label.Image != null && label.Image is Bitmap bmpPrev)
+                            // No special icon found — try the generic icon lookup (title-based)
+                            var icon = GetIconForTitle(val);
+                            if (icon != null)
                             {
-                                try { bmpPrev.Dispose(); } catch { }
-                            }
+                                int targetHeight = Math.Max(14, (int)(label.Font.Height * 1.2));
+                                label.Image = ScaleImageToFit(icon, targetHeight, targetHeight);
+                                label.ImageAlign = ContentAlignment.MiddleLeft;
+                                label.Padding = new Padding(targetHeight + 8, 0, 0, 0);
 
-                            label.Image = null;
-                            label.Text = val;
+                                var trimmed = val.Trim();
+                                var idx = trimmed.IndexOf(' ');
+                                label.Text = (idx >= 0) ? trimmed.Substring(idx + 1) : (trimmed.Length > 1 ? trimmed.Substring(1) : trimmed);
+                                label.ForeColor = TextGray;
+                            }
+                            else
+                            {
+                                // Plain text fallback
+                                label.Image = null;
+                                label.Text = val;
+                                label.ForeColor = TextGray;
+                            }
                         }
                     }
                 }
@@ -7836,6 +7954,8 @@ namespace Risk_Manager
                 themeButtonScaledImage = null;
                 try { cautionButtonScaledImage?.Dispose(); } catch { }
                 cautionButtonScaledImage = null;
+                try { cautionButtonBgImage?.Dispose(); } catch { }
+                cautionButtonBgImage = null;
             }
             base.Dispose(disposing);
         }
