@@ -2222,13 +2222,7 @@ namespace Risk_Manager
                 statsGrid.ResumeLayout();
                 // Ensure other UI value labels are refreshed. statsDetailGrid is colored selectively in RefreshAccountStats().
                 ApplyValueLabelColoring(statsGrid.Parent ?? this);
-            }
-            // Re-apply grid and label coloring after rows were rebuilt
-            if (currentTheme == Theme.YellowBlueBlack)
-            {
-                ColorizeNumericCells(statsDetailGrid, "Value");
-            }
-            ApplyValueLabelColoring(statsDetailGrid.Parent ?? this);
+            }        
         }
 
         private Control CreateAccountStatsPanel()
