@@ -100,6 +100,8 @@ namespace Risk_Manager
 
         private Image themeButtonScaledImage;
 
+        private Image cautionButtonScaledImage;
+
         /// <summary>
         /// Sets the WPF window reference for dragging functionality
         /// </summary>
@@ -1378,10 +1380,10 @@ namespace Risk_Manager
             accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
             topPanel.Controls.Add(accountSelector);
 
-            // Emergency Flatten button next to Account Selector
+            // Emergency Flatten button next to Account Selector       
             var emergencyFlattenButton = new Button
             {
-                Text = "⚠️ EMERGENCY FLATTEN ⚠️",
+                Text = "", // image + text handled below
                 Location = new Point(340, 37),
                 Width = 250,
                 Height = 26,
@@ -1393,6 +1395,40 @@ namespace Risk_Manager
             };
             emergencyFlattenButton.FlatAppearance.BorderSize = 0;
             emergencyFlattenButton.Click += EmergencyFlattenButton_Click;
+
+            // Load caution image (try IconMap key "caution" first, then fallback to resource)
+            Image cautionImg = null;
+            if (IconMap.TryGetValue("caution", out var ico) && ico != null)
+                cautionImg = ico;
+            else
+            {
+                try { cautionImg = Properties.Resources.caution; } catch { cautionImg = null; }
+            }
+
+            if (cautionImg != null)
+            {
+                // Dispose previous scaled image to avoid memory leaks
+                cautionButtonScaledImage?.Dispose();
+
+                // Scale to fit inside button with small vertical padding
+                int pad = 6;
+                cautionButtonScaledImage = ScaleImageToFit(cautionImg, Math.Max(8, emergencyFlattenButton.Height - pad), Math.Max(8, emergencyFlattenButton.Height - pad));
+
+                emergencyFlattenButton.Image = cautionButtonScaledImage;
+                emergencyFlattenButton.ImageAlign = ContentAlignment.MiddleLeft;
+                emergencyFlattenButton.Text = "EMERGENCY FLATTEN";
+                emergencyFlattenButton.TextImageRelation = TextImageRelation.ImageBeforeText;
+
+                // Leave room for the image so the text doesn't overlap
+                emergencyFlattenButton.Padding = new Padding(cautionButtonScaledImage.Width + 12, 0, 0, 0);
+            }
+            else
+            {
+                // Fallback to emoji text if resource missing
+                emergencyFlattenButton.Text = "⚠️ EMERGENCY FLATTEN ⚠️";
+                emergencyFlattenButton.Font = new Font("Segoe UI Emoji", 9, FontStyle.Bold);
+            }
+
             topPanel.Controls.Add(emergencyFlattenButton);
 
             // Status badges container (right-aligned)
@@ -7764,6 +7800,7 @@ namespace Risk_Manager
             contentPanel.ResumeLayout();
         }
 
+        // Update Dispose to free scaled images (replace existing Dispose(bool) body)
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -7790,9 +7827,15 @@ namespace Risk_Manager
 
                 alertSoundPlayer?.Dispose();
                 alertSoundPlayer = null;
-                
+
                 titleToolTip?.Dispose();
                 titleToolTip = null;
+
+                // Dispose scaled images created at runtime
+                try { themeButtonScaledImage?.Dispose(); } catch { }
+                themeButtonScaledImage = null;
+                try { cautionButtonScaledImage?.Dispose(); } catch { }
+                cautionButtonScaledImage = null;
             }
             base.Dispose(disposing);
         }

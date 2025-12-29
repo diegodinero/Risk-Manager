@@ -83,9 +83,9 @@ namespace Risk_Manager.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap cautionpng {
+        internal static System.Drawing.Bitmap caution {
             get {
-                object obj = ResourceManager.GetObject("cautionpng", resourceCulture);
+                object obj = ResourceManager.GetObject("caution", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -165,6 +165,26 @@ namespace Risk_Manager.Properties {
         internal static System.Drawing.Bitmap limit {
             get {
                 object obj = ResourceManager.GetObject("limit", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap locksettings {
+            get {
+                object obj = ResourceManager.GetObject("locksettings", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap locktrading {
+            get {
+                object obj = ResourceManager.GetObject("locktrading", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
