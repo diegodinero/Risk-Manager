@@ -2688,17 +2688,15 @@ namespace Risk_Manager
             }
             finally
             {
+                // After typeSummaryGrid.ResumeLayout();
                 typeSummaryGrid.ResumeLayout();
-                // re-apply theme-specific coloring after the stats detail rows were rebuilt
+                // Re-apply theme-specific coloring for accounts/type grids and labels.
+                // DO NOT color statsDetailGrid here — RefreshAccountStats must own statsDetailGrid coloring.
                 ReapplyThemeColoringAfterRefresh();
-            }
 
-            // Re-apply grid and label coloring after rows were rebuilt
-            if (currentTheme == Theme.YellowBlueBlack)
-            {
-                ColorizeNumericCells(statsDetailGrid, "Value");
-            }
-            ApplyValueLabelColoring(statsDetailGrid.Parent ?? this);
+                // Ensure surrounding UI labels are refreshed; statsDetailGrid coloring is handled inside RefreshAccountStats()
+                ApplyValueLabelColoring(typeSummaryGrid.Parent ?? this);
+            }          
         }
 
         // Helper class to aggregate type summary data
