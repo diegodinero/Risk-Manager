@@ -14,8 +14,47 @@ using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
 using DockStyle = System.Windows.Forms.DockStyle;
 
+class CustomHeaderControl : Panel
+{
+    public CustomHeaderControl(string text, Image icon)
+    {
+        this.Dock = DockStyle.Top;
+        this.Height = 40;
+        this.BackColor = Color.Transparent;
+
+        // Text (Label)
+        var textLabel = new Label
+        {
+            Text = text,
+            AutoSize = true,
+            Font = new Font("Segoe UI", 11, FontStyle.Bold),
+            ForeColor = Color.White,
+            Dock = DockStyle.Left,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(8, 0, 0, 0) // Add padding to separate text from the icon
+        };
+        this.Controls.Add(textLabel);
+
+        // Icon (PictureBox)
+        if (icon != null)
+        {
+            var iconBox = new PictureBox
+            {
+                Image = icon,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Width = 24,
+                Height = 24,
+                Dock = DockStyle.Left,
+                Margin = new Padding(8, 8, 0, 8) // Add some margin around the icon
+            };
+            this.Controls.Add(iconBox);
+        }
+    }
+}
+
 namespace Risk_Manager
 {
+
     public class RiskManagerControl : UserControl
     {
         private readonly Panel contentPanel;
@@ -1916,6 +1955,42 @@ namespace Risk_Manager
             }
         }
 
+        private Label CreateHeaderLabel(string text, Image icon)
+        {
+            var label = new Label
+            {
+                Text = text,
+                AutoSize = false,
+                Height = 32,
+                Dock = DockStyle.Top,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = Color.Transparent,
+                ImageAlign = ContentAlignment.MiddleLeft,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            if (icon != null)
+            {
+                // Scale the icon to fit the label's height while maintaining aspect ratio
+                int targetHeight = Math.Max(16, (int)(label.Font.Height * 1.4));
+                var scaledIcon = ScaleImageToFit(icon, targetHeight, targetHeight);
+                label.Image = scaledIcon;
+
+                // Explicitly add space between the icon and the text
+                int iconWidth = scaledIcon.Width;
+                int gap = 12; // Space between the icon and the text
+                label.Padding = new Padding(iconWidth + gap, 0, 0, 0);
+            }
+            else
+            {
+                // Default padding when no icon is present
+                label.Padding = new Padding(8, 0, 0, 0);
+            }
+
+            return label;
+        }
+
         /// <summary>
         /// Creates a label with colored emoji support using Segoe UI Emoji font
         /// </summary>
@@ -1976,13 +2051,9 @@ namespace Risk_Manager
         {
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
-            // Title with colored emoji rendering
-            var titleLabel = CreateEmojiLabel("📊 Accounts Summary", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
+            var header = new CustomHeaderControl("Accounts Summary", GetIconForTitle("Accounts Summary"));
+            header.Dock = DockStyle.Top;
+            header.Margin = new Padding(10, 0, 0, 0); // External spacing
 
             statsGrid = new DataGridView
             {
@@ -2050,7 +2121,7 @@ namespace Risk_Manager
             // Add controls in correct order: Fill control first, then Top controls
             // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(statsGrid);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(header);
             return mainPanel;
         }
 
@@ -2256,12 +2327,9 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title (use emoji label so header PNG is used)
-            var titleLabel = CreateEmojiLabel("📈 Stats", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
+            var header = new CustomHeaderControl("Stats", GetIconForTitle("Stats"));
+            header.Dock = DockStyle.Top;
+            header.Margin = new Padding(10, 0, 0, 0);
 
             // Stats display grid
             statsDetailGrid = new DataGridView
@@ -2300,7 +2368,7 @@ namespace Risk_Manager
             // Add controls in correct order: Fill control first, then Top controls
             // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(statsDetailGrid);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(header);
             return mainPanel;
         }
 
@@ -2481,12 +2549,9 @@ namespace Risk_Manager
                 Padding = new Padding(10, 5, 10, 5)
             };
             // Title with colored emoji rendering (ensure key matches IconMap -> "Type")
-            var titleLabel = CreateEmojiLabel("📋 Type", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Left;
-            
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
+            var header = new CustomHeaderControl("Type", GetIconForTitle("Type"));
+            header.Dock = DockStyle.Left;
+            header.Margin = new Padding(10, 0, 0, 0);
 
             // Filter label
             var filterLabel = new Label
@@ -2517,7 +2582,7 @@ namespace Risk_Manager
 
             topPanel.Controls.Add(typeSummaryFilterComboBox);
             topPanel.Controls.Add(filterLabel);
-            topPanel.Controls.Add(titleLabel);
+            topPanel.Controls.Add(header);
 
             typeSummaryGrid = new DataGridView
             {
@@ -3179,12 +3244,10 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering (use the mapped key "Allowed Trading Times" so clock.png is used)
-            var titleLabel = CreateEmojiLabel("🕐 Allowed Trading Times", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
+            var tradingTimesHeader = new CustomHeaderControl("Allowed Trading Times", GetIconForTitle("Allowed Trading Times"));
+            tradingTimesHeader.Dock = DockStyle.Top;
+            tradingTimesHeader.Margin = new Padding(10, 0, 0, 0);
+            contentPanel.Controls.Add(tradingTimesHeader);
 
             // Subtitle
             var subtitleLabel = new Label
@@ -3240,7 +3303,7 @@ namespace Risk_Manager
             mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(tradingTimesHeader);
 
             return mainPanel;
         }
@@ -3250,12 +3313,10 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel("⚙️ Settings Lock", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
+            var lockSettingsHeader = new CustomHeaderControl("Lock Settings", GetIconForTitle("Lock Settings"));
+            lockSettingsHeader.Dock = DockStyle.Top;
+            lockSettingsHeader.Margin = new Padding(10, 0, 0, 0);
+            contentPanel.Controls.Add(lockSettingsHeader);
 
             // Subtitle
             var subtitleLabel = new Label
@@ -3461,7 +3522,7 @@ namespace Risk_Manager
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(settingsAccountDisplay);
             mainPanel.Controls.Add(subtitleLabel);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(lockSettingsHeader);
             
             // Initialize the account display
             UpdateLockAccountDisplay(settingsAccountDisplay);
@@ -3474,12 +3535,10 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title
-            var titleLabel = CreateEmojiLabel("🔒 Trading Lock", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
+            var manualLockHeader = new CustomHeaderControl("Manual Lock", GetIconForTitle("Manual Lock"));
+            manualLockHeader.Dock = DockStyle.Top;
+            manualLockHeader.Margin = new Padding(10, 0, 0, 0);
+            contentPanel.Controls.Add(manualLockHeader);
 
             // Subtitle
             var subtitleLabel = new Label
@@ -3606,7 +3665,7 @@ namespace Risk_Manager
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(lockAccountDisplay);
             mainPanel.Controls.Add(subtitleLabel);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(manualLockHeader);
 
             return mainPanel;
         }
@@ -6293,12 +6352,10 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title (use exact key "Feature Toggles" so IconMap resolves to featuretoggles.png)
-            var titleLabel = CreateEmojiLabel("⚙️ Feature Toggles", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
+            var featureTogglesHeader = new CustomHeaderControl("Feature Toggles", GetIconForTitle("Feature Toggles"));
+            featureTogglesHeader.Dock = DockStyle.Top;
+            featureTogglesHeader.Margin = new Padding(10, 0, 0, 0);
+            contentPanel.Controls.Add(featureTogglesHeader);
 
             // Subtitle
             var subtitleLabel = new Label
@@ -6365,7 +6422,7 @@ namespace Risk_Manager
             mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(featureTogglesHeader);
 
             return mainPanel;
         }
@@ -6378,12 +6435,10 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title
-            var titleLabel = CreateEmojiLabel("📋 Copy Settings", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
+            var copySettingsHeader = new CustomHeaderControl("Copy Settings", GetIconForTitle("Copy Settings"));
+            copySettingsHeader.Dock = DockStyle.Top;
+            copySettingsHeader.Margin = new Padding(10, 0, 0, 0);
+            contentPanel.Controls.Add(copySettingsHeader);
 
             // Subtitle
             var subtitleLabel = new Label
@@ -6694,7 +6749,7 @@ namespace Risk_Manager
             mainPanel.Controls.Add(copyButton);
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(copySettingsHeader);
 
             return mainPanel;
         }
@@ -6707,12 +6762,10 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel("🔍 Risk Overview", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
+            var riskOverviewHeader = new CustomHeaderControl("Risk Overview", GetIconForTitle("Risk Overview"));
+            riskOverviewHeader.Dock = DockStyle.Top;
+            riskOverviewHeader.Margin = new Padding(10, 0, 0, 0);
+            contentPanel.Controls.Add(riskOverviewHeader);
 
             // Subtitle
             var subtitleLabel = new Label
@@ -6789,7 +6842,7 @@ namespace Risk_Manager
             // Add controls in correct order: Fill second, Top last
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(riskOverviewHeader);
 
             return mainPanel;
         }
@@ -7411,12 +7464,10 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel("📈 Positions", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
+            var positionsHeader = new CustomHeaderControl("Positions", GetIconForTitle("Positions"));
+            positionsHeader.Dock = DockStyle.Top;
+            positionsHeader.Margin = new Padding(10, 0, 0, 0);
+            contentPanel.Controls.Add(positionsHeader);
 
             // Subtitle
             var subtitleLabel = new Label
@@ -7457,7 +7508,7 @@ namespace Risk_Manager
             mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(positionsHeader);
 
             return mainPanel;
         }
@@ -7586,12 +7637,10 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel("📊 Limits", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
+            var limitsHeader = new CustomHeaderControl("Limits", GetIconForTitle("Limits"));
+            limitsHeader.Dock = DockStyle.Top;
+            limitsHeader.Margin = new Padding(10, 0, 0, 0);
+            contentPanel.Controls.Add(limitsHeader);
 
             // Subtitle
             var subtitleLabel = new Label
@@ -7651,7 +7700,7 @@ namespace Risk_Manager
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(accountNumberDisplay);
             mainPanel.Controls.Add(subtitleLabel);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(limitsHeader);
 
             return mainPanel;
         }
@@ -7789,12 +7838,10 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title with emoji rendering
-            var titleLabel = CreateEmojiLabel("🛡️ Symbols", 14, FontStyle.Bold);
-            titleLabel.Dock = DockStyle.Top;
-            titleLabel.Height = 40;
-            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
-            titleLabel.Padding = new Padding(10, 0, 0, 0);
-            titleLabel.BackColor = DarkBackground;
+            var symbolsHeader = new CustomHeaderControl("Symbols", GetIconForTitle("Symbols"));
+            symbolsHeader.Dock = DockStyle.Top;
+            symbolsHeader.Margin = new Padding(10, 0, 0, 0);
+            contentPanel.Controls.Add(symbolsHeader);
 
             // Subtitle
             var subtitleLabel = new Label
@@ -7833,7 +7880,7 @@ namespace Risk_Manager
             mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
-            mainPanel.Controls.Add(titleLabel);
+            mainPanel.Controls.Add(symbolsHeader);
 
             return mainPanel;
         }
