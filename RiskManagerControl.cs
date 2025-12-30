@@ -27,7 +27,7 @@ class CustomHeaderControl : Panel
         {
             Text = text,
             AutoSize = true,
-            Font = new Font("Segoe UI", 11, FontStyle.Bold),
+            Font = new Font("Segoe UI", 14, FontStyle.Bold),
             ForeColor = Color.White,
             Dock = DockStyle.Left,
             TextAlign = ContentAlignment.MiddleLeft,
@@ -42,10 +42,10 @@ class CustomHeaderControl : Panel
             {
                 Image = icon,
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Width = 24,
-                Height = 24,
+                Width = 36,
+                Height = 36,
                 Dock = DockStyle.Left,
-                Margin = new Padding(8, 8, 0, 8) // Add some margin around the icon
+                Margin = new Padding(8, 0, 0, 8) // Add some margin around the icon
             };
             this.Controls.Add(iconBox);
         }
