@@ -394,10 +394,31 @@ namespace Risk_Manager
         private static bool IsNegativeNumericString(string s)
         {
             if (string.IsNullOrWhiteSpace(s)) return false;
+            // Normalize
             s = s.Trim();
-            if (s.StartsWith("(") && s.EndsWith(")")) return true;
-            if (s.StartsWith("-") || s.StartsWith("−")) return true;
-            return false;
+
+            try
+            {
+                // Match a numeric token that may include optional currency symbol and optional parentheses:
+                // Examples matched: "(1,234.56)", "$-1,234.56", "-1234.56", "1234.56"
+                var m = Regex.Match(s, @"\(?-?\$?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?");
+                if (!m.Success) return false;
+
+                var token = m.Value.Trim();
+
+                // Parentheses indicate negative: "(123.45)"
+                if (token.StartsWith("(") && token.EndsWith(")")) return true;
+
+                // A '-' anywhere in the token indicates negativity ("-123.45" or "$-123.45")
+                if (token.Contains("-")) return true;
+
+                return false;
+            }
+            catch
+            {
+                // Fallback conservative answer
+                return false;
+            }
         }
 
         // Color numeric cells for specified column keys when YellowBlueBlack theme active
@@ -7237,7 +7258,6 @@ namespace Risk_Manager
             // Check if this is the Trading Times card - needs special refresh
             if (control is Panel panel && panel.Tag as string == "TradingTimesCard")
             {
-                // Clear and recreate the trading times card content
                 var parent = panel.Parent;
                 var index = parent?.Controls.GetChildIndex(panel) ?? -1;
                 if (parent != null && index >= 0)
@@ -7268,6 +7288,7 @@ namespace Risk_Manager
                     {
                         label.Text = "Not set";
                         label.Image = null;
+                        label.ForeColor = TextGray;
                     }
                     else
                     {
@@ -7282,13 +7303,30 @@ namespace Risk_Manager
                         }
                         else if (val.Contains("⛔"))
                         {
-                            // Use the Symbols/blocked icon
                             overrideIcon = GetIconForTitle("Symbols") ?? (IconMap.TryGetValue("Symbols", out var img) ? img : null);
                         }
                         else if (val.Contains("📊"))
                         {
-                            // Use the limits/icon for contract-limit style values
                             overrideIcon = GetIconForTitle("Limits") ?? (IconMap.TryGetValue("Limits", out var img) ? img : null);
+                        }
+
+                        // Default display text (may be modified below)
+                        string display = val;
+                        Color labelColor = TextGray;
+
+                        // If theme requires special numeric coloring, detect numeric content and sign
+                        bool applySpecialThemeColoring = currentTheme == Theme.YellowBlueBlack;
+                        bool hasDigit = display.Any(char.IsDigit);
+                        bool isNegative = IsNegativeNumericString(display);
+
+                        if (applySpecialThemeColoring && hasDigit)
+                        {
+                            // Use yellow for negative, blue for positive (per theme)
+                            labelColor = isNegative ? NegativeValueColor : PositiveValueColor;
+                        }
+                        else
+                        {
+                            labelColor = TextGray;
                         }
 
                         if (overrideIcon != null)
@@ -7298,10 +7336,7 @@ namespace Risk_Manager
                             label.ImageAlign = ContentAlignment.MiddleLeft;
                             label.Padding = new Padding(targetHeight + 8, 0, 0, 0);
 
-                            // Remove leading emoji/currency tokens for display text
-                            var display = val;
-
-                            // Remove the dollar emoji and any leading $ signs
+                            // Remove emoji/currency tokens for display text
                             if (isDollar)
                             {
                                 display = display.Replace("💵", "").Trim();
@@ -7310,53 +7345,28 @@ namespace Risk_Manager
                             }
                             else
                             {
-                                // Remove a leading emoji token (up to first space) if present
                                 var idx = display.IndexOf(' ');
                                 if (idx >= 0 && idx + 1 < display.Length)
                                     display = display.Substring(idx + 1).Trim();
-                                else if (display.Length > 1)
-                                {
-                                    // If only emoji + short text, try to remove the leading char
-                                    if (char.IsSurrogate(display[0]) || char.IsSymbol(display[0]) || char.IsPunctuation(display[0]))
-                                        display = display.Length > 1 ? display.Substring(1).Trim() : display;
-                                }
+                                else if (display.Length > 1 && (char.IsSurrogate(display[0]) || char.IsSymbol(display[0]) || char.IsPunctuation(display[0])))
+                                    display = display.Length > 1 ? display.Substring(1).Trim() : display;
                             }
 
                             label.Text = display;
-                            // default color
-                            label.ForeColor = TextGray;
-
-                            // If the special theme is active and this label corresponds to certain getters, color by sign
-                            if (currentTheme == Theme.YellowBlueBlack && label.Tag is Func<string> lblGetter)
-                            {
-                                var getterName = lblGetter.Method.Name;
-                                if (getterName == nameof(GetPositionLossLimit) ||
-                                    getterName == nameof(GetDailyLossLimit) ||
-                                    getterName == nameof(GetDailyProfitTarget) ||
-                                    getterName == nameof(GetPositionProfitTarget))
-                                {
-                                    // Determine positive/negative from display text
-                                    if (IsNegativeNumericString(display))
-                                        label.ForeColor = NegativeValueColor;
-                                    else
-                                        label.ForeColor = PositiveValueColor;
-                                }
-                            }
+                            label.ForeColor = labelColor;
                         }
                         else if (val.StartsWith("$") && DollarImage != null)
                         {
-                            // Legacy: value starts with '$' without emoji
                             int targetHeight = Math.Max(14, (int)(label.Font.Height * 1.2));
                             label.Image = ScaleImageToFit(DollarImage, targetHeight, targetHeight);
                             label.ImageAlign = ContentAlignment.MiddleLeft;
                             label.Padding = new Padding(targetHeight + 8, 0, 0, 0);
-                            label.Text = val.TrimStart('$', ' ');
-                            label.ForeColor = TextGray;
+                            label.Text = display.TrimStart('$', ' ');
+                            label.ForeColor = labelColor;
                         }
                         else
                         {
-                            // No special icon found — try the generic icon lookup (title-based)
-                            var icon = GetIconForTitle(val);
+                            var icon = GetIconForTitle(display);
                             if (icon != null)
                             {
                                 int targetHeight = Math.Max(14, (int)(label.Font.Height * 1.2));
@@ -7364,17 +7374,17 @@ namespace Risk_Manager
                                 label.ImageAlign = ContentAlignment.MiddleLeft;
                                 label.Padding = new Padding(targetHeight + 8, 0, 0, 0);
 
-                                var trimmed = val.Trim();
+                                var trimmed = display.Trim();
                                 var idx = trimmed.IndexOf(' ');
                                 label.Text = (idx >= 0) ? trimmed.Substring(idx + 1) : (trimmed.Length > 1 ? trimmed.Substring(1) : trimmed);
-                                label.ForeColor = TextGray;
+                                label.ForeColor = labelColor;
                             }
                             else
                             {
                                 // Plain text fallback
                                 label.Image = null;
-                                label.Text = val;
-                                label.ForeColor = TextGray;
+                                label.Text = display;
+                                label.ForeColor = labelColor;
                             }
                         }
                     }
