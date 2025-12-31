@@ -6860,11 +6860,8 @@ namespace Risk_Manager
                 new[] { GetBlockedSymbols, GetDefaultContractLimit }
             ));
 
-            flowLayout.Controls.Add(CreateRiskOverviewCard(
-                "Allowed Trading Times",
-                new[] { "Trading Time Status:" },
-                new[] { GetTradingTimeRestrictions }
-            ));
+            var tradingTimesCard = CreateTradingTimesOverviewCard();
+            flowLayout.Controls.Add(tradingTimesCard);
 
             // Add the flow layout to the content area
             contentArea.Controls.Add(flowLayout);
@@ -6981,11 +6978,12 @@ namespace Risk_Manager
             };
 
             // Card title
-            var titleLabel = CreateEmojiLabel("🕐 Allowed Trading Times", 12, FontStyle.Bold, CardBackground);
-            titleLabel.Height = 30;
-            titleLabel.Width = 440;
-            titleLabel.Margin = new Padding(0, 0, 0, 10);
-            cardLayout.Controls.Add(titleLabel);
+            var header = new CustomCardHeaderControl("Allowed Trading Times", GetIconForTitle("Allowed Trading Times"))
+            {
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            cardLayout.Controls.Add(header);
 
             // Get trading time restrictions
             var accountNumber = GetSelectedAccountNumber();
