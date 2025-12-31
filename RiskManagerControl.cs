@@ -14,6 +14,56 @@ using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
 using DockStyle = System.Windows.Forms.DockStyle;
 
+
+public class CustomValueLabel : Panel
+{
+    public Label TextLabel { get; }
+    public PictureBox IconBox { get; }
+
+    public CustomValueLabel(string text, Image icon, Font font = null, Color? foreColor = null, Color? backColor = null)
+    {
+        this.Height = 28;
+        this.Width = 240;
+        this.BackColor = backColor ?? Color.Transparent;
+
+        // Icon (PictureBox)
+        if (icon != null)
+        {
+            IconBox = new PictureBox
+            {
+                Image = icon,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Width = 20,
+                Height = 20,
+                Location = new Point(0, 4),
+                Margin = new Padding(0, 0, 8, 0)
+            };
+            this.Controls.Add(IconBox);
+        }
+
+        // Text (Label)
+        TextLabel = new Label
+        {
+            Text = text,
+            AutoSize = true,
+            Font = font ?? new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+            ForeColor = foreColor ?? Color.White,
+            BackColor = Color.Transparent,
+            Location = new Point(icon != null ? 28 : 0, 4),
+            TextAlign = ContentAlignment.MiddleLeft,
+            UseCompatibleTextRendering = false
+        };
+        this.Controls.Add(TextLabel);
+    }
+
+    // Optional: update text and icon after creation
+    public void SetText(string text) => TextLabel.Text = text;
+    public void SetIcon(Image icon)
+    {
+        if (IconBox != null)
+            IconBox.Image = icon;
+    }
+}
 class CustomCardHeaderControl : Panel
 {
     public CustomCardHeaderControl(string title, Image icon)
@@ -7438,7 +7488,7 @@ namespace Risk_Manager
                                     display = display.Length > 1 ? display.Substring(1).Trim() : display;
                             }
 
-                            label.Text = display;
+                            label.Text = "       " + display;
                             label.ForeColor = labelColor;
                         }
                         else if (val.StartsWith("$") && DollarImage != null)
@@ -7481,13 +7531,13 @@ namespace Risk_Manager
                     System.Diagnostics.Debug.WriteLine($"Error refreshing Risk Overview label: {ex.Message}");
                 }
             }
-
             // Recursively refresh child controls
             foreach (Control child in control.Controls)
             {
                 RefreshLabelsInControl(child);
             }
         }
+
 
         /// <summary>
         /// Creates the consolidated "Positions" panel combining Position Loss Limit and Position Profit Target.
