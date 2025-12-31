@@ -14,6 +14,48 @@ using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
 using DockStyle = System.Windows.Forms.DockStyle;
 
+class CustomCardHeaderControl : Panel
+{
+    public CustomCardHeaderControl(string title, Image icon)
+    {
+        this.Dock = DockStyle.Top;
+        this.Height = 40;
+        this.BackColor = Color.Transparent;
+
+        // Title (Label)
+        var titleLabel = new Label
+        {
+            Text = title, // Title without emojis
+            AutoSize = true,
+            Font = new Font("Segoe UI", 11, FontStyle.Bold),
+            ForeColor = Color.White,
+            Dock = DockStyle.Left,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(8, 0, 0, 0) // Padding to separate text from the icon
+        };
+        this.Controls.Add(titleLabel);
+
+        // Icon (PictureBox)
+        if (icon != null)
+        {
+            var iconBox = new PictureBox
+            {
+                Image = icon,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Width = 24,
+                Height = 24,
+                Dock = DockStyle.Left,
+                Margin = new Padding(8, 8, 0, 8) // Adjusted margin for proper alignment
+            };
+            this.Controls.Add(iconBox);
+        }
+
+        
+
+        // Add spacing below the header
+        this.Padding = new Padding(0, 0, 0, 10); // Add padding below the header
+    }
+}
 class CustomHeaderControl : Panel
 {
     public CustomHeaderControl(string text, Image icon)
@@ -6759,14 +6801,6 @@ namespace Risk_Manager
         /// </summary>
         private Control CreateRiskOverviewPanel()
         {
-            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
-
-            // Title with emoji rendering
-            var riskOverviewHeader = new CustomHeaderControl("Risk Overview", GetIconForTitle("Risk Overview"));
-            riskOverviewHeader.Dock = DockStyle.Top;
-            riskOverviewHeader.Margin = new Padding(10, 0, 0, 0);
-            contentPanel.Controls.Add(riskOverviewHeader);
-
             // Subtitle
             var subtitleLabel = new Label
             {
@@ -6790,61 +6824,62 @@ namespace Risk_Manager
                 AutoScroll = true
             };
 
-            // Create a flow layout for risk settings cards in 2-column grid (3 rows x 2 columns)
+            // Create a flow layout for risk settings cards in 3 rows x 2 columns
             var flowLayout = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                FlowDirection = FlowDirection.LeftToRight, // Changed from TopDown to LeftToRight for columns
-                WrapContents = true, // Changed to true to allow wrapping to next row
+                FlowDirection = FlowDirection.LeftToRight, // Arrange cards horizontally first
+                WrapContents = true, // Enable wrapping to create a grid layout
                 AutoSize = true,
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 0, 15, 0) // Right padding for scrollbar
             };
 
-            // Account Lock/Unlock Status Card
-            var lockStatusCard = CreateRiskOverviewCard(
-                "🔒 Account Status",
+            // Add cards to the flow layout
+            flowLayout.Controls.Add(CreateRiskOverviewCard(
+                "Account Status",
                 new[] { "Lock Status:", "Settings Lock:" },
                 new[] { GetAccountLockStatus, GetSettingsLockStatus }
-            );
-            flowLayout.Controls.Add(lockStatusCard);
+            ));
 
-            // Position Limits Card
-            var positionLimitsCard = CreateRiskOverviewCard(
-                "📈 Position Limits",
+            flowLayout.Controls.Add(CreateRiskOverviewCard(
+                "Position Limits",
                 new[] { "Loss Limit:", "Profit Target:" },
                 new[] { GetPositionLossLimit, GetPositionProfitTarget }
-            );
-            flowLayout.Controls.Add(positionLimitsCard);
+            ));
 
-            // Daily Limits Card
-            var dailyLimitsCard = CreateRiskOverviewCard(
-                "📊 Daily Limits",
-                new[] { "Loss Limit:", "Profit Target:" },
+            flowLayout.Controls.Add(CreateRiskOverviewCard(
+                "Daily Limits",
+                new[] { "Daily Loss Limit:", "Daily Profit Target:" },
                 new[] { GetDailyLossLimit, GetDailyProfitTarget }
-            );
-            flowLayout.Controls.Add(dailyLimitsCard);
+            ));
 
-            // Symbol Restrictions Card
-            var symbolRestrictionsCard = CreateRiskOverviewCard(
-                "🛡️ Symbol Restrictions",
-                new[] { "Blacklisted Symbols:", "Default Contract Limit:", "Symbol-Specific Limits:" },
-                new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits }
-            );
-            flowLayout.Controls.Add(symbolRestrictionsCard);
+            flowLayout.Controls.Add(CreateRiskOverviewCard(
+                "Symbol Restrictions",
+                new[] { "Blocked Symbols:", "Default Contract Limit:" },
+                new[] { GetBlockedSymbols, GetDefaultContractLimit }
+            ));
 
-            // Allowed Trading Times Card - Custom display with day/session grid
-            var tradingTimesCard = CreateTradingTimesOverviewCard();
-            flowLayout.Controls.Add(tradingTimesCard);
+            flowLayout.Controls.Add(CreateRiskOverviewCard(
+                "Allowed Trading Times",
+                new[] { "Trading Time Status:" },
+                new[] { GetTradingTimeRestrictions }
+            ));
 
+            // Add the flow layout to the content area
             contentArea.Controls.Add(flowLayout);
 
-            // Add controls in correct order: Fill second, Top last
-            mainPanel.Controls.Add(contentArea);
-            mainPanel.Controls.Add(subtitleLabel);
-            mainPanel.Controls.Add(riskOverviewHeader);
+            // Create a container panel to hold the subtitle and content area
+            var containerPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground
+            };
 
-            return mainPanel;
+            containerPanel.Controls.Add(contentArea);
+            containerPanel.Controls.Add(subtitleLabel);
+
+            return containerPanel;
         }
 
         /// <summary>
@@ -6870,12 +6905,12 @@ namespace Risk_Manager
                 BackColor = CardBackground
             };
 
-            // Card title with emoji - use CardBackground for consistency
-            var titleLabel = CreateEmojiLabel(title, 12, FontStyle.Bold, CardBackground);
-            titleLabel.Height = 30;
-            titleLabel.Width = 440; // Adjusted for new card width
-            titleLabel.Margin = new Padding(0, 0, 0, 10);
-            cardLayout.Controls.Add(titleLabel);
+            var header = new CustomCardHeaderControl(title, GetIconForTitle(title))
+            {
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, 15)
+            };
+            cardLayout.Controls.Add(header);
 
             // Add each label-value pair
             for (int i = 0; i < labels.Length && i < valueGetters.Length; i++)
