@@ -7091,8 +7091,9 @@ namespace Risk_Manager
                     }
                     
                     // Save the trading time restrictions
-                    System.Diagnostics.Debug.WriteLine($"Saving {tradingTimeRestrictions.Count} trading time restrictions");
+                    System.Diagnostics.Debug.WriteLine($"Saving {tradingTimeRestrictions.Count} trading time restrictions for account: {accountNumber}");
                     service.SetTradingTimeRestrictions(accountNumber, tradingTimeRestrictions);
+                    System.Diagnostics.Debug.WriteLine($"SetTradingTimeRestrictions completed. Settings file: {service.SettingsFolder}\\{accountNumber}.json");
                     
                     MessageBox.Show(
                         $"Settings saved successfully for account: {accountNumber}\n\nSettings folder: {service.SettingsFolder}",
