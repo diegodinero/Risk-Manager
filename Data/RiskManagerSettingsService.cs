@@ -703,6 +703,17 @@ namespace Risk_Manager.Data
                     // Outside allowed trading times - lock if not already locked
                     if (!isCurrentlyLocked)
                     {
+                        // Check if this was a recent manual unlock - if so, respect it
+                        var lockInfo = settings.TradingLock;
+                        if (lockInfo?.LockReason != null && 
+                            (lockInfo.LockReason.Contains("Manual unlock") || 
+                             lockInfo.LockReason.Contains("Manual override")))
+                        {
+                            // This was manually unlocked - don't auto-lock it
+                            System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Account {accountNumber} was manually unlocked, respecting manual override");
+                            return;
+                        }
+                        
                         var lockDuration = GetTradingLockDuration(accountNumber);
                         if (lockDuration.HasValue)
                         {
