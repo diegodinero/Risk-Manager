@@ -7017,13 +7017,21 @@ namespace Risk_Manager
                     var tradingTimeRestrictions = new List<TradingTimeRestriction>();
                     
                     System.Diagnostics.Debug.WriteLine("=== Starting to save Trading Time Restrictions ===");
+                    System.Diagnostics.Debug.WriteLine($"pageContents has {pageContents.Count} entries");
+                    foreach (var kvp in pageContents)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Page: '{kvp.Key}' - Control type: {kvp.Value?.GetType().Name}");
+                    }
                     
                     // Find the trading times rows container
+                    bool found = false;
                     foreach (Control pageControl in pageContents.Values)
                     {
+                        System.Diagnostics.Debug.WriteLine($"Searching in page control: {pageControl?.GetType().Name}");
                         var tradingTimeContentArea = FindControlByTag(pageControl, "TradingTimeContentArea");
                         if (tradingTimeContentArea != null)
                         {
+                            found = true;
                             System.Diagnostics.Debug.WriteLine("Found TradingTimeContentArea");
                             var rowsContainer = FindControlByTag(tradingTimeContentArea, "TradingTimeRowsContainer") as FlowLayoutPanel;
                             if (rowsContainer != null)
@@ -7115,6 +7123,11 @@ namespace Risk_Manager
                             }
                             break;
                         }
+                    }
+                    
+                    if (!found)
+                    {
+                        System.Diagnostics.Debug.WriteLine("WARNING: TradingTimeContentArea NOT FOUND in any page!");
                     }
                     
                     // Save the trading time restrictions
