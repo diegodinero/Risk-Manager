@@ -4594,7 +4594,7 @@ namespace Risk_Manager
                         // Reset warning state since we've reached the target
                         settingsService.ResetDailyProfitWarning(accountId);
                         
-                        System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily profit target at ${netPnL:F2}");
+                        System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily profit target at ${currentPnL:F2}");
                     }
                     // Check if warning threshold is reached (80% of target)
                     else if (currentPnL >= warningThreshold)

@@ -106,7 +106,7 @@ else if (currentPnL >= warningThreshold)
 
 **New NotifyUserProfitTargetReached() Method (Lines ~5040-5059):**
 ```csharp
-private void NotifyUserProfitTargetReached(string accountId, double netPnL, decimal profitTarget)
+private void NotifyUserProfitTargetReached(string accountId, decimal netPnL, decimal profitTarget)
 {
     string lockMessage = $"🎯 DAILY PROFIT TARGET REACHED!\n\n" +
         $"Account: {accountId}\n" +
