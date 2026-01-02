@@ -293,8 +293,7 @@ namespace Risk_Manager
         // P&L field identifiers
         private const string TOTAL_PNL_ID = "TotalPnL";
         
-        // Lock status constants
-        private const string LOCK_STATUS_UNLOCKED = "Unlocked";
+        // Badge logging helper constants
         private const int LOG_PARTS_MAX = 6; // Max parts in badge logging helpers (LogBadgeUpdate, LogSettingsBadgeUpdate): Caller, Account, LockStatus/IsLocked, PreviousState, Message
 
         // Regex patterns for account type detection (compiled for performance)
@@ -3972,8 +3971,11 @@ namespace Risk_Manager
                         settingsService.SetTradingLock(accountNumber, true, reason, duration);
                     }
                     
-                    // Always update the trading status badge immediately (no conditional check)
-                    UpdateTradingStatusBadgeUI(true);
+                    // Clear cache to ensure the badge updates with fresh state from service
+                    _previousTradingLockState = null;
+                    
+                    // Update the trading status badge (will query current state from service)
+                    UpdateTradingStatusBadge();
                     
                     // Update button states - Lock button should now be disabled
                     // Do this BEFORE refresh to avoid race conditions
@@ -4047,8 +4049,11 @@ namespace Risk_Manager
                             $"Reason: Manual override via Unlock Trading button");
                     }
                     
-                    // Always update the trading status badge immediately (no conditional check)
-                    UpdateTradingStatusBadgeUI(false);
+                    // Clear cache to ensure the badge updates with fresh state from service
+                    _previousTradingLockState = null;
+                    
+                    // Update the trading status badge (will query current state from service)
+                    UpdateTradingStatusBadge();
                     
                     // Update button states - Unlock button should now be disabled
                     // Do this BEFORE refresh to avoid race conditions
@@ -5269,7 +5274,9 @@ namespace Risk_Manager
                 var selectedAccountNumber = GetSelectedAccountNumber();
                 if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == accountId)
                 {
-                    UpdateTradingStatusBadgeUI(true);
+                    // Clear cache to ensure fresh state from service
+                    _previousTradingLockState = null;
+                    UpdateTradingStatusBadge();
                     UpdateLockButtonStates();
                 }
             }
@@ -5393,7 +5400,9 @@ namespace Risk_Manager
                 var selectedAccountNumber = GetSelectedAccountNumber();
                 if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == accountId)
                 {
-                    UpdateTradingStatusBadgeUI(true);
+                    // Clear cache to ensure fresh state from service
+                    _previousTradingLockState = null;
+                    UpdateTradingStatusBadge();
                     UpdateLockButtonStates();
                 }
             }
@@ -5855,9 +5864,10 @@ namespace Risk_Manager
         /// </remarks>
         private void UpdateTradingStatusBadge([System.Runtime.CompilerServices.CallerMemberName] string callerName = "")
         {
+            string accountNumber = null; // Declare outside try block for error logging
             try
             {
-                var accountNumber = GetSelectedAccountNumber();
+                accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
                     LogBadgeUpdate(callerName, accountNumber, null, null, null, "No account selected, skipping update");
@@ -5871,48 +5881,29 @@ namespace Risk_Manager
                     return;
                 }
 
-                // Get lock status string with validation
-                string lockStatusString = settingsService.GetLockStatusString(accountNumber);
-                
-                // LOG: Show what we got from the settings service
-                System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadge] Retrieved lockStatusString='{lockStatusString}' for account='{accountNumber}'");
-                
-                // Validate lockStatusString for null/empty/unexpected values
-                if (string.IsNullOrWhiteSpace(lockStatusString))
-                {
-                    // NOTE: We default to "Unlocked" (fail-open) rather than "Locked" (fail-closed) because:
-                    // 1. This is a UI indicator issue, not a critical security control
-                    // 2. The actual lock enforcement happens in the Core API/settings service
-                    // 3. Failing open prevents UX confusion when status is temporarily unavailable
-                    // 4. Manual lock/unlock operations always update settings service first
-                    LogBadgeUpdate(callerName, accountNumber, null, null, null, "LockStatusString is null or empty, treating as unlocked");
-                    lockStatusString = LOCK_STATUS_UNLOCKED; // Default to unlocked for safety
-                }
-                
-                // Sanitize and determine lock status
-                // The lockStatusString can be: "Unlocked", "Locked", "Locked (2h 30m)", etc.
-                bool isLocked = !lockStatusString.Equals(LOCK_STATUS_UNLOCKED, StringComparison.OrdinalIgnoreCase);
+                // Get current lock status directly from service
+                bool isLocked = settingsService.IsTradingLocked(accountNumber);
                 
                 // Log the determination with all relevant context
-                LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, _previousTradingLockState, null);
+                LogBadgeUpdate(callerName, accountNumber, null, isLocked, _previousTradingLockState, null);
 
                 // Only update UI if state has actually changed to avoid redundant updates
                 if (_previousTradingLockState.HasValue && _previousTradingLockState.Value == isLocked)
                 {
-                    LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, _previousTradingLockState, "State unchanged, skipping UI update to prevent redundant refresh");
+                    LogBadgeUpdate(callerName, accountNumber, null, isLocked, _previousTradingLockState, "State unchanged, skipping UI update to prevent redundant refresh");
                     return;
                 }
                 
                 // Cache the new state before updating UI
                 _previousTradingLockState = isLocked;
                 
-                LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, null, "State changed, updating UI");
+                LogBadgeUpdate(callerName, accountNumber, null, isLocked, null, "State changed, updating UI");
                 UpdateTradingStatusBadgeUI(isLocked);
             }
             catch (Exception ex)
             {
-                // Log error using the same structured format
-                LogBadgeUpdate(callerName ?? "Unknown", null, null, null, null, $"ERROR: {ex.Message}");
+                // Log error using the structured format with available context
+                LogBadgeUpdate(callerName ?? "Unknown", accountNumber, null, null, null, $"ERROR: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadge] Stack trace: {ex.StackTrace}");
             }
         }
@@ -6017,7 +6008,7 @@ namespace Risk_Manager
                     var callerName = callerMethod != null ? $"{callerMethod.DeclaringType?.Name}.{callerMethod.Name}" : "Unknown";
                     var lineNumber = callerFrame?.GetFileLineNumber() ?? 0;
                     
-                    System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Called from {callerName}:{lineNumber}, Setting badge to {newState}, Previous cache={(_previousTradingLockState.HasValue ? _previousTradingLockState.Value.ToString() : "null")}");
+                    System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Called from {callerName}:{lineNumber}, Setting badge to {newState}");
                     
                     if (isLocked)
                     {
@@ -6031,11 +6022,7 @@ namespace Risk_Manager
                     }
                     tradingStatusBadge.Refresh(); // Force immediate repaint
                     
-                    // IMPORTANT: Update cache to keep it in sync with the badge state
-                    // This ensures that direct calls to this method don't desync the cache
-                    _previousTradingLockState = isLocked;
-                    
-                    System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Badge updated to {newState}, Cache updated to {isLocked}");
+                    System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Badge updated to {newState}");
                 }
             }
             catch (Exception ex)
