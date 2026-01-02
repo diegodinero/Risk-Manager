@@ -293,7 +293,7 @@ namespace Risk_Manager
         // P&L field identifiers
         private const string TOTAL_PNL_ID = "TotalPnL";
         
-        // Badge logging constants
+        // Badge logging helper constants
         private const int LOG_PARTS_MAX = 6; // Max parts in badge logging helpers (LogBadgeUpdate, LogSettingsBadgeUpdate): Caller, Account, LockStatus/IsLocked, PreviousState, Message
 
         // Regex patterns for account type detection (compiled for performance)
