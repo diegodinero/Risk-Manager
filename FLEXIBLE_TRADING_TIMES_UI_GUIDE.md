@@ -58,7 +58,7 @@
 - ✅ Precise time control (15-min intervals)
 - ✅ Per-day configuration
 - ✅ Easy add/delete
-- ✅ Any day of the week (Sunday-Friday)
+- ✅ Any day of the week (Sunday-Saturday - all 7 days)
 
 ---
 
@@ -73,7 +73,7 @@
    (1)      (2)  (3)    (4)          (5)  (6)    (7)     (8)
 ```
 
-1. **Day Dropdown**: Sunday, Monday, Tuesday, Wednesday, Thursday, Friday
+1. **Day Dropdown**: Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday
 2. **Start Hour**: 01-12
 3. **Start Minute**: 00, 15, 30, 45
 4. **Start AM/PM**: AM, PM
