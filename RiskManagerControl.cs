@@ -7009,13 +7009,16 @@ namespace Risk_Manager
                                                 var dayStr = controls.DayComboBox.SelectedItem?.ToString();
                                                 if (string.IsNullOrEmpty(dayStr)) continue;
                                                 
-                                                if (!Enum.TryParse<DayOfWeek>(dayStr, out var dayOfWeek))
+                                                DayOfWeek dayOfWeek;
+                                                if (!Enum.TryParse<DayOfWeek>(dayStr, out dayOfWeek))
                                                     continue;
 
                                                 // Parse start time
-                                                if (!int.TryParse(controls.StartHourComboBox.SelectedItem?.ToString(), out var startHour))
+                                                int startHour;
+                                                if (!int.TryParse(controls.StartHourComboBox.SelectedItem?.ToString(), out startHour))
                                                     continue;
-                                                if (!int.TryParse(controls.StartMinuteComboBox.SelectedItem?.ToString(), out var startMinute))
+                                                int startMinute;
+                                                if (!int.TryParse(controls.StartMinuteComboBox.SelectedItem?.ToString(), out startMinute))
                                                     continue;
                                                 var startAmPm = controls.StartAmPmComboBox.SelectedItem?.ToString();
                                                 if (string.IsNullOrEmpty(startAmPm)) continue;
@@ -7027,9 +7030,11 @@ namespace Risk_Manager
                                                     startHour = 0;
 
                                                 // Parse end time
-                                                if (!int.TryParse(controls.EndHourComboBox.SelectedItem?.ToString(), out var endHour))
+                                                int endHour;
+                                                if (!int.TryParse(controls.EndHourComboBox.SelectedItem?.ToString(), out endHour))
                                                     continue;
-                                                if (!int.TryParse(controls.EndMinuteComboBox.SelectedItem?.ToString(), out var endMinute))
+                                                int endMinute;
+                                                if (!int.TryParse(controls.EndMinuteComboBox.SelectedItem?.ToString(), out endMinute))
                                                     continue;
                                                 var endAmPm = controls.EndAmPmComboBox.SelectedItem?.ToString();
                                                 if (string.IsNullOrEmpty(endAmPm)) continue;
