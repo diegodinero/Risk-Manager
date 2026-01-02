@@ -3520,7 +3520,7 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 9),
                 FlatStyle = FlatStyle.Flat
             };
-            dayComboBox.Items.AddRange(new object[] { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" });
+            dayComboBox.Items.AddRange(new object[] { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" });
             dayComboBox.SelectedIndex = restriction != null ? (int)restriction.DayOfWeek : 1; // Default to Monday
             rowPanel.Controls.Add(dayComboBox);
 
