@@ -4788,14 +4788,20 @@ namespace Risk_Manager
                 if (!accountPositions.Any())
                     return;
 
+                // Generate timestamp once for consistent logging across this execution
+                var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+                
+                // Track positions that have been closed to avoid processing them again
+                var closedPositions = new HashSet<Position>();
+
                 // First, check and close positions for contract limit violations (by symbol)
                 if (settings.DefaultContractLimit.HasValue || 
                     (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any()))
                 {
-                    // Group positions by symbol
+                    // Group positions by symbol, filtering out invalid symbols early
                     var positionsBySymbol = accountPositions
-                        .GroupBy(p => p.Symbol?.Name ?? string.Empty)
-                        .Where(g => !string.IsNullOrEmpty(g.Key));
+                        .Where(p => !string.IsNullOrEmpty(p.Symbol?.Name))
+                        .GroupBy(p => p.Symbol.Name);
 
                     foreach (var symbolGroup in positionsBySymbol)
                     {
@@ -4810,16 +4816,13 @@ namespace Risk_Manager
                         {
                             // Exceeded contract limit - close all positions for this symbol
                             string reason = $"Contract Limit Exceeded: {positionCount} positions > {contractLimit.Value} limit";
-                            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
                             
                             foreach (var position in positions)
                             {
                                 System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
                                 ClosePosition(position, core);
+                                closedPositions.Add(position);
                             }
-                            
-                            // Remove these positions from the list since they've been closed
-                            accountPositions = accountPositions.Except(positions).ToList();
                         }
                     }
                 }
@@ -4827,6 +4830,10 @@ namespace Risk_Manager
                 // Now check remaining positions for other violations
                 foreach (var position in accountPositions)
                 {
+                    // Skip if already closed
+                    if (closedPositions.Contains(position))
+                        continue;
+                        
                     var symbol = position.Symbol?.Name ?? string.Empty;
                     if (string.IsNullOrEmpty(symbol))
                         continue;
@@ -4835,7 +4842,6 @@ namespace Risk_Manager
                     if (settingsService.IsSymbolBlocked(accountId, symbol))
                     {
                         string reason = $"Symbol Blocked: {symbol}";
-                        var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
                         System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
                         
                         ClosePosition(position, core);
@@ -4852,7 +4858,6 @@ namespace Risk_Manager
                         if ((decimal)openPnL <= lossLimit)
                         {
                             string reason = $"Position Loss Limit: P&L ${openPnL:F2} ≤ Limit ${lossLimit:F2}";
-                            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
                             System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
                             
                             ClosePosition(position, core);
@@ -4867,7 +4872,6 @@ namespace Risk_Manager
                         if ((decimal)openPnL >= profitTarget)
                         {
                             string reason = $"Position Profit Target: P&L ${openPnL:F2} ≥ Target ${profitTarget:F2}";
-                            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
                             System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
                             
                             ClosePosition(position, core);
