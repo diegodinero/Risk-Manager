@@ -4788,13 +4788,43 @@ namespace Risk_Manager
                 if (!accountPositions.Any())
                     return;
 
-                // Group positions by symbol to check contract limits
-                var positionsBySymbol = accountPositions
-                    .GroupBy(p => p.Symbol?.Name ?? string.Empty)
-                    .Where(g => !string.IsNullOrEmpty(g.Key))
-                    .ToDictionary(g => g.Key, g => g.ToList());
+                // First, check and close positions for contract limit violations (by symbol)
+                if (settings.DefaultContractLimit.HasValue || 
+                    (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any()))
+                {
+                    // Group positions by symbol
+                    var positionsBySymbol = accountPositions
+                        .GroupBy(p => p.Symbol?.Name ?? string.Empty)
+                        .Where(g => !string.IsNullOrEmpty(g.Key));
 
-                // Check each position for violations
+                    foreach (var symbolGroup in positionsBySymbol)
+                    {
+                        var symbol = symbolGroup.Key;
+                        var positions = symbolGroup.ToList();
+                        var positionCount = positions.Count;
+
+                        // Get the contract limit for this symbol
+                        var contractLimit = settingsService.GetContractLimit(accountId, symbol);
+                        
+                        if (contractLimit.HasValue && positionCount > contractLimit.Value)
+                        {
+                            // Exceeded contract limit - close all positions for this symbol
+                            string reason = $"Contract Limit Exceeded: {positionCount} positions > {contractLimit.Value} limit";
+                            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+                            
+                            foreach (var position in positions)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
+                                ClosePosition(position, core);
+                            }
+                            
+                            // Remove these positions from the list since they've been closed
+                            accountPositions = accountPositions.Except(positions).ToList();
+                        }
+                    }
+                }
+
+                // Now check remaining positions for other violations
                 foreach (var position in accountPositions)
                 {
                     var symbol = position.Symbol?.Name ?? string.Empty;
@@ -4802,8 +4832,7 @@ namespace Risk_Manager
                         continue;
 
                     // 1. Check if symbol is blocked
-                    if (settings.BlockedSymbols != null && settings.BlockedSymbols.Any() &&
-                        settingsService.IsSymbolBlocked(accountId, symbol))
+                    if (settingsService.IsSymbolBlocked(accountId, symbol))
                     {
                         string reason = $"Symbol Blocked: {symbol}";
                         var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
@@ -4813,27 +4842,7 @@ namespace Risk_Manager
                         continue; // Move to next position
                     }
 
-                    // 2. Check if contract limit is exceeded for this symbol
-                    if (settings.DefaultContractLimit.HasValue || 
-                        (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any()))
-                    {
-                        var contractLimit = settingsService.GetContractLimit(accountId, symbol);
-                        if (contractLimit.HasValue && positionsBySymbol.TryGetValue(symbol, out var symbolPositions))
-                        {
-                            var positionCount = symbolPositions.Count;
-                            if (positionCount > contractLimit.Value)
-                            {
-                                string reason = $"Contract Limit Exceeded: {positionCount} positions > {contractLimit.Value} limit";
-                                var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
-                                System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
-                                
-                                ClosePosition(position, core);
-                                continue; // Move to next position
-                            }
-                        }
-                    }
-
-                    // 3. Check position P&L limits
+                    // 2. Check position P&L limits
                     double openPnL = GetPositionOpenPnL(position);
 
                     // Check Position Loss Limit (negative value)
