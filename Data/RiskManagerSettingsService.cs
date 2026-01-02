@@ -539,21 +539,213 @@ namespace Risk_Manager.Data
             if (settings?.TradingTimeRestrictions == null || !settings.TradingTimeRestrictions.Any())
                 return true;
 
-            // Using local time since trading hours are defined in local time
-            var now = DateTime.Now;
-            var currentDayOfWeek = now.DayOfWeek;
-            var currentTime = now.TimeOfDay;
+            // Use EST for all time comparisons per requirements
+            try
+            {
+                var easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                var nowET = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
+                var currentDayOfWeek = nowET.DayOfWeek;
+                var currentTime = nowET.TimeOfDay;
 
-            var applicableRestrictions = settings.TradingTimeRestrictions
-                .Where(r => r.DayOfWeek == currentDayOfWeek);
+                var applicableRestrictions = settings.TradingTimeRestrictions
+                    .Where(r => r.DayOfWeek == currentDayOfWeek);
 
-            if (!applicableRestrictions.Any())
-                return true;
+                if (!applicableRestrictions.Any())
+                    return true;
 
-            return applicableRestrictions.Any(r =>
-                r.IsAllowed &&
-                currentTime >= r.StartTime &&
-                currentTime <= r.EndTime);
+                return applicableRestrictions.Any(r =>
+                    r.IsAllowed &&
+                    currentTime >= r.StartTime &&
+                    currentTime <= r.EndTime);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                // Fallback to local time if EST timezone not found
+                System.Diagnostics.Debug.WriteLine("IsTradingAllowedNow: EST timezone not found, using local time");
+                var now = DateTime.Now;
+                var currentDayOfWeek = now.DayOfWeek;
+                var currentTime = now.TimeOfDay;
+
+                var applicableRestrictions = settings.TradingTimeRestrictions
+                    .Where(r => r.DayOfWeek == currentDayOfWeek);
+
+                if (!applicableRestrictions.Any())
+                    return true;
+
+                return applicableRestrictions.Any(r =>
+                    r.IsAllowed &&
+                    currentTime >= r.StartTime &&
+                    currentTime <= r.EndTime);
+            }
+        }
+        
+        /// <summary>
+        /// Checks if trading is allowed and returns lock duration if not allowed.
+        /// Returns null if trading is allowed, otherwise returns the duration until next allowed time or 5 PM ET.
+        /// </summary>
+        public TimeSpan? GetTradingLockDuration(string accountNumber)
+        {
+            if (string.IsNullOrEmpty(accountNumber))
+                return null;
+
+            var settings = GetSettings(accountNumber);
+
+            // If no time restrictions are set, trading is always allowed
+            if (settings?.TradingTimeRestrictions == null || !settings.TradingTimeRestrictions.Any())
+                return null;
+
+            try
+            {
+                var easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                var nowET = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
+                var currentDayOfWeek = nowET.DayOfWeek;
+                var currentTime = nowET.TimeOfDay;
+
+                // Get applicable restrictions for current day
+                var applicableRestrictions = settings.TradingTimeRestrictions
+                    .Where(r => r.DayOfWeek == currentDayOfWeek && r.IsAllowed)
+                    .OrderBy(r => r.StartTime)
+                    .ToList();
+
+                // Check if we're currently in an allowed time window
+                bool isInAllowedWindow = applicableRestrictions.Any(r =>
+                    currentTime >= r.StartTime && currentTime <= r.EndTime);
+
+                if (isInAllowedWindow)
+                    return null; // Trading is allowed now
+
+                // Find next allowed time window (today or future days)
+                DateTime? nextAllowedTime = null;
+
+                // Check remaining windows today
+                var remainingTodayWindows = applicableRestrictions
+                    .Where(r => r.StartTime > currentTime)
+                    .OrderBy(r => r.StartTime)
+                    .ToList();
+
+                if (remainingTodayWindows.Any())
+                {
+                    nextAllowedTime = nowET.Date.Add(remainingTodayWindows.First().StartTime);
+                }
+                else
+                {
+                    // Check next 7 days for allowed windows
+                    for (int daysAhead = 1; daysAhead <= 7; daysAhead++)
+                    {
+                        var checkDate = nowET.Date.AddDays(daysAhead);
+                        var checkDayOfWeek = checkDate.DayOfWeek;
+
+                        var nextDayWindows = settings.TradingTimeRestrictions
+                            .Where(r => r.DayOfWeek == checkDayOfWeek && r.IsAllowed)
+                            .OrderBy(r => r.StartTime)
+                            .ToList();
+
+                        if (nextDayWindows.Any())
+                        {
+                            nextAllowedTime = checkDate.Add(nextDayWindows.First().StartTime);
+                            break;
+                        }
+                    }
+                }
+
+                // Calculate duration until 5 PM ET today/tomorrow
+                var target5PMET = nowET.Date.AddHours(17);
+                if (nowET >= target5PMET)
+                {
+                    target5PMET = target5PMET.AddDays(1);
+                }
+                var durationUntil5PM = target5PMET - nowET;
+
+                // If no next allowed time found, lock until 5 PM ET
+                if (!nextAllowedTime.HasValue)
+                {
+                    System.Diagnostics.Debug.WriteLine($"GetTradingLockDuration: No next allowed time found, locking until 5 PM ET. Duration={durationUntil5PM}");
+                    return durationUntil5PM;
+                }
+
+                // Return the shorter duration (next allowed time or 5 PM ET)
+                var durationUntilNextWindow = nextAllowedTime.Value - nowET;
+                var lockDuration = durationUntilNextWindow < durationUntil5PM ? durationUntilNextWindow : durationUntil5PM;
+
+                System.Diagnostics.Debug.WriteLine($"GetTradingLockDuration: Next window={nextAllowedTime:yyyy-MM-dd HH:mm:ss}, 5PM={target5PMET:yyyy-MM-dd HH:mm:ss}, Lock duration={lockDuration}");
+                return lockDuration;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetTradingLockDuration error: {ex.Message}");
+                return null;
+            }
+        }
+        
+        /// <summary>
+        /// Checks and enforces trading time locks based on configured allowed trading times.
+        /// Locks account when outside allowed windows and unlocks when entering allowed windows (if no day/hour locks exist).
+        /// </summary>
+        public void CheckAndEnforceTradeTimeLocks(string accountNumber)
+        {
+            if (string.IsNullOrEmpty(accountNumber))
+                return;
+
+            var settings = GetSettings(accountNumber);
+
+            // If no time restrictions are set, nothing to enforce
+            if (settings?.TradingTimeRestrictions == null || !settings.TradingTimeRestrictions.Any())
+                return;
+
+            try
+            {
+                // Check if trading is currently allowed based on time restrictions
+                bool isTradingAllowed = IsTradingAllowedNow(accountNumber);
+                bool isCurrentlyLocked = IsTradingLocked(accountNumber);
+
+                if (!isTradingAllowed)
+                {
+                    // Outside allowed trading times - lock if not already locked
+                    if (!isCurrentlyLocked)
+                    {
+                        var lockDuration = GetTradingLockDuration(accountNumber);
+                        if (lockDuration.HasValue)
+                        {
+                            string reason = "Outside allowed trading times";
+                            System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Locking account {accountNumber} - {reason}, Duration={lockDuration.Value}");
+                            SetTradingLock(accountNumber, true, reason, lockDuration.Value);
+                        }
+                    }
+                }
+                else
+                {
+                    // Inside allowed trading time - check if we should unlock
+                    if (isCurrentlyLocked)
+                    {
+                        // Only unlock if the lock was due to trading times (not day/hour level locks)
+                        var lockInfo = settings.TradingLock;
+                        if (lockInfo?.LockReason != null && 
+                            (lockInfo.LockReason.Contains("Outside allowed trading times") ||
+                             lockInfo.LockReason.Contains("Trading times")))
+                        {
+                            // Verify lock has expired before unlocking
+                            if (lockInfo.LockExpirationTime.HasValue && DateTime.UtcNow >= lockInfo.LockExpirationTime.Value)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Unlocking account {accountNumber} - entering allowed trading time");
+                                SetTradingLock(accountNumber, false, "Auto-unlocked: Entered allowed trading time");
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Account {accountNumber} lock not yet expired, keeping locked");
+                            }
+                        }
+                        else
+                        {
+                            // Don't unlock - this is a day-level or manual lock that takes precedence
+                            System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Account {accountNumber} has day/manual lock, not unlocking despite allowed time");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks error for account {accountNumber}: {ex.Message}");
+            }
         }
 
         #endregion

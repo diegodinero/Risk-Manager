@@ -4436,6 +4436,9 @@ namespace Risk_Manager
                     if (settings == null || !settings.FeatureToggleEnabled)
                         continue;
 
+                    // Enforce trading time locks (lock/unlock based on allowed trading times)
+                    EnforceTradingTimeLocks(uniqueAccountId, settingsService);
+
                     // Skip if account is already locked
                     if (settingsService.IsTradingLocked(uniqueAccountId))
                         continue;
@@ -4454,6 +4457,33 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error monitoring P&L limits: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Enforces trading time locks by checking allowed trading times and locking/unlocking accounts accordingly.
+        /// Locks account when outside allowed trading windows and unlocks when entering allowed windows (if no day/hour locks exist).
+        /// </summary>
+        private void EnforceTradingTimeLocks(string accountId, RiskManagerSettingsService settingsService)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(accountId) || settingsService == null)
+                    return;
+
+                // Use the service method to check and enforce trading time locks
+                settingsService.CheckAndEnforceTradeTimeLocks(accountId);
+
+                // Update badge status if this is the currently selected account
+                var selectedAccountNumber = GetSelectedAccountNumber();
+                if (selectedAccountNumber == accountId)
+                {
+                    UpdateTradingStatusBadge();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error enforcing trading time locks for account {accountId}: {ex.Message}");
             }
         }
 
