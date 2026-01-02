@@ -4584,11 +4584,12 @@ namespace Risk_Manager
                         System.Diagnostics.Debug.WriteLine($"[ACCOUNT LOCK] Account: {accountId}, Reason: {reason}, " +
                             $"Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
                         
-                        LockAccountUntil5PMET(accountId, reason, core, account);
+                        // Close positions first, then lock account to ensure all positions are properly closed
                         CloseAllPositionsForAccount(account, core);
+                        LockAccountUntil5PMET(accountId, reason, core, account);
                         
                         // Send notification to user (only once, when first locking)
-                        NotifyUserProfitTargetReached(accountId, netPnL, profitTarget);
+                        NotifyUserProfitTargetReached(accountId, currentPnL, profitTarget);
                         
                         // Reset warning state since we've reached the target
                         settingsService.ResetDailyProfitWarning(accountId);
@@ -4606,14 +4607,14 @@ namespace Risk_Manager
                             
                             // Send warning notification
                             string warningMessage = $"⚠️ Warning: Account {accountId} is approaching daily profit target!\n\n" +
-                                $"Current Net P&L: ${netPnL:F2}\n" +
+                                $"Current Net P&L: ${currentPnL:F2}\n" +
                                 $"Daily Profit Target: ${profitTarget:F2}\n" +
                                 $"You are at {percentOfTarget:F0}% of your target.\n\n" +
                                 $"Account will be locked and all positions closed when target is reached.";
                             
                             // Log the warning
                             System.Diagnostics.Debug.WriteLine($"[WARNING NOTIFICATION] Account: {accountId}, " +
-                                $"Current P&L: ${netPnL:F2}, Target: ${profitTarget:F2}, " +
+                                $"Current P&L: ${currentPnL:F2}, Target: ${profitTarget:F2}, " +
                                 $"Threshold: 80%, Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
                             
                             // Show warning notification
@@ -5056,7 +5057,7 @@ namespace Risk_Manager
         /// <summary>
         /// Notifies the user that the account has been locked due to reaching the daily profit target.
         /// </summary>
-        private void NotifyUserProfitTargetReached(string accountId, double netPnL, decimal profitTarget)
+        private void NotifyUserProfitTargetReached(string accountId, decimal netPnL, decimal profitTarget)
         {
             try
             {

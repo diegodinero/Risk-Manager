@@ -904,7 +904,12 @@ namespace Risk_Manager.Data
         /// 
         /// TIMEZONE NOTE: Uses UTC for date comparison to ensure consistent behavior across timezones.
         /// While account locks use 5 PM ET for expiration, warning resets are based on UTC midnight
-        /// for simplicity and to prevent edge cases with timezone conversions.
+        /// for simplicity and to prevent edge cases with timezone conversions. This design is intentional:
+        /// - Warnings reset at UTC midnight (e.g., 7 PM ET / 4 PM PT in winter)
+        /// - Account locks expire at 5 PM ET (market close time)
+        /// This decouples warning resets from trading hours and ensures warnings are cleared daily
+        /// regardless of when trading occurs globally. Most users will experience warning resets in
+        /// the evening (after market close), which is acceptable for the 80% warning use case.
         /// </summary>
         public bool HasDailyProfitWarningSent(string accountNumber)
         {
