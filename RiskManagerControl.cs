@@ -1227,39 +1227,66 @@ namespace Risk_Manager
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine($"=== LoadTradingTimeRestrictions called ===");
+                System.Diagnostics.Debug.WriteLine($"Settings: {(settings != null ? "Found" : "NULL")}");
+                if (settings?.TradingTimeRestrictions != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"TradingTimeRestrictions count: {settings.TradingTimeRestrictions.Count}");
+                    foreach (var r in settings.TradingTimeRestrictions)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  - {r.DayOfWeek}: {r.StartTime:hh\\:mm tt} to {r.EndTime:hh\\:mm tt} ({r.Name})");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("TradingTimeRestrictions is NULL or empty");
+                }
+                
                 // Find the trading times rows container
                 foreach (Control pageControl in pageContents.Values)
                 {
                     var tradingTimeContentArea = FindControlByTag(pageControl, "TradingTimeContentArea");
                     if (tradingTimeContentArea != null)
                     {
+                        System.Diagnostics.Debug.WriteLine("Found TradingTimeContentArea for loading");
                         var rowsContainer = FindControlByTag(tradingTimeContentArea, "TradingTimeRowsContainer") as FlowLayoutPanel;
                         if (rowsContainer != null)
                         {
+                            System.Diagnostics.Debug.WriteLine($"Found rowsContainer, clearing {rowsContainer.Controls.Count} existing controls");
                             // Clear existing rows
                             rowsContainer.Controls.Clear();
 
                             // Add rows from settings
                             if (settings?.TradingTimeRestrictions != null && settings.TradingTimeRestrictions.Any())
                             {
+                                System.Diagnostics.Debug.WriteLine($"Loading {settings.TradingTimeRestrictions.Count} restrictions from settings");
                                 foreach (var restriction in settings.TradingTimeRestrictions)
                                 {
                                     AddTradingTimeRow(rowsContainer, restriction);
+                                    System.Diagnostics.Debug.WriteLine($"Added row for: {restriction.DayOfWeek} {restriction.StartTime:hh\\:mm tt} - {restriction.EndTime:hh\\:mm tt}");
                                 }
                             }
                             else
                             {
                                 // Add one default row if no restrictions exist
+                                System.Diagnostics.Debug.WriteLine("No restrictions in settings, adding default row");
                                 AddTradingTimeRow(rowsContainer);
                             }
+                            System.Diagnostics.Debug.WriteLine($"Load complete. rowsContainer now has {rowsContainer.Controls.Count} controls");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("rowsContainer NOT found");
                         }
                         break;
                     }
                 }
+                System.Diagnostics.Debug.WriteLine("=== LoadTradingTimeRestrictions completed ===");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading trading time restrictions: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
             }
         }
         
