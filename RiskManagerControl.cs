@@ -3417,7 +3417,6 @@ namespace Risk_Manager
                 WrapContents = false,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Width = contentArea.Width - 50,
                 BackColor = CardBackground,
                 Padding = new Padding(0),
                 Margin = new Padding(0),
@@ -3499,7 +3498,7 @@ namespace Risk_Manager
         {
             var rowPanel = new Panel
             {
-                Width = container.Width - 30,
+                Width = 530, // Fixed width to accommodate all controls
                 Height = 40,
                 BackColor = DarkerBackground,
                 Margin = new Padding(0, 5, 0, 5),
