@@ -4585,7 +4585,17 @@ namespace Risk_Manager
                             $"Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
                         
                         // Close positions first, then lock account to ensure all positions are properly closed
-                        CloseAllPositionsForAccount(account, core);
+                        // If position closing fails, still lock account for risk management
+                        try
+                        {
+                            CloseAllPositionsForAccount(account, core);
+                        }
+                        catch (Exception closeEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to close all positions for account {accountId}: {closeEx.Message}");
+                        }
+                        
+                        // Always lock account even if position closing failed (critical for risk management)
                         LockAccountUntil5PMET(accountId, reason, core, account);
                         
                         // Send notification to user (only once, when first locking)
@@ -5057,13 +5067,13 @@ namespace Risk_Manager
         /// <summary>
         /// Notifies the user that the account has been locked due to reaching the daily profit target.
         /// </summary>
-        private void NotifyUserProfitTargetReached(string accountId, decimal netPnL, decimal profitTarget)
+        private void NotifyUserProfitTargetReached(string accountId, decimal currentPnL, decimal profitTarget)
         {
             try
             {
                 string lockMessage = $"🎯 DAILY PROFIT TARGET REACHED!\n\n" +
                     $"Account: {accountId}\n" +
-                    $"Current Net P&L: ${netPnL:F2}\n" +
+                    $"Current Net P&L: ${currentPnL:F2}\n" +
                     $"Daily Profit Target: ${profitTarget:F2}\n\n" +
                     $"Congratulations! Your account has been locked until 5 PM ET to protect your profits.\n" +
                     $"All positions have been closed.\n\n" +
