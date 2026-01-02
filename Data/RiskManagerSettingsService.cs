@@ -751,6 +751,19 @@ namespace Risk_Manager.Data
                             System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Account {accountNumber} has day/manual lock, not unlocking despite allowed time");
                         }
                     }
+                    else
+                    {
+                        // Account is unlocked and we're in allowed trading time
+                        // Clear any manual unlock reason so auto-lock can resume in next cycle
+                        var lockInfo = settings.TradingLock;
+                        if (lockInfo?.LockReason != null && 
+                            (lockInfo.LockReason.Contains("Manual unlock") || 
+                             lockInfo.LockReason.Contains("Manual override")))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Clearing manual unlock flag for account {accountNumber} - in allowed time");
+                            SetTradingLock(accountNumber, false, null); // Clear the manual override reason
+                        }
+                    }
                 }
             }
             catch (Exception ex)
