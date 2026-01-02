@@ -3385,7 +3385,6 @@ namespace Risk_Manager
             var tradingTimesHeader = new CustomHeaderControl("Allowed Trading Times", GetIconForTitle("Allowed Trading Times"));
             tradingTimesHeader.Dock = DockStyle.Top;
             tradingTimesHeader.Margin = new Padding(10, 0, 0, 0);
-            contentPanel.Controls.Add(tradingTimesHeader);
 
             // Subtitle
             var subtitleLabel = new Label
