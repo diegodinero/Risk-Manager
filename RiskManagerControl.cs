@@ -6989,15 +6989,19 @@ namespace Risk_Manager
                     // Save Trading Time Restrictions
                     var tradingTimeRestrictions = new List<TradingTimeRestriction>();
                     
+                    System.Diagnostics.Debug.WriteLine("=== Starting to save Trading Time Restrictions ===");
+                    
                     // Find the trading times rows container
                     foreach (Control pageControl in pageContents.Values)
                     {
                         var tradingTimeContentArea = FindControlByTag(pageControl, "TradingTimeContentArea");
                         if (tradingTimeContentArea != null)
                         {
+                            System.Diagnostics.Debug.WriteLine("Found TradingTimeContentArea");
                             var rowsContainer = FindControlByTag(tradingTimeContentArea, "TradingTimeRowsContainer") as FlowLayoutPanel;
                             if (rowsContainer != null)
                             {
+                                System.Diagnostics.Debug.WriteLine($"Found rowsContainer with {rowsContainer.Controls.Count} controls");
                                 foreach (Control rowControl in rowsContainer.Controls)
                                 {
                                     if (rowControl is Panel rowPanel && rowPanel.Tag != null)
@@ -7072,6 +7076,7 @@ namespace Risk_Manager
                                                 };
 
                                                 tradingTimeRestrictions.Add(restriction);
+                                                System.Diagnostics.Debug.WriteLine($"Added restriction: {restriction.Name}");
                                             }
                                             catch (Exception parseEx)
                                             {
@@ -7086,6 +7091,7 @@ namespace Risk_Manager
                     }
                     
                     // Save the trading time restrictions
+                    System.Diagnostics.Debug.WriteLine($"Saving {tradingTimeRestrictions.Count} trading time restrictions");
                     service.SetTradingTimeRestrictions(accountNumber, tradingTimeRestrictions);
                     
                     MessageBox.Show(
