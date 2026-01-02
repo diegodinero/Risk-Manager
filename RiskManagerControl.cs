@@ -4569,7 +4569,13 @@ namespace Risk_Manager
                 if (settings.DailyProfitTarget.HasValue && settings.DailyProfitTarget.Value > 0)
                 {
                     decimal profitTarget = settings.DailyProfitTarget.Value;
-                    if ((decimal)netPnL >= profitTarget)
+                    decimal currentPnL = (decimal)netPnL;
+                    
+                    // Calculate warning threshold (80% of target)
+                    decimal warningThreshold = profitTarget * 0.80m;
+                    
+                    // Check if profit target is reached
+                    if (currentPnL >= profitTarget)
                     {
                         // Profit target reached - lock account until 5 PM ET
                         string reason = $"Daily Profit Target reached: Net P&L ${netPnL:F2} ≥ Target ${profitTarget:F2}";
@@ -4581,7 +4587,52 @@ namespace Risk_Manager
                         LockAccountUntil5PMET(accountId, reason, core, account);
                         CloseAllPositionsForAccount(account, core);
                         
+                        // Send notification to user (only once, when first locking)
+                        NotifyUserProfitTargetReached(accountId, netPnL, profitTarget);
+                        
+                        // Reset warning state since we've reached the target
+                        settingsService.ResetDailyProfitWarning(accountId);
+                        
                         System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily profit target at ${netPnL:F2}");
+                    }
+                    // Check if warning threshold is reached (80% of target)
+                    else if (currentPnL >= warningThreshold)
+                    {
+                        // Check if we've already sent a warning today
+                        if (!settingsService.HasDailyProfitWarningSent(accountId))
+                        {
+                            // Calculate percentage of target reached
+                            decimal percentOfTarget = (currentPnL / profitTarget) * 100;
+                            
+                            // Send warning notification
+                            string warningMessage = $"⚠️ Warning: Account {accountId} is approaching daily profit target!\n\n" +
+                                $"Current Net P&L: ${netPnL:F2}\n" +
+                                $"Daily Profit Target: ${profitTarget:F2}\n" +
+                                $"You are at {percentOfTarget:F0}% of your target.\n\n" +
+                                $"Account will be locked and all positions closed when target is reached.";
+                            
+                            // Log the warning
+                            System.Diagnostics.Debug.WriteLine($"[WARNING NOTIFICATION] Account: {accountId}, " +
+                                $"Current P&L: ${netPnL:F2}, Target: ${profitTarget:F2}, " +
+                                $"Threshold: 80%, Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+                            
+                            // Show warning notification
+                            try
+                            {
+                                PlayAlertSound();
+                                MessageBox.Show(warningMessage, "Daily Profit Target Warning", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            }
+                            catch (Exception notifEx)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[WARNING] Failed to show notification: {notifEx.Message}");
+                            }
+                            
+                            // Mark warning as sent
+                            settingsService.SetDailyProfitWarningSent(accountId, currentPnL);
+                            
+                            System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Warning notification sent to account {accountId} at 80% profit target threshold");
+                        }
                     }
                 }
             }
@@ -4641,6 +4692,7 @@ namespace Risk_Manager
 
         /// <summary>
         /// Checks if any position has exceeded P&L limits and closes position if necessary.
+        /// Does NOT lock the account - only closes the individual position that breached limits.
         /// </summary>
         private void CheckPositionPnLLimits(Account account, string accountId, AccountSettings settings, Core core)
         {
@@ -4664,9 +4716,17 @@ namespace Risk_Manager
                         decimal lossLimit = settings.PositionLossLimit.Value;
                         if ((decimal)openPnL <= lossLimit)
                         {
-                            // Position loss limit exceeded - close position
+                            // Position loss limit exceeded - close position (but do NOT lock account)
+                            string reason = $"Position Loss Limit: {position.Symbol} P&L ${openPnL:F2} ≤ Limit ${lossLimit:F2}";
+                            
+                            // Enhanced logging with timestamp
+                            System.Diagnostics.Debug.WriteLine($"[POSITION CLOSURE] Account: {accountId}, Symbol: {position.Symbol}, " +
+                                $"Reason: {reason}, Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+                            
                             ClosePosition(position, core);
-                            System.Diagnostics.Debug.WriteLine($"Position closed due to loss limit: {position.Symbol} OpenPnL ${openPnL:F2} ≤ Limit ${lossLimit:F2}");
+                            
+                            System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Position closed for account {accountId}, Symbol: {position.Symbol}, " +
+                                $"P&L: ${openPnL:F2}, Limit: ${lossLimit:F2}, Account NOT locked");
                         }
                     }
 
@@ -4676,16 +4736,24 @@ namespace Risk_Manager
                         decimal profitTarget = settings.PositionProfitTarget.Value;
                         if ((decimal)openPnL >= profitTarget)
                         {
-                            // Position profit target reached - close position
+                            // Position profit target reached - close position (but do NOT lock account)
+                            string reason = $"Position Profit Target: {position.Symbol} P&L ${openPnL:F2} ≥ Target ${profitTarget:F2}";
+                            
+                            // Enhanced logging with timestamp
+                            System.Diagnostics.Debug.WriteLine($"[POSITION CLOSURE] Account: {accountId}, Symbol: {position.Symbol}, " +
+                                $"Reason: {reason}, Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+                            
                             ClosePosition(position, core);
-                            System.Diagnostics.Debug.WriteLine($"Position closed due to profit target: {position.Symbol} OpenPnL ${openPnL:F2} ≥ Target ${profitTarget:F2}");
+                            
+                            System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Position closed for account {accountId}, Symbol: {position.Symbol}, " +
+                                $"P&L: ${openPnL:F2}, Target: ${profitTarget:F2}, Account NOT locked");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error checking position P&L limits for account {accountId}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Error checking position P&L limits for account {accountId}: {ex.Message}");
             }
         }
 
@@ -4982,6 +5050,31 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to show lock notification: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Notifies the user that the account has been locked due to reaching the daily profit target.
+        /// </summary>
+        private void NotifyUserProfitTargetReached(string accountId, double netPnL, decimal profitTarget)
+        {
+            try
+            {
+                string lockMessage = $"🎯 DAILY PROFIT TARGET REACHED!\n\n" +
+                    $"Account: {accountId}\n" +
+                    $"Current Net P&L: ${netPnL:F2}\n" +
+                    $"Daily Profit Target: ${profitTarget:F2}\n\n" +
+                    $"Congratulations! Your account has been locked until 5 PM ET to protect your profits.\n" +
+                    $"All positions have been closed.\n\n" +
+                    $"Please contact an administrator if you need to unlock the account before the scheduled time.";
+                
+                PlayAlertSound();
+                MessageBox.Show(lockMessage, "Account Locked - Profit Target Reached", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to show profit target notification: {ex.Message}");
             }
         }
 

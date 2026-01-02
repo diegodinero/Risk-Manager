@@ -878,6 +878,68 @@ namespace Risk_Manager.Data
 
         #endregion
 
+        #region Daily Profit Warning Management
+
+        /// <summary>
+        /// Records that a daily profit warning notification has been sent.
+        /// </summary>
+        public void SetDailyProfitWarningSent(string accountNumber, decimal pnlValue)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.DailyProfitWarning = new DailyProfitWarningInfo
+                {
+                    WarningNotificationSent = true,
+                    WarningDate = DateTime.UtcNow.Date,
+                    WarningPnLValue = pnlValue
+                };
+                SaveSettings(settings);
+            }
+        }
+
+        /// <summary>
+        /// Checks if a daily profit warning has already been sent today.
+        /// Automatically resets if the date has changed.
+        /// 
+        /// TIMEZONE NOTE: Uses UTC for date comparison to ensure consistent behavior across timezones.
+        /// While account locks use 5 PM ET for expiration, warning resets are based on UTC midnight
+        /// for simplicity and to prevent edge cases with timezone conversions.
+        /// </summary>
+        public bool HasDailyProfitWarningSent(string accountNumber)
+        {
+            var settings = GetSettings(accountNumber);
+            if (settings?.DailyProfitWarning == null)
+                return false;
+
+            // Reset warning if it's a new day (UTC-based for consistency)
+            var today = DateTime.UtcNow.Date;
+            if (settings.DailyProfitWarning.WarningDate.HasValue &&
+                settings.DailyProfitWarning.WarningDate.Value.Date != today)
+            {
+                // New day - reset the warning
+                ResetDailyProfitWarning(accountNumber);
+                return false;
+            }
+
+            return settings.DailyProfitWarning.WarningNotificationSent;
+        }
+
+        /// <summary>
+        /// Resets the daily profit warning state (called at the start of a new trading day).
+        /// </summary>
+        public void ResetDailyProfitWarning(string accountNumber)
+        {
+            var settings = GetSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.DailyProfitWarning = null;
+                SaveSettings(settings);
+            }
+        }
+
+        #endregion
+
         #region Cache Management
 
         public void InvalidateCache(string accountNumber)
@@ -957,6 +1019,9 @@ namespace Risk_Manager.Data
         
         // Daily Loss Limit Warning Tracking
         public DailyLossWarningInfo? DailyLossWarning { get; set; }
+        
+        // Daily Profit Target Warning Tracking
+        public DailyProfitWarningInfo? DailyProfitWarning { get; set; }
     }
 
     /// <summary>
@@ -997,6 +1062,28 @@ namespace Risk_Manager.Data
     /// Tracks when the 80% warning was last sent to prevent duplicate notifications.
     /// </summary>
     public class DailyLossWarningInfo
+    {
+        /// <summary>
+        /// Whether a warning has been sent for the current day
+        /// </summary>
+        public bool WarningNotificationSent { get; set; }
+        
+        /// <summary>
+        /// The date when the warning was sent (used to reset daily)
+        /// </summary>
+        public DateTime? WarningDate { get; set; }
+        
+        /// <summary>
+        /// The P&L value when the warning was sent (for audit purposes)
+        /// </summary>
+        public decimal? WarningPnLValue { get; set; }
+    }
+
+    /// <summary>
+    /// Daily Profit Warning tracking data class.
+    /// Tracks when the 80% warning was last sent to prevent duplicate notifications.
+    /// </summary>
+    public class DailyProfitWarningInfo
     {
         /// <summary>
         /// Whether a warning has been sent for the current day
