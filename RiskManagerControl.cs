@@ -4443,17 +4443,12 @@ namespace Risk_Manager
                     // Check Allowed Trading Times - close positions if outside trading hours
                     CheckTradingTimeRestrictions(item.account, uniqueAccountId, settings, settingsService, core);
 
-                    // Check Symbol Blacklist - close positions for blacklisted symbols
-                    CheckSymbolBlacklist(item.account, uniqueAccountId, settings, settingsService, core);
+                    // Check and flatten positions for blocked symbols, contract limits, and P&L limits
+                    // This unified method handles all position-level flattening scenarios
+                    CheckAndFlattenBlockedOrLimitExceededPositions(item.account, uniqueAccountId, settings, settingsService, core);
 
-                    // Check Symbol Contract Limits - close excess positions
-                    CheckSymbolContractLimits(item.account, uniqueAccountId, settings, settingsService, core);
-
-                    // Check Daily P&L limits
+                    // Check Daily P&L limits (account-level checks that may lock the account)
                     CheckDailyPnLLimits(item.account, uniqueAccountId, settings, core);
-
-                    // Check Position P&L limits
-                    CheckPositionPnLLimits(item.account, uniqueAccountId, settings, core);
                 }
             }
             catch (Exception ex)
@@ -4765,6 +4760,116 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[ERROR] Error checking position P&L limits for account {accountId}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Unified method to check and flatten positions for blocked symbols, contract limit violations, and P&L limits.
+        /// Closes positions immediately when any of the following conditions are met:
+        /// 1. Symbol is blocked
+        /// 2. Position volume exceeds contract limit for the symbol
+        /// 3. Position loss reaches or exceeds the loss limit
+        /// 4. Position profit reaches or exceeds the profit target
+        /// Does NOT lock the account - only closes individual positions that breach limits.
+        /// </summary>
+        private void CheckAndFlattenBlockedOrLimitExceededPositions(Account account, string accountId, AccountSettings settings,
+            RiskManagerSettingsService settingsService, Core core)
+        {
+            try
+            {
+                if (core.Positions == null)
+                    return;
+
+                // Get all positions for this account
+                var accountPositions = core.Positions
+                    .Where(p => p != null && p.Account == account && p.Quantity != 0)
+                    .ToList();
+
+                if (!accountPositions.Any())
+                    return;
+
+                // Group positions by symbol to check contract limits
+                var positionsBySymbol = accountPositions
+                    .GroupBy(p => p.Symbol?.Name ?? string.Empty)
+                    .Where(g => !string.IsNullOrEmpty(g.Key))
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // Check each position for violations
+                foreach (var position in accountPositions)
+                {
+                    var symbol = position.Symbol?.Name ?? string.Empty;
+                    if (string.IsNullOrEmpty(symbol))
+                        continue;
+
+                    // 1. Check if symbol is blocked
+                    if (settings.BlockedSymbols != null && settings.BlockedSymbols.Any() &&
+                        settingsService.IsSymbolBlocked(accountId, symbol))
+                    {
+                        string reason = $"Symbol Blocked: {symbol}";
+                        var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+                        System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
+                        
+                        ClosePosition(position, core);
+                        continue; // Move to next position
+                    }
+
+                    // 2. Check if contract limit is exceeded for this symbol
+                    if (settings.DefaultContractLimit.HasValue || 
+                        (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any()))
+                    {
+                        var contractLimit = settingsService.GetContractLimit(accountId, symbol);
+                        if (contractLimit.HasValue && positionsBySymbol.TryGetValue(symbol, out var symbolPositions))
+                        {
+                            var positionCount = symbolPositions.Count;
+                            if (positionCount > contractLimit.Value)
+                            {
+                                string reason = $"Contract Limit Exceeded: {positionCount} positions > {contractLimit.Value} limit";
+                                var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+                                System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
+                                
+                                ClosePosition(position, core);
+                                continue; // Move to next position
+                            }
+                        }
+                    }
+
+                    // 3. Check position P&L limits
+                    double openPnL = GetPositionOpenPnL(position);
+
+                    // Check Position Loss Limit (negative value)
+                    if (settings.PositionLossLimit.HasValue && settings.PositionLossLimit.Value < 0)
+                    {
+                        decimal lossLimit = settings.PositionLossLimit.Value;
+                        if ((decimal)openPnL <= lossLimit)
+                        {
+                            string reason = $"Position Loss Limit: P&L ${openPnL:F2} ≤ Limit ${lossLimit:F2}";
+                            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+                            System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
+                            
+                            ClosePosition(position, core);
+                            continue; // Move to next position
+                        }
+                    }
+
+                    // Check Position Profit Target (positive value)
+                    if (settings.PositionProfitTarget.HasValue && settings.PositionProfitTarget.Value > 0)
+                    {
+                        decimal profitTarget = settings.PositionProfitTarget.Value;
+                        if ((decimal)openPnL >= profitTarget)
+                        {
+                            string reason = $"Position Profit Target: P&L ${openPnL:F2} ≥ Target ${profitTarget:F2}";
+                            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+                            System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
+                            
+                            ClosePosition(position, core);
+                            continue; // Move to next position
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Error checking and flattening positions for account {accountId}: {ex.Message}");
             }
         }
 
