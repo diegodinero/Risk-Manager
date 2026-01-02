@@ -3400,14 +3400,16 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
-            // Content area with proper scrolling
-            var contentArea = new Panel
+            // Main content area using FlowLayoutPanel for proper vertical layout
+            var contentArea = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
                 Padding = new Padding(15),
                 AutoScroll = true,
-                Tag = "TradingTimeContentArea" // Tag to find this panel later
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                Tag = "TradingTimeContentArea"
             };
 
             // Container for trading time rows
@@ -3419,20 +3421,24 @@ namespace Risk_Manager
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = CardBackground,
                 Padding = new Padding(0),
-                Margin = new Padding(0),
+                Margin = new Padding(0, 0, 0, 10),
                 Tag = "TradingTimeRowsContainer"
             };
+
+            // Add one default row
+            AddTradingTimeRow(rowsContainer);
+
             contentArea.Controls.Add(rowsContainer);
 
-            // Button panel at the bottom of content area
+            // Button panel
             var buttonPanel = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Padding = new Padding(0, 15, 0, 0),
-                BackColor = CardBackground,
-                Top = rowsContainer.Bottom + 10
+                Padding = new Padding(0),
+                Margin = new Padding(0, 10, 0, 0),
+                BackColor = CardBackground
             };
 
             // Add Trading Window button
@@ -3477,9 +3483,6 @@ namespace Risk_Manager
             buttonPanel.Controls.Add(clearButton);
 
             contentArea.Controls.Add(buttonPanel);
-
-            // Add one default row
-            AddTradingTimeRow(rowsContainer);
 
             var saveButton = CreateDarkSaveButton();
 
