@@ -649,12 +649,12 @@ namespace Risk_Manager.Data
                 }
 
                 // Calculate duration until 5 PM ET today/tomorrow
-                var target5PMET = nowET.Date.AddHours(17);
-                if (nowET >= target5PMET)
+                var target5PmET = nowET.Date.AddHours(17);
+                if (nowET >= target5PmET)
                 {
-                    target5PMET = target5PMET.AddDays(1);
+                    target5PmET = target5PmET.AddDays(1);
                 }
-                var durationUntil5PM = target5PMET - nowET;
+                var durationUntil5PM = target5PmET - nowET;
 
                 // If no next allowed time found, lock until 5 PM ET
                 if (!nextAllowedTime.HasValue)
@@ -667,7 +667,7 @@ namespace Risk_Manager.Data
                 var durationUntilNextWindow = nextAllowedTime.Value - nowET;
                 var lockDuration = durationUntilNextWindow < durationUntil5PM ? durationUntilNextWindow : durationUntil5PM;
 
-                System.Diagnostics.Debug.WriteLine($"GetTradingLockDuration: Next window={nextAllowedTime:yyyy-MM-dd HH:mm:ss}, 5PM={target5PMET:yyyy-MM-dd HH:mm:ss}, Lock duration={lockDuration}");
+                System.Diagnostics.Debug.WriteLine($"GetTradingLockDuration: Next window={nextAllowedTime:yyyy-MM-dd HH:mm:ss}, 5 PM ET={target5PmET:yyyy-MM-dd HH:mm:ss}, Lock duration={lockDuration}");
                 return lockDuration;
             }
             catch (Exception ex)
