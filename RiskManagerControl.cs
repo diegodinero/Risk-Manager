@@ -297,6 +297,11 @@ namespace Risk_Manager
         private const string LOCK_STATUS_UNLOCKED = "Unlocked";
         private const string LOCK_STATUS_COLUMN_NAME = "LockStatus";
         private const int LOG_PARTS_MAX = 6; // Max parts in badge logging helpers (LogBadgeUpdate, LogSettingsBadgeUpdate): Caller, Account, LockStatus/IsLocked, PreviousState, Message
+        private const string LOCK_EMOJI = "🔒";
+        private const string UNLOCK_EMOJI = "🔓";
+        
+        // Risk Overview card title constants
+        private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -593,6 +598,14 @@ namespace Risk_Manager
             }
         }
 
+        // Helper method to check if a value is a lock status value
+        private bool IsLockStatusValue(string valueText)
+        {
+            if (string.IsNullOrEmpty(valueText))
+                return false;
+            return valueText.Contains(UNLOCK_EMOJI) || valueText.Contains(LOCK_EMOJI);
+        }
+
         // Helper method to extract lock status text from emoji-prefixed strings
         // e.g., "🔓 Unlocked" -> "Unlocked", "🔒 Locked (2h 30m)" -> "Locked (2h 30m)"
         private string ExtractLockStatusText(string valueText)
@@ -601,7 +614,7 @@ namespace Risk_Manager
                 return valueText;
                 
             var lockStatusText = valueText;
-            if (valueText.Contains("🔓") || valueText.Contains("🔒"))
+            if (IsLockStatusValue(valueText))
             {
                 var spaceIndex = valueText.IndexOf(' ');
                 if (spaceIndex >= 0 && spaceIndex + 1 < valueText.Length)
@@ -1685,11 +1698,11 @@ namespace Risk_Manager
                 }
 
                 // Explicit card header mappings for Risk Overview
-                IconMap["Account Status"] = Properties.Resources._lock;          // lock.png
-                IconMap["Position Limits"] = Properties.Resources.positions;     // positions.png
-                IconMap["Daily Limits"] = Properties.Resources.limit;            // limit.png
-                IconMap["Symbol Restrictions"] = Properties.Resources.blocked;   // blocked.png
-                IconMap["Allowed Trading Times"] = Properties.Resources.clock;   // clock.png
+                IconMap[CARD_TITLE_ACCOUNT_STATUS] = Properties.Resources._lock;     // lock.png
+                IconMap["Position Limits"] = Properties.Resources.positions;         // positions.png
+                IconMap["Daily Limits"] = Properties.Resources.limit;                // limit.png
+                IconMap["Symbol Restrictions"] = Properties.Resources.blocked;       // blocked.png
+                IconMap["Allowed Trading Times"] = Properties.Resources.clock;       // clock.png
 
                 // Additional lock-related title variants (keep fallback)
                 IconMap["Settings Lock"] = Properties.Resources._lock;
@@ -7829,7 +7842,7 @@ namespace Risk_Manager
 
             // Add cards to the flow layout
             flowLayout.Controls.Add(CreateRiskOverviewCard(
-                "Account Status",
+                CARD_TITLE_ACCOUNT_STATUS,
                 new[] { "Lock Status:", "Settings Lock:" },
                 new[] { GetAccountLockStatus, GetSettingsLockStatus }
             ));
@@ -7939,7 +7952,7 @@ namespace Risk_Manager
                 };
                 
                 // Apply lock status color-coding for "Account Status" card
-                if (title == "Account Status")
+                if (title == CARD_TITLE_ACCOUNT_STATUS)
                 {
                     var lockStatusText = ExtractLockStatusText(valueText);
                     valueControl.ForeColor = GetLockStatusColor(lockStatusText);
@@ -8312,7 +8325,7 @@ namespace Risk_Manager
                         Color labelColor = TextGray;
 
                         // Check if this is a lock status value (contains lock/unlock emojis)
-                        bool isLockStatus = val.Contains("🔓") || val.Contains("🔒");
+                        bool isLockStatus = IsLockStatusValue(val);
                         
                         if (isLockStatus)
                         {
