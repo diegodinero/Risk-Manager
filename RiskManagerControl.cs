@@ -6255,17 +6255,23 @@ namespace Risk_Manager
         {
             try
             {
+                // Get caller information including line number for better debugging
+                var stackTrace = new System.Diagnostics.StackTrace(1, true);
+                var callerFrame = stackTrace.GetFrame(0);
+                var lineNumber = callerFrame?.GetFileLineNumber() ?? 0;
+                var callerInfo = lineNumber > 0 ? $"{callerName}:{lineNumber}" : callerName;
+                
                 var accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
-                    LogBadgeUpdate(callerName, accountNumber, null, null, null, "No account selected, skipping update");
+                    LogBadgeUpdate(callerInfo, accountNumber, null, null, null, "No account selected, skipping update");
                     return;
                 }
 
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (!settingsService.IsInitialized)
                 {
-                    LogBadgeUpdate(callerName, accountNumber, null, null, null, "Settings service not initialized, skipping update");
+                    LogBadgeUpdate(callerInfo, accountNumber, null, null, null, "Settings service not initialized, skipping update");
                     return;
                 }
 
@@ -6283,7 +6289,7 @@ namespace Risk_Manager
                     // 2. The actual lock enforcement happens in the Core API/settings service
                     // 3. Failing open prevents UX confusion when status is temporarily unavailable
                     // 4. Manual lock/unlock operations always update settings service first
-                    LogBadgeUpdate(callerName, accountNumber, null, null, null, "LockStatusString is null or empty, treating as unlocked");
+                    LogBadgeUpdate(callerInfo, accountNumber, null, null, null, "LockStatusString is null or empty, treating as unlocked");
                     lockStatusString = LOCK_STATUS_UNLOCKED; // Default to unlocked for safety
                 }
                 
@@ -6298,13 +6304,13 @@ namespace Risk_Manager
                 bool switchingAccounts = _currentBadgeAccountNumber != accountNumber;
                 
                 // Log the determination with all relevant context
-                LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, previousState, switchingAccounts ? "Account switch detected" : null);
+                LogBadgeUpdate(callerInfo, accountNumber, lockStatusString, isLocked, previousState, switchingAccounts ? "Account switch detected" : null);
 
                 // Only update UI if state has actually changed OR if we're switching accounts
                 // When switching accounts, we ALWAYS need to update the badge to show the new account's state
                 if (!switchingAccounts && previousState.HasValue && previousState.Value == isLocked)
                 {
-                    LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, previousState, "Same account, state unchanged, skipping UI update");
+                    LogBadgeUpdate(callerInfo, accountNumber, lockStatusString, isLocked, previousState, "Same account, state unchanged, skipping UI update");
                     return;
                 }
                 
@@ -6314,8 +6320,8 @@ namespace Risk_Manager
                 // Cache the new state for THIS account
                 _accountTradingLockStateCache[accountNumber] = isLocked;
                 
-                LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, null, switchingAccounts ? "Account switch - updating UI" : "State changed - updating UI");
-                UpdateTradingStatusBadgeUI(isLocked, previousState);
+                LogBadgeUpdate(callerInfo, accountNumber, lockStatusString, isLocked, null, switchingAccounts ? "Account switch - updating UI" : "State changed - updating UI");
+                UpdateTradingStatusBadgeUI(isLocked, previousState, callerInfo);
             }
             catch (Exception ex)
             {
@@ -6410,7 +6416,7 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine(string.Join(", ", parts, 0, index));
         }
 
-        private void UpdateTradingStatusBadgeUI(bool isLocked, bool? previousStateParam = null)
+        private void UpdateTradingStatusBadgeUI(bool isLocked, bool? previousStateParam = null, string callerInfoParam = null)
         {
             try
             {
@@ -6418,18 +6424,30 @@ namespace Risk_Manager
                 {
                     string newState = isLocked ? "Locked (Red)" : "Unlocked (Green)";
                     
-                    // Get caller information for debugging
-                    var stackTrace = new System.Diagnostics.StackTrace(1, true);
-                    var callerFrame = stackTrace.GetFrame(0);
-                    var callerMethod = callerFrame?.GetMethod();
-                    var callerName = callerMethod != null ? $"{callerMethod.DeclaringType?.Name}.{callerMethod.Name}" : "Unknown";
-                    var lineNumber = callerFrame?.GetFileLineNumber() ?? 0;
+                    // Get caller information for debugging if not provided
+                    string callerName;
+                    if (!string.IsNullOrEmpty(callerInfoParam))
+                    {
+                        callerName = callerInfoParam;
+                    }
+                    else
+                    {
+                        var stackTrace = new System.Diagnostics.StackTrace(1, true);
+                        var callerFrame = stackTrace.GetFrame(0);
+                        var callerMethod = callerFrame?.GetMethod();
+                        var lineNumber = callerFrame?.GetFileLineNumber() ?? 0;
+                        callerName = callerMethod != null ? $"{callerMethod.DeclaringType?.Name}.{callerMethod.Name}" : "Unknown";
+                        if (lineNumber > 0)
+                        {
+                            callerName = $"{callerName}:{lineNumber}";
+                        }
+                    }
                     
                     // Get account number for per-account cache
                     var accountNumber = GetSelectedAccountNumber();
                     bool? currentCachedState = !string.IsNullOrEmpty(accountNumber) && _accountTradingLockStateCache.TryGetValue(accountNumber, out var cached) ? cached : null;
                     
-                    System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Called from {callerName}:{lineNumber}, Setting badge to {newState}, Previous cache for account '{accountNumber}'={(currentCachedState.HasValue ? currentCachedState.Value.ToString() : "null")}");
+                    System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Called from {callerName}, Setting badge to {newState}, Previous cache for account '{accountNumber}'={(currentCachedState.HasValue ? currentCachedState.Value.ToString() : "null")}");
                     
                     if (isLocked)
                     {
