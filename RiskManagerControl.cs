@@ -1876,40 +1876,9 @@ namespace Risk_Manager
             settingsStatusBadge = CreateStatusBadge("Settings Unlocked", AccentGreen);
             badgesPanel.Controls.Add(settingsStatusBadge);
 
-            // Trading Unlocked badge with debug label container
-            var tradingBadgeContainer = new Panel
-            {
-                AutoSize = true,
-                BackColor = Color.Transparent,
-                Margin = new Padding(5, 0, 5, 0),
-                Padding = new Padding(0)
-            };
-            
+            // Trading Unlocked badge
             tradingStatusBadge = CreateStatusBadge("Trading Unlocked", AccentGreen);
-            tradingStatusBadge.Location = new Point(0, 0);
-            tradingBadgeContainer.Controls.Add(tradingStatusBadge);
-            
-            // Debug label below the trading status badge
-            lblTradingStatusBadgeDebug = new Label
-            {
-                Text = "Debug: Waiting for updates...",
-                AutoSize = false,
-                Width = DEBUG_LABEL_WIDTH,
-                Height = DEBUG_LABEL_HEIGHT,
-                ForeColor = Color.Yellow,
-                BackColor = Color.Transparent,
-                Font = new Font("Consolas", 7, FontStyle.Regular),
-                Location = new Point(0, tradingStatusBadge.Height + DEBUG_LABEL_SPACING),
-                TextAlign = ContentAlignment.TopLeft,
-                Visible = _badgeDebugMode
-            };
-            tradingBadgeContainer.Controls.Add(lblTradingStatusBadgeDebug);
-            
-            // Set container size to accommodate both badge and debug label
-            tradingBadgeContainer.Width = Math.Max(tradingStatusBadge.Width, lblTradingStatusBadgeDebug.Width);
-            tradingBadgeContainer.Height = tradingStatusBadge.Height + lblTradingStatusBadgeDebug.Height + DEBUG_LABEL_SPACING + DEBUG_CONTAINER_SPACING;
-            
-            badgesPanel.Controls.Add(tradingBadgeContainer);
+            badgesPanel.Controls.Add(tradingStatusBadge);
 
             // Theme Changer button (replaces the X button)
             var themeButton = new Button
@@ -1987,7 +1956,30 @@ namespace Risk_Manager
             PositionBadgesPanel(topPanel, badgesPanel);
             topPanel.Controls.Add(badgesPanel);
 
-            topPanel.Resize += (s, e) => PositionBadgesPanel(topPanel, badgesPanel);
+            // Debug label positioned above and to the left of the badges
+            lblTradingStatusBadgeDebug = new Label
+            {
+                Text = "Debug: Waiting for updates...",
+                AutoSize = false,
+                Width = DEBUG_LABEL_WIDTH,
+                Height = DEBUG_LABEL_HEIGHT,
+                ForeColor = Color.Yellow,
+                BackColor = Color.Transparent,
+                Font = new Font("Consolas", 7, FontStyle.Regular),
+                TextAlign = ContentAlignment.TopLeft,
+                Visible = _badgeDebugMode,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            topPanel.Controls.Add(lblTradingStatusBadgeDebug);
+            
+            // Position debug label above badges (called initially and on resize)
+            PositionDebugLabel(topPanel, badgesPanel, lblTradingStatusBadgeDebug);
+
+            topPanel.Resize += (s, e) => 
+            {
+                PositionBadgesPanel(topPanel, badgesPanel);
+                PositionDebugLabel(topPanel, badgesPanel, lblTradingStatusBadgeDebug);
+            };
 
             return topPanel;
         }
@@ -1995,6 +1987,18 @@ namespace Risk_Manager
         private static void PositionBadgesPanel(Panel topPanel, FlowLayoutPanel badgesPanel)
         {
             badgesPanel.Location = new Point(topPanel.Width - badgesPanel.PreferredSize.Width - 20, 15);
+        }
+
+        private static void PositionDebugLabel(Panel topPanel, FlowLayoutPanel badgesPanel, Label debugLabel)
+        {
+            if (debugLabel != null && debugLabel.Visible)
+            {
+                // Position debug label above the badges panel, aligned to the right
+                // Place it just above the badges with a small gap
+                int debugY = 2; // Near top of panel
+                int debugX = topPanel.Width - debugLabel.Width - 20; // Aligned with badges panel
+                debugLabel.Location = new Point(debugX, debugY);
+            }
         }
 
         private Label CreateStatusBadge(string text, Color badgeColor)
