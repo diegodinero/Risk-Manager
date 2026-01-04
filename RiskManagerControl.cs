@@ -505,6 +505,9 @@ namespace Risk_Manager
                 // Colorize grids again (ensures per-cell styles are set last)
                 ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
                 ColorizeNumericCells(typeSummaryGrid, "OpenPnL", "ClosedPnL", "TotalPnL");
+                
+                // Re-apply Lock Status coloring after theme change
+                ColorizeLockStatusCells(statsGrid);
 
                 // Refresh Risk Overview values (applies label.Tag based coloring)
                 if (!string.IsNullOrEmpty(selectedNavItem) && selectedNavItem.EndsWith("Risk Overview") && pageContents.TryGetValue(selectedNavItem, out var panel))
