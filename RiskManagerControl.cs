@@ -2740,7 +2740,7 @@ namespace Risk_Manager
                 for (int i = 0; i < statsDetailGrid.Rows.Count; i++)
                 {
                     var metric = statsDetailGrid.Rows[i].Cells[0].Value?.ToString() ?? "";
-                    if (metric == "Trading Lock Status")
+                    if (string.Equals(metric, "Trading Lock Status", StringComparison.OrdinalIgnoreCase))
                     {
                         var valueCell = statsDetailGrid.Rows[i].Cells[1];
                         var lockStatusValue = (valueCell.Value ?? string.Empty).ToString();
