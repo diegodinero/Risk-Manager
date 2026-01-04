@@ -1234,7 +1234,9 @@ namespace Risk_Manager
                     System.Diagnostics.Debug.WriteLine($"TradingTimeRestrictions count: {settings.TradingTimeRestrictions.Count}");
                     foreach (var r in settings.TradingTimeRestrictions)
                     {
-                        System.Diagnostics.Debug.WriteLine($"  - {r.DayOfWeek}: {r.StartTime:hh\\:mm tt} to {r.EndTime:hh\\:mm tt} ({r.Name})");
+                        var startFormatted = FormatTimeSpan(r.StartTime);
+                        var endFormatted = FormatTimeSpan(r.EndTime);
+                        System.Diagnostics.Debug.WriteLine($"  - {r.DayOfWeek}: {startFormatted} to {endFormatted} ({r.Name})");
                     }
                 }
                 else
@@ -1263,7 +1265,9 @@ namespace Risk_Manager
                                 foreach (var restriction in settings.TradingTimeRestrictions)
                                 {
                                     AddTradingTimeRow(rowsContainer, restriction);
-                                    System.Diagnostics.Debug.WriteLine($"Added row for: {restriction.DayOfWeek} {restriction.StartTime:hh\\:mm tt} - {restriction.EndTime:hh\\:mm tt}");
+                                    var startTimeFormatted = FormatTimeSpan(restriction.StartTime);
+                                    var endTimeFormatted = FormatTimeSpan(restriction.EndTime);
+                                    System.Diagnostics.Debug.WriteLine($"Added row for: {restriction.DayOfWeek} {startTimeFormatted} - {endTimeFormatted}");
                                 }
                             }
                             else
@@ -1273,6 +1277,16 @@ namespace Risk_Manager
                                 AddTradingTimeRow(rowsContainer);
                             }
                             System.Diagnostics.Debug.WriteLine($"Load complete. rowsContainer now has {rowsContainer.Controls.Count} controls");
+                            
+                            // Force UI refresh to ensure the controls are visible
+                            rowsContainer.PerformLayout();
+                            rowsContainer.Refresh();
+                            if (rowsContainer.Parent != null)
+                            {
+                                rowsContainer.Parent.PerformLayout();
+                                rowsContainer.Parent.Refresh();
+                            }
+                            System.Diagnostics.Debug.WriteLine("UI refresh completed");
                         }
                         else
                         {
