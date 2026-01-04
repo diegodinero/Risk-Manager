@@ -593,6 +593,25 @@ namespace Risk_Manager
             }
         }
 
+        // Helper method to extract lock status text from emoji-prefixed strings
+        // e.g., "🔓 Unlocked" -> "Unlocked", "🔒 Locked (2h 30m)" -> "Locked (2h 30m)"
+        private string ExtractLockStatusText(string valueText)
+        {
+            if (string.IsNullOrEmpty(valueText))
+                return valueText;
+                
+            var lockStatusText = valueText;
+            if (valueText.Contains("🔓") || valueText.Contains("🔒"))
+            {
+                var spaceIndex = valueText.IndexOf(' ');
+                if (spaceIndex >= 0 && spaceIndex + 1 < valueText.Length)
+                {
+                    lockStatusText = valueText.Substring(spaceIndex + 1).Trim();
+                }
+            }
+            return lockStatusText;
+        }
+
         // Helper method to get the color for a lock status
         // Returns Green for "Unlocked", Red for "Locked" (any format), TextWhite for other
         private Color GetLockStatusColor(string lockStatus)
@@ -7922,17 +7941,7 @@ namespace Risk_Manager
                 // Apply lock status color-coding for "Account Status" card
                 if (title == "Account Status")
                 {
-                    // Extract the actual lock status from the emoji-prefixed string
-                    // e.g., "🔓 Unlocked" -> "Unlocked", "🔒 Locked (2h 30m)" -> "Locked (2h 30m)"
-                    var lockStatusText = valueText;
-                    if (valueText.Contains("🔓") || valueText.Contains("🔒"))
-                    {
-                        var spaceIndex = valueText.IndexOf(' ');
-                        if (spaceIndex >= 0 && spaceIndex + 1 < valueText.Length)
-                        {
-                            lockStatusText = valueText.Substring(spaceIndex + 1).Trim();
-                        }
-                    }
+                    var lockStatusText = ExtractLockStatusText(valueText);
                     valueControl.ForeColor = GetLockStatusColor(lockStatusText);
                 }
                 
@@ -8307,14 +8316,8 @@ namespace Risk_Manager
                         
                         if (isLockStatus)
                         {
-                            // Extract the actual lock status text from emoji-prefixed string
-                            var lockStatusText = val;
-                            var spaceIndex = val.IndexOf(' ');
-                            if (spaceIndex >= 0 && spaceIndex + 1 < val.Length)
-                            {
-                                lockStatusText = val.Substring(spaceIndex + 1).Trim();
-                            }
-                            // Apply lock status color (Green for Unlocked, Red for Locked)
+                            // Extract and apply lock status color (Green for Unlocked, Red for Locked)
+                            var lockStatusText = ExtractLockStatusText(val);
                             labelColor = GetLockStatusColor(lockStatusText);
                         }
                         else
