@@ -297,6 +297,11 @@ namespace Risk_Manager
         private const string LOCK_STATUS_UNLOCKED = "Unlocked";
         private const string LOCK_STATUS_COLUMN_NAME = "LockStatus";
         private const int LOG_PARTS_MAX = 6; // Max parts in badge logging helpers (LogBadgeUpdate, LogSettingsBadgeUpdate): Caller, Account, LockStatus/IsLocked, PreviousState, Message
+        private const string LOCK_EMOJI = "🔒";
+        private const string UNLOCK_EMOJI = "🔓";
+        
+        // Risk Overview card title constants
+        private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -591,6 +596,33 @@ namespace Risk_Manager
             {
                 System.Diagnostics.Debug.WriteLine($"ColorizeNumericCells error: {ex.Message}");
             }
+        }
+
+        // Helper method to check if a value is a lock status value
+        private bool IsLockStatusValue(string valueText)
+        {
+            if (string.IsNullOrEmpty(valueText))
+                return false;
+            return valueText.Contains(UNLOCK_EMOJI) || valueText.Contains(LOCK_EMOJI);
+        }
+
+        // Helper method to extract lock status text from emoji-prefixed strings
+        // e.g., "🔓 Unlocked" -> "Unlocked", "🔒 Locked (2h 30m)" -> "Locked (2h 30m)"
+        private string ExtractLockStatusText(string valueText)
+        {
+            if (string.IsNullOrEmpty(valueText))
+                return valueText;
+                
+            var lockStatusText = valueText;
+            if (IsLockStatusValue(valueText))
+            {
+                var spaceIndex = valueText.IndexOf(' ');
+                if (spaceIndex >= 0 && spaceIndex + 1 < valueText.Length)
+                {
+                    lockStatusText = valueText.Substring(spaceIndex + 1).Trim();
+                }
+            }
+            return lockStatusText;
         }
 
         // Helper method to get the color for a lock status
@@ -1666,11 +1698,11 @@ namespace Risk_Manager
                 }
 
                 // Explicit card header mappings for Risk Overview
-                IconMap["Account Status"] = Properties.Resources._lock;          // lock.png
-                IconMap["Position Limits"] = Properties.Resources.positions;     // positions.png
-                IconMap["Daily Limits"] = Properties.Resources.limit;            // limit.png
-                IconMap["Symbol Restrictions"] = Properties.Resources.blocked;   // blocked.png
-                IconMap["Allowed Trading Times"] = Properties.Resources.clock;   // clock.png
+                IconMap[CARD_TITLE_ACCOUNT_STATUS] = Properties.Resources._lock;     // lock.png
+                IconMap["Position Limits"] = Properties.Resources.positions;         // positions.png
+                IconMap["Daily Limits"] = Properties.Resources.limit;                // limit.png
+                IconMap["Symbol Restrictions"] = Properties.Resources.blocked;       // blocked.png
+                IconMap["Allowed Trading Times"] = Properties.Resources.clock;       // clock.png
 
                 // Additional lock-related title variants (keep fallback)
                 IconMap["Settings Lock"] = Properties.Resources._lock;
@@ -7810,7 +7842,7 @@ namespace Risk_Manager
 
             // Add cards to the flow layout
             flowLayout.Controls.Add(CreateRiskOverviewCard(
-                "Account Status",
+                CARD_TITLE_ACCOUNT_STATUS,
                 new[] { "Lock Status:", "Settings Lock:" },
                 new[] { GetAccountLockStatus, GetSettingsLockStatus }
             ));
@@ -7905,9 +7937,10 @@ namespace Risk_Manager
                 };
                 rowPanel.Controls.Add(labelControl);
 
+                var valueText = valueGetters[i]();
                 var valueControl = new Label
                 {
-                    Text = valueGetters[i](),
+                    Text = valueText,
                     Left = 190, // Adjusted for new card width
                     Top = 5,
                     Width = 240, // Adjusted for new card width
@@ -7917,6 +7950,25 @@ namespace Risk_Manager
                     Tag = valueGetters[i], // Store the getter function for later refresh
                     UseCompatibleTextRendering = false // Use GDI for proper emoji rendering
                 };
+                
+                // Apply lock status color-coding for "Account Status" card
+                if (title == CARD_TITLE_ACCOUNT_STATUS)
+                {
+                    var lockStatusText = ExtractLockStatusText(valueText);
+                    valueControl.ForeColor = GetLockStatusColor(lockStatusText);
+                    
+                    // Add extra spacing between emoji and text for better readability
+                    if (IsLockStatusValue(valueText))
+                    {
+                        var idx = valueText.IndexOf(' ');
+                        if (idx >= 0 && idx + 1 < valueText.Length)
+                        {
+                            // Replace single space with double space after emoji
+                            valueControl.Text = valueText.Substring(0, idx) + "  " + valueText.Substring(idx + 1);
+                        }
+                    }
+                }
+                
                 rowPanel.Controls.Add(valueControl);
 
                 cardLayout.Controls.Add(rowPanel);
@@ -8283,19 +8335,31 @@ namespace Risk_Manager
                         string display = val;
                         Color labelColor = TextGray;
 
-                        // If theme requires special numeric coloring, detect numeric content and sign
-                        bool applySpecialThemeColoring = currentTheme == Theme.YellowBlueBlack;
-                        bool hasDigit = display.Any(char.IsDigit);
-                        bool isNegative = IsNegativeNumericString(display);
-
-                        if (applySpecialThemeColoring && hasDigit)
+                        // Check if this is a lock status value (contains lock/unlock emojis)
+                        bool isLockStatus = IsLockStatusValue(val);
+                        
+                        if (isLockStatus)
                         {
-                            // Use yellow for negative, blue for positive (per theme)
-                            labelColor = isNegative ? NegativeValueColor : PositiveValueColor;
+                            // Extract and apply lock status color (Green for Unlocked, Red for Locked)
+                            var lockStatusText = ExtractLockStatusText(val);
+                            labelColor = GetLockStatusColor(lockStatusText);
                         }
                         else
                         {
-                            labelColor = TextGray;
+                            // If theme requires special numeric coloring, detect numeric content and sign
+                            bool applySpecialThemeColoring = currentTheme == Theme.YellowBlueBlack;
+                            bool hasDigit = display.Any(char.IsDigit);
+                            bool isNegative = IsNegativeNumericString(display);
+
+                            if (applySpecialThemeColoring && hasDigit)
+                            {
+                                // Use yellow for negative, blue for positive (per theme)
+                                labelColor = isNegative ? NegativeValueColor : PositiveValueColor;
+                            }
+                            else
+                            {
+                                labelColor = TextGray;
+                            }
                         }
 
                         if (overrideIcon != null)
@@ -8341,7 +8405,8 @@ namespace Risk_Manager
                                 int targetHeight = Math.Max(14, (int)(label.Font.Height * 1.2));
                                 label.Image = ScaleImageToFit(icon, targetHeight, targetHeight);
                                 label.ImageAlign = ContentAlignment.MiddleLeft;
-                                label.Padding = new Padding(targetHeight + 8, 0, 0, 0);
+                                // Increased padding for better spacing between icon and text
+                                label.Padding = new Padding(targetHeight + 12, 0, 0, 0);
 
                                 var trimmed = display.Trim();
                                 var idx = trimmed.IndexOf(' ');
@@ -9517,14 +9582,24 @@ namespace Risk_Manager
                         // Default label color for value labels
                         Color colorToApply = TextGray;
 
-                        if (currentTheme == Theme.YellowBlueBlack)
+                        // Check if this is a lock status getter
+                        var methodName = getter.Method.Name;
+                        bool isLockStatusGetter = methodName == nameof(GetAccountLockStatus) || 
+                                                   methodName == nameof(GetSettingsLockStatus);
+                        
+                        if (isLockStatusGetter)
+                        {
+                            // Extract lock status and apply appropriate color
+                            var lockStatusText = ExtractLockStatusText(display);
+                            colorToApply = GetLockStatusColor(lockStatusText);
+                        }
+                        else if (currentTheme == Theme.YellowBlueBlack)
                         {
                             // Only these getters should get the positive/negative color mapping
-                            var name = getter.Method.Name;
-                            if (name == nameof(GetPositionLossLimit) ||
-                                name == nameof(GetDailyLossLimit) ||
-                                name == nameof(GetDailyProfitTarget) ||
-                                name == nameof(GetPositionProfitTarget))
+                            if (methodName == nameof(GetPositionLossLimit) ||
+                                methodName == nameof(GetDailyLossLimit) ||
+                                methodName == nameof(GetDailyProfitTarget) ||
+                                methodName == nameof(GetPositionProfitTarget))
                             {
                                 // Determine sign from formatted display (FormatNumeric/FormatLossLimit use parentheses for negatives)
                                 if (IsNegativeNumericString(display))
