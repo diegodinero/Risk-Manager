@@ -4371,8 +4371,9 @@ namespace Risk_Manager
                         settingsService.SetTradingLock(accountNumber, true, reason, duration);
                     }
                     
-                    // Always update the trading status badge immediately (no conditional check)
-                    UpdateTradingStatusBadgeUI(true);
+                    // Update the trading status badge by reading from settings service
+                    // This ensures the badge reflects the actual persisted state
+                    UpdateTradingStatusBadge();
                     
                     // Update button states - Lock button should now be disabled
                     // Do this BEFORE refresh to avoid race conditions
@@ -4446,8 +4447,9 @@ namespace Risk_Manager
                             $"Reason: Manual override via Unlock Trading button");
                     }
                     
-                    // Always update the trading status badge immediately (no conditional check)
-                    UpdateTradingStatusBadgeUI(false);
+                    // Update the trading status badge by reading from settings service
+                    // This ensures the badge reflects the actual persisted state
+                    UpdateTradingStatusBadge();
                     
                     // Update button states - Unlock button should now be disabled
                     // Do this BEFORE refresh to avoid race conditions
@@ -5668,7 +5670,7 @@ namespace Risk_Manager
                 var selectedAccountNumber = GetSelectedAccountNumber();
                 if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == accountId)
                 {
-                    UpdateTradingStatusBadgeUI(true);
+                    UpdateTradingStatusBadge();
                     UpdateLockButtonStates();
                 }
             }
@@ -5792,7 +5794,7 @@ namespace Risk_Manager
                 var selectedAccountNumber = GetSelectedAccountNumber();
                 if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == accountId)
                 {
-                    UpdateTradingStatusBadgeUI(true);
+                    UpdateTradingStatusBadge();
                     UpdateLockButtonStates();
                 }
             }
