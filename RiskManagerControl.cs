@@ -7956,6 +7956,17 @@ namespace Risk_Manager
                 {
                     var lockStatusText = ExtractLockStatusText(valueText);
                     valueControl.ForeColor = GetLockStatusColor(lockStatusText);
+                    
+                    // Add extra spacing between emoji and text for better readability
+                    if (IsLockStatusValue(valueText))
+                    {
+                        var idx = valueText.IndexOf(' ');
+                        if (idx >= 0 && idx + 1 < valueText.Length)
+                        {
+                            // Replace single space with double space after emoji
+                            valueControl.Text = valueText.Substring(0, idx) + "  " + valueText.Substring(idx + 1);
+                        }
+                    }
                 }
                 
                 rowPanel.Controls.Add(valueControl);
@@ -8394,7 +8405,8 @@ namespace Risk_Manager
                                 int targetHeight = Math.Max(14, (int)(label.Font.Height * 1.2));
                                 label.Image = ScaleImageToFit(icon, targetHeight, targetHeight);
                                 label.ImageAlign = ContentAlignment.MiddleLeft;
-                                label.Padding = new Padding(targetHeight + 8, 0, 0, 0);
+                                // Increased padding for better spacing between icon and text
+                                label.Padding = new Padding(targetHeight + 12, 0, 0, 0);
 
                                 var trimmed = display.Trim();
                                 var idx = trimmed.IndexOf(' ');
@@ -9570,14 +9582,24 @@ namespace Risk_Manager
                         // Default label color for value labels
                         Color colorToApply = TextGray;
 
-                        if (currentTheme == Theme.YellowBlueBlack)
+                        // Check if this is a lock status getter
+                        var methodName = getter.Method.Name;
+                        bool isLockStatusGetter = methodName == nameof(GetAccountLockStatus) || 
+                                                   methodName == nameof(GetSettingsLockStatus);
+                        
+                        if (isLockStatusGetter)
+                        {
+                            // Extract lock status and apply appropriate color
+                            var lockStatusText = ExtractLockStatusText(display);
+                            colorToApply = GetLockStatusColor(lockStatusText);
+                        }
+                        else if (currentTheme == Theme.YellowBlueBlack)
                         {
                             // Only these getters should get the positive/negative color mapping
-                            var name = getter.Method.Name;
-                            if (name == nameof(GetPositionLossLimit) ||
-                                name == nameof(GetDailyLossLimit) ||
-                                name == nameof(GetDailyProfitTarget) ||
-                                name == nameof(GetPositionProfitTarget))
+                            if (methodName == nameof(GetPositionLossLimit) ||
+                                methodName == nameof(GetDailyLossLimit) ||
+                                methodName == nameof(GetDailyProfitTarget) ||
+                                methodName == nameof(GetPositionProfitTarget))
                             {
                                 // Determine sign from formatted display (FormatNumeric/FormatLossLimit use parentheses for negatives)
                                 if (IsNegativeNumericString(display))
