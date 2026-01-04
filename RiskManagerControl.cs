@@ -1193,6 +1193,9 @@ namespace Risk_Manager
                     settingsLockCheckBox.Checked = settings.SettingsLock?.IsLocked ?? false;
                 }
 
+                // Load Trading Time Restrictions
+                LoadTradingTimeRestrictions(settings);
+
                 // Update status displays
                 UpdateTradingStatusBadge();
                 UpdateSettingsStatusBadge();
@@ -1214,6 +1217,90 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading account settings: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Loads trading time restrictions into the UI from settings.
+        /// </summary>
+        private void LoadTradingTimeRestrictions(AccountSettings settings)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"=== LoadTradingTimeRestrictions called ===");
+                System.Diagnostics.Debug.WriteLine($"Settings: {(settings != null ? "Found" : "NULL")}");
+                if (settings?.TradingTimeRestrictions != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"TradingTimeRestrictions count: {settings.TradingTimeRestrictions.Count}");
+                    foreach (var r in settings.TradingTimeRestrictions)
+                    {
+                        var startFormatted = FormatTimeSpan(r.StartTime);
+                        var endFormatted = FormatTimeSpan(r.EndTime);
+                        System.Diagnostics.Debug.WriteLine($"  - {r.DayOfWeek}: {startFormatted} to {endFormatted} ({r.Name})");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("TradingTimeRestrictions is NULL or empty");
+                }
+                
+                // Find the trading times rows container
+                foreach (Control pageControl in pageContents.Values)
+                {
+                    var tradingTimeContentArea = FindControlByTag(pageControl, "TradingTimeContentArea");
+                    if (tradingTimeContentArea != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Found TradingTimeContentArea for loading");
+                        var rowsContainer = FindControlByTag(tradingTimeContentArea, "TradingTimeRowsContainer") as FlowLayoutPanel;
+                        if (rowsContainer != null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Found rowsContainer, clearing {rowsContainer.Controls.Count} existing controls");
+                            // Clear existing rows
+                            rowsContainer.Controls.Clear();
+
+                            // Add rows from settings
+                            if (settings?.TradingTimeRestrictions != null && settings.TradingTimeRestrictions.Any())
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Loading {settings.TradingTimeRestrictions.Count} restrictions from settings");
+                                foreach (var restriction in settings.TradingTimeRestrictions)
+                                {
+                                    AddTradingTimeRow(rowsContainer, restriction);
+                                    var startTimeFormatted = FormatTimeSpan(restriction.StartTime);
+                                    var endTimeFormatted = FormatTimeSpan(restriction.EndTime);
+                                    System.Diagnostics.Debug.WriteLine($"Added row for: {restriction.DayOfWeek} {startTimeFormatted} - {endTimeFormatted}");
+                                }
+                            }
+                            else
+                            {
+                                // Add one default row if no restrictions exist
+                                System.Diagnostics.Debug.WriteLine("No restrictions in settings, adding default row");
+                                AddTradingTimeRow(rowsContainer);
+                            }
+                            System.Diagnostics.Debug.WriteLine($"Load complete. rowsContainer now has {rowsContainer.Controls.Count} controls");
+                            
+                            // Force UI refresh to ensure the controls are visible
+                            rowsContainer.PerformLayout();
+                            rowsContainer.Refresh();
+                            if (rowsContainer.Parent != null)
+                            {
+                                rowsContainer.Parent.PerformLayout();
+                                rowsContainer.Parent.Refresh();
+                            }
+                            System.Diagnostics.Debug.WriteLine("UI refresh completed");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("rowsContainer NOT found");
+                        }
+                        break;
+                    }
+                }
+                System.Diagnostics.Debug.WriteLine("=== LoadTradingTimeRestrictions completed ===");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading trading time restrictions: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
             }
         }
         
@@ -3339,12 +3426,11 @@ namespace Risk_Manager
             var tradingTimesHeader = new CustomHeaderControl("Allowed Trading Times", GetIconForTitle("Allowed Trading Times"));
             tradingTimesHeader.Dock = DockStyle.Top;
             tradingTimesHeader.Margin = new Padding(10, 0, 0, 0);
-            contentPanel.Controls.Add(tradingTimesHeader);
 
             // Subtitle
             var subtitleLabel = new Label
             {
-                Text = "Select which sessions the trader is allowed to participate in (Monday-Friday only):",
+                Text = "Configure custom trading windows with day and time restrictions:",
                 Dock = DockStyle.Top,
                 Height = 30,
                 TextAlign = ContentAlignment.TopLeft,
@@ -3355,7 +3441,7 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
-            // Content area with proper scrolling
+            // Main content area using FlowLayoutPanel for proper vertical layout
             var contentArea = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -3363,30 +3449,81 @@ namespace Risk_Manager
                 Padding = new Padding(15),
                 AutoScroll = true,
                 FlowDirection = FlowDirection.TopDown,
-                WrapContents = false
+                WrapContents = false,
+                Tag = "TradingTimeContentArea"
             };
 
-            var sessions = new[]
+            // Container for trading time rows
+            var rowsContainer = new FlowLayoutPanel
             {
-                ("NY Session", "8 AM - 5 PM EST"),
-                ("London Session", "3 AM - 12 PM EST"),
-                ("Asia Session", "7 PM - 4 AM EST")
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = CardBackground,
+                Padding = new Padding(0),
+                Margin = new Padding(0, 0, 0, 10),
+                Tag = "TradingTimeRowsContainer"
             };
 
-            foreach (var (sessionName, timeRange) in sessions)
+            // Don't add a default row here - LoadTradingTimeRestrictions will handle it
+            // when the page is shown in ShowPage()
+
+            contentArea.Controls.Add(rowsContainer);
+
+            // Button panel
+            var buttonPanel = new FlowLayoutPanel
             {
-                var checkbox = new CheckBox
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(0),
+                Margin = new Padding(0, 10, 0, 0),
+                BackColor = CardBackground
+            };
+
+            // Add Trading Window button
+            var addButton = new Button
+            {
+                Text = "Add Trading Window",
+                Width = 180,
+                Height = 35,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                BackColor = AccentGreen,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 10, 0)
+            };
+            addButton.FlatAppearance.BorderSize = 0;
+            addButton.Click += (s, e) => AddTradingTimeRow(rowsContainer);
+            buttonPanel.Controls.Add(addButton);
+
+            // Clear All button
+            var clearButton = new Button
+            {
+                Text = "Clear All",
+                Width = 120,
+                Height = 35,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                BackColor = AccentAmber,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            clearButton.FlatAppearance.BorderSize = 0;
+            clearButton.Click += (s, e) =>
+            {
+                var result = MessageBox.Show("Are you sure you want to remove all trading time restrictions?", 
+                    "Confirm Clear", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (result == DialogResult.Yes)
                 {
-                    Text = $"{sessionName} ({timeRange})",
-                    AutoSize = true,
-                    Checked = true,
-                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                    ForeColor = TextWhite,
-                    BackColor = CardBackground,
-                    Margin = new Padding(0, 5, 0, 5)
-                };
-                contentArea.Controls.Add(checkbox);
-            }
+                    rowsContainer.Controls.Clear();
+                }
+            };
+            buttonPanel.Controls.Add(clearButton);
+
+            contentArea.Controls.Add(buttonPanel);
 
             var saveButton = CreateDarkSaveButton();
 
@@ -3398,6 +3535,223 @@ namespace Risk_Manager
             mainPanel.Controls.Add(tradingTimesHeader);
 
             return mainPanel;
+        }
+
+        // Helper method to add a trading time row
+        private void AddTradingTimeRow(FlowLayoutPanel container, TradingTimeRestriction restriction = null)
+        {
+            var rowPanel = new Panel
+            {
+                Width = 530, // Fixed width to accommodate all controls
+                Height = 40,
+                BackColor = DarkerBackground,
+                Margin = new Padding(0, 5, 0, 5),
+                Padding = new Padding(5)
+            };
+
+            // Day of Week dropdown
+            var dayComboBox = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 100,
+                Height = 30,
+                Left = 5,
+                Top = 5,
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 9),
+                FlatStyle = FlatStyle.Flat
+            };
+            dayComboBox.Items.AddRange(new object[] { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" });
+            dayComboBox.SelectedIndex = restriction != null ? (int)restriction.DayOfWeek : 1; // Default to Monday
+            rowPanel.Controls.Add(dayComboBox);
+
+            // Start Hour
+            var startHourComboBox = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 50,
+                Height = 30,
+                Left = 115,
+                Top = 5,
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 9),
+                FlatStyle = FlatStyle.Flat
+            };
+            for (int i = 1; i <= 12; i++)
+                startHourComboBox.Items.Add(i.ToString("D2"));
+            rowPanel.Controls.Add(startHourComboBox);
+
+            // Start Minute
+            var startMinuteComboBox = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 50,
+                Height = 30,
+                Left = 170,
+                Top = 5,
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 9),
+                FlatStyle = FlatStyle.Flat
+            };
+            startMinuteComboBox.Items.AddRange(new object[] { "00", "15", "30", "45" });
+            startMinuteComboBox.SelectedIndex = 0;
+            rowPanel.Controls.Add(startMinuteComboBox);
+
+            // Start AM/PM
+            var startAmPmComboBox = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 50,
+                Height = 30,
+                Left = 225,
+                Top = 5,
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 9),
+                FlatStyle = FlatStyle.Flat
+            };
+            startAmPmComboBox.Items.AddRange(new object[] { "AM", "PM" });
+            startAmPmComboBox.SelectedIndex = 0;
+            rowPanel.Controls.Add(startAmPmComboBox);
+
+            // "to" label
+            var toLabel = new Label
+            {
+                Text = "to",
+                Left = 285,
+                Top = 10,
+                Width = 20,
+                Height = 20,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 9),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            rowPanel.Controls.Add(toLabel);
+
+            // End Hour
+            var endHourComboBox = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 50,
+                Height = 30,
+                Left = 310,
+                Top = 5,
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 9),
+                FlatStyle = FlatStyle.Flat
+            };
+            for (int i = 1; i <= 12; i++)
+                endHourComboBox.Items.Add(i.ToString("D2"));
+            rowPanel.Controls.Add(endHourComboBox);
+
+            // End Minute
+            var endMinuteComboBox = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 50,
+                Height = 30,
+                Left = 365,
+                Top = 5,
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 9),
+                FlatStyle = FlatStyle.Flat
+            };
+            endMinuteComboBox.Items.AddRange(new object[] { "00", "15", "30", "45" });
+            endMinuteComboBox.SelectedIndex = 0;
+            rowPanel.Controls.Add(endMinuteComboBox);
+
+            // End AM/PM
+            var endAmPmComboBox = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 50,
+                Height = 30,
+                Left = 420,
+                Top = 5,
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 9),
+                FlatStyle = FlatStyle.Flat
+            };
+            endAmPmComboBox.Items.AddRange(new object[] { "AM", "PM" });
+            endAmPmComboBox.SelectedIndex = 1;
+            rowPanel.Controls.Add(endAmPmComboBox);
+
+            // If restriction data provided, populate the controls
+            if (restriction != null)
+            {
+                // Parse start time
+                int startHour = restriction.StartTime.Hours;
+                int startMinute = restriction.StartTime.Minutes;
+                bool startIsPM = startHour >= 12;
+                if (startHour > 12) startHour -= 12;
+                if (startHour == 0) startHour = 12;
+                
+                startHourComboBox.SelectedItem = startHour.ToString("D2");
+                startMinuteComboBox.SelectedItem = (startMinute / 15 * 15).ToString("D2");
+                startAmPmComboBox.SelectedItem = startIsPM ? "PM" : "AM";
+
+                // Parse end time
+                int endHour = restriction.EndTime.Hours;
+                int endMinute = restriction.EndTime.Minutes;
+                bool endIsPM = endHour >= 12;
+                if (endHour > 12) endHour -= 12;
+                if (endHour == 0) endHour = 12;
+                
+                endHourComboBox.SelectedItem = endHour.ToString("D2");
+                endMinuteComboBox.SelectedItem = (endMinute / 15 * 15).ToString("D2");
+                endAmPmComboBox.SelectedItem = endIsPM ? "PM" : "AM";
+            }
+            else
+            {
+                // Default values: 9:00 AM to 5:00 PM
+                startHourComboBox.SelectedItem = "09";
+                startMinuteComboBox.SelectedItem = "00";
+                startAmPmComboBox.SelectedItem = "AM";
+                endHourComboBox.SelectedItem = "05";
+                endMinuteComboBox.SelectedItem = "00";
+                endAmPmComboBox.SelectedItem = "PM";
+            }
+
+            // Delete button
+            var deleteButton = new Button
+            {
+                Text = "×",
+                Width = 30,
+                Height = 30,
+                Left = 480,
+                Top = 5,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                BackColor = Color.FromArgb(200, 50, 50),
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            deleteButton.FlatAppearance.BorderSize = 0;
+            deleteButton.Click += (s, e) =>
+            {
+                container.Controls.Remove(rowPanel);
+                rowPanel.Dispose();
+            };
+            rowPanel.Controls.Add(deleteButton);
+
+            // Store references in rowPanel.Tag for easy retrieval during save
+            rowPanel.Tag = new {
+                DayComboBox = dayComboBox,
+                StartHourComboBox = startHourComboBox,
+                StartMinuteComboBox = startMinuteComboBox,
+                StartAmPmComboBox = startAmPmComboBox,
+                EndHourComboBox = endHourComboBox,
+                EndMinuteComboBox = endMinuteComboBox,
+                EndAmPmComboBox = endAmPmComboBox
+            };
+
+            container.Controls.Add(rowPanel);
         }
 
         private Control CreateLockSettingsDarkPanel()
@@ -6672,6 +7026,134 @@ namespace Risk_Manager
                             UpdateSettingsLockStatus(statusLabel);
                         }
                     }
+
+                    // Save Trading Time Restrictions
+                    var tradingTimeRestrictions = new List<TradingTimeRestriction>();
+                    
+                    System.Diagnostics.Debug.WriteLine("=== Starting to save Trading Time Restrictions ===");
+                    System.Diagnostics.Debug.WriteLine($"pageContents has {pageContents.Count} entries");
+                    foreach (var kvp in pageContents)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Page: '{kvp.Key}' - Control type: {kvp.Value?.GetType().Name}");
+                    }
+                    
+                    // Find the trading times rows container
+                    bool found = false;
+                    foreach (Control pageControl in pageContents.Values)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Searching in page control: {pageControl?.GetType().Name}");
+                        var tradingTimeContentArea = FindControlByTag(pageControl, "TradingTimeContentArea");
+                        if (tradingTimeContentArea != null)
+                        {
+                            found = true;
+                            System.Diagnostics.Debug.WriteLine("Found TradingTimeContentArea");
+                            var rowsContainer = FindControlByTag(tradingTimeContentArea, "TradingTimeRowsContainer") as FlowLayoutPanel;
+                            if (rowsContainer != null)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Found rowsContainer with {rowsContainer.Controls.Count} controls");
+                                foreach (Control rowControl in rowsContainer.Controls)
+                                {
+                                    if (rowControl is Panel rowPanel && rowPanel.Tag != null)
+                                    {
+                                        var controls = rowPanel.Tag as dynamic;
+                                        if (controls != null)
+                                        {
+                                            try
+                                            {
+                                                // Parse day of week
+                                                var dayStr = controls.DayComboBox.SelectedItem?.ToString();
+                                                if (string.IsNullOrEmpty(dayStr)) continue;
+                                                
+                                                DayOfWeek dayOfWeek;
+                                                if (!Enum.TryParse<DayOfWeek>(dayStr, out dayOfWeek))
+                                                    continue;
+
+                                                // Parse start time
+                                                int startHour;
+                                                if (!int.TryParse(controls.StartHourComboBox.SelectedItem?.ToString(), out startHour))
+                                                    continue;
+                                                int startMinute;
+                                                if (!int.TryParse(controls.StartMinuteComboBox.SelectedItem?.ToString(), out startMinute))
+                                                    continue;
+                                                var startAmPm = controls.StartAmPmComboBox.SelectedItem?.ToString();
+                                                if (string.IsNullOrEmpty(startAmPm)) continue;
+                                                
+                                                // Convert 12-hour to 24-hour
+                                                if (startAmPm == "PM" && startHour != 12)
+                                                    startHour += 12;
+                                                else if (startAmPm == "AM" && startHour == 12)
+                                                    startHour = 0;
+
+                                                // Parse end time
+                                                int endHour;
+                                                if (!int.TryParse(controls.EndHourComboBox.SelectedItem?.ToString(), out endHour))
+                                                    continue;
+                                                int endMinute;
+                                                if (!int.TryParse(controls.EndMinuteComboBox.SelectedItem?.ToString(), out endMinute))
+                                                    continue;
+                                                var endAmPm = controls.EndAmPmComboBox.SelectedItem?.ToString();
+                                                if (string.IsNullOrEmpty(endAmPm)) continue;
+                                                
+                                                // Convert 12-hour to 24-hour
+                                                if (endAmPm == "PM" && endHour != 12)
+                                                    endHour += 12;
+                                                else if (endAmPm == "AM" && endHour == 12)
+                                                    endHour = 0;
+
+                                                var startTime = new TimeSpan(startHour, startMinute, 0);
+                                                var endTime = new TimeSpan(endHour, endMinute, 0);
+
+                                                // Validate start time < end time
+                                                if (startTime >= endTime)
+                                                {
+                                                    var startFormatted = FormatTimeSpan(startTime);
+                                                    var endFormatted = FormatTimeSpan(endTime);
+                                                    MessageBox.Show(
+                                                        $"Start time must be before end time for {dayStr}.\nStart: {startFormatted}\nEnd: {endFormatted}",
+                                                        "Validation Error",
+                                                        MessageBoxButtons.OK,
+                                                        MessageBoxIcon.Warning);
+                                                    return;
+                                                }
+
+                                                // Create restriction with proper name formatting
+                                                var startTimeFormatted = FormatTimeSpan(startTime);
+                                                var endTimeFormatted = FormatTimeSpan(endTime);
+                                                
+                                                var restriction = new TradingTimeRestriction
+                                                {
+                                                    DayOfWeek = dayOfWeek,
+                                                    StartTime = startTime,
+                                                    EndTime = endTime,
+                                                    IsAllowed = true,
+                                                    Name = $"{dayStr} {startTimeFormatted} - {endTimeFormatted}"
+                                                };
+
+                                                tradingTimeRestrictions.Add(restriction);
+                                                System.Diagnostics.Debug.WriteLine($"Added restriction: {restriction.Name}");
+                                            }
+                                            catch (Exception parseEx)
+                                            {
+                                                System.Diagnostics.Debug.WriteLine($"Error parsing trading time row: {parseEx.Message}");
+                                                System.Diagnostics.Debug.WriteLine($"Stack trace: {parseEx.StackTrace}");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    
+                    if (!found)
+                    {
+                        System.Diagnostics.Debug.WriteLine("WARNING: TradingTimeContentArea NOT FOUND in any page!");
+                    }
+                    
+                    // Save the trading time restrictions
+                    System.Diagnostics.Debug.WriteLine($"Saving {tradingTimeRestrictions.Count} trading time restrictions for account: {accountNumber}");
+                    service.SetTradingTimeRestrictions(accountNumber, tradingTimeRestrictions);
+                    System.Diagnostics.Debug.WriteLine($"SetTradingTimeRestrictions completed. Settings file: {service.SettingsFolder}\\{accountNumber}.json");
                     
                     MessageBox.Show(
                         $"Settings saved successfully for account: {accountNumber}\n\nSettings folder: {service.SettingsFolder}",
@@ -7309,169 +7791,79 @@ namespace Risk_Manager
             {
                 var settings = settingsService.GetSettings(accountNumber);
 
-                // Define trading sessions with their time ranges
-                var sessions = new[]
+                if (settings?.TradingTimeRestrictions == null || !settings.TradingTimeRestrictions.Any())
                 {
-                    ("Asia", new TimeSpan(0, 0, 0), new TimeSpan(9, 0, 0)),      // 00:00-09:00
-                    ("London", new TimeSpan(8, 0, 0), new TimeSpan(16, 0, 0)),   // 08:00-16:00
-                    ("New York", new TimeSpan(13, 0, 0), new TimeSpan(21, 0, 0)) // 13:00-21:00
-                };
-
-                // Header row
-                var headerRow = new Panel
-                {
-                    Width = 440,
-                    Height = 25,
-                    BackColor = CardBackground,
-                    Margin = new Padding(0, 5, 0, 5)
-                };
-
-                var dayHeader = new Label
-                {
-                    Text = "Day",
-                    Left = 0,
-                    Top = 0,
-                    Width = 80,
-                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = TextWhite,
-                    BackColor = CardBackground
-                };
-                headerRow.Controls.Add(dayHeader);
-
-                int xPos = 100;
-                foreach (var (sessionName, _, _) in sessions)
-                {
-                    var sessionHeader = new Label
+                    // No restrictions = 24/7 trading
+                    var noRestrictionsLabel = new Label
                     {
-                        Text = sessionName,
-                        Left = xPos,
-                        Top = 0,
-                        Width = 80,
-                        Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                        ForeColor = TextWhite,
-                        BackColor = CardBackground,
-                        TextAlign = ContentAlignment.MiddleCenter
-                    };
-                    headerRow.Controls.Add(sessionHeader);
-                    xPos += 95;
-                }
-                cardLayout.Controls.Add(headerRow);
-
-                // Day rows - Only Monday through Friday
-                var daysOfWeek = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
-                                        DayOfWeek.Thursday, DayOfWeek.Friday };
-
-                foreach (var day in daysOfWeek)
-                {
-                    var dayRow = new Panel
-                    {
+                        Text = "✅ No restrictions (24/7 trading allowed)",
                         Width = 440,
                         Height = 25,
-                        BackColor = CardBackground,
-                        Margin = new Padding(0, 2, 0, 2)
-                    };
-
-                    var dayLabel = new Label
-                    {
-                        Text = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(day),
-                        Left = 0,
-                        Top = 3,
-                        Width = 80,
-                        Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                        ForeColor = TextGray,
+                        Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                        ForeColor = AccentGreen,
                         BackColor = CardBackground
                     };
-                    dayRow.Controls.Add(dayLabel);
+                    cardLayout.Controls.Add(noRestrictionsLabel);
+                }
+                else
+                {
+                    // Group restrictions by day of week
+                    var groupedByDay = settings.TradingTimeRestrictions
+                        .GroupBy(r => r.DayOfWeek)
+                        .OrderBy(g => (int)g.Key);
 
-                    xPos = 100;
-                    foreach (var (_, startTime, endTime) in sessions)
+                    foreach (var dayGroup in groupedByDay)
                     {
-                        // Check if this session is allowed for this day
-                        // Session is allowed if there's ANY time restriction that:
-                        // 1. Is for this day of week
-                        // 2. Is marked as allowed
-                        // 3. Overlaps with the session time range
-                        bool isAllowed = false;
-                        if (settings?.TradingTimeRestrictions != null)
+                        var dayName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(dayGroup.Key);
+                        
+                        // Day header
+                        var dayLabel = new Label
                         {
-                            isAllowed = settings.TradingTimeRestrictions.Any(r =>
-                                r.DayOfWeek == day &&
-                                r.IsAllowed &&
-                                // Check for any overlap between restriction and session
-                                r.StartTime < endTime &&
-                                r.EndTime > startTime);
+                            Text = dayName,
+                            Width = 440,
+                            Height = 25,
+                            Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                            ForeColor = TextWhite,
+                            BackColor = CardBackground,
+                            Margin = new Padding(0, 5, 0, 2)
+                        };
+                        cardLayout.Controls.Add(dayLabel);
+
+                        // Time windows for this day
+                        foreach (var restriction in dayGroup.OrderBy(r => r.StartTime))
+                        {
+                            var timeText = $"  • {FormatTimeSpan(restriction.StartTime)} to {FormatTimeSpan(restriction.EndTime)}";
+                            var timeLabel = new Label
+                            {
+                                Text = timeText,
+                                Width = 440,
+                                Height = 20,
+                                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                                ForeColor = TextGray,
+                                BackColor = CardBackground,
+                                Margin = new Padding(0, 0, 0, 2)
+                            };
+                            cardLayout.Controls.Add(timeLabel);
                         }
-
-                        var checkBox = new CheckBox
-                        {
-                            Left = xPos + 30,
-                            Top = 2,
-                            Width = 10,  // Reduced from 20 to 10 (half size)
-                            Height = 10, // Reduced from 20 to 10 (half size)
-                            Checked = isAllowed,
-                            Enabled = false, // Read-only for overview
-                            BackColor = Color.Black,
-                            ForeColor = Color.White,
-                            FlatStyle = FlatStyle.Flat,
-                            UseVisualStyleBackColor = false,
-                            Text = "" // Remove text to only show checkbox
-                        };
-
-                        // Simple flat appearance - black box with white check for all themes
-                        checkBox.FlatAppearance.BorderColor = Color.Black;
-                        checkBox.FlatAppearance.BorderSize = 1;
-                        checkBox.FlatAppearance.CheckedBackColor = Color.Black;
-
-                        // Custom paint to ensure white checkmark shows on black background
-                        checkBox.Paint += (s, e) =>
-                        {
-                            var cb = (CheckBox)s;
-
-                            // Draw black background
-                            using (var bgBrush = new SolidBrush(Color.Black))
-                            {
-                                e.Graphics.FillRectangle(bgBrush, 0, 0, cb.Width, cb.Height);
-                            }
-
-                            // Draw black border
-                            using (var borderPen = new Pen(Color.Black, 1))
-                            {
-                                e.Graphics.DrawRectangle(borderPen, 0, 0, cb.Width - 1, cb.Height - 1);
-                            }
-
-                            // If checked, draw white checkmark
-                            if (cb.Checked)
-                            {
-                                using (var checkPen = new Pen(Color.White, 1)) // Reduced thickness from 2 to 1
-                                {
-                                    checkPen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
-                                    checkPen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
-
-                                    // Draw checkmark (✓) - scaled down proportionally
-                                    var x1 = 2;  // Scaled from 4
-                                    var y1 = 5;  // Scaled from 10
-                                    var x2 = 4;  // Scaled from 8
-                                    var y2 = 7;  // Scaled from 14
-                                    var x3 = 8;  // Scaled from 16
-                                    var y3 = 3;  // Scaled from 6
-
-                                    e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                                    e.Graphics.DrawLine(checkPen, x1, y1, x2, y2);
-                                    e.Graphics.DrawLine(checkPen, x2, y2, x3, y3);
-                                }
-                            }
-                        };
-
-                        dayRow.Controls.Add(checkBox);
-                        xPos += 95;
                     }
-
-                    cardLayout.Controls.Add(dayRow);
                 }
             }
 
             cardPanel.Controls.Add(cardLayout);
             return cardPanel;
+        }
+
+        // Helper method to format TimeSpan as human-readable time
+        private string FormatTimeSpan(TimeSpan time)
+        {
+            int hour = time.Hours;
+            int minute = time.Minutes;
+            string ampm = hour >= 12 ? "PM" : "AM";
+            
+            if (hour > 12) hour -= 12;
+            if (hour == 0) hour = 12;
+            
+            return $"{hour}:{minute:D2} {ampm}";
         }
 
         // Helper methods to get risk setting values for Risk Overview
@@ -8500,6 +8892,41 @@ namespace Risk_Manager
                 {
                     RefreshRiskOverviewPanel(ctrl);
                 }
+                
+                // Reload Trading Time Restrictions when Allowed Trading Times tab is shown
+                if (name.EndsWith("Allowed Trading Times"))
+                {
+                    System.Diagnostics.Debug.WriteLine("=== ShowPage: Allowed Trading Times tab clicked ===");
+                    var accountNumber = GetSelectedAccountNumber();
+                    System.Diagnostics.Debug.WriteLine($"ShowPage: accountNumber = '{accountNumber}'");
+                    if (!string.IsNullOrEmpty(accountNumber))
+                    {
+                        var settingsService = RiskManagerSettingsService.Instance;
+                        System.Diagnostics.Debug.WriteLine($"ShowPage: settingsService.IsInitialized = {settingsService.IsInitialized}");
+                        if (settingsService.IsInitialized)
+                        {
+                            var settings = settingsService.GetSettings(accountNumber);
+                            System.Diagnostics.Debug.WriteLine($"ShowPage: settings = {(settings != null ? "Found" : "NULL")}");
+                            if (settings != null)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"ShowPage: settings.TradingTimeRestrictions count = {settings.TradingTimeRestrictions?.Count ?? 0}");
+                                LoadTradingTimeRestrictions(settings);
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine("ShowPage: WARNING - settings is NULL, cannot load trading times");
+                            }
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("ShowPage: WARNING - settingsService not initialized");
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("ShowPage: WARNING - accountNumber is null or empty");
+                    }
+                }
             }
             else
             {
@@ -8865,6 +9292,28 @@ namespace Risk_Manager
                 lastPoint = Point.Empty;
             };
         }
+
+        // Helper method to find a control by its Tag property (recursive search)
+        private Control FindControlByTag(Control parent, string tagValue)
+        {
+            if (parent == null || string.IsNullOrEmpty(tagValue))
+                return null;
+
+            // Check if this control has the matching tag
+            if (parent.Tag is string tag && tag == tagValue)
+                return parent;
+
+            // Recursively search children
+            foreach (Control child in parent.Controls)
+            {
+                var found = FindControlByTag(child, tagValue);
+                if (found != null)
+                    return found;
+            }
+
+            return null;
+        }
+
         private void ApplyValueLabelColoring(Control root)
         {
             if (root == null) return;
