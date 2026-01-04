@@ -8888,7 +8888,7 @@ namespace Risk_Manager
                         var settingsService = RiskManagerSettingsService.Instance;
                         if (settingsService.IsInitialized)
                         {
-                            var settings = settingsService.GetAccountSettings(accountNumber);
+                            var settings = settingsService.GetSettings(accountNumber);
                             if (settings != null)
                             {
                                 LoadTradingTimeRestrictions(settings);
