@@ -6314,14 +6314,15 @@ namespace Risk_Manager
                     return;
                 }
                 
-                // Update which account is currently displayed
-                _currentBadgeAccountNumber = accountNumber;
-                
-                // Cache the new state for THIS account
+                // Cache the new state for THIS account BEFORE updating UI
                 _accountTradingLockStateCache[accountNumber] = isLocked;
                 
                 LogBadgeUpdate(callerInfo, accountNumber, lockStatusString, isLocked, null, switchingAccounts ? "Account switch - updating UI" : "State changed - updating UI");
                 UpdateTradingStatusBadgeUI(isLocked, previousState, callerInfo);
+                
+                // Update which account is currently displayed AFTER successful UI update
+                // This ensures we only mark the account as "switched" once the UI has been updated
+                _currentBadgeAccountNumber = accountNumber;
             }
             catch (Exception ex)
             {
