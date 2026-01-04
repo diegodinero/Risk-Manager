@@ -7092,22 +7092,27 @@ namespace Risk_Manager
                                                 // Validate start time < end time
                                                 if (startTime >= endTime)
                                                 {
+                                                    var startFormatted = FormatTimeSpan(startTime);
+                                                    var endFormatted = FormatTimeSpan(endTime);
                                                     MessageBox.Show(
-                                                        $"Start time must be before end time for {dayStr}.\nStart: {startTime:hh\\:mm}\nEnd: {endTime:hh\\:mm}",
+                                                        $"Start time must be before end time for {dayStr}.\nStart: {startFormatted}\nEnd: {endFormatted}",
                                                         "Validation Error",
                                                         MessageBoxButtons.OK,
                                                         MessageBoxIcon.Warning);
                                                     return;
                                                 }
 
-                                                // Create restriction
+                                                // Create restriction with proper name formatting
+                                                var startTimeFormatted = FormatTimeSpan(startTime);
+                                                var endTimeFormatted = FormatTimeSpan(endTime);
+                                                
                                                 var restriction = new TradingTimeRestriction
                                                 {
                                                     DayOfWeek = dayOfWeek,
                                                     StartTime = startTime,
                                                     EndTime = endTime,
                                                     IsAllowed = true,
-                                                    Name = $"{dayStr} {startTime:hh\\:mm tt} - {endTime:hh\\:mm tt}"
+                                                    Name = $"{dayStr} {startTimeFormatted} - {endTimeFormatted}"
                                                 };
 
                                                 tradingTimeRestrictions.Add(restriction);
@@ -7116,6 +7121,7 @@ namespace Risk_Manager
                                             catch (Exception parseEx)
                                             {
                                                 System.Diagnostics.Debug.WriteLine($"Error parsing trading time row: {parseEx.Message}");
+                                                System.Diagnostics.Debug.WriteLine($"Stack trace: {parseEx.StackTrace}");
                                             }
                                         }
                                     }
