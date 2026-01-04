@@ -600,11 +600,11 @@ namespace Risk_Manager
                 return TextWhite;
                 
             // "Locked" with any duration format (Locked, Locked (2h 30m), etc.)
-            if (lockStatus.StartsWith("Locked", StringComparison.Ordinal))
+            if (lockStatus.StartsWith("Locked", StringComparison.OrdinalIgnoreCase))
                 return Color.Red;
             
             // "Unlocked"
-            if (lockStatus == "Unlocked")
+            if (lockStatus.Equals(LOCK_STATUS_UNLOCKED, StringComparison.OrdinalIgnoreCase))
                 return AccentGreen;
             
             // Default for any other status
