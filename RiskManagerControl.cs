@@ -300,6 +300,12 @@ namespace Risk_Manager
         // Lock status constants
         private const string LOCK_STATUS_UNLOCKED = "Unlocked";
         private const int LOG_PARTS_MAX = 6; // Max parts in badge logging helpers (LogBadgeUpdate, LogSettingsBadgeUpdate): Caller, Account, LockStatus/IsLocked, PreviousState, Message
+        
+        // Debug label constants
+        private const int DEBUG_LABEL_WIDTH = 350; // Width of the trading status badge debug label
+        private const int DEBUG_LABEL_HEIGHT = 16; // Height of the trading status badge debug label
+        private const int DEBUG_LABEL_SPACING = 2; // Spacing between trading status badge and debug label
+        private const int DEBUG_CONTAINER_SPACING = 4; // Extra spacing in container for proper layout
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -1888,12 +1894,12 @@ namespace Risk_Manager
             {
                 Text = "Debug: Waiting for updates...",
                 AutoSize = false,
-                Width = 350,
-                Height = 16,
+                Width = DEBUG_LABEL_WIDTH,
+                Height = DEBUG_LABEL_HEIGHT,
                 ForeColor = Color.Yellow,
                 BackColor = Color.Transparent,
                 Font = new Font("Consolas", 7, FontStyle.Regular),
-                Location = new Point(0, tradingStatusBadge.Height + 2),
+                Location = new Point(0, tradingStatusBadge.Height + DEBUG_LABEL_SPACING),
                 TextAlign = ContentAlignment.TopLeft,
                 Visible = _badgeDebugMode
             };
@@ -1901,7 +1907,7 @@ namespace Risk_Manager
             
             // Set container size to accommodate both badge and debug label
             tradingBadgeContainer.Width = Math.Max(tradingStatusBadge.Width, lblTradingStatusBadgeDebug.Width);
-            tradingBadgeContainer.Height = tradingStatusBadge.Height + lblTradingStatusBadgeDebug.Height + 4;
+            tradingBadgeContainer.Height = tradingStatusBadge.Height + lblTradingStatusBadgeDebug.Height + DEBUG_LABEL_SPACING + DEBUG_CONTAINER_SPACING;
             
             badgesPanel.Controls.Add(tradingBadgeContainer);
 
