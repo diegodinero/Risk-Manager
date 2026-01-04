@@ -3452,8 +3452,8 @@ namespace Risk_Manager
                 Tag = "TradingTimeRowsContainer"
             };
 
-            // Add one default row
-            AddTradingTimeRow(rowsContainer);
+            // Don't add a default row here - LoadTradingTimeRestrictions will handle it
+            // when the page is shown in ShowPage()
 
             contentArea.Controls.Add(rowsContainer);
 
@@ -8877,6 +8877,24 @@ namespace Risk_Manager
                 if (name.EndsWith("Risk Overview"))
                 {
                     RefreshRiskOverviewPanel(ctrl);
+                }
+                
+                // Reload Trading Time Restrictions when Allowed Trading Times tab is shown
+                if (name.EndsWith("Allowed Trading Times"))
+                {
+                    var accountNumber = GetSelectedAccountNumber();
+                    if (!string.IsNullOrEmpty(accountNumber))
+                    {
+                        var settingsService = RiskManagerSettingsService.Instance;
+                        if (settingsService.IsInitialized)
+                        {
+                            var settings = settingsService.GetAccountSettings(accountNumber);
+                            if (settings != null)
+                            {
+                                LoadTradingTimeRestrictions(settings);
+                            }
+                        }
+                    }
                 }
             }
             else
