@@ -7905,9 +7905,10 @@ namespace Risk_Manager
                 };
                 rowPanel.Controls.Add(labelControl);
 
+                var valueText = valueGetters[i]();
                 var valueControl = new Label
                 {
-                    Text = valueGetters[i](),
+                    Text = valueText,
                     Left = 190, // Adjusted for new card width
                     Top = 5,
                     Width = 240, // Adjusted for new card width
@@ -7917,6 +7918,24 @@ namespace Risk_Manager
                     Tag = valueGetters[i], // Store the getter function for later refresh
                     UseCompatibleTextRendering = false // Use GDI for proper emoji rendering
                 };
+                
+                // Apply lock status color-coding for "Account Status" card
+                if (title == "Account Status")
+                {
+                    // Extract the actual lock status from the emoji-prefixed string
+                    // e.g., "🔓 Unlocked" -> "Unlocked", "🔒 Locked (2h 30m)" -> "Locked (2h 30m)"
+                    var lockStatusText = valueText;
+                    if (valueText.Contains("🔓") || valueText.Contains("🔒"))
+                    {
+                        var spaceIndex = valueText.IndexOf(' ');
+                        if (spaceIndex >= 0 && spaceIndex + 1 < valueText.Length)
+                        {
+                            lockStatusText = valueText.Substring(spaceIndex + 1).Trim();
+                        }
+                    }
+                    valueControl.ForeColor = GetLockStatusColor(lockStatusText);
+                }
+                
                 rowPanel.Controls.Add(valueControl);
 
                 cardLayout.Controls.Add(rowPanel);
@@ -8283,19 +8302,37 @@ namespace Risk_Manager
                         string display = val;
                         Color labelColor = TextGray;
 
-                        // If theme requires special numeric coloring, detect numeric content and sign
-                        bool applySpecialThemeColoring = currentTheme == Theme.YellowBlueBlack;
-                        bool hasDigit = display.Any(char.IsDigit);
-                        bool isNegative = IsNegativeNumericString(display);
-
-                        if (applySpecialThemeColoring && hasDigit)
+                        // Check if this is a lock status value (contains lock/unlock emojis)
+                        bool isLockStatus = val.Contains("🔓") || val.Contains("🔒");
+                        
+                        if (isLockStatus)
                         {
-                            // Use yellow for negative, blue for positive (per theme)
-                            labelColor = isNegative ? NegativeValueColor : PositiveValueColor;
+                            // Extract the actual lock status text from emoji-prefixed string
+                            var lockStatusText = val;
+                            var spaceIndex = val.IndexOf(' ');
+                            if (spaceIndex >= 0 && spaceIndex + 1 < val.Length)
+                            {
+                                lockStatusText = val.Substring(spaceIndex + 1).Trim();
+                            }
+                            // Apply lock status color (Green for Unlocked, Red for Locked)
+                            labelColor = GetLockStatusColor(lockStatusText);
                         }
                         else
                         {
-                            labelColor = TextGray;
+                            // If theme requires special numeric coloring, detect numeric content and sign
+                            bool applySpecialThemeColoring = currentTheme == Theme.YellowBlueBlack;
+                            bool hasDigit = display.Any(char.IsDigit);
+                            bool isNegative = IsNegativeNumericString(display);
+
+                            if (applySpecialThemeColoring && hasDigit)
+                            {
+                                // Use yellow for negative, blue for positive (per theme)
+                                labelColor = isNegative ? NegativeValueColor : PositiveValueColor;
+                            }
+                            else
+                            {
+                                labelColor = TextGray;
+                            }
                         }
 
                         if (overrideIcon != null)
