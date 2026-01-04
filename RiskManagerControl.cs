@@ -182,6 +182,9 @@ namespace Risk_Manager
         private readonly Dictionary<string, bool?> _accountTradingLockStateCache = new Dictionary<string, bool?>();
         private readonly Dictionary<string, bool?> _accountSettingsLockStateCache = new Dictionary<string, bool?>();
         
+        // Track which account is currently displayed on the badge to force updates when switching accounts
+        private string _currentBadgeAccountNumber = null;
+        
         // Debug mode configuration
         private bool _badgeDebugMode = true; // Enable/disable visual debugging of badge transitions
 
@@ -6291,20 +6294,27 @@ namespace Risk_Manager
                 // Get the cached state for THIS account
                 bool? previousState = _accountTradingLockStateCache.TryGetValue(accountNumber, out var cachedState) ? cachedState : null;
                 
+                // Check if we're switching to a different account
+                bool switchingAccounts = _currentBadgeAccountNumber != accountNumber;
+                
                 // Log the determination with all relevant context
-                LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, previousState, null);
+                LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, previousState, switchingAccounts ? "Account switch detected" : null);
 
-                // Only update UI if state has actually changed to avoid redundant updates
-                if (previousState.HasValue && previousState.Value == isLocked)
+                // Only update UI if state has actually changed OR if we're switching accounts
+                // When switching accounts, we ALWAYS need to update the badge to show the new account's state
+                if (!switchingAccounts && previousState.HasValue && previousState.Value == isLocked)
                 {
-                    LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, previousState, "State unchanged, skipping UI update to prevent redundant refresh");
+                    LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, previousState, "Same account, state unchanged, skipping UI update");
                     return;
                 }
+                
+                // Update which account is currently displayed
+                _currentBadgeAccountNumber = accountNumber;
                 
                 // Cache the new state for THIS account
                 _accountTradingLockStateCache[accountNumber] = isLocked;
                 
-                LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, null, "State changed, updating UI");
+                LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, null, switchingAccounts ? "Account switch - updating UI" : "State changed - updating UI");
                 UpdateTradingStatusBadgeUI(isLocked, previousState);
             }
             catch (Exception ex)
