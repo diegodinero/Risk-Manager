@@ -295,6 +295,7 @@ namespace Risk_Manager
         
         // Lock status constants
         private const string LOCK_STATUS_UNLOCKED = "Unlocked";
+        private const string LOCK_STATUS_COLUMN_NAME = "LockStatus";
         private const int LOG_PARTS_MAX = 6; // Max parts in badge logging helpers (LogBadgeUpdate, LogSettingsBadgeUpdate): Caller, Account, LockStatus/IsLocked, PreviousState, Message
 
         // Regex patterns for account type detection (compiled for performance)
@@ -618,12 +619,12 @@ namespace Risk_Manager
             try
             {
                 // Check if LockStatus column exists
-                if (!grid.Columns.Contains("LockStatus")) return;
+                if (!grid.Columns.Contains(LOCK_STATUS_COLUMN_NAME)) return;
                 
                 for (int r = 0; r < grid.Rows.Count; r++)
                 {
                     var row = grid.Rows[r];
-                    var cell = row.Cells["LockStatus"];
+                    var cell = row.Cells[LOCK_STATUS_COLUMN_NAME];
                     if (cell == null) continue;
                     
                     var lockStatus = (cell.Value ?? string.Empty).ToString();
