@@ -3925,9 +3925,6 @@ namespace Risk_Manager
                     // Lock settings with calculated duration
                     settingsService.SetSettingsLock(accountNumber, true, "Locked until 5 PM ET", duration);
                     
-                    // Clear cache first to ensure the next update will refresh the badge
-                    _previousSettingsLockState = null;
-                    
                     // Update status display for the account we just locked
                     UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
                     
@@ -3983,9 +3980,6 @@ namespace Risk_Manager
 
                     // Unlock settings
                     settingsService.SetSettingsLock(accountNumber, false, "Manually unlocked");
-                    
-                    // Clear cache first to ensure the next update will refresh the badge
-                    _previousSettingsLockState = null;
                     
                     // Update status display for the account we just unlocked
                     UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
@@ -6530,18 +6524,21 @@ namespace Risk_Manager
                 // Get current lock status from service
                 bool isLocked = settingsService.AreSettingsLocked(accountNumber);
                 
+                // Get the cached state for THIS account
+                bool? previousState = _accountSettingsLockStateCache.TryGetValue(accountNumber, out var cachedState) ? cachedState : null;
+                
                 // Log the determination with all relevant context
-                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, _previousSettingsLockState, null);
+                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, previousState, null);
 
                 // Only update UI if state has actually changed to avoid redundant updates
-                if (_previousSettingsLockState.HasValue && _previousSettingsLockState.Value == isLocked)
+                if (previousState.HasValue && previousState.Value == isLocked)
                 {
-                    LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, _previousSettingsLockState, "State unchanged, skipping UI update to prevent redundant refresh");
+                    LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, previousState, "State unchanged, skipping UI update to prevent redundant refresh");
                     return;
                 }
                 
-                // Cache the new state before updating UI
-                _previousSettingsLockState = isLocked;
+                // Cache the new state for THIS account
+                _accountSettingsLockStateCache[accountNumber] = isLocked;
                 
                 LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "State changed, updating UI");
                 
