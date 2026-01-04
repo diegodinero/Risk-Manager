@@ -171,6 +171,7 @@ namespace Risk_Manager
         private readonly List<Button> navButtons = new();
         private Label settingsStatusBadge;
         private Label tradingStatusBadge;
+        private Label lblTradingStatusBadgeDebug; // Debug label to show badge transition information
         private ComboBox accountSelector;
         private Label accountNumberDisplay; // Display current account number in UI
         private Button lockTradingButton; // Lock Trading button reference
@@ -180,6 +181,9 @@ namespace Risk_Manager
         // State caching for badge updates
         private bool? _previousTradingLockState = null; // Cache previous lock state to avoid redundant UI updates
         private bool? _previousSettingsLockState = null; // Cache previous settings lock state to avoid redundant UI updates
+        
+        // Debug mode configuration
+        private bool _badgeDebugMode = true; // Enable/disable visual debugging of badge transitions
 
         // Settings input control references for persistence
         private TextBox dailyLossLimitInput;
@@ -1866,9 +1870,40 @@ namespace Risk_Manager
             settingsStatusBadge = CreateStatusBadge("Settings Unlocked", AccentGreen);
             badgesPanel.Controls.Add(settingsStatusBadge);
 
-            // Trading Unlocked badge
+            // Trading Unlocked badge with debug label container
+            var tradingBadgeContainer = new Panel
+            {
+                AutoSize = true,
+                BackColor = Color.Transparent,
+                Margin = new Padding(5, 0, 5, 0),
+                Padding = new Padding(0)
+            };
+            
             tradingStatusBadge = CreateStatusBadge("Trading Unlocked", AccentGreen);
-            badgesPanel.Controls.Add(tradingStatusBadge);
+            tradingStatusBadge.Location = new Point(0, 0);
+            tradingBadgeContainer.Controls.Add(tradingStatusBadge);
+            
+            // Debug label below the trading status badge
+            lblTradingStatusBadgeDebug = new Label
+            {
+                Text = "Debug: Waiting for updates...",
+                AutoSize = false,
+                Width = 350,
+                Height = 16,
+                ForeColor = Color.Yellow,
+                BackColor = Color.Transparent,
+                Font = new Font("Consolas", 7, FontStyle.Regular),
+                Location = new Point(0, tradingStatusBadge.Height + 2),
+                TextAlign = ContentAlignment.TopLeft,
+                Visible = _badgeDebugMode
+            };
+            tradingBadgeContainer.Controls.Add(lblTradingStatusBadgeDebug);
+            
+            // Set container size to accommodate both badge and debug label
+            tradingBadgeContainer.Width = Math.Max(tradingStatusBadge.Width, lblTradingStatusBadgeDebug.Width);
+            tradingBadgeContainer.Height = tradingStatusBadge.Height + lblTradingStatusBadgeDebug.Height + 4;
+            
+            badgesPanel.Controls.Add(tradingBadgeContainer);
 
             // Theme Changer button (replaces the X button)
             var themeButton = new Button
@@ -6385,6 +6420,9 @@ namespace Risk_Manager
                     }
                     tradingStatusBadge.Refresh(); // Force immediate repaint
                     
+                    // Update debug label with transition information
+                    UpdateDebugLabel(callerName, _previousTradingLockState, isLocked);
+                    
                     // IMPORTANT: Update cache to keep it in sync with the badge state
                     // This ensures that direct calls to this method don't desync the cache
                     _previousTradingLockState = isLocked;
@@ -6395,6 +6433,42 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error updating trading status badge UI: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Updates the debug label with badge transition information for visual debugging.
+        /// </summary>
+        /// <param name="callerName">The name of the calling function</param>
+        /// <param name="previousState">The previous lock state (true=locked, false=unlocked, null=first call)</param>
+        /// <param name="currentState">The current lock state (true=locked, false=unlocked)</param>
+        private void UpdateDebugLabel(string callerName, bool? previousState, bool currentState)
+        {
+            try
+            {
+                if (lblTradingStatusBadgeDebug != null && _badgeDebugMode)
+                {
+                    // Format: "Caller: FunctionName | Prev: False→True | Current: True | Time: HH:MM:SS.mmm"
+                    var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+                    var prevStateStr = previousState.HasValue ? previousState.Value.ToString() : "null";
+                    var stateChangeStr = previousState.HasValue ? $"{prevStateStr}→{currentState}" : $"null→{currentState}";
+                    var stateChanged = !previousState.HasValue || previousState.Value != currentState;
+                    
+                    var debugText = $"Caller: {callerName} | Prev: {stateChangeStr} | Current: {currentState} | Changed: {stateChanged} | Time: {timestamp}";
+                    
+                    lblTradingStatusBadgeDebug.Text = debugText;
+                    
+                    // Change color based on whether state changed
+                    lblTradingStatusBadgeDebug.ForeColor = stateChanged ? Color.Yellow : Color.LightGray;
+                    
+                    lblTradingStatusBadgeDebug.Refresh();
+                    
+                    System.Diagnostics.Debug.WriteLine($"[UpdateDebugLabel] {debugText}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating debug label: {ex.Message}");
             }
         }
 
