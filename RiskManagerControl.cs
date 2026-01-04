@@ -589,6 +589,47 @@ namespace Risk_Manager
             }
         }
 
+        // Color Lock Status cells based on lock state (Green for Unlocked, Red for Locked)
+        private void ColorizeLockStatusCells(DataGridView grid)
+        {
+            if (grid == null) return;
+            try
+            {
+                // Check if LockStatus column exists
+                if (!grid.Columns.Contains("LockStatus")) return;
+                
+                for (int r = 0; r < grid.Rows.Count; r++)
+                {
+                    var row = grid.Rows[r];
+                    var cell = row.Cells["LockStatus"];
+                    if (cell == null) continue;
+                    
+                    var lockStatus = (cell.Value ?? string.Empty).ToString();
+                    
+                    // Apply color based on lock status
+                    // "Unlocked" -> Green
+                    // "Locked (...)" or "Locked" -> Red
+                    if (lockStatus.StartsWith("Locked"))
+                    {
+                        cell.Style.ForeColor = Color.Red;
+                    }
+                    else if (lockStatus == "Unlocked")
+                    {
+                        cell.Style.ForeColor = AccentGreen;
+                    }
+                    else
+                    {
+                        // Default color for any other status
+                        cell.Style.ForeColor = TextWhite;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ColorizeLockStatusCells error: {ex.Message}");
+            }
+        }
+
         /// <summary>
         /// Updates colors for all controls in the application
         /// </summary>
@@ -2496,6 +2537,8 @@ namespace Risk_Manager
                 {
                     ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
                 }
+                // Apply Lock Status coloring (Green for Unlocked, Red for Locked)
+                ColorizeLockStatusCells(statsGrid);
                 // Refresh risk-overview/value labels around the grid
                 ApplyValueLabelColoring(statsGrid.Parent ?? this);
             }        
@@ -2684,6 +2727,31 @@ namespace Risk_Manager
                         {
                             valueCell.Style.ForeColor = TextWhite;
                         }
+                    }
+                }
+                
+                // Apply Lock Status coloring for all themes (Green for Unlocked, Red for Locked)
+                for (int i = 0; i < statsDetailGrid.Rows.Count; i++)
+                {
+                    var metric = statsDetailGrid.Rows[i].Cells[0].Value?.ToString() ?? "";
+                    if (metric == "Trading Lock Status")
+                    {
+                        var valueCell = statsDetailGrid.Rows[i].Cells[1];
+                        var lockStatusValue = (valueCell.Value ?? string.Empty).ToString();
+                        
+                        if (lockStatusValue.StartsWith("Locked"))
+                        {
+                            valueCell.Style.ForeColor = Color.Red;
+                        }
+                        else if (lockStatusValue == "Unlocked")
+                        {
+                            valueCell.Style.ForeColor = AccentGreen;
+                        }
+                        else
+                        {
+                            valueCell.Style.ForeColor = TextWhite;
+                        }
+                        break; // Found and colored, exit loop
                     }
                 }
             }
