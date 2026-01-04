@@ -983,6 +983,9 @@ namespace Risk_Manager
                 // Update settings lock status labels and badge for the new account
                 UpdateSettingsStatusLabelsRecursive(this);
                 
+                // Update manual lock status labels for the new account
+                UpdateManualLockStatusLabelsRecursive(this);
+                
                 // Refresh Stats tab if visible
                 if (statsDetailGrid != null)
                     RefreshAccountStats();
@@ -4024,12 +4027,28 @@ namespace Risk_Manager
                 AutoScroll = true
             };
 
+            // Status label to show lock state with color and remaining time
+            var lblManualLockStatus = new Label
+            {
+                Text = "Unlocked",
+                Left = 0,
+                Top = 0,
+                Width = 400,
+                Height = 30,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = AccentGreen,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Tag = "ManualLockStatus" // Tag for identification
+            };
+            contentArea.Controls.Add(lblManualLockStatus);
+
             // Lock Duration Section
             var durationLabel = new Label
             {
                 Text = "Lock Duration:",
                 Left = 0,
-                Top = 10,
+                Top = 50,
                 Width = 150,
                 Height = 25,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
@@ -4042,7 +4061,7 @@ namespace Risk_Manager
             lockDurationComboBox = new ComboBox
             {
                 Left = 160,
-                Top = 10,
+                Top = 50,
                 Width = 200,
                 Height = 25,
                 DropDownStyle = ComboBoxStyle.DropDownList,
@@ -4071,7 +4090,7 @@ namespace Risk_Manager
                 Width = 200,
                 Height = 40,
                 Left = 0,
-                Top = 60,
+                Top = 100,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 BackColor = AccentAmber,
                 ForeColor = TextWhite,
@@ -4089,7 +4108,7 @@ namespace Risk_Manager
                 Width = 200,
                 Height = 40,
                 Left = 220,
-                Top = 60,
+                Top = 100,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 BackColor = AccentGreen,
                 ForeColor = TextWhite,
@@ -4106,6 +4125,9 @@ namespace Risk_Manager
             
             // Update button states based on current lock status
             UpdateLockButtonStates();
+            
+            // Initialize status from settings service
+            UpdateManualLockStatus(lblManualLockStatus);
 
             // Add controls in correct order: Fill first, then Top
             mainPanel.Controls.Add(contentArea);
@@ -4336,6 +4358,9 @@ namespace Risk_Manager
                     RefreshAccountsSummary();
                     RefreshAccountStats();
                     
+                    // Update Manual Lock status labels immediately
+                    UpdateManualLockStatusLabelsRecursive(this);
+                    
                     MessageBox.Show(
                         $"Account '{accountNumber}' has been locked for {durationText}.\n\nBuy/Sell buttons are now disabled.",
                         "Trading Locked",
@@ -4410,6 +4435,9 @@ namespace Risk_Manager
                     
                     RefreshAccountsSummary();
                     RefreshAccountStats();
+                    
+                    // Update Manual Lock status labels immediately
+                    UpdateManualLockStatusLabelsRecursive(this);
                     
                     MessageBox.Show($"Account '{accountNumber}' has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -4686,6 +4714,9 @@ namespace Risk_Manager
                 {
                     RefreshAccountsSummary();
                     RefreshAccountStats();
+                    
+                    // Update Manual Lock status labels when trading lock expires
+                    UpdateManualLockStatusLabelsRecursive(this);
                 }
                 
                 // Update settings lock status display if any settings locks expired
@@ -4744,6 +4775,28 @@ namespace Risk_Manager
                 if (control.Controls.Count > 0)
                 {
                     UpdateSettingsStatusLabelsRecursive(control);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Recursively finds and updates all ManualLockStatus labels in the control tree.
+        /// </summary>
+        private void UpdateManualLockStatusLabelsRecursive(Control parent)
+        {
+            if (parent == null) return;
+            
+            foreach (Control control in parent.Controls)
+            {
+                if (control is Label label && label.Tag?.ToString() == "ManualLockStatus")
+                {
+                    UpdateManualLockStatus(label);
+                }
+                
+                // Recursively check child controls
+                if (control.Controls.Count > 0)
+                {
+                    UpdateManualLockStatusLabelsRecursive(control);
                 }
             }
         }
@@ -6538,6 +6591,79 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"Error updating settings lock status for account: {ex.Message}");
                 lblSettingsStatus.Text = "Status Error";
                 lblSettingsStatus.ForeColor = TextGray;
+            }
+        }
+
+        /// <summary>
+        /// Updates the manual lock status label with current lock state and remaining time.
+        /// </summary>
+        private void UpdateManualLockStatus(Label lblManualLockStatus)
+        {
+            try
+            {
+                var accountNumber = GetSelectedAccountNumber();
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    lblManualLockStatus.Text = "No Account Selected";
+                    lblManualLockStatus.ForeColor = TextGray;
+                    return;
+                }
+
+                UpdateManualLockStatusForAccount(lblManualLockStatus, accountNumber);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating manual lock status: {ex.Message}");
+                lblManualLockStatus.Text = "Status Error";
+                lblManualLockStatus.ForeColor = TextGray;
+            }
+        }
+        
+        /// <summary>
+        /// Updates the manual lock status label for a specific account number.
+        /// </summary>
+        private void UpdateManualLockStatusForAccount(Label lblManualLockStatus, string accountNumber)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    lblManualLockStatus.Text = "No Account Selected";
+                    lblManualLockStatus.ForeColor = TextGray;
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    lblManualLockStatus.Text = "Status Unknown";
+                    lblManualLockStatus.ForeColor = TextGray;
+                    return;
+                }
+
+                bool isLocked = settingsService.IsTradingLocked(accountNumber);
+
+                if (isLocked)
+                {
+                    // Get remaining time and display it using the same format as Lock Settings
+                    var statusString = settingsService.GetLockStatusString(accountNumber);
+                    lblManualLockStatus.Text = statusString;
+                    lblManualLockStatus.ForeColor = Color.Red;
+                }
+                else
+                {
+                    lblManualLockStatus.Text = "Unlocked";
+                    lblManualLockStatus.ForeColor = AccentGreen;
+                }
+
+                // Update top badge as well
+                UpdateTradingStatusBadge();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating manual lock status for account: {ex.Message}");
+                lblManualLockStatus.Text = "Status Error";
+                lblManualLockStatus.ForeColor = TextGray;
             }
         }
 
