@@ -6304,11 +6304,14 @@ namespace Risk_Manager
                     return;
                 }
                 
+                // Store the previous state before updating cache
+                bool? previousState = _previousTradingLockState;
+                
                 // Cache the new state before updating UI
                 _previousTradingLockState = isLocked;
                 
                 LogBadgeUpdate(callerName, accountNumber, lockStatusString, isLocked, null, "State changed, updating UI");
-                UpdateTradingStatusBadgeUI(isLocked);
+                UpdateTradingStatusBadgeUI(isLocked, previousState);
             }
             catch (Exception ex)
             {
@@ -6403,7 +6406,7 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine(string.Join(", ", parts, 0, index));
         }
 
-        private void UpdateTradingStatusBadgeUI(bool isLocked)
+        private void UpdateTradingStatusBadgeUI(bool isLocked, bool? previousStateParam = null)
         {
             try
             {
@@ -6433,7 +6436,9 @@ namespace Risk_Manager
                     tradingStatusBadge.Refresh(); // Force immediate repaint
                     
                     // Update debug label with transition information
-                    UpdateDebugLabel(callerName, _previousTradingLockState, isLocked);
+                    // Use the previousStateParam if provided, otherwise use the cached value
+                    bool? previousStateForDebug = previousStateParam ?? _previousTradingLockState;
+                    UpdateDebugLabel(callerName, previousStateForDebug, isLocked);
                     
                     // IMPORTANT: Update cache to keep it in sync with the badge state
                     // This ensures that direct calls to this method don't desync the cache
