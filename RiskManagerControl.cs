@@ -8882,18 +8882,35 @@ namespace Risk_Manager
                 // Reload Trading Time Restrictions when Allowed Trading Times tab is shown
                 if (name.EndsWith("Allowed Trading Times"))
                 {
+                    System.Diagnostics.Debug.WriteLine("=== ShowPage: Allowed Trading Times tab clicked ===");
                     var accountNumber = GetSelectedAccountNumber();
+                    System.Diagnostics.Debug.WriteLine($"ShowPage: accountNumber = '{accountNumber}'");
                     if (!string.IsNullOrEmpty(accountNumber))
                     {
                         var settingsService = RiskManagerSettingsService.Instance;
+                        System.Diagnostics.Debug.WriteLine($"ShowPage: settingsService.IsInitialized = {settingsService.IsInitialized}");
                         if (settingsService.IsInitialized)
                         {
                             var settings = settingsService.GetSettings(accountNumber);
+                            System.Diagnostics.Debug.WriteLine($"ShowPage: settings = {(settings != null ? "Found" : "NULL")}");
                             if (settings != null)
                             {
+                                System.Diagnostics.Debug.WriteLine($"ShowPage: settings.TradingTimeRestrictions count = {settings.TradingTimeRestrictions?.Count ?? 0}");
                                 LoadTradingTimeRestrictions(settings);
                             }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine("ShowPage: WARNING - settings is NULL, cannot load trading times");
+                            }
                         }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("ShowPage: WARNING - settingsService not initialized");
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("ShowPage: WARNING - accountNumber is null or empty");
                     }
                 }
             }
