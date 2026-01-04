@@ -592,6 +592,25 @@ namespace Risk_Manager
             }
         }
 
+        // Helper method to get the color for a lock status
+        // Returns Green for "Unlocked", Red for "Locked" (any format), TextWhite for other
+        private Color GetLockStatusColor(string lockStatus)
+        {
+            if (string.IsNullOrEmpty(lockStatus))
+                return TextWhite;
+                
+            // "Locked" with any duration format (Locked, Locked (2h 30m), etc.)
+            if (lockStatus.StartsWith("Locked", StringComparison.Ordinal))
+                return Color.Red;
+            
+            // "Unlocked"
+            if (lockStatus == "Unlocked")
+                return AccentGreen;
+            
+            // Default for any other status
+            return TextWhite;
+        }
+
         // Color Lock Status cells based on lock state (Green for Unlocked, Red for Locked)
         private void ColorizeLockStatusCells(DataGridView grid)
         {
@@ -608,23 +627,7 @@ namespace Risk_Manager
                     if (cell == null) continue;
                     
                     var lockStatus = (cell.Value ?? string.Empty).ToString();
-                    
-                    // Apply color based on lock status
-                    // "Unlocked" -> Green
-                    // "Locked (...)" or "Locked" -> Red
-                    if (lockStatus.StartsWith("Locked"))
-                    {
-                        cell.Style.ForeColor = Color.Red;
-                    }
-                    else if (lockStatus == "Unlocked")
-                    {
-                        cell.Style.ForeColor = AccentGreen;
-                    }
-                    else
-                    {
-                        // Default color for any other status
-                        cell.Style.ForeColor = TextWhite;
-                    }
+                    cell.Style.ForeColor = GetLockStatusColor(lockStatus);
                 }
             }
             catch (Exception ex)
@@ -2741,19 +2744,7 @@ namespace Risk_Manager
                     {
                         var valueCell = statsDetailGrid.Rows[i].Cells[1];
                         var lockStatusValue = (valueCell.Value ?? string.Empty).ToString();
-                        
-                        if (lockStatusValue.StartsWith("Locked"))
-                        {
-                            valueCell.Style.ForeColor = Color.Red;
-                        }
-                        else if (lockStatusValue == "Unlocked")
-                        {
-                            valueCell.Style.ForeColor = AccentGreen;
-                        }
-                        else
-                        {
-                            valueCell.Style.ForeColor = TextWhite;
-                        }
+                        valueCell.Style.ForeColor = GetLockStatusColor(lockStatusValue);
                         break; // Found and colored, exit loop
                     }
                 }
