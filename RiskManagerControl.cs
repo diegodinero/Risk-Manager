@@ -295,6 +295,7 @@ namespace Risk_Manager
         
         // Lock status constants
         private const string LOCK_STATUS_UNLOCKED = "Unlocked";
+        private const string LOCK_STATUS_COLUMN_NAME = "LockStatus";
         private const int LOG_PARTS_MAX = 6; // Max parts in badge logging helpers (LogBadgeUpdate, LogSettingsBadgeUpdate): Caller, Account, LockStatus/IsLocked, PreviousState, Message
 
         // Regex patterns for account type detection (compiled for performance)
@@ -505,6 +506,9 @@ namespace Risk_Manager
                 // Colorize grids again (ensures per-cell styles are set last)
                 ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
                 ColorizeNumericCells(typeSummaryGrid, "OpenPnL", "ClosedPnL", "TotalPnL");
+                
+                // Re-apply Lock Status coloring after theme change
+                ColorizeLockStatusCells(statsGrid);
 
                 // Refresh Risk Overview values (applies label.Tag based coloring)
                 if (!string.IsNullOrEmpty(selectedNavItem) && selectedNavItem.EndsWith("Risk Overview") && pageContents.TryGetValue(selectedNavItem, out var panel))
@@ -586,6 +590,50 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"ColorizeNumericCells error: {ex.Message}");
+            }
+        }
+
+        // Helper method to get the color for a lock status
+        // Returns Green for "Unlocked", Red for "Locked" (any format), TextWhite for other
+        private Color GetLockStatusColor(string lockStatus)
+        {
+            if (string.IsNullOrEmpty(lockStatus))
+                return TextWhite;
+                
+            // "Locked" with any duration format (Locked, Locked (2h 30m), etc.)
+            if (lockStatus.StartsWith("Locked", StringComparison.OrdinalIgnoreCase))
+                return Color.Red;
+            
+            // "Unlocked"
+            if (lockStatus.Equals(LOCK_STATUS_UNLOCKED, StringComparison.OrdinalIgnoreCase))
+                return AccentGreen;
+            
+            // Default for any other status
+            return TextWhite;
+        }
+
+        // Color Lock Status cells based on lock state (Green for Unlocked, Red for Locked)
+        private void ColorizeLockStatusCells(DataGridView grid)
+        {
+            if (grid == null) return;
+            try
+            {
+                // Check if LockStatus column exists
+                if (!grid.Columns.Contains(LOCK_STATUS_COLUMN_NAME)) return;
+                
+                for (int r = 0; r < grid.Rows.Count; r++)
+                {
+                    var row = grid.Rows[r];
+                    var cell = row.Cells[LOCK_STATUS_COLUMN_NAME];
+                    if (cell == null) continue;
+                    
+                    var lockStatus = (cell.Value ?? string.Empty).ToString();
+                    cell.Style.ForeColor = GetLockStatusColor(lockStatus);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ColorizeLockStatusCells error: {ex.Message}");
             }
         }
 
@@ -2496,6 +2544,8 @@ namespace Risk_Manager
                 {
                     ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
                 }
+                // Apply Lock Status coloring (Green for Unlocked, Red for Locked)
+                ColorizeLockStatusCells(statsGrid);
                 // Refresh risk-overview/value labels around the grid
                 ApplyValueLabelColoring(statsGrid.Parent ?? this);
             }        
@@ -2684,6 +2734,19 @@ namespace Risk_Manager
                         {
                             valueCell.Style.ForeColor = TextWhite;
                         }
+                    }
+                }
+                
+                // Apply Lock Status coloring for all themes (Green for Unlocked, Red for Locked)
+                for (int i = 0; i < statsDetailGrid.Rows.Count; i++)
+                {
+                    var metric = statsDetailGrid.Rows[i].Cells[0].Value?.ToString() ?? "";
+                    if (string.Equals(metric, "Trading Lock Status", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var valueCell = statsDetailGrid.Rows[i].Cells[1];
+                        var lockStatusValue = (valueCell.Value ?? string.Empty).ToString();
+                        valueCell.Style.ForeColor = GetLockStatusColor(lockStatusValue);
+                        break; // Found and colored, exit loop
                     }
                 }
             }
