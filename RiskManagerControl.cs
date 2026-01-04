@@ -302,6 +302,7 @@ namespace Risk_Manager
         
         // Lock status constants
         private const string LOCK_STATUS_UNLOCKED = "Unlocked";
+        private const string LOCK_STATUS_COLUMN_NAME = "LockStatus";
         private const int LOG_PARTS_MAX = 6; // Max parts in badge logging helpers (LogBadgeUpdate, LogSettingsBadgeUpdate): Caller, Account, LockStatus/IsLocked, PreviousState, Message
         
         // Debug label constants
@@ -309,6 +310,11 @@ namespace Risk_Manager
         private const int DEBUG_LABEL_HEIGHT = 16; // Height of the trading status badge debug label
         private const int DEBUG_LABEL_SPACING = 2; // Spacing between trading status badge and debug label
         private const int DEBUG_CONTAINER_SPACING = 4; // Extra spacing in container for proper layout
+        private const string LOCK_EMOJI = "🔒";
+        private const string UNLOCK_EMOJI = "🔓";
+        
+        // Risk Overview card title constants
+        private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -518,6 +524,9 @@ namespace Risk_Manager
                 // Colorize grids again (ensures per-cell styles are set last)
                 ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
                 ColorizeNumericCells(typeSummaryGrid, "OpenPnL", "ClosedPnL", "TotalPnL");
+                
+                // Re-apply Lock Status coloring after theme change
+                ColorizeLockStatusCells(statsGrid);
 
                 // Refresh Risk Overview values (applies label.Tag based coloring)
                 if (!string.IsNullOrEmpty(selectedNavItem) && selectedNavItem.EndsWith("Risk Overview") && pageContents.TryGetValue(selectedNavItem, out var panel))
@@ -599,6 +608,77 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"ColorizeNumericCells error: {ex.Message}");
+            }
+        }
+
+        // Helper method to check if a value is a lock status value
+        private bool IsLockStatusValue(string valueText)
+        {
+            if (string.IsNullOrEmpty(valueText))
+                return false;
+            return valueText.Contains(UNLOCK_EMOJI) || valueText.Contains(LOCK_EMOJI);
+        }
+
+        // Helper method to extract lock status text from emoji-prefixed strings
+        // e.g., "🔓 Unlocked" -> "Unlocked", "🔒 Locked (2h 30m)" -> "Locked (2h 30m)"
+        private string ExtractLockStatusText(string valueText)
+        {
+            if (string.IsNullOrEmpty(valueText))
+                return valueText;
+                
+            var lockStatusText = valueText;
+            if (IsLockStatusValue(valueText))
+            {
+                var spaceIndex = valueText.IndexOf(' ');
+                if (spaceIndex >= 0 && spaceIndex + 1 < valueText.Length)
+                {
+                    lockStatusText = valueText.Substring(spaceIndex + 1).Trim();
+                }
+            }
+            return lockStatusText;
+        }
+
+        // Helper method to get the color for a lock status
+        // Returns Green for "Unlocked", Red for "Locked" (any format), TextWhite for other
+        private Color GetLockStatusColor(string lockStatus)
+        {
+            if (string.IsNullOrEmpty(lockStatus))
+                return TextWhite;
+                
+            // "Locked" with any duration format (Locked, Locked (2h 30m), etc.)
+            if (lockStatus.StartsWith("Locked", StringComparison.OrdinalIgnoreCase))
+                return Color.Red;
+            
+            // "Unlocked"
+            if (lockStatus.Equals(LOCK_STATUS_UNLOCKED, StringComparison.OrdinalIgnoreCase))
+                return AccentGreen;
+            
+            // Default for any other status
+            return TextWhite;
+        }
+
+        // Color Lock Status cells based on lock state (Green for Unlocked, Red for Locked)
+        private void ColorizeLockStatusCells(DataGridView grid)
+        {
+            if (grid == null) return;
+            try
+            {
+                // Check if LockStatus column exists
+                if (!grid.Columns.Contains(LOCK_STATUS_COLUMN_NAME)) return;
+                
+                for (int r = 0; r < grid.Rows.Count; r++)
+                {
+                    var row = grid.Rows[r];
+                    var cell = row.Cells[LOCK_STATUS_COLUMN_NAME];
+                    if (cell == null) continue;
+                    
+                    var lockStatus = (cell.Value ?? string.Empty).ToString();
+                    cell.Style.ForeColor = GetLockStatusColor(lockStatus);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ColorizeLockStatusCells error: {ex.Message}");
             }
         }
 
@@ -995,6 +1075,9 @@ namespace Risk_Manager
                 
                 // Update settings lock status labels and badge for the new account
                 UpdateSettingsStatusLabelsRecursive(this);
+                
+                // Update manual lock status labels for the new account
+                UpdateManualLockStatusLabelsRecursive(this);
                 
                 // Refresh Stats tab if visible
                 if (statsDetailGrid != null)
@@ -1628,11 +1711,11 @@ namespace Risk_Manager
                 }
 
                 // Explicit card header mappings for Risk Overview
-                IconMap["Account Status"] = Properties.Resources._lock;          // lock.png
-                IconMap["Position Limits"] = Properties.Resources.positions;     // positions.png
-                IconMap["Daily Limits"] = Properties.Resources.limit;            // limit.png
-                IconMap["Symbol Restrictions"] = Properties.Resources.blocked;   // blocked.png
-                IconMap["Allowed Trading Times"] = Properties.Resources.clock;   // clock.png
+                IconMap[CARD_TITLE_ACCOUNT_STATUS] = Properties.Resources._lock;     // lock.png
+                IconMap["Position Limits"] = Properties.Resources.positions;         // positions.png
+                IconMap["Daily Limits"] = Properties.Resources.limit;                // limit.png
+                IconMap["Symbol Restrictions"] = Properties.Resources.blocked;       // blocked.png
+                IconMap["Allowed Trading Times"] = Properties.Resources.clock;       // clock.png
 
                 // Additional lock-related title variants (keep fallback)
                 IconMap["Settings Lock"] = Properties.Resources._lock;
@@ -2544,6 +2627,8 @@ namespace Risk_Manager
                 {
                     ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
                 }
+                // Apply Lock Status coloring (Green for Unlocked, Red for Locked)
+                ColorizeLockStatusCells(statsGrid);
                 // Refresh risk-overview/value labels around the grid
                 ApplyValueLabelColoring(statsGrid.Parent ?? this);
             }        
@@ -2732,6 +2817,19 @@ namespace Risk_Manager
                         {
                             valueCell.Style.ForeColor = TextWhite;
                         }
+                    }
+                }
+                
+                // Apply Lock Status coloring for all themes (Green for Unlocked, Red for Locked)
+                for (int i = 0; i < statsDetailGrid.Rows.Count; i++)
+                {
+                    var metric = statsDetailGrid.Rows[i].Cells[0].Value?.ToString() ?? "";
+                    if (string.Equals(metric, "Trading Lock Status", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var valueCell = statsDetailGrid.Rows[i].Cells[1];
+                        var lockStatusValue = (valueCell.Value ?? string.Empty).ToString();
+                        valueCell.Style.ForeColor = GetLockStatusColor(lockStatusValue);
+                        break; // Found and colored, exit loop
                     }
                 }
             }
@@ -4066,12 +4164,28 @@ namespace Risk_Manager
                 AutoScroll = true
             };
 
+            // Status label to show lock state with color and remaining time
+            var lblManualLockStatus = new Label
+            {
+                Text = "Unlocked",
+                Left = 0,
+                Top = 0,
+                Width = 400,
+                Height = 30,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = AccentGreen,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Tag = "ManualLockStatus" // Tag for identification
+            };
+            contentArea.Controls.Add(lblManualLockStatus);
+
             // Lock Duration Section
             var durationLabel = new Label
             {
                 Text = "Lock Duration:",
                 Left = 0,
-                Top = 10,
+                Top = 50,
                 Width = 150,
                 Height = 25,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
@@ -4084,7 +4198,7 @@ namespace Risk_Manager
             lockDurationComboBox = new ComboBox
             {
                 Left = 160,
-                Top = 10,
+                Top = 50,
                 Width = 200,
                 Height = 25,
                 DropDownStyle = ComboBoxStyle.DropDownList,
@@ -4113,7 +4227,7 @@ namespace Risk_Manager
                 Width = 200,
                 Height = 40,
                 Left = 0,
-                Top = 60,
+                Top = 100,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 BackColor = AccentAmber,
                 ForeColor = TextWhite,
@@ -4131,7 +4245,7 @@ namespace Risk_Manager
                 Width = 200,
                 Height = 40,
                 Left = 220,
-                Top = 60,
+                Top = 100,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 BackColor = AccentGreen,
                 ForeColor = TextWhite,
@@ -4148,6 +4262,9 @@ namespace Risk_Manager
             
             // Update button states based on current lock status
             UpdateLockButtonStates();
+            
+            // Initialize status from settings service
+            UpdateManualLockStatus(lblManualLockStatus);
 
             // Add controls in correct order: Fill first, then Top
             mainPanel.Controls.Add(contentArea);
@@ -4379,6 +4496,9 @@ namespace Risk_Manager
                     RefreshAccountsSummary();
                     RefreshAccountStats();
                     
+                    // Update Manual Lock status labels immediately
+                    UpdateManualLockStatusLabelsRecursive(this);
+                    
                     MessageBox.Show(
                         $"Account '{accountNumber}' has been locked for {durationText}.\n\nBuy/Sell buttons are now disabled.",
                         "Trading Locked",
@@ -4454,6 +4574,9 @@ namespace Risk_Manager
                     
                     RefreshAccountsSummary();
                     RefreshAccountStats();
+                    
+                    // Update Manual Lock status labels immediately
+                    UpdateManualLockStatusLabelsRecursive(this);
                     
                     MessageBox.Show($"Account '{accountNumber}' has been unlocked successfully. Buy/Sell buttons are now enabled.", "Trading Unlocked", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -4730,6 +4853,9 @@ namespace Risk_Manager
                 {
                     RefreshAccountsSummary();
                     RefreshAccountStats();
+                    
+                    // Update Manual Lock status labels when trading lock expires
+                    UpdateManualLockStatusLabelsRecursive(this);
                 }
                 
                 // Update settings lock status display if any settings locks expired
@@ -4788,6 +4914,28 @@ namespace Risk_Manager
                 if (control.Controls.Count > 0)
                 {
                     UpdateSettingsStatusLabelsRecursive(control);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Recursively finds and updates all ManualLockStatus labels in the control tree.
+        /// </summary>
+        private void UpdateManualLockStatusLabelsRecursive(Control parent)
+        {
+            if (parent == null) return;
+            
+            foreach (Control control in parent.Controls)
+            {
+                if (control is Label label && label.Tag?.ToString() == "ManualLockStatus")
+                {
+                    UpdateManualLockStatus(label);
+                }
+                
+                // Recursively check child controls
+                if (control.Controls.Count > 0)
+                {
+                    UpdateManualLockStatusLabelsRecursive(control);
                 }
             }
         }
@@ -6665,6 +6813,79 @@ namespace Risk_Manager
             }
         }
 
+        /// <summary>
+        /// Updates the manual lock status label with current lock state and remaining time.
+        /// </summary>
+        private void UpdateManualLockStatus(Label lblManualLockStatus)
+        {
+            try
+            {
+                var accountNumber = GetSelectedAccountNumber();
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    lblManualLockStatus.Text = "No Account Selected";
+                    lblManualLockStatus.ForeColor = TextGray;
+                    return;
+                }
+
+                UpdateManualLockStatusForAccount(lblManualLockStatus, accountNumber);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating manual lock status: {ex.Message}");
+                lblManualLockStatus.Text = "Status Error";
+                lblManualLockStatus.ForeColor = TextGray;
+            }
+        }
+        
+        /// <summary>
+        /// Updates the manual lock status label for a specific account number.
+        /// </summary>
+        private void UpdateManualLockStatusForAccount(Label lblManualLockStatus, string accountNumber)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    lblManualLockStatus.Text = "No Account Selected";
+                    lblManualLockStatus.ForeColor = TextGray;
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    lblManualLockStatus.Text = "Status Unknown";
+                    lblManualLockStatus.ForeColor = TextGray;
+                    return;
+                }
+
+                bool isLocked = settingsService.IsTradingLocked(accountNumber);
+
+                if (isLocked)
+                {
+                    // Get remaining time and display it using the same format as Lock Settings
+                    var statusString = settingsService.GetLockStatusString(accountNumber);
+                    lblManualLockStatus.Text = statusString;
+                    lblManualLockStatus.ForeColor = Color.Red;
+                }
+                else
+                {
+                    lblManualLockStatus.Text = "Unlocked";
+                    lblManualLockStatus.ForeColor = AccentGreen;
+                }
+
+                // Update top badge as well
+                UpdateTradingStatusBadge();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating manual lock status for account: {ex.Message}");
+                lblManualLockStatus.Text = "Status Error";
+                lblManualLockStatus.ForeColor = TextGray;
+            }
+        }
+
         private void UpdateAccountNumberDisplay()
         {
             try
@@ -7745,7 +7966,7 @@ namespace Risk_Manager
 
             // Add cards to the flow layout
             flowLayout.Controls.Add(CreateRiskOverviewCard(
-                "Account Status",
+                CARD_TITLE_ACCOUNT_STATUS,
                 new[] { "Lock Status:", "Settings Lock:" },
                 new[] { GetAccountLockStatus, GetSettingsLockStatus }
             ));
@@ -7840,9 +8061,10 @@ namespace Risk_Manager
                 };
                 rowPanel.Controls.Add(labelControl);
 
+                var valueText = valueGetters[i]();
                 var valueControl = new Label
                 {
-                    Text = valueGetters[i](),
+                    Text = valueText,
                     Left = 190, // Adjusted for new card width
                     Top = 5,
                     Width = 240, // Adjusted for new card width
@@ -7852,6 +8074,25 @@ namespace Risk_Manager
                     Tag = valueGetters[i], // Store the getter function for later refresh
                     UseCompatibleTextRendering = false // Use GDI for proper emoji rendering
                 };
+                
+                // Apply lock status color-coding for "Account Status" card
+                if (title == CARD_TITLE_ACCOUNT_STATUS)
+                {
+                    var lockStatusText = ExtractLockStatusText(valueText);
+                    valueControl.ForeColor = GetLockStatusColor(lockStatusText);
+                    
+                    // Add extra spacing between emoji and text for better readability
+                    if (IsLockStatusValue(valueText))
+                    {
+                        var idx = valueText.IndexOf(' ');
+                        if (idx >= 0 && idx + 1 < valueText.Length)
+                        {
+                            // Replace single space with double space after emoji
+                            valueControl.Text = valueText.Substring(0, idx) + "  " + valueText.Substring(idx + 1);
+                        }
+                    }
+                }
+                
                 rowPanel.Controls.Add(valueControl);
 
                 cardLayout.Controls.Add(rowPanel);
@@ -8218,19 +8459,31 @@ namespace Risk_Manager
                         string display = val;
                         Color labelColor = TextGray;
 
-                        // If theme requires special numeric coloring, detect numeric content and sign
-                        bool applySpecialThemeColoring = currentTheme == Theme.YellowBlueBlack;
-                        bool hasDigit = display.Any(char.IsDigit);
-                        bool isNegative = IsNegativeNumericString(display);
-
-                        if (applySpecialThemeColoring && hasDigit)
+                        // Check if this is a lock status value (contains lock/unlock emojis)
+                        bool isLockStatus = IsLockStatusValue(val);
+                        
+                        if (isLockStatus)
                         {
-                            // Use yellow for negative, blue for positive (per theme)
-                            labelColor = isNegative ? NegativeValueColor : PositiveValueColor;
+                            // Extract and apply lock status color (Green for Unlocked, Red for Locked)
+                            var lockStatusText = ExtractLockStatusText(val);
+                            labelColor = GetLockStatusColor(lockStatusText);
                         }
                         else
                         {
-                            labelColor = TextGray;
+                            // If theme requires special numeric coloring, detect numeric content and sign
+                            bool applySpecialThemeColoring = currentTheme == Theme.YellowBlueBlack;
+                            bool hasDigit = display.Any(char.IsDigit);
+                            bool isNegative = IsNegativeNumericString(display);
+
+                            if (applySpecialThemeColoring && hasDigit)
+                            {
+                                // Use yellow for negative, blue for positive (per theme)
+                                labelColor = isNegative ? NegativeValueColor : PositiveValueColor;
+                            }
+                            else
+                            {
+                                labelColor = TextGray;
+                            }
                         }
 
                         if (overrideIcon != null)
@@ -8276,7 +8529,8 @@ namespace Risk_Manager
                                 int targetHeight = Math.Max(14, (int)(label.Font.Height * 1.2));
                                 label.Image = ScaleImageToFit(icon, targetHeight, targetHeight);
                                 label.ImageAlign = ContentAlignment.MiddleLeft;
-                                label.Padding = new Padding(targetHeight + 8, 0, 0, 0);
+                                // Increased padding for better spacing between icon and text
+                                label.Padding = new Padding(targetHeight + 12, 0, 0, 0);
 
                                 var trimmed = display.Trim();
                                 var idx = trimmed.IndexOf(' ');
@@ -9452,14 +9706,24 @@ namespace Risk_Manager
                         // Default label color for value labels
                         Color colorToApply = TextGray;
 
-                        if (currentTheme == Theme.YellowBlueBlack)
+                        // Check if this is a lock status getter
+                        var methodName = getter.Method.Name;
+                        bool isLockStatusGetter = methodName == nameof(GetAccountLockStatus) || 
+                                                   methodName == nameof(GetSettingsLockStatus);
+                        
+                        if (isLockStatusGetter)
+                        {
+                            // Extract lock status and apply appropriate color
+                            var lockStatusText = ExtractLockStatusText(display);
+                            colorToApply = GetLockStatusColor(lockStatusText);
+                        }
+                        else if (currentTheme == Theme.YellowBlueBlack)
                         {
                             // Only these getters should get the positive/negative color mapping
-                            var name = getter.Method.Name;
-                            if (name == nameof(GetPositionLossLimit) ||
-                                name == nameof(GetDailyLossLimit) ||
-                                name == nameof(GetDailyProfitTarget) ||
-                                name == nameof(GetPositionProfitTarget))
+                            if (methodName == nameof(GetPositionLossLimit) ||
+                                methodName == nameof(GetDailyLossLimit) ||
+                                methodName == nameof(GetDailyProfitTarget) ||
+                                methodName == nameof(GetPositionProfitTarget))
                             {
                                 // Determine sign from formatted display (FormatNumeric/FormatLossLimit use parentheses for negatives)
                                 if (IsNegativeNumericString(display))
