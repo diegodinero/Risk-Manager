@@ -29,7 +29,7 @@ private bool _badgeDebugMode = true; // Enable/disable visual debugging of badge
 - Replaced simple badge with a container panel
 - Added debug label below the trading status badge
 - Positioned debug label 2px below badge
-- Set debug label properties: Consolas 7pt font, Yellow color, 350px width
+- Set debug label properties: Consolas 7pt font, Yellow color, 600px width
 
 ```csharp
 // Trading Unlocked badge with debug label container
@@ -46,7 +46,7 @@ tradingStatusBadge = CreateStatusBadge("Trading Unlocked", AccentGreen);
 lblTradingStatusBadgeDebug = new Label
 {
     Text = "Debug: Waiting for updates...",
-    Width = 350,
+    Width = 600,
     Height = 16,
     ForeColor = Color.Yellow,
     Font = new Font("Consolas", 7, FontStyle.Regular),
@@ -197,7 +197,7 @@ The debug label can be customized by modifying properties in `CreateTopPanel()`:
 lblTradingStatusBadgeDebug = new Label
 {
     Text = "Debug: Waiting for updates...",
-    Width = 350,           // Adjust width
+    Width = 600,           // Adjust width
     Height = 16,           // Adjust height
     ForeColor = Color.Yellow,  // Change color
     Font = new Font("Consolas", 7, FontStyle.Regular),  // Change font
@@ -268,7 +268,7 @@ lblTradingStatusBadgeDebug = new Label
 | Property | Value | Purpose |
 |----------|-------|---------|
 | Name | `lblTradingStatusBadgeDebug` | Control identifier |
-| Width | 350px | Accommodate full debug text |
+| Width | 600px | Accommodate full debug text |
 | Height | 16px | Single line of text |
 | Font | Consolas, 7pt, Regular | Monospace for alignment |
 | ForeColor | Yellow or LightGray | State change indicator |

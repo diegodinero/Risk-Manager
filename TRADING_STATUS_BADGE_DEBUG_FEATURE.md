@@ -32,7 +32,7 @@ private Label lblTradingStatusBadgeDebug; // Debug label to show badge transitio
 **Label Properties:**
 - **Font:** Consolas 7pt (monospace for aligned columns)
 - **Color:** Yellow (high visibility) or Light Gray (when no state change)
-- **Width:** 350px (accommodates full debug message)
+- **Width:** 600px (accommodates full debug message)
 - **Height:** 16px
 - **Position:** 2px below the trading status badge
 - **Visibility:** Controlled by `_badgeDebugMode`
@@ -60,7 +60,7 @@ lblTradingStatusBadgeDebug = new Label
 {
     Text = "Debug: Waiting for updates...",
     AutoSize = false,
-    Width = 350,
+    Width = 600,
     Height = 16,
     ForeColor = Color.Yellow,
     BackColor = Color.Transparent,
@@ -355,7 +355,7 @@ Potential improvements for future versions:
 - Millisecond precision helps identify rapid state changes
 - Color changes provide instant visual feedback
 - Debug output is also written to `System.Diagnostics.Debug` for logging
-- Label width (350px) accommodates longest expected function names
+- Label width (600px) accommodates longest expected function names
 - Container panel ensures proper layout with FlowLayoutPanel
 
 ## Conclusion

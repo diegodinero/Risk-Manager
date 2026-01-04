@@ -95,7 +95,7 @@ Label {
   Name: lblTradingStatusBadgeDebug
   Text: "Caller: FunctionName | Prev: State→State | Current: State | Changed: Bool | Time: HH:MM:SS.mmm"
   AutoSize: false
-  Width: 350px
+  Width: 600px
   Height: 16px
   ForeColor: Yellow (if changed) or LightGray (if not changed)
   BackColor: Transparent
@@ -220,7 +220,7 @@ Caller: LoadAccountSettings | Prev: null→True | Current: True | Changed: True 
 ### Debug Label Width Calculation
 
 ```
-Width: 350px (fixed)
+Width: 600px (fixed)
 
 Breakdown:
 - "Caller: " = ~50px
@@ -234,7 +234,7 @@ Breakdown:
 - " | Time: " = ~40px
 - "15:23:45.123" = ~70px
 Total: ~530px content
-Actual: 350px (truncates if needed, scrollable)
+Actual: 600px (truncates if needed, scrollable)
 ```
 
 ### Container Height Calculation
@@ -250,7 +250,7 @@ Container Height = Badge Height + Debug Label Height + Spacing
 - **Font Choice:** Consolas (monospace) ensures columns align
 - **Font Size:** 7pt - small but readable on typical monitors
 - **Color Contrast:** Yellow/LightGray on dark background (high contrast)
-- **Width:** Fixed at 350px to prevent layout shifts
+- **Width:** Fixed at 600px to prevent layout shifts
 - **Positioning:** Always below badge, consistent placement
 
 ## Theme Compatibility

@@ -302,7 +302,7 @@ namespace Risk_Manager
         private const int LOG_PARTS_MAX = 6; // Max parts in badge logging helpers (LogBadgeUpdate, LogSettingsBadgeUpdate): Caller, Account, LockStatus/IsLocked, PreviousState, Message
         
         // Debug label constants
-        private const int DEBUG_LABEL_WIDTH = 350; // Width of the trading status badge debug label
+        private const int DEBUG_LABEL_WIDTH = 600; // Width of the trading status badge debug label (increased to show full debug text)
         private const int DEBUG_LABEL_HEIGHT = 16; // Height of the trading status badge debug label
         private const int DEBUG_LABEL_SPACING = 2; // Spacing between trading status badge and debug label
         private const int DEBUG_CONTAINER_SPACING = 4; // Extra spacing in container for proper layout
