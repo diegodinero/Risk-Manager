@@ -737,18 +737,18 @@ namespace Risk_Manager
                 statusTableView.GridColor = DarkerBackground;
                 statusTableView.DefaultCellStyle.BackColor = CardBackground;
                 statusTableView.DefaultCellStyle.ForeColor = TextWhite;
-                statusTableView.DefaultCellStyle.SelectionBackColor = CardBackground;
+                statusTableView.DefaultCellStyle.SelectionBackColor = SelectedColor;
                 statusTableView.DefaultCellStyle.SelectionForeColor = TextWhite;
                 
                 // Re-apply lock status colors to cells using helper method
                 if (statusTableView.Rows.Count > STATUS_TABLE_TRADING_ROW)
                 {
                     // Settings Status row
-                    var settingsStatusText = statusTableView.Rows[STATUS_TABLE_SETTINGS_ROW].Cells[1].Value?.ToString() ?? "Unlocked";
+                    var settingsStatusText = statusTableView.Rows[STATUS_TABLE_SETTINGS_ROW].Cells[2].Value?.ToString() ?? "Unlocked";
                     UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, settingsStatusText);
                     
                     // Trading Status row
-                    var tradingStatusText = statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[1].Value?.ToString() ?? "Unlocked";
+                    var tradingStatusText = statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[2].Value?.ToString() ?? "Unlocked";
                     UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, tradingStatusText);
                 }
             }
@@ -2009,20 +2009,33 @@ namespace Risk_Manager
                 {
                     BackColor = CardBackground,
                     ForeColor = TextWhite,
-                    SelectionBackColor = CardBackground,
+                    SelectionBackColor = SelectedColor,
                     SelectionForeColor = TextWhite,
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
                     Padding = new Padding(5, 2, 5, 2)
                 }
             };
             
-            // Add columns
+            // Add columns - Icon, Status Label, Value
+            var iconColumn = new DataGridViewImageColumn
+            {
+                Name = "Icon",
+                HeaderText = "Icon",
+                Width = 24,
+                ImageLayout = DataGridViewImageCellLayout.Zoom,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+            };
+            statusTableView.Columns.Add(iconColumn);
             statusTableView.Columns.Add("Status", "Status");
             statusTableView.Columns.Add("Value", "Value");
             
-            // Add rows for Settings Status and Trading Status
-            statusTableView.Rows.Add("Settings Status:", "Unlocked");
-            statusTableView.Rows.Add("Trading Status:", "Unlocked");
+            // Get icons for the status rows
+            var settingsIcon = GetIconForTitle("Lock Settings") ?? GetIconForTitle("Locked");
+            var tradingIcon = GetIconForTitle("Manual Lock") ?? GetIconForTitle("Locked");
+            
+            // Add rows for Settings Status and Trading Status with icons
+            statusTableView.Rows.Add(settingsIcon, "Settings Status:", "Unlocked");
+            statusTableView.Rows.Add(tradingIcon, "Trading Status:", "Unlocked");
             
             // Apply green color to initial "Unlocked" values using helper method
             UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, "Unlocked");
@@ -2214,7 +2227,8 @@ namespace Risk_Manager
             if (statusTableView != null && statusTableView.Rows.Count > rowIndex && rowIndex >= 0)
             {
                 bool isLocked = statusText.StartsWith("Locked", StringComparison.OrdinalIgnoreCase);
-                statusTableView.Rows[rowIndex].Cells[1].Style.ForeColor = isLocked ? Color.Red : AccentGreen;
+                // Value is now in column 2 (0=Icon, 1=Label, 2=Value)
+                statusTableView.Rows[rowIndex].Cells[2].Style.ForeColor = isLocked ? Color.Red : AccentGreen;
             }
         }
 
@@ -6718,7 +6732,7 @@ namespace Risk_Manager
                         }
                     }
                     
-                    statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[1].Value = lockStatusText;
+                    statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[2].Value = lockStatusText;
                     UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, lockStatusText);
                 }
                 
@@ -6851,7 +6865,7 @@ namespace Risk_Manager
                 {
                     // Settings Status is in row STATUS_TABLE_SETTINGS_ROW
                     var lockStatusText = isLocked ? "Locked" : "Unlocked";
-                    statusTableView.Rows[STATUS_TABLE_SETTINGS_ROW].Cells[1].Value = lockStatusText;
+                    statusTableView.Rows[STATUS_TABLE_SETTINGS_ROW].Cells[2].Value = lockStatusText;
                     UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, lockStatusText);
                 }
                 
