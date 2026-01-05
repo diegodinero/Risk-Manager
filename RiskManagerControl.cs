@@ -6597,18 +6597,15 @@ namespace Risk_Manager
                 // Log the determination with all relevant context
                 LogBadgeUpdate(callerInfo, accountNumber, lockStatusString, isLocked, previousState, switchingAccounts ? "Account switch detected" : null);
 
-                // Only update UI if state has actually changed OR if we're switching accounts
-                // When switching accounts, we ALWAYS need to update the badge to show the new account's state
-                if (!switchingAccounts && previousState.HasValue && previousState.Value == isLocked)
-                {
-                    LogBadgeUpdate(callerInfo, accountNumber, lockStatusString, isLocked, previousState, "Same account, state unchanged, skipping UI update");
-                    return;
-                }
+                // ALWAYS update UI to reflect current JSON state
+                // This ensures the badge always shows the latest data from the settings service
+                // including updated lock duration (e.g., "Locked (2h 30m)" -> "Locked (2h 29m)")
+                // Cache optimization was preventing these updates
                 
                 // Cache the new state for THIS account BEFORE updating UI
                 _accountTradingLockStateCache[accountNumber] = isLocked;
                 
-                LogBadgeUpdate(callerInfo, accountNumber, lockStatusString, isLocked, null, switchingAccounts ? "Account switch - updating UI" : "State changed - updating UI");
+                LogBadgeUpdate(callerInfo, accountNumber, lockStatusString, isLocked, null, switchingAccounts ? "Account switch - updating UI" : "Updating UI from JSON");
                 UpdateTradingStatusBadgeUI(lockStatusString, previousState, callerInfo);
                 
                 // Update which account is currently displayed AFTER successful UI update
