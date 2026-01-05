@@ -707,6 +707,10 @@ namespace Risk_Manager.Data
                         // Check if this account was manually unlocked - if so, don't override with auto-lock
                         // We check if there's a lock info with a reason that is NOT a time-based auto-lock
                         var lockInfo = settings.TradingLock;
+                        
+                        System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Account {accountNumber} is outside trading times and currently unlocked");
+                        System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: lockInfo.LockReason='{lockInfo?.LockReason}', lockInfo.IsLocked={lockInfo?.IsLocked}");
+                        
                         if (lockInfo?.LockReason != null && 
                             !lockInfo.IsLocked &&  // Verify it's actually unlocked
                             !lockInfo.LockReason.Contains("Outside allowed trading times") &&
@@ -723,6 +727,10 @@ namespace Risk_Manager.Data
                             string reason = "Outside allowed trading times";
                             System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Locking account {accountNumber} - {reason}, Duration={lockDuration.Value}");
                             SetTradingLock(accountNumber, true, reason, lockDuration.Value);
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: No lock duration calculated for account {accountNumber}, not locking");
                         }
                     }
                 }
