@@ -178,6 +178,7 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer typeSummaryRefreshTimer;
         private System.Windows.Forms.Timer lockExpirationCheckTimer;
         private System.Windows.Forms.Timer pnlMonitorTimer; // Timer to monitor P&L limits
+        private System.Windows.Forms.Timer badgeRefreshTimer; // Timer to refresh badge from JSON (like Accounts Summary)
         private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
@@ -450,6 +451,12 @@ namespace Risk_Manager
             pnlMonitorTimer = new System.Windows.Forms.Timer { Interval = PNL_MONITOR_INTERVAL_MS };
             pnlMonitorTimer.Tick += (s, e) => MonitorPnLLimits();
             pnlMonitorTimer.Start();
+
+            // Refresh Trading Status badge every second (same as Accounts Summary)
+            // This ensures badge always shows current JSON state in real-time
+            badgeRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            badgeRefreshTimer.Tick += (s, e) => RefreshTradingStatusBadgeFromJSON();
+            badgeRefreshTimer.Start();
 
             // Show Accounts Summary by default
             selectedNavItem = "📊 Accounts Summary";
@@ -6631,6 +6638,62 @@ namespace Risk_Manager
         }
         
         /// <summary>
+        /// Refreshes the Trading Status badge by reading directly from JSON.
+        /// This method is called by a timer every second (same pattern as Accounts Summary).
+        /// It ensures the badge always displays the current persisted state from the settings service.
+        /// </summary>
+        private void RefreshTradingStatusBadgeFromJSON()
+        {
+            // Use InvokeRequired pattern for thread safety (timer runs on different thread)
+            if (InvokeRequired) 
+            { 
+                BeginInvoke(new Action(RefreshTradingStatusBadgeFromJSON)); 
+                return; 
+            }
+
+            try
+            {
+                // Get the currently selected account
+                var accountNumber = GetSelectedAccountNumber();
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    // No account selected, nothing to update
+                    return;
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    // Settings service not ready
+                    return;
+                }
+
+                // Read the current lock status directly from JSON
+                string lockStatusString = settingsService.GetLockStatusString(accountNumber);
+                
+                // Handle null/empty status
+                if (string.IsNullOrWhiteSpace(lockStatusString))
+                {
+                    lockStatusString = LOCK_STATUS_UNLOCKED;
+                }
+
+                // Determine lock state
+                bool isLocked = !lockStatusString.Equals(LOCK_STATUS_UNLOCKED, StringComparison.OrdinalIgnoreCase);
+                
+                // Update the UI directly (no caching, no state comparison - always refresh from JSON)
+                UpdateTradingStatusBadgeUI(lockStatusString, null, "RefreshTradingStatusBadgeFromJSON");
+                
+                // Update the cache to track current state
+                _accountTradingLockStateCache[accountNumber] = isLocked;
+                _currentBadgeAccountNumber = accountNumber;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[RefreshTradingStatusBadgeFromJSON] Error: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
         /// Helper method for consistent, structured logging of badge update operations.
         /// Formats log messages with contextual information for debugging and tracing.
         /// </summary>
@@ -9524,6 +9587,10 @@ namespace Risk_Manager
                 pnlMonitorTimer?.Stop();
                 pnlMonitorTimer?.Dispose();
                 pnlMonitorTimer = null;
+
+                badgeRefreshTimer?.Stop();
+                badgeRefreshTimer?.Dispose();
+                badgeRefreshTimer = null;
 
                 alertSoundPlayer?.Dispose();
                 alertSoundPlayer = null;
