@@ -195,6 +195,9 @@ namespace Risk_Manager
         private readonly Dictionary<string, bool?> _accountTradingLockStateCache = new Dictionary<string, bool?>();
         private readonly Dictionary<string, bool?> _accountSettingsLockStateCache = new Dictionary<string, bool?>();
         
+        // Cache for full settings lock status strings (includes duration) to detect changes between accounts
+        private readonly Dictionary<string, string> _accountSettingsLockStatusCache = new Dictionary<string, string>();
+        
         // Track which account is currently displayed on the badge to force updates when switching accounts
         private string _currentBadgeAccountNumber = null;
         
@@ -6946,23 +6949,23 @@ namespace Risk_Manager
                 // Use explicit check to determine lock state (more robust than != "Unlocked")
                 bool isLocked = lockStatusString.StartsWith("Locked", StringComparison.OrdinalIgnoreCase);
                 
-                // Get the cached state for THIS account
-                bool? previousState = _accountSettingsLockStateCache.TryGetValue(accountNumber, out var cachedState) ? cachedState : null;
+                // Get the cached status string for THIS account (includes duration)
+                string previousStatusString = _accountSettingsLockStatusCache.TryGetValue(accountNumber, out var cachedStatus) ? cachedStatus : null;
                 
                 // Log the determination with all relevant context
-                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, previousState, null);
+                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, isLocked ? (bool?)true : false, null);
 
-                // Only update UI if state has actually changed to avoid redundant updates
-                if (previousState.HasValue && previousState.Value == isLocked)
+                // Only update UI if the status string has actually changed (detects duration changes)
+                if (previousStatusString != null && previousStatusString == lockStatusString)
                 {
-                    LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, previousState, "State unchanged, skipping UI update to prevent redundant refresh");
+                    LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "Status unchanged, skipping UI update to prevent redundant refresh");
                     return;
                 }
                 
-                // Cache the new state for THIS account
-                _accountSettingsLockStateCache[accountNumber] = isLocked;
+                // Cache the new status string for THIS account (includes duration for accurate comparison)
+                _accountSettingsLockStatusCache[accountNumber] = lockStatusString;
                 
-                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "State changed, updating UI");
+                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "Status changed, updating UI");
                 
                 // Update the status table
                 if (statusTableView != null && statusTableView.Rows.Count > STATUS_TABLE_SETTINGS_ROW)
