@@ -6623,7 +6623,7 @@ namespace Risk_Manager
                 _accountTradingLockStateCache[accountNumber] = isLocked;
                 
                 LogBadgeUpdate(callerInfo, accountNumber, lockStatusString, isLocked, null, switchingAccounts ? "Account switch - updating UI" : "Updating UI from JSON");
-                UpdateTradingStatusBadgeUI(lockStatusString, previousState, callerInfo);
+                UpdateTradingStatusBadgeUI(lockStatusString, accountNumber, previousState, callerInfo);
                 
                 // Update which account is currently displayed AFTER successful UI update
                 // This ensures we only mark the account as "switched" once the UI has been updated
@@ -6681,7 +6681,7 @@ namespace Risk_Manager
                 bool isLocked = !lockStatusString.Equals(LOCK_STATUS_UNLOCKED, StringComparison.OrdinalIgnoreCase);
                 
                 // Update the UI directly (always refresh from JSON, no state comparison to skip updates)
-                UpdateTradingStatusBadgeUI(lockStatusString, null, "RefreshTradingStatusBadgeFromJSON");
+                UpdateTradingStatusBadgeUI(lockStatusString, accountNumber, null, "RefreshTradingStatusBadgeFromJSON");
                 
                 // Update the cache to keep it in sync (used by other methods)
                 _accountTradingLockStateCache[accountNumber] = isLocked;
@@ -6778,7 +6778,7 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine(string.Join(", ", parts, 0, index));
         }
 
-        private void UpdateTradingStatusBadgeUI(string lockStatusString, bool? previousStateParam = null, string callerInfoParam = null)
+        private void UpdateTradingStatusBadgeUI(string lockStatusString, string accountNumber, bool? previousStateParam = null, string callerInfoParam = null)
         {
             try
             {
@@ -6801,15 +6801,15 @@ namespace Risk_Manager
                     }
                 }
                 
-                // Get account number for per-account cache
-                var accountNumber = GetSelectedAccountNumber();
+                // Use the passed account number instead of calling GetSelectedAccountNumber() again
+                // This ensures we're using the SAME account number that was used to fetch the lock status
                 bool? currentCachedState = !string.IsNullOrEmpty(accountNumber) && _accountTradingLockStateCache.TryGetValue(accountNumber, out var cached) ? cached : null;
                 
                 // Determine lock state from the status string
                 bool isLocked = !lockStatusString.Equals(LOCK_STATUS_UNLOCKED, StringComparison.OrdinalIgnoreCase);
                 
                 string newState = isLocked ? "Locked (Red)" : "Unlocked (Green)";
-                System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Called from {callerName}, Setting badge to {newState} (lockStatusString='{lockStatusString}'), Previous cache for account '{accountNumber}'={(currentCachedState.HasValue ? currentCachedState.Value.ToString() : "null")}");
+                System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Called from {callerName}, Setting badge to {newState} (lockStatusString='{lockStatusString}') for account '{accountNumber}', Previous cache={(currentCachedState.HasValue ? currentCachedState.Value.ToString() : "null")}");
                 
                 // Update the status table
                 if (statusTableView != null && statusTableView.Rows.Count > STATUS_TABLE_TRADING_ROW)
@@ -6840,7 +6840,7 @@ namespace Risk_Manager
                 // Update debug label with transition information
                 // Use the previousStateParam if provided, otherwise use the cached value
                 bool? previousStateForDebug = previousStateParam ?? currentCachedState;
-                UpdateDebugLabel(callerName, previousStateForDebug, isLocked);
+                UpdateDebugLabel(callerName, previousStateForDebug, isLocked, accountNumber);
                 
                 // IMPORTANT: Update per-account cache to keep it in sync with the badge state
                 // This ensures that direct calls to this method don't desync the cache
@@ -6863,19 +6863,20 @@ namespace Risk_Manager
         /// <param name="callerName">The name of the calling function</param>
         /// <param name="previousState">The previous lock state (true=locked, false=unlocked, null=first call)</param>
         /// <param name="currentState">The current lock state (true=locked, false=unlocked)</param>
-        private void UpdateDebugLabel(string callerName, bool? previousState, bool currentState)
+        /// <param name="accountNumber">The account number being displayed</param>
+        private void UpdateDebugLabel(string callerName, bool? previousState, bool currentState, string accountNumber)
         {
             try
             {
                 if (lblTradingStatusBadgeDebug != null && _badgeDebugMode)
                 {
-                    // Format: "Caller: FunctionName | Prev: False→True | Current: True | Time: HH:MM:SS.mmm"
+                    // Format: "Caller: FunctionName | Prev: False→True | Current: True | Account: 123456 | Time: HH:MM:SS.mmm"
                     var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
                     var prevStateStr = previousState.HasValue ? previousState.Value.ToString() : "null";
                     var stateChangeStr = previousState.HasValue ? $"{prevStateStr}→{currentState}" : $"null→{currentState}";
                     var stateChanged = !previousState.HasValue || previousState.Value != currentState;
                     
-                    var debugText = $"Caller: {callerName} | Prev: {stateChangeStr} | Current: {currentState} | Changed: {stateChanged} | Time: {timestamp}";
+                    var debugText = $"Caller: {callerName} | Prev: {stateChangeStr} | Current: {currentState} | Account: {accountNumber ?? "null"} | Changed: {stateChanged} | Time: {timestamp}";
                     
                     lblTradingStatusBadgeDebug.Text = debugText;
                     
