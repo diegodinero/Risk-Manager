@@ -689,15 +689,41 @@ namespace Risk_Manager.Data
 
             var settings = GetSettings(accountNumber);
 
+            // DEBUG: Always show that this method is being called
+            MessageBox.Show(
+                $"CheckAndEnforceTradeTimeLocks called for account: {accountNumber}\n\n" +
+                $"Has settings: {settings != null}\n" +
+                $"Has TradingTimeRestrictions: {settings?.TradingTimeRestrictions != null}\n" +
+                $"Restrictions count: {settings?.TradingTimeRestrictions?.Count ?? 0}",
+                "CheckAndEnforceTradeTimeLocks - Entry",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+
             // If no time restrictions are set, nothing to enforce
             if (settings?.TradingTimeRestrictions == null || !settings.TradingTimeRestrictions.Any())
+            {
+                MessageBox.Show(
+                    $"No trading time restrictions configured for account {accountNumber}\n\n" +
+                    $"Skipping time-based lock enforcement",
+                    "No Time Restrictions",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
                 return;
+            }
 
             try
             {
                 // Check if trading is currently allowed based on time restrictions
                 bool isTradingAllowed = IsTradingAllowedNow(accountNumber);
                 bool isCurrentlyLocked = IsTradingLocked(accountNumber);
+
+                MessageBox.Show(
+                    $"Account {accountNumber} status check:\n\n" +
+                    $"Trading allowed now: {isTradingAllowed}\n" +
+                    $"Currently locked: {isCurrentlyLocked}",
+                    "Status Check",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
 
                 if (!isTradingAllowed)
                 {
