@@ -66,6 +66,9 @@ public class CustomValueLabel : Panel
 }
 class CustomCardHeaderControl : Panel
 {
+    private Label titleLabel;
+    private PictureBox iconBox;
+    
     public CustomCardHeaderControl(string title, Image icon)
     {
         this.Dock = DockStyle.Top;
@@ -73,7 +76,7 @@ class CustomCardHeaderControl : Panel
         this.BackColor = Color.Transparent;
 
         // Title (Label)
-        var titleLabel = new Label
+        titleLabel = new Label
         {
             Text = title, // Title without emojis
             AutoSize = true,
@@ -85,17 +88,17 @@ class CustomCardHeaderControl : Panel
         };
         this.Controls.Add(titleLabel);
 
-        // Icon (PictureBox)
+        // Icon (PictureBox) - increased size from 24 to 32 for better visibility
         if (icon != null)
         {
-            var iconBox = new PictureBox
+            iconBox = new PictureBox
             {
                 Image = icon,
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Width = 24,
-                Height = 24,
+                Width = 32,
+                Height = 32,
                 Dock = DockStyle.Left,
-                Margin = new Padding(8, 8, 0, 8) // Adjusted margin for proper alignment
+                Margin = new Padding(8, 4, 0, 4) // Adjusted margin for proper alignment
             };
             this.Controls.Add(iconBox);
         }
@@ -105,9 +108,15 @@ class CustomCardHeaderControl : Panel
         // Add spacing below the header
         this.Padding = new Padding(0, 0, 0, 10); // Add padding below the header
     }
+    
+    public Label TitleLabel => titleLabel;
+    public PictureBox IconBox => iconBox;
 }
 class CustomHeaderControl : Panel
 {
+    private Label textLabel;
+    private PictureBox iconBox;
+    
     public CustomHeaderControl(string text, Image icon)
     {
         this.Dock = DockStyle.Top;
@@ -115,7 +124,7 @@ class CustomHeaderControl : Panel
         this.BackColor = Color.Transparent;
 
         // Text (Label)
-        var textLabel = new Label
+        textLabel = new Label
         {
             Text = text,
             AutoSize = true,
@@ -127,21 +136,24 @@ class CustomHeaderControl : Panel
         };
         this.Controls.Add(textLabel);
 
-        // Icon (PictureBox)
+        // Icon (PictureBox) - increased size from 36 to 48 for better visibility
         if (icon != null)
         {
-            var iconBox = new PictureBox
+            iconBox = new PictureBox
             {
                 Image = icon,
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Width = 36,
-                Height = 36,
+                Width = 48,
+                Height = 48,
                 Dock = DockStyle.Left,
-                Margin = new Padding(8, 0, 0, 8) // Add some margin around the icon
+                Margin = new Padding(8, 0, 0, 0) // Add some margin around the icon
             };
             this.Controls.Add(iconBox);
         }
     }
+    
+    public Label TextLabel => textLabel;
+    public PictureBox IconBox => iconBox;
 }
 
 namespace Risk_Manager
@@ -171,6 +183,7 @@ namespace Risk_Manager
         private readonly List<Button> navButtons = new();
         private Label settingsStatusBadge;
         private Label tradingStatusBadge;
+        private DataGridView statusTableView; // Data table displaying settings and trading status
         private Label lblTradingStatusBadgeDebug; // Debug label to show badge transition information
         private ComboBox accountSelector;
         private Label accountNumberDisplay; // Display current account number in UI
@@ -315,6 +328,10 @@ namespace Risk_Manager
         
         // Risk Overview card title constants
         private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
+        
+        // Status table row indices
+        private const int STATUS_TABLE_SETTINGS_ROW = 0; // Settings Status row index
+        private const int STATUS_TABLE_TRADING_ROW = 1;  // Trading Status row index
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -725,6 +742,29 @@ namespace Risk_Manager
                 tradingStatusBadge.Invalidate();
             }
             
+            // Update status table view
+            if (statusTableView != null)
+            {
+                statusTableView.BackgroundColor = CardBackground;
+                statusTableView.GridColor = DarkerBackground;
+                statusTableView.DefaultCellStyle.BackColor = CardBackground;
+                statusTableView.DefaultCellStyle.ForeColor = TextWhite;
+                statusTableView.DefaultCellStyle.SelectionBackColor = CardBackground;
+                statusTableView.DefaultCellStyle.SelectionForeColor = TextWhite;
+                
+                // Re-apply lock status colors to cells using helper method
+                if (statusTableView.Rows.Count > STATUS_TABLE_TRADING_ROW)
+                {
+                    // Settings Status row
+                    var settingsStatusText = statusTableView.Rows[STATUS_TABLE_SETTINGS_ROW].Cells[2].Value?.ToString() ?? "Unlocked";
+                    UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, settingsStatusText);
+                    
+                    // Trading Status row
+                    var tradingStatusText = statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[2].Value?.ToString() ?? "Unlocked";
+                    UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, tradingStatusText);
+                }
+            }
+            
             // Update all page contents
             foreach (var kvp in pageContents)
             {
@@ -770,7 +810,23 @@ namespace Risk_Manager
             if (control == null) return;
 
             // Update background colors based on control type
-            if (control is Panel)
+            if (control is CustomHeaderControl headerControl)
+            {
+                // Update the label text color in CustomHeaderControl
+                if (headerControl.TextLabel != null)
+                {
+                    headerControl.TextLabel.ForeColor = TextWhite;
+                }
+            }
+            else if (control is CustomCardHeaderControl cardHeaderControl)
+            {
+                // Update the label text color in CustomCardHeaderControl
+                if (cardHeaderControl.TitleLabel != null)
+                {
+                    cardHeaderControl.TitleLabel.ForeColor = TextWhite;
+                }
+            }
+            else if (control is Panel)
             {
                 if (control.BackColor == Color.FromArgb(45, 62, 80) ||
                     control.BackColor == Color.FromArgb(20, 20, 20) ||
@@ -1958,13 +2014,71 @@ namespace Risk_Manager
                 Padding = new Padding(0)
             };
 
-            // Settings Unlocked badge
+            // Create status table to display Settings Status and Trading Status
+            statusTableView = new DataGridView
+            {
+                Width = 350,
+                Height = 70,
+                BackgroundColor = CardBackground,
+                GridColor = DarkerBackground,
+                BorderStyle = BorderStyle.None,
+                RowHeadersVisible = false,
+                ColumnHeadersVisible = false,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AllowUserToResizeRows = false,
+                AllowUserToResizeColumns = false,
+                ReadOnly = true,
+                ScrollBars = ScrollBars.None,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                DefaultCellStyle = new DataGridViewCellStyle
+                {
+                    BackColor = CardBackground,
+                    ForeColor = TextWhite,
+                    SelectionBackColor = CardBackground,
+                    SelectionForeColor = TextWhite,
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    Padding = new Padding(5, 2, 5, 2)
+                }
+            };
+            
+            // Add columns - Icon, Status Label, Value
+            var iconColumn = new DataGridViewImageColumn
+            {
+                Name = "Icon",
+                HeaderText = "Icon",
+                Width = 48,
+                ImageLayout = DataGridViewImageCellLayout.Zoom,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+            };
+            statusTableView.Columns.Add(iconColumn);
+            statusTableView.Columns.Add("Status", "Status");
+            statusTableView.Columns.Add("Value", "Value");
+            
+            // Get icons for the status rows
+            var settingsIcon = GetIconForTitle("Lock Settings") ?? GetIconForTitle("Locked");
+            var tradingIcon = GetIconForTitle("Manual Lock") ?? GetIconForTitle("Locked");
+            
+            // Add rows for Settings Status and Trading Status with icons
+            statusTableView.Rows.Add(settingsIcon, "Settings Status:", "Unlocked");
+            statusTableView.Rows.Add(tradingIcon, "Trading Status:", "Unlocked");
+            
+            // Apply green color to initial "Unlocked" values using helper method
+            UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, "Unlocked");
+            UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, "Unlocked");
+            
+            // Keep reference to old badges for backward compatibility
+            // Note: These badges are hidden but maintained to ensure existing code
+            // that may reference these controls continues to work without errors
             settingsStatusBadge = CreateStatusBadge("Settings Unlocked", AccentGreen);
-            badgesPanel.Controls.Add(settingsStatusBadge);
-
-            // Trading Unlocked badge
+            settingsStatusBadge.Visible = false; // Hide but maintain for compatibility
+            
             tradingStatusBadge = CreateStatusBadge("Trading Unlocked", AccentGreen);
-            badgesPanel.Controls.Add(tradingStatusBadge);
+            tradingStatusBadge.Visible = false; // Hide but maintain for compatibility
+            
+            badgesPanel.Controls.Add(statusTableView);
 
             // Theme Changer button (replaces the X button)
             var themeButton = new Button
@@ -2043,6 +2157,8 @@ namespace Risk_Manager
             topPanel.Controls.Add(badgesPanel);
 
             // Debug label positioned above and to the left of the badges
+            // Commented out per user request
+            /*
             lblTradingStatusBadgeDebug = new Label
             {
                 Text = "Debug: Waiting for updates...",
@@ -2065,6 +2181,13 @@ namespace Risk_Manager
             {
                 PositionBadgesPanel(topPanel, badgesPanel);
                 PositionDebugLabel(topPanel, badgesPanel, lblTradingStatusBadgeDebug);
+            };
+            */
+            
+            topPanel.Resize += (s, e) => 
+            {
+                PositionBadgesPanel(topPanel, badgesPanel);
+                // PositionDebugLabel(topPanel, badgesPanel, lblTradingStatusBadgeDebug);
             };
 
             return topPanel;
@@ -2119,6 +2242,26 @@ namespace Risk_Manager
             };
 
             return badge;
+        }
+        
+        /// <summary>
+        /// Helper method to update status table cell color based on lock status.
+        /// Applies green text for "Unlocked" and red text for "Locked".
+        /// </summary>
+        /// <param name="rowIndex">The row index in the status table</param>
+        /// <param name="statusText">The status text (e.g., "Locked", "Unlocked", "Locked (2h 30m)")</param>
+        private void UpdateStatusTableCellColor(int rowIndex, string statusText)
+        {
+            if (statusTableView != null && statusTableView.Rows.Count > rowIndex && rowIndex >= 0)
+            {
+                bool isLocked = statusText.StartsWith("Locked", StringComparison.OrdinalIgnoreCase);
+                // Value is now in column 2 (0=Icon, 1=Label, 2=Value)
+                var cell = statusTableView.Rows[rowIndex].Cells[2];
+                cell.Style.ForeColor = isLocked ? Color.Red : AccentGreen;
+                cell.Style.SelectionForeColor = isLocked ? Color.Red : AccentGreen;
+                cell.Style.BackColor = CardBackground;
+                cell.Style.SelectionBackColor = CardBackground;
+            }
         }
 
         private GraphicsPath GetRoundedRectPath(Rectangle rect, int radius)
@@ -6569,35 +6712,65 @@ namespace Risk_Manager
         {
             try
             {
-                if (tradingStatusBadge != null)
+                // Get caller information for debugging if not provided
+                string callerName;
+                if (!string.IsNullOrEmpty(callerInfoParam))
                 {
-                    string newState = isLocked ? "Locked (Red)" : "Unlocked (Green)";
-                    
-                    // Get caller information for debugging if not provided
-                    string callerName;
-                    if (!string.IsNullOrEmpty(callerInfoParam))
+                    callerName = callerInfoParam;
+                }
+                else
+                {
+                    var stackTrace = new System.Diagnostics.StackTrace(1, true);
+                    var callerFrame = stackTrace.GetFrame(0);
+                    var callerMethod = callerFrame?.GetMethod();
+                    var lineNumber = callerFrame?.GetFileLineNumber() ?? 0;
+                    callerName = callerMethod != null ? $"{callerMethod.DeclaringType?.Name}.{callerMethod.Name}" : "Unknown";
+                    if (lineNumber > 0)
                     {
-                        callerName = callerInfoParam;
+                        callerName = $"{callerName}:{lineNumber}";
                     }
-                    else
+                }
+                
+                // Get account number for per-account cache
+                var accountNumber = GetSelectedAccountNumber();
+                bool? currentCachedState = !string.IsNullOrEmpty(accountNumber) && _accountTradingLockStateCache.TryGetValue(accountNumber, out var cached) ? cached : null;
+                
+                string newState = isLocked ? "Locked (Red)" : "Unlocked (Green)";
+                System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Called from {callerName}, Setting badge to {newState}, Previous cache for account '{accountNumber}'={(currentCachedState.HasValue ? currentCachedState.Value.ToString() : "null")}");
+                
+                // Update the status table
+                if (statusTableView != null && statusTableView.Rows.Count > STATUS_TABLE_TRADING_ROW)
+                {
+                    // Trading Status is in row STATUS_TABLE_TRADING_ROW
+                    var lockStatusText = isLocked ? "Locked" : "Unlocked";
+                    
+                    // Get lock status string with duration if locked
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (isLocked && !string.IsNullOrEmpty(accountNumber) && settingsService.IsInitialized)
                     {
-                        var stackTrace = new System.Diagnostics.StackTrace(1, true);
-                        var callerFrame = stackTrace.GetFrame(0);
-                        var callerMethod = callerFrame?.GetMethod();
-                        var lineNumber = callerFrame?.GetFileLineNumber() ?? 0;
-                        callerName = callerMethod != null ? $"{callerMethod.DeclaringType?.Name}.{callerMethod.Name}" : "Unknown";
-                        if (lineNumber > 0)
+                        var fullLockStatus = settingsService.GetLockStatusString(accountNumber);
+                        if (!string.IsNullOrEmpty(fullLockStatus) && fullLockStatus != "Unlocked")
                         {
-                            callerName = $"{callerName}:{lineNumber}";
+                            // Extract duration if present (e.g., "Locked (2h 30m)")
+                            var startIdx = fullLockStatus.IndexOf('(');
+                            if (startIdx >= 0)
+                            {
+                                lockStatusText = fullLockStatus; // Use full text with duration
+                            }
+                            else
+                            {
+                                lockStatusText = "Locked";
+                            }
                         }
                     }
                     
-                    // Get account number for per-account cache
-                    var accountNumber = GetSelectedAccountNumber();
-                    bool? currentCachedState = !string.IsNullOrEmpty(accountNumber) && _accountTradingLockStateCache.TryGetValue(accountNumber, out var cached) ? cached : null;
-                    
-                    System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Called from {callerName}, Setting badge to {newState}, Previous cache for account '{accountNumber}'={(currentCachedState.HasValue ? currentCachedState.Value.ToString() : "null")}");
-                    
+                    statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[2].Value = lockStatusText;
+                    UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, lockStatusText);
+                }
+                
+                // Also update the old badge for backward compatibility
+                if (tradingStatusBadge != null)
+                {
                     if (isLocked)
                     {
                         tradingStatusBadge.Text = "  Trading Locked  ";
@@ -6609,21 +6782,21 @@ namespace Risk_Manager
                         tradingStatusBadge.BackColor = AccentGreen;
                     }
                     tradingStatusBadge.Refresh(); // Force immediate repaint
-                    
-                    // Update debug label with transition information
-                    // Use the previousStateParam if provided, otherwise use the cached value
-                    bool? previousStateForDebug = previousStateParam ?? currentCachedState;
-                    UpdateDebugLabel(callerName, previousStateForDebug, isLocked);
-                    
-                    // IMPORTANT: Update per-account cache to keep it in sync with the badge state
-                    // This ensures that direct calls to this method don't desync the cache
-                    if (!string.IsNullOrEmpty(accountNumber))
-                    {
-                        _accountTradingLockStateCache[accountNumber] = isLocked;
-                    }
-                    
-                    System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Badge updated to {newState}, Cache for account '{accountNumber}' updated to {isLocked}");
                 }
+                
+                // Update debug label with transition information
+                // Use the previousStateParam if provided, otherwise use the cached value
+                bool? previousStateForDebug = previousStateParam ?? currentCachedState;
+                UpdateDebugLabel(callerName, previousStateForDebug, isLocked);
+                
+                // IMPORTANT: Update per-account cache to keep it in sync with the badge state
+                // This ensures that direct calls to this method don't desync the cache
+                if (!string.IsNullOrEmpty(accountNumber))
+                {
+                    _accountTradingLockStateCache[accountNumber] = isLocked;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Badge updated to {newState}, Cache for account '{accountNumber}' updated to {isLocked}");
             }
             catch (Exception ex)
             {
@@ -6719,7 +6892,16 @@ namespace Risk_Manager
                 
                 LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "State changed, updating UI");
                 
-                // Update the badge UI
+                // Update the status table
+                if (statusTableView != null && statusTableView.Rows.Count > STATUS_TABLE_SETTINGS_ROW)
+                {
+                    // Settings Status is in row STATUS_TABLE_SETTINGS_ROW
+                    var lockStatusText = isLocked ? "Locked" : "Unlocked";
+                    statusTableView.Rows[STATUS_TABLE_SETTINGS_ROW].Cells[2].Value = lockStatusText;
+                    UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, lockStatusText);
+                }
+                
+                // Also update the badge UI for backward compatibility
                 if (settingsStatusBadge != null)
                 {
                     if (isLocked)
@@ -9362,6 +9544,10 @@ namespace Risk_Manager
                 cautionButtonScaledImage = null;
                 try { cautionButtonBgImage?.Dispose(); } catch { }
                 cautionButtonBgImage = null;
+                
+                // Dispose status table view
+                try { statusTableView?.Dispose(); } catch { }
+                statusTableView = null;
             }
             base.Dispose(disposing);
         }
