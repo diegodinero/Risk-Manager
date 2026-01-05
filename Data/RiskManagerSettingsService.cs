@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Windows.Forms;
 
 #nullable enable
 
@@ -708,8 +709,14 @@ namespace Risk_Manager.Data
                         // We check if there's a lock info with a reason that is NOT a time-based auto-lock
                         var lockInfo = settings.TradingLock;
                         
-                        System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Account {accountNumber} is outside trading times and currently unlocked");
-                        System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: lockInfo.LockReason='{lockInfo?.LockReason}', lockInfo.IsLocked={lockInfo?.IsLocked}");
+                        // DEBUG: Show what we're checking
+                        MessageBox.Show(
+                            $"Account {accountNumber} is outside trading times and currently unlocked\n\n" +
+                            $"LockReason: '{lockInfo?.LockReason}'\n" +
+                            $"IsLocked: {lockInfo?.IsLocked}",
+                            "CheckAndEnforceTradeTimeLocks - Debug",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
                         
                         if (lockInfo?.LockReason != null && 
                             !lockInfo.IsLocked &&  // Verify it's actually unlocked
@@ -717,7 +724,13 @@ namespace Risk_Manager.Data
                             !lockInfo.LockReason.Contains("Auto-unlocked"))
                         {
                             // This was likely a manual unlock or other non-time-based unlock - respect it
-                            System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Account {accountNumber} was manually unlocked (reason: '{lockInfo.LockReason}'), respecting manual override");
+                            MessageBox.Show(
+                                $"Account {accountNumber} was manually unlocked\n\n" +
+                                $"Reason: '{lockInfo.LockReason}'\n\n" +
+                                $"Respecting manual override - NOT auto-locking",
+                                "Manual Override Detected",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Information);
                             return;
                         }
                         
@@ -725,12 +738,22 @@ namespace Risk_Manager.Data
                         if (lockDuration.HasValue)
                         {
                             string reason = "Outside allowed trading times";
-                            System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Locking account {accountNumber} - {reason}, Duration={lockDuration.Value}");
+                            MessageBox.Show(
+                                $"Auto-locking account {accountNumber}\n\n" +
+                                $"Reason: {reason}\n" +
+                                $"Duration: {lockDuration.Value}",
+                                "Auto-Lock Applied",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning);
                             SetTradingLock(accountNumber, true, reason, lockDuration.Value);
                         }
                         else
                         {
-                            System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: No lock duration calculated for account {accountNumber}, not locking");
+                            MessageBox.Show(
+                                $"Account {accountNumber}: No lock duration calculated, not locking",
+                                "CheckAndEnforceTradeTimeLocks - Debug",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Information);
                         }
                     }
                 }
