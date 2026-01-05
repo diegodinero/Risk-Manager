@@ -6609,7 +6609,7 @@ namespace Risk_Manager
                 _accountTradingLockStateCache[accountNumber] = isLocked;
                 
                 LogBadgeUpdate(callerInfo, accountNumber, lockStatusString, isLocked, null, switchingAccounts ? "Account switch - updating UI" : "State changed - updating UI");
-                UpdateTradingStatusBadgeUI(isLocked, previousState, callerInfo);
+                UpdateTradingStatusBadgeUI(lockStatusString, previousState, callerInfo);
                 
                 // Update which account is currently displayed AFTER successful UI update
                 // This ensures we only mark the account as "switched" once the UI has been updated
@@ -6708,7 +6708,7 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine(string.Join(", ", parts, 0, index));
         }
 
-        private void UpdateTradingStatusBadgeUI(bool isLocked, bool? previousStateParam = null, string callerInfoParam = null)
+        private void UpdateTradingStatusBadgeUI(string lockStatusString, bool? previousStateParam = null, string callerInfoParam = null)
         {
             try
             {
@@ -6735,37 +6735,20 @@ namespace Risk_Manager
                 var accountNumber = GetSelectedAccountNumber();
                 bool? currentCachedState = !string.IsNullOrEmpty(accountNumber) && _accountTradingLockStateCache.TryGetValue(accountNumber, out var cached) ? cached : null;
                 
+                // Determine lock state from the status string
+                bool isLocked = !lockStatusString.Equals(LOCK_STATUS_UNLOCKED, StringComparison.OrdinalIgnoreCase);
+                
                 string newState = isLocked ? "Locked (Red)" : "Unlocked (Green)";
-                System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Called from {callerName}, Setting badge to {newState}, Previous cache for account '{accountNumber}'={(currentCachedState.HasValue ? currentCachedState.Value.ToString() : "null")}");
+                System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Called from {callerName}, Setting badge to {newState} (lockStatusString='{lockStatusString}'), Previous cache for account '{accountNumber}'={(currentCachedState.HasValue ? currentCachedState.Value.ToString() : "null")}");
                 
                 // Update the status table
                 if (statusTableView != null && statusTableView.Rows.Count > STATUS_TABLE_TRADING_ROW)
                 {
                     // Trading Status is in row STATUS_TABLE_TRADING_ROW
-                    var lockStatusText = isLocked ? "Locked" : "Unlocked";
-                    
-                    // Get lock status string with duration if locked
-                    var settingsService = RiskManagerSettingsService.Instance;
-                    if (isLocked && !string.IsNullOrEmpty(accountNumber) && settingsService.IsInitialized)
-                    {
-                        var fullLockStatus = settingsService.GetLockStatusString(accountNumber);
-                        if (!string.IsNullOrEmpty(fullLockStatus) && fullLockStatus != "Unlocked")
-                        {
-                            // Extract duration if present (e.g., "Locked (2h 30m)")
-                            var startIdx = fullLockStatus.IndexOf('(');
-                            if (startIdx >= 0)
-                            {
-                                lockStatusText = fullLockStatus; // Use full text with duration
-                            }
-                            else
-                            {
-                                lockStatusText = "Locked";
-                            }
-                        }
-                    }
-                    
-                    statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[2].Value = lockStatusText;
-                    UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, lockStatusText);
+                    // Use the lockStatusString directly from the settings service
+                    // This ensures the badge shows exactly what's in the Accounts Summary tab
+                    statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[2].Value = lockStatusString;
+                    UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, lockStatusString);
                 }
                 
                 // Also update the old badge for backward compatibility
