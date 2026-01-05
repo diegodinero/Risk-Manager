@@ -2116,6 +2116,8 @@ namespace Risk_Manager
             topPanel.Controls.Add(badgesPanel);
 
             // Debug label positioned above and to the left of the badges
+            // Commented out per user request
+            /*
             lblTradingStatusBadgeDebug = new Label
             {
                 Text = "Debug: Waiting for updates...",
@@ -2138,6 +2140,13 @@ namespace Risk_Manager
             {
                 PositionBadgesPanel(topPanel, badgesPanel);
                 PositionDebugLabel(topPanel, badgesPanel, lblTradingStatusBadgeDebug);
+            };
+            */
+            
+            topPanel.Resize += (s, e) => 
+            {
+                PositionBadgesPanel(topPanel, badgesPanel);
+                // PositionDebugLabel(topPanel, badgesPanel, lblTradingStatusBadgeDebug);
             };
 
             return topPanel;
