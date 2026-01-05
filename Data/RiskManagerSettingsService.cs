@@ -705,10 +705,15 @@ namespace Risk_Manager.Data
                     if (!isCurrentlyLocked)
                     {
                         // Check if this account was manually unlocked - if so, don't override with auto-lock
+                        // We check if there's a lock info with a reason that is NOT a time-based auto-lock
                         var lockInfo = settings.TradingLock;
-                        if (lockInfo?.LockReason != null && lockInfo.LockReason.Contains("Manual unlock"))
+                        if (lockInfo?.LockReason != null && 
+                            !lockInfo.IsLocked &&  // Verify it's actually unlocked
+                            !lockInfo.LockReason.Contains("Outside allowed trading times") &&
+                            !lockInfo.LockReason.Contains("Auto-unlocked"))
                         {
-                            System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Account {accountNumber} was manually unlocked, respecting manual override");
+                            // This was likely a manual unlock or other non-time-based unlock - respect it
+                            System.Diagnostics.Debug.WriteLine($"CheckAndEnforceTradeTimeLocks: Account {accountNumber} was manually unlocked (reason: '{lockInfo.LockReason}'), respecting manual override");
                             return;
                         }
                         
