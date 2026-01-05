@@ -6668,11 +6668,28 @@ namespace Risk_Manager
 
             try
             {
-                // Get the currently selected account
-                var accountNumber = GetSelectedAccountNumber();
-                if (string.IsNullOrEmpty(accountNumber))
+                // Get the currently selected account directly from the ComboBox to avoid stale cache
+                // This ensures we always use the most recent selection
+                Account currentAccount = null;
+                int currentIndex = -1;
+                
+                if (accountSelector != null && accountSelector.SelectedItem is Account acc)
+                {
+                    currentAccount = acc;
+                    currentIndex = accountSelector.SelectedIndex;
+                }
+                
+                if (currentAccount == null)
                 {
                     // No account selected, nothing to update
+                    return;
+                }
+                
+                // Generate account number using the current account from ComboBox
+                var accountNumber = GetUniqueAccountIdentifier(currentAccount, currentIndex);
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    // Could not generate account identifier
                     return;
                 }
 
