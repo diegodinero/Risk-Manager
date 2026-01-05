@@ -2017,8 +2017,8 @@ namespace Risk_Manager
             // Create status table to display Settings Status and Trading Status
             statusTableView = new DataGridView
             {
-                Width = 250,
-                Height = 60,
+                Width = 350,
+                Height = 70,
                 BackgroundColor = CardBackground,
                 GridColor = DarkerBackground,
                 BorderStyle = BorderStyle.None,
