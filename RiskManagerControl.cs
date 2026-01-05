@@ -6680,10 +6680,10 @@ namespace Risk_Manager
                 // Determine lock state
                 bool isLocked = !lockStatusString.Equals(LOCK_STATUS_UNLOCKED, StringComparison.OrdinalIgnoreCase);
                 
-                // Update the UI directly (no caching, no state comparison - always refresh from JSON)
+                // Update the UI directly (always refresh from JSON, no state comparison to skip updates)
                 UpdateTradingStatusBadgeUI(lockStatusString, null, "RefreshTradingStatusBadgeFromJSON");
                 
-                // Update the cache to track current state
+                // Update the cache to keep it in sync (used by other methods)
                 _accountTradingLockStateCache[accountNumber] = isLocked;
                 _currentBadgeAccountNumber = accountNumber;
             }
