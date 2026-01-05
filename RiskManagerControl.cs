@@ -66,6 +66,9 @@ public class CustomValueLabel : Panel
 }
 class CustomCardHeaderControl : Panel
 {
+    private Label titleLabel;
+    private PictureBox iconBox;
+    
     public CustomCardHeaderControl(string title, Image icon)
     {
         this.Dock = DockStyle.Top;
@@ -73,7 +76,7 @@ class CustomCardHeaderControl : Panel
         this.BackColor = Color.Transparent;
 
         // Title (Label)
-        var titleLabel = new Label
+        titleLabel = new Label
         {
             Text = title, // Title without emojis
             AutoSize = true,
@@ -85,17 +88,17 @@ class CustomCardHeaderControl : Panel
         };
         this.Controls.Add(titleLabel);
 
-        // Icon (PictureBox)
+        // Icon (PictureBox) - increased size from 24 to 32 for better visibility
         if (icon != null)
         {
-            var iconBox = new PictureBox
+            iconBox = new PictureBox
             {
                 Image = icon,
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Width = 24,
-                Height = 24,
+                Width = 32,
+                Height = 32,
                 Dock = DockStyle.Left,
-                Margin = new Padding(8, 8, 0, 8) // Adjusted margin for proper alignment
+                Margin = new Padding(8, 4, 0, 4) // Adjusted margin for proper alignment
             };
             this.Controls.Add(iconBox);
         }
@@ -105,9 +108,15 @@ class CustomCardHeaderControl : Panel
         // Add spacing below the header
         this.Padding = new Padding(0, 0, 0, 10); // Add padding below the header
     }
+    
+    public Label TitleLabel => titleLabel;
+    public PictureBox IconBox => iconBox;
 }
 class CustomHeaderControl : Panel
 {
+    private Label textLabel;
+    private PictureBox iconBox;
+    
     public CustomHeaderControl(string text, Image icon)
     {
         this.Dock = DockStyle.Top;
@@ -115,7 +124,7 @@ class CustomHeaderControl : Panel
         this.BackColor = Color.Transparent;
 
         // Text (Label)
-        var textLabel = new Label
+        textLabel = new Label
         {
             Text = text,
             AutoSize = true,
@@ -127,21 +136,24 @@ class CustomHeaderControl : Panel
         };
         this.Controls.Add(textLabel);
 
-        // Icon (PictureBox)
+        // Icon (PictureBox) - increased size from 36 to 48 for better visibility
         if (icon != null)
         {
-            var iconBox = new PictureBox
+            iconBox = new PictureBox
             {
                 Image = icon,
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Width = 36,
-                Height = 36,
+                Width = 48,
+                Height = 48,
                 Dock = DockStyle.Left,
-                Margin = new Padding(8, 0, 0, 8) // Add some margin around the icon
+                Margin = new Padding(8, 0, 0, 0) // Add some margin around the icon
             };
             this.Controls.Add(iconBox);
         }
     }
+    
+    public Label TextLabel => textLabel;
+    public PictureBox IconBox => iconBox;
 }
 
 namespace Risk_Manager
@@ -798,7 +810,23 @@ namespace Risk_Manager
             if (control == null) return;
 
             // Update background colors based on control type
-            if (control is Panel)
+            if (control is CustomHeaderControl headerControl)
+            {
+                // Update the label text color in CustomHeaderControl
+                if (headerControl.TextLabel != null)
+                {
+                    headerControl.TextLabel.ForeColor = TextWhite;
+                }
+            }
+            else if (control is CustomCardHeaderControl cardHeaderControl)
+            {
+                // Update the label text color in CustomCardHeaderControl
+                if (cardHeaderControl.TitleLabel != null)
+                {
+                    cardHeaderControl.TitleLabel.ForeColor = TextWhite;
+                }
+            }
+            else if (control is Panel)
             {
                 if (control.BackColor == Color.FromArgb(45, 62, 80) ||
                     control.BackColor == Color.FromArgb(20, 20, 20) ||
