@@ -5028,9 +5028,12 @@ namespace Risk_Manager
                 // Update badge only if the selected account changed
                 if (selectedAccountChanged && !string.IsNullOrEmpty(selectedAccountNumber))
                 {
-                    System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: Selected account '{selectedAccountNumber}' state changed - refreshing badge");
-                    // Use UpdateTradingStatusBadge instead of UpdateTradingStatusBadgeUI to ensure proper validation and caching
-                    UpdateTradingStatusBadge();
+                    System.Diagnostics.Debug.WriteLine($"CheckExpiredLocks: Selected account '{selectedAccountNumber}' state changed");
+                    // NOTE: We do NOT update the badge here. The badge should only update from:
+                    // 1. Manual lock/unlock button clicks
+                    // 2. Account selection changes (LoadAccountSettings)
+                    // The badge reads directly from JSON, so it will always show the current state
+                    // without needing timer-triggered updates.
                 }
             }
             catch (Exception ex)
@@ -5163,12 +5166,12 @@ namespace Risk_Manager
                 // Use the service method to check and enforce trading time locks
                 settingsService.CheckAndEnforceTradeTimeLocks(accountId);
 
-                // Update badge status if this is the currently selected account
-                var selectedAccountNumber = GetSelectedAccountNumber();
-                if (selectedAccountNumber == accountId)
-                {
-                    UpdateTradingStatusBadge();
-                }
+                // NOTE: We do NOT update the badge here. The badge should only update from:
+                // 1. Manual lock/unlock button clicks
+                // 2. Account selection changes (LoadAccountSettings)
+                // 3. Explicit refresh actions
+                // The badge reads directly from JSON via GetLockStatusString, so it will always
+                // show the current persisted state without needing timer-triggered updates.
             }
             catch (Exception ex)
             {
@@ -5958,7 +5961,11 @@ namespace Risk_Manager
                 var selectedAccountNumber = GetSelectedAccountNumber();
                 if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == accountId)
                 {
-                    UpdateTradingStatusBadge();
+                    // NOTE: We do NOT update the badge here. The badge should only update from:
+                    // 1. Manual lock/unlock button clicks
+                    // 2. Account selection changes (LoadAccountSettings)
+                    // The badge reads directly from JSON, so it will show the locked state
+                    // when the user next interacts with it.
                     UpdateLockButtonStates();
                 }
             }
@@ -6082,7 +6089,11 @@ namespace Risk_Manager
                 var selectedAccountNumber = GetSelectedAccountNumber();
                 if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == accountId)
                 {
-                    UpdateTradingStatusBadge();
+                    // NOTE: We do NOT update the badge here. The badge should only update from:
+                    // 1. Manual lock/unlock button clicks
+                    // 2. Account selection changes (LoadAccountSettings)
+                    // The badge reads directly from JSON, so it will show the locked state
+                    // when the user next interacts with it.
                     UpdateLockButtonStates();
                 }
             }
@@ -7037,8 +7048,12 @@ namespace Risk_Manager
                     lblManualLockStatus.ForeColor = AccentGreen;
                 }
 
-                // Update top badge as well
-                UpdateTradingStatusBadge();
+                // NOTE: We do NOT update the badge here. The badge should only update from:
+                // 1. Manual lock/unlock button clicks
+                // 2. Account selection changes (LoadAccountSettings)
+                // This method is called by timer-triggered updates, and we don't want the timer
+                // to cause badge updates. The badge reads directly from JSON, so it will always
+                // show the current state without needing timer-triggered updates.
             }
             catch (Exception ex)
             {
