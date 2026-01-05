@@ -316,6 +316,10 @@ namespace Risk_Manager
         
         // Risk Overview card title constants
         private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
+        
+        // Status table row indices
+        private const int STATUS_TABLE_SETTINGS_ROW = 0; // Settings Status row index
+        private const int STATUS_TABLE_TRADING_ROW = 1;  // Trading Status row index
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -736,16 +740,16 @@ namespace Risk_Manager
                 statusTableView.DefaultCellStyle.SelectionBackColor = CardBackground;
                 statusTableView.DefaultCellStyle.SelectionForeColor = TextWhite;
                 
-                // Re-apply lock status colors to cells
-                if (statusTableView.Rows.Count > 1)
+                // Re-apply lock status colors to cells using helper method
+                if (statusTableView.Rows.Count > STATUS_TABLE_TRADING_ROW)
                 {
                     // Settings Status row
-                    var settingsStatusText = statusTableView.Rows[0].Cells[1].Value?.ToString() ?? "Unlocked";
-                    statusTableView.Rows[0].Cells[1].Style.ForeColor = settingsStatusText.StartsWith("Locked") ? Color.Red : AccentGreen;
+                    var settingsStatusText = statusTableView.Rows[STATUS_TABLE_SETTINGS_ROW].Cells[1].Value?.ToString() ?? "Unlocked";
+                    UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, settingsStatusText);
                     
                     // Trading Status row
-                    var tradingStatusText = statusTableView.Rows[1].Cells[1].Value?.ToString() ?? "Unlocked";
-                    statusTableView.Rows[1].Cells[1].Style.ForeColor = tradingStatusText.StartsWith("Locked") ? Color.Red : AccentGreen;
+                    var tradingStatusText = statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[1].Value?.ToString() ?? "Unlocked";
+                    UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, tradingStatusText);
                 }
             }
             
@@ -2020,9 +2024,9 @@ namespace Risk_Manager
             statusTableView.Rows.Add("Settings Status:", "Unlocked");
             statusTableView.Rows.Add("Trading Status:", "Unlocked");
             
-            // Apply green color to initial "Unlocked" values
-            statusTableView.Rows[0].Cells[1].Style.ForeColor = AccentGreen;
-            statusTableView.Rows[1].Cells[1].Style.ForeColor = AccentGreen;
+            // Apply green color to initial "Unlocked" values using helper method
+            UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, "Unlocked");
+            UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, "Unlocked");
             
             // Keep reference to old badges for backward compatibility
             settingsStatusBadge = CreateStatusBadge("Settings Unlocked", AccentGreen);
@@ -2186,6 +2190,21 @@ namespace Risk_Manager
             };
 
             return badge;
+        }
+        
+        /// <summary>
+        /// Helper method to update status table cell color based on lock status.
+        /// Applies green text for "Unlocked" and red text for "Locked".
+        /// </summary>
+        /// <param name="rowIndex">The row index in the status table</param>
+        /// <param name="statusText">The status text (e.g., "Locked", "Unlocked", "Locked (2h 30m)")</param>
+        private void UpdateStatusTableCellColor(int rowIndex, string statusText)
+        {
+            if (statusTableView != null && statusTableView.Rows.Count > rowIndex && rowIndex >= 0)
+            {
+                bool isLocked = statusText.StartsWith("Locked", StringComparison.OrdinalIgnoreCase);
+                statusTableView.Rows[rowIndex].Cells[1].Style.ForeColor = isLocked ? Color.Red : AccentGreen;
+            }
         }
 
         private GraphicsPath GetRoundedRectPath(Rectangle rect, int radius)
@@ -6663,9 +6682,9 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"[UpdateTradingStatusBadgeUI] Called from {callerName}, Setting badge to {newState}, Previous cache for account '{accountNumber}'={(currentCachedState.HasValue ? currentCachedState.Value.ToString() : "null")}");
                 
                 // Update the status table
-                if (statusTableView != null && statusTableView.Rows.Count > 1)
+                if (statusTableView != null && statusTableView.Rows.Count > STATUS_TABLE_TRADING_ROW)
                 {
-                    // Trading Status is in row 1
+                    // Trading Status is in row STATUS_TABLE_TRADING_ROW
                     var lockStatusText = isLocked ? "Locked" : "Unlocked";
                     
                     // Get lock status string with duration if locked
@@ -6688,8 +6707,8 @@ namespace Risk_Manager
                         }
                     }
                     
-                    statusTableView.Rows[1].Cells[1].Value = lockStatusText;
-                    statusTableView.Rows[1].Cells[1].Style.ForeColor = isLocked ? Color.Red : AccentGreen;
+                    statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[1].Value = lockStatusText;
+                    UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, lockStatusText);
                 }
                 
                 // Also update the old badge for backward compatibility
@@ -6817,11 +6836,12 @@ namespace Risk_Manager
                 LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "State changed, updating UI");
                 
                 // Update the status table
-                if (statusTableView != null && statusTableView.Rows.Count > 0)
+                if (statusTableView != null && statusTableView.Rows.Count > STATUS_TABLE_SETTINGS_ROW)
                 {
-                    // Settings Status is in row 0
-                    statusTableView.Rows[0].Cells[1].Value = isLocked ? "Locked" : "Unlocked";
-                    statusTableView.Rows[0].Cells[1].Style.ForeColor = isLocked ? Color.Red : AccentGreen;
+                    // Settings Status is in row STATUS_TABLE_SETTINGS_ROW
+                    var lockStatusText = isLocked ? "Locked" : "Unlocked";
+                    statusTableView.Rows[STATUS_TABLE_SETTINGS_ROW].Cells[1].Value = lockStatusText;
+                    UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, lockStatusText);
                 }
                 
                 // Also update the badge UI for backward compatibility
