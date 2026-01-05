@@ -5169,7 +5169,6 @@ namespace Risk_Manager
                 // NOTE: We do NOT update the badge here. The badge should only update from:
                 // 1. Manual lock/unlock button clicks
                 // 2. Account selection changes (LoadAccountSettings)
-                // 3. Explicit refresh actions
                 // The badge reads directly from JSON via GetLockStatusString, so it will always
                 // show the current persisted state without needing timer-triggered updates.
             }
