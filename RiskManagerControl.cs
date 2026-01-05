@@ -6943,7 +6943,8 @@ namespace Risk_Manager
 
                 // Get current lock status with duration from service (authoritative JSON source)
                 string lockStatusString = settingsService.GetSettingsLockStatusString(accountNumber);
-                bool isLocked = lockStatusString != "Unlocked";
+                // Use explicit check to determine lock state (more robust than != "Unlocked")
+                bool isLocked = lockStatusString.StartsWith("Locked", StringComparison.OrdinalIgnoreCase);
                 
                 // Get the cached state for THIS account
                 bool? previousState = _accountSettingsLockStateCache.TryGetValue(accountNumber, out var cachedState) ? cachedState : null;
