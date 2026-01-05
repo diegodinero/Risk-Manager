@@ -1108,8 +1108,7 @@ namespace Risk_Manager
                 if (accountSelector.SelectedItem is Account account)
                 {
                     selectedAccount = account;
-                    selectedAccountIndex = 0; // Ensure index is set
-                    UpdateAccountNumberDisplay(); // Update display
+                    selectedAccountIndex = 0; // Ensure index is set                  
                     LoadAccountSettings();
                 }
             }
@@ -1131,8 +1130,6 @@ namespace Risk_Manager
                 var accountName = account.Name ?? "NULL";
                 System.Diagnostics.Debug.WriteLine($"Account selected at index {selectedAccountIndex}: Id='{accountId}', Name='{accountName}'");
                 
-                // Update the account number display for both Limits and Manual Lock tabs
-                UpdateAccountNumberDisplay();
                 UpdateAllLockAccountDisplays();
                 
                 // Update settings lock status labels and badge for the new account
@@ -7142,38 +7139,6 @@ namespace Risk_Manager
             }
         }
 
-        private void UpdateAccountNumberDisplay()
-        {
-            try
-            {
-                if (accountNumberDisplay == null)
-                    return;
-                
-                var accountNumber = GetSelectedAccountNumber();
-                
-                // Cache the account number so save operation uses exactly what's displayed
-                displayedAccountNumber = accountNumber;
-                
-                if (string.IsNullOrEmpty(accountNumber))
-                {
-                    accountNumberDisplay.Text = "Account: Not Selected";
-                    accountNumberDisplay.ForeColor = Color.Orange;
-                }
-                else
-                {
-                    accountNumberDisplay.Text = $"Account: {accountNumber}";
-                    accountNumberDisplay.ForeColor = Color.Transparent;
-                }
-                
-                System.Diagnostics.Debug.WriteLine($"UpdateAccountNumberDisplay: Displaying and caching account='{accountNumber}'");
-                accountNumberDisplay.Invalidate();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error updating account number display: {ex.Message}");
-            }
-        }
-
         private void EmergencyFlattenButton_Click(object sender, EventArgs e)
         {
             FlattenAllTrades();
@@ -9017,26 +8982,6 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
-            // Account Number Display - shows which account settings will be saved to
-            // This is hidden but functionality is retained for settings persistence
-            accountNumberDisplay = new Label
-            {
-                Text = "Account: Not Selected",
-                Dock = DockStyle.Top,
-                Height = 30,
-                TextAlign = ContentAlignment.TopLeft,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                Padding = new Padding(10, 5, 10, 0),
-                BackColor = CardBackground,
-                ForeColor = TextWhite,  // Set proper color in case it's made visible later
-                AutoSize = false,
-                BorderStyle = BorderStyle.FixedSingle,
-                Visible = false  // Hide the control while retaining functionality
-            };
-            
-            // Update the display with current account
-            UpdateAccountNumberDisplay();
-
             // Content area
             var contentArea = new Panel
             {
@@ -9059,7 +9004,6 @@ namespace Risk_Manager
             // Add controls in correct order: Bottom first, Fill second, Top last
             mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
-            mainPanel.Controls.Add(accountNumberDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(limitsHeader);
 
