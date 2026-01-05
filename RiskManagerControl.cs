@@ -171,7 +171,7 @@ namespace Risk_Manager
         private readonly List<Button> navButtons = new();
         private Label settingsStatusBadge;
         private Label tradingStatusBadge;
-        private DataGridView statusTableView; // Data table displaying status and trading status
+        private DataGridView statusTableView; // Data table displaying settings and trading status
         private Label lblTradingStatusBadgeDebug; // Debug label to show badge transition information
         private ComboBox accountSelector;
         private Label accountNumberDisplay; // Display current account number in UI
@@ -2029,6 +2029,8 @@ namespace Risk_Manager
             UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, "Unlocked");
             
             // Keep reference to old badges for backward compatibility
+            // Note: These badges are hidden but maintained to ensure existing code
+            // that may reference these controls continues to work without errors
             settingsStatusBadge = CreateStatusBadge("Settings Unlocked", AccentGreen);
             settingsStatusBadge.Visible = false; // Hide but maintain for compatibility
             
