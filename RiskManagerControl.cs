@@ -6909,15 +6909,18 @@ namespace Risk_Manager
 
         /// <summary>
         /// Updates the settings status badge based on the current lock state of the selected account.
+        /// Displays lock duration when settings are locked (e.g., "Settings Locked (2h 30m)").
         /// Uses state caching to prevent redundant UI updates when the lock state hasn't changed.
         /// </summary>
         /// <param name="callerName">The name of the calling method (automatically populated by CallerMemberName attribute)</param>
         /// <remarks>
         /// This method:
+        /// - Queries the settings service (JSON) directly for authoritative lock status with duration
         /// - Validates account selection and service initialization
         /// - Caches the previous state to avoid unnecessary UI updates
         /// - Logs all state transitions and validation issues for debugging
         /// - Only updates the UI when the state actually changes
+        /// - Displays formatted duration (e.g., "Locked (2h 30m)", "Locked (1d 3h 15m)", "Unlocked")
         /// </remarks>
         private void UpdateSettingsStatusBadge([System.Runtime.CompilerServices.CallerMemberName] string callerName = "")
         {
@@ -6938,8 +6941,9 @@ namespace Risk_Manager
                     return;
                 }
 
-                // Get current lock status from service
-                bool isLocked = settingsService.AreSettingsLocked(accountNumber);
+                // Get current lock status with duration from service (authoritative JSON source)
+                string lockStatusString = settingsService.GetSettingsLockStatusString(accountNumber);
+                bool isLocked = lockStatusString != "Unlocked";
                 
                 // Get the cached state for THIS account
                 bool? previousState = _accountSettingsLockStateCache.TryGetValue(accountNumber, out var cachedState) ? cachedState : null;
@@ -6963,17 +6967,18 @@ namespace Risk_Manager
                 if (statusTableView != null && statusTableView.Rows.Count > STATUS_TABLE_SETTINGS_ROW)
                 {
                     // Settings Status is in row STATUS_TABLE_SETTINGS_ROW
-                    var lockStatusText = isLocked ? "Locked" : "Unlocked";
-                    statusTableView.Rows[STATUS_TABLE_SETTINGS_ROW].Cells[2].Value = lockStatusText;
-                    UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, lockStatusText);
+                    // Use the full status string with duration (e.g., "Locked (2h 30m)" or "Unlocked")
+                    statusTableView.Rows[STATUS_TABLE_SETTINGS_ROW].Cells[2].Value = lockStatusString;
+                    UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, lockStatusString);
                 }
                 
-                // Also update the badge UI for backward compatibility
+                // Also update the badge UI with duration information
                 if (settingsStatusBadge != null)
                 {
                     if (isLocked)
                     {
-                        settingsStatusBadge.Text = "  Settings Locked  ";
+                        // Display lock status with duration (e.g., "Settings Locked (2h 30m)")
+                        settingsStatusBadge.Text = $"  Settings {lockStatusString}  ";
                         settingsStatusBadge.BackColor = Color.Red;
                     }
                     else
