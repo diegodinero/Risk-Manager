@@ -737,7 +737,7 @@ namespace Risk_Manager
                 statusTableView.GridColor = DarkerBackground;
                 statusTableView.DefaultCellStyle.BackColor = CardBackground;
                 statusTableView.DefaultCellStyle.ForeColor = TextWhite;
-                statusTableView.DefaultCellStyle.SelectionBackColor = SelectedColor;
+                statusTableView.DefaultCellStyle.SelectionBackColor = CardBackground;
                 statusTableView.DefaultCellStyle.SelectionForeColor = TextWhite;
                 
                 // Re-apply lock status colors to cells using helper method
@@ -2009,7 +2009,7 @@ namespace Risk_Manager
                 {
                     BackColor = CardBackground,
                     ForeColor = TextWhite,
-                    SelectionBackColor = SelectedColor,
+                    SelectionBackColor = CardBackground,
                     SelectionForeColor = TextWhite,
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
                     Padding = new Padding(5, 2, 5, 2)
@@ -2021,7 +2021,7 @@ namespace Risk_Manager
             {
                 Name = "Icon",
                 HeaderText = "Icon",
-                Width = 24,
+                Width = 48,
                 ImageLayout = DataGridViewImageCellLayout.Zoom,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.None
             };
@@ -2228,7 +2228,11 @@ namespace Risk_Manager
             {
                 bool isLocked = statusText.StartsWith("Locked", StringComparison.OrdinalIgnoreCase);
                 // Value is now in column 2 (0=Icon, 1=Label, 2=Value)
-                statusTableView.Rows[rowIndex].Cells[2].Style.ForeColor = isLocked ? Color.Red : AccentGreen;
+                var cell = statusTableView.Rows[rowIndex].Cells[2];
+                cell.Style.ForeColor = isLocked ? Color.Red : AccentGreen;
+                cell.Style.SelectionForeColor = isLocked ? Color.Red : AccentGreen;
+                cell.Style.BackColor = CardBackground;
+                cell.Style.SelectionBackColor = CardBackground;
             }
         }
 
