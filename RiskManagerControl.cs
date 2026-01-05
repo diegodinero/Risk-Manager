@@ -187,7 +187,6 @@ namespace Risk_Manager
         private DataGridView statusTableView; // Data table displaying settings and trading status
         private Label lblTradingStatusBadgeDebug; // Debug label to show badge transition information
         private ComboBox accountSelector;
-        private Label accountNumberDisplay; // Display current account number in UI
         private Button lockTradingButton; // Lock Trading button reference
         private Button unlockTradingButton; // Unlock Trading button reference
         private ComboBox lockDurationComboBox; // Lock duration selector
@@ -2010,21 +2009,6 @@ namespace Risk_Manager
             };
 
             topPanel.Controls.Add(emergencyFlattenButton);
-
-            // Selected Account Label - displayed next to Emergency Flatten button
-            accountNumberDisplay = new Label
-            {
-                Text = "Account: None",
-                Location = new Point(600, 40), // Right of Emergency Flatten button
-                Width = 200,
-                Height = 20,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                ForeColor = Color.Yellow,
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleLeft,
-                AutoSize = false
-            };
-            topPanel.Controls.Add(accountNumberDisplay);
 
             // Status badges container (right-aligned)
             var badgesPanel = new FlowLayoutPanel
@@ -6831,12 +6815,6 @@ namespace Risk_Manager
                     {
                         callerName = $"{callerName}:{lineNumber}";
                     }
-                }
-                
-                // Update the selected account display label
-                if (accountNumberDisplay != null)
-                {
-                    accountNumberDisplay.Text = $"Account: {accountNumber ?? "None"}";
                 }
                 
                 // Use the passed account number instead of calling GetSelectedAccountNumber() again
