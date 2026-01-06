@@ -198,8 +198,9 @@ namespace Risk_Manager
         // Cache for full settings lock status strings (includes duration) to detect changes between accounts
         private readonly Dictionary<string, string> _accountSettingsLockStatusCache = new Dictionary<string, string>();
         
-        // Track which account is currently displayed on the badge to force updates when switching accounts
-        private string _currentBadgeAccountNumber = null;
+        // Track which account is currently displayed on each badge to force updates when switching accounts
+        private string _currentTradingBadgeAccountNumber = null;  // For Trading Status Badge
+        private string _currentSettingsBadgeAccountNumber = null;  // For Settings Status Badge
         
         // Debug mode configuration
         private bool _badgeDebugMode = true; // Enable/disable visual debugging of badge transitions
@@ -6634,7 +6635,7 @@ namespace Risk_Manager
                 bool? previousState = _accountTradingLockStateCache.TryGetValue(accountNumber, out var cachedState) ? cachedState : null;
                 
                 // Check if we're switching to a different account
-                bool switchingAccounts = _currentBadgeAccountNumber != accountNumber;
+                bool switchingAccounts = _currentTradingBadgeAccountNumber != accountNumber;
                 
                 // Log the determination with all relevant context
                 LogBadgeUpdate(callerInfo, accountNumber, lockStatusString, isLocked, previousState, switchingAccounts ? "Account switch detected" : null);
@@ -6652,7 +6653,7 @@ namespace Risk_Manager
                 
                 // Update which account is currently displayed AFTER successful UI update
                 // This ensures we only mark the account as "switched" once the UI has been updated
-                _currentBadgeAccountNumber = accountNumber;
+                _currentTradingBadgeAccountNumber = accountNumber;
             }
             catch (Exception ex)
             {
@@ -6727,7 +6728,7 @@ namespace Risk_Manager
                 
                 // Update the cache to keep it in sync (used by other methods)
                 _accountTradingLockStateCache[accountNumber] = isLocked;
-                _currentBadgeAccountNumber = accountNumber;
+                _currentTradingBadgeAccountNumber = accountNumber;
             }
             catch (Exception ex)
             {
@@ -7019,10 +7020,10 @@ namespace Risk_Manager
 
                 // DEBUG: Account number retrieved (FILE + Debug)
                 LogToFileAndDebug($"[UpdateSettingsStatusBadge] Account Number: '{accountNumber}'");
-                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Current Badge Account: '{_currentBadgeAccountNumber ?? "NULL"}'");
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Current Badge Account: '{_currentSettingsBadgeAccountNumber ?? "NULL"}'");
                 
                 // Check if account has changed (account switch detection)
-                bool accountChanged = _currentBadgeAccountNumber != accountNumber;
+                bool accountChanged = _currentSettingsBadgeAccountNumber != accountNumber;
                 LogToFileAndDebug($"[UpdateSettingsStatusBadge] Account Changed: {accountChanged}");
 
                 var settingsService = RiskManagerSettingsService.Instance;
@@ -7072,7 +7073,7 @@ namespace Risk_Manager
                 // If we reach here, either status changed OR account changed - update UI
                 if (accountChanged)
                 {
-                    LogToFileAndDebug($"[UpdateSettingsStatusBadge] FORCE UPDATE: Account changed from '{_currentBadgeAccountNumber ?? "NULL"}' to '{accountNumber}'");
+                    LogToFileAndDebug($"[UpdateSettingsStatusBadge] FORCE UPDATE: Account changed from '{_currentSettingsBadgeAccountNumber ?? "NULL"}' to '{accountNumber}'");
                 }
                 
                 // Cache the new status string for THIS account (includes duration for accurate comparison)
@@ -7128,8 +7129,8 @@ namespace Risk_Manager
                 
                 // Update the currently displayed account AFTER UI is successfully updated
                 // This ensures we only mark the account as "displayed" once the badge actually shows it
-                _currentBadgeAccountNumber = accountNumber;
-                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Current Badge Account Updated: '{_currentBadgeAccountNumber}' (after UI update)");
+                _currentSettingsBadgeAccountNumber = accountNumber;
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Current Badge Account Updated: '{_currentSettingsBadgeAccountNumber}' (after UI update)");
                 
                 // DEBUG: Exit point logging (FILE + Debug)
                 LogToFileAndDebug($"[UpdateSettingsStatusBadge] === EXIT (Success) === Caller={callerName}, Final Status='{lockStatusString}'");
