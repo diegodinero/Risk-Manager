@@ -5491,9 +5491,11 @@ namespace Risk_Manager
                     if (settings.PositionLossLimit.HasValue && settings.PositionLossLimit.Value < 0)
                     {
                         decimal lossLimit = settings.PositionLossLimit.Value;
+#if DEBUG
                         System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Account: {accountId}, Symbol: {symbol}, " +
                             $"P&L: ${openPnL:F2}, Loss Limit: ${lossLimit:F2}, " +
                             $"Trigger: {openPnL:F2} <= {lossLimit:F2} = {(decimal)openPnL <= lossLimit}");
+#endif
                         
                         if ((decimal)openPnL <= lossLimit)
                         {
@@ -5510,19 +5512,23 @@ namespace Risk_Manager
                                 $"P&L: ${openPnL:F2}, Limit: ${lossLimit:F2}, Account NOT locked");
                         }
                     }
+#if DEBUG
                     else
                     {
                         System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Account: {accountId}, Symbol: {symbol}, " +
                             $"P&L: ${openPnL:F2}, No loss limit configured or limit is not negative");
                     }
+#endif
 
                     // Check Position Profit Target (positive value)
                     if (settings.PositionProfitTarget.HasValue && settings.PositionProfitTarget.Value > 0)
                     {
                         decimal profitTarget = settings.PositionProfitTarget.Value;
+#if DEBUG
                         System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Account: {accountId}, Symbol: {symbol}, " +
                             $"P&L: ${openPnL:F2}, Profit Target: ${profitTarget:F2}, " +
                             $"Trigger: {openPnL:F2} >= {profitTarget:F2} = {(decimal)openPnL >= profitTarget}");
+#endif
                         
                         if ((decimal)openPnL >= profitTarget)
                         {
@@ -5539,11 +5545,13 @@ namespace Risk_Manager
                                 $"P&L: ${openPnL:F2}, Target: ${profitTarget:F2}, Account NOT locked");
                         }
                     }
+#if DEBUG
                     else
                     {
                         System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Account: {accountId}, Symbol: {symbol}, " +
                             $"P&L: ${openPnL:F2}, No profit target configured or target is not positive");
                     }
+#endif
                 }
             }
             catch (Exception ex)
