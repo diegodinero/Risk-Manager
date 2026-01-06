@@ -195,11 +195,19 @@ namespace Risk_Manager
         private readonly Dictionary<string, bool?> _accountTradingLockStateCache = new Dictionary<string, bool?>();
         private readonly Dictionary<string, bool?> _accountSettingsLockStateCache = new Dictionary<string, bool?>();
         
-        // Track which account is currently displayed on the badge to force updates when switching accounts
-        private string _currentBadgeAccountNumber = null;
+        // Cache for full settings lock status strings (includes duration) to detect changes between accounts
+        private readonly Dictionary<string, string> _accountSettingsLockStatusCache = new Dictionary<string, string>();
+        
+        // Track which account is currently displayed on each badge to force updates when switching accounts
+        private string _currentTradingBadgeAccountNumber = null;  // For Trading Status Badge
+        private string _currentSettingsBadgeAccountNumber = null;  // For Settings Status Badge
         
         // Debug mode configuration
         private bool _badgeDebugMode = true; // Enable/disable visual debugging of badge transitions
+        
+        // File-based debug logging for Settings Badge
+        private string _badgeDebugLogPath = null;
+        private readonly object _badgeDebugLogLock = new object();
 
         // Settings input control references for persistence
         private TextBox dailyLossLimitInput;
@@ -1116,8 +1124,18 @@ namespace Risk_Manager
 
         private void AccountSelectorOnSelectedIndexChanged(object sender, EventArgs e)
         {
+            LogToFileAndDebug($"[AccountSelectorOnSelectedIndexChanged] === ACCOUNT CHANGE EVENT START ===");
+            
             if (accountSelector.SelectedItem is Account account)
             {
+                var oldAccountId = selectedAccount?.Id ?? "NULL";
+                var oldAccountName = selectedAccount?.Name ?? "NULL";
+                var newAccountId = account.Id ?? "NULL";
+                var newAccountName = account.Name ?? "NULL";
+                
+                LogToFileAndDebug($"[AccountSelectorOnSelectedIndexChanged] Switching from Account: Id='{oldAccountId}', Name='{oldAccountName}'");
+                LogToFileAndDebug($"[AccountSelectorOnSelectedIndexChanged] Switching to Account: Id='{newAccountId}', Name='{newAccountName}', Index={accountSelector.SelectedIndex}");
+                
                 selectedAccount = account;
                 selectedAccountIndex = accountSelector.SelectedIndex; // Store the index
                 
@@ -1128,14 +1146,16 @@ namespace Risk_Manager
                 // Debug logging to help identify account selection issues
                 var accountId = account.Id ?? "NULL";
                 var accountName = account.Name ?? "NULL";
-                System.Diagnostics.Debug.WriteLine($"Account selected at index {selectedAccountIndex}: Id='{accountId}', Name='{accountName}'");
+                LogToFileAndDebug($"[AccountSelectorOnSelectedIndexChanged] Account selected at index {selectedAccountIndex}: Id='{accountId}', Name='{accountName}'");
                 
                 UpdateAllLockAccountDisplays();
                 
                 // Update settings lock status labels and badge for the new account
+                LogToFileAndDebug($"[AccountSelectorOnSelectedIndexChanged] Calling UpdateSettingsStatusLabelsRecursive...");
                 UpdateSettingsStatusLabelsRecursive(this);
                 
                 // Update manual lock status labels for the new account
+                LogToFileAndDebug($"[AccountSelectorOnSelectedIndexChanged] Calling UpdateManualLockStatusLabelsRecursive...");
                 UpdateManualLockStatusLabelsRecursive(this);
                 
                 // Refresh Stats tab if visible
@@ -1152,7 +1172,14 @@ namespace Risk_Manager
                 }
                 
                 // Load settings for the selected account
+                LogToFileAndDebug($"[AccountSelectorOnSelectedIndexChanged] Calling LoadAccountSettings...");
                 LoadAccountSettings();
+                
+                LogToFileAndDebug($"[AccountSelectorOnSelectedIndexChanged] === ACCOUNT CHANGE EVENT END ===");
+            }
+            else
+            {
+                LogToFileAndDebug($"[AccountSelectorOnSelectedIndexChanged] === ACCOUNT CHANGE EVENT END (Not an Account object) ===");
             }
         }
 
@@ -1352,8 +1379,11 @@ namespace Risk_Manager
                 LoadTradingTimeRestrictions(settings);
 
                 // Update status displays
+                LogToFileAndDebug($"[LoadAccountSettings] About to call UpdateTradingStatusBadge...");
                 UpdateTradingStatusBadge();
+                LogToFileAndDebug($"[LoadAccountSettings] About to call UpdateSettingsStatusBadge...");
                 UpdateSettingsStatusBadge();
+                LogToFileAndDebug($"[LoadAccountSettings] Badge updates completed.");
                 if (settingsLockCheckBox?.Tag is Label statusLabel)
                 {
                     UpdateSettingsLockStatus(statusLabel);
@@ -6605,7 +6635,7 @@ namespace Risk_Manager
                 bool? previousState = _accountTradingLockStateCache.TryGetValue(accountNumber, out var cachedState) ? cachedState : null;
                 
                 // Check if we're switching to a different account
-                bool switchingAccounts = _currentBadgeAccountNumber != accountNumber;
+                bool switchingAccounts = _currentTradingBadgeAccountNumber != accountNumber;
                 
                 // Log the determination with all relevant context
                 LogBadgeUpdate(callerInfo, accountNumber, lockStatusString, isLocked, previousState, switchingAccounts ? "Account switch detected" : null);
@@ -6623,7 +6653,7 @@ namespace Risk_Manager
                 
                 // Update which account is currently displayed AFTER successful UI update
                 // This ensures we only mark the account as "switched" once the UI has been updated
-                _currentBadgeAccountNumber = accountNumber;
+                _currentTradingBadgeAccountNumber = accountNumber;
             }
             catch (Exception ex)
             {
@@ -6698,7 +6728,7 @@ namespace Risk_Manager
                 
                 // Update the cache to keep it in sync (used by other methods)
                 _accountTradingLockStateCache[accountNumber] = isLocked;
-                _currentBadgeAccountNumber = accountNumber;
+                _currentTradingBadgeAccountNumber = accountNumber;
             }
             catch (Exception ex)
             {
@@ -6767,6 +6797,56 @@ namespace Risk_Manager
         /// - "[UpdateSettingsStatusBadge] Caller=LoadAccountSettings, Account='123456', IsLocked=False, PreviousState=True"
         /// - "[UpdateSettingsStatusBadge] Caller=UpdateSettingsLockStatus - No account selected, skipping update"
         /// </remarks>
+        /// <summary>
+        /// Writes a debug message to both Debug output and a log file for Settings Badge diagnostics.
+        /// File logging is enabled automatically when debugging issues.
+        /// </summary>
+        private void LogToFileAndDebug(string message)
+        {
+            // Always write to Debug output
+            System.Diagnostics.Debug.WriteLine(message);
+            
+            // Initialize log file path on first use
+            if (_badgeDebugLogPath == null)
+            {
+                try
+                {
+                    string tempPath = System.IO.Path.GetTempPath();
+                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                    _badgeDebugLogPath = System.IO.Path.Combine(tempPath, $"RiskManager_SettingsBadge_Debug_{timestamp}.log");
+                    
+                    // Write header to new log file
+                    string header = $"=== Settings Badge Debug Log ===\nStarted: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\nLog File: {_badgeDebugLogPath}\n{'='.ToString().PadRight(50, '=')}\n";
+                    System.IO.File.WriteAllText(_badgeDebugLogPath, header);
+                    
+                    System.Diagnostics.Debug.WriteLine($"[SettingsBadge] Debug log file created: {_badgeDebugLogPath}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SettingsBadge] Failed to create debug log file: {ex.Message}");
+                    _badgeDebugLogPath = ""; // Set to empty to prevent retry
+                }
+            }
+            
+            // Write to file if path is valid
+            if (!string.IsNullOrEmpty(_badgeDebugLogPath))
+            {
+                try
+                {
+                    lock (_badgeDebugLogLock)
+                    {
+                        string timestampedMessage = $"[{DateTime.Now:HH:mm:ss.fff}] {message}\n";
+                        System.IO.File.AppendAllText(_badgeDebugLogPath, timestampedMessage);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Don't let file logging errors break the application
+                    System.Diagnostics.Debug.WriteLine($"[SettingsBadge] Error writing to debug log: {ex.Message}");
+                }
+            }
+        }
+
         private void LogSettingsBadgeUpdate(string caller, string accountNumber, bool? isLocked, bool? previousState, string message)
         {
             // Pre-allocate array for better performance
@@ -6909,71 +6989,125 @@ namespace Risk_Manager
 
         /// <summary>
         /// Updates the settings status badge based on the current lock state of the selected account.
+        /// Displays lock duration when settings are locked (e.g., "Settings Locked (2h 30m)").
         /// Uses state caching to prevent redundant UI updates when the lock state hasn't changed.
         /// </summary>
         /// <param name="callerName">The name of the calling method (automatically populated by CallerMemberName attribute)</param>
         /// <remarks>
         /// This method:
+        /// - Queries the settings service (JSON) directly for authoritative lock status with duration
         /// - Validates account selection and service initialization
         /// - Caches the previous state to avoid unnecessary UI updates
         /// - Logs all state transitions and validation issues for debugging
         /// - Only updates the UI when the state actually changes
+        /// - Displays formatted duration (e.g., "Locked (2h 30m)", "Locked (1d 3h 15m)", "Unlocked")
         /// </remarks>
         private void UpdateSettingsStatusBadge([System.Runtime.CompilerServices.CallerMemberName] string callerName = "")
         {
             string accountNumber = null; // Declare outside try block for error logging
             try
             {
+                // DEBUG: Entry point logging (FILE + Debug)
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] === ENTRY === Caller={callerName}");
+                
                 accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
                     LogSettingsBadgeUpdate(callerName, accountNumber, null, null, "No account selected, skipping update");
+                    LogToFileAndDebug($"[UpdateSettingsStatusBadge] === EXIT (No Account) === Caller={callerName}");
                     return;
                 }
+
+                // DEBUG: Account number retrieved (FILE + Debug)
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Account Number: '{accountNumber}'");
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Current Badge Account: '{_currentSettingsBadgeAccountNumber ?? "NULL"}'");
+                
+                // Check if account has changed (account switch detection)
+                bool accountChanged = _currentSettingsBadgeAccountNumber != accountNumber;
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Account Changed: {accountChanged}");
 
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (!settingsService.IsInitialized)
                 {
                     LogSettingsBadgeUpdate(callerName, accountNumber, null, null, "Settings service not initialized, skipping update");
+                    LogToFileAndDebug($"[UpdateSettingsStatusBadge] === EXIT (Service Not Init) === Caller={callerName}");
                     return;
                 }
 
-                // Get current lock status from service
-                bool isLocked = settingsService.AreSettingsLocked(accountNumber);
+                // Get current lock status with duration from service (authoritative JSON source)
+                string lockStatusString = settingsService.GetSettingsLockStatusString(accountNumber);
+                // Use explicit check to determine lock state (more robust than != "Unlocked")
+                bool isLocked = lockStatusString.StartsWith("Locked", StringComparison.OrdinalIgnoreCase);
                 
-                // Get the cached state for THIS account
-                bool? previousState = _accountSettingsLockStateCache.TryGetValue(accountNumber, out var cachedState) ? cachedState : null;
+                // DEBUG: Status retrieved from service (FILE + Debug)
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Service returned: '{lockStatusString}', IsLocked={isLocked}");
+                
+                // Get the cached status string for THIS account (includes duration)
+                string previousStatusString = _accountSettingsLockStatusCache.TryGetValue(accountNumber, out var cachedStatus) ? cachedStatus : null;
+                
+                // DEBUG: Cache state dump (FILE + Debug)
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] === CACHE STATE DUMP ===");
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Cache Size: {_accountSettingsLockStatusCache.Count} entries");
+                foreach (var kvp in _accountSettingsLockStatusCache)
+                {
+                    LogToFileAndDebug($"[UpdateSettingsStatusBadge] Cache Entry: Account='{kvp.Key}' -> Status='{kvp.Value}'");
+                }
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] === END CACHE DUMP ===");
+                
+                // DEBUG: Cache comparison (FILE + Debug)
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Cached Status: '{previousStatusString ?? "NULL"}'");
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Status Comparison: Previous='{previousStatusString ?? "NULL"}' vs Current='{lockStatusString}' Match={previousStatusString == lockStatusString}");
                 
                 // Log the determination with all relevant context
-                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, previousState, null);
+                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, isLocked ? (bool?)true : false, null);
 
-                // Only update UI if state has actually changed to avoid redundant updates
-                if (previousState.HasValue && previousState.Value == isLocked)
+                // Only update UI if the status string has actually changed OR if the account has changed
+                // Account change detection ensures badge updates even if new account has same status as previous account
+                if (!accountChanged && previousStatusString != null && previousStatusString == lockStatusString)
                 {
-                    LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, previousState, "State unchanged, skipping UI update to prevent redundant refresh");
+                    LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "Status unchanged and same account, skipping UI update to prevent redundant refresh");
+                    LogToFileAndDebug($"[UpdateSettingsStatusBadge] === EXIT (Status Unchanged, Same Account) === Caller={callerName}");
                     return;
                 }
                 
-                // Cache the new state for THIS account
-                _accountSettingsLockStateCache[accountNumber] = isLocked;
+                // If we reach here, either status changed OR account changed - update UI
+                if (accountChanged)
+                {
+                    LogToFileAndDebug($"[UpdateSettingsStatusBadge] FORCE UPDATE: Account changed from '{_currentSettingsBadgeAccountNumber ?? "NULL"}' to '{accountNumber}'");
+                }
                 
-                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "State changed, updating UI");
+                // Cache the new status string for THIS account (includes duration for accurate comparison)
+                _accountSettingsLockStatusCache[accountNumber] = lockStatusString;
+                
+                // DEBUG: Cache updated (FILE + Debug)
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Cache Updated: Account='{accountNumber}' -> Status='{lockStatusString}'");
+                
+                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, accountChanged ? "Account changed, updating UI" : "Status changed, updating UI");
                 
                 // Update the status table
                 if (statusTableView != null && statusTableView.Rows.Count > STATUS_TABLE_SETTINGS_ROW)
                 {
                     // Settings Status is in row STATUS_TABLE_SETTINGS_ROW
-                    var lockStatusText = isLocked ? "Locked" : "Unlocked";
-                    statusTableView.Rows[STATUS_TABLE_SETTINGS_ROW].Cells[2].Value = lockStatusText;
-                    UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, lockStatusText);
+                    // Use the full status string with duration (e.g., "Locked (2h 30m)" or "Unlocked")
+                    statusTableView.Rows[STATUS_TABLE_SETTINGS_ROW].Cells[2].Value = lockStatusString;
+                    UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, lockStatusString);
+                    LogToFileAndDebug($"[UpdateSettingsStatusBadge] Status Table Updated: '{lockStatusString}'");
+                }
+                else
+                {
+                    LogToFileAndDebug($"[UpdateSettingsStatusBadge] Status Table NOT updated (statusTableView={statusTableView != null}, RowCount={statusTableView?.Rows.Count ?? 0})");
                 }
                 
-                // Also update the badge UI for backward compatibility
+                // Also update the badge UI with duration information
                 if (settingsStatusBadge != null)
                 {
+                    string oldBadgeText = settingsStatusBadge.Text;
+                    Color oldBadgeColor = settingsStatusBadge.BackColor;
+                    
                     if (isLocked)
                     {
-                        settingsStatusBadge.Text = "  Settings Locked  ";
+                        // Display lock status with duration (e.g., "Settings Locked (2h 30m)")
+                        settingsStatusBadge.Text = $"  Settings {lockStatusString}  ";
                         settingsStatusBadge.BackColor = Color.Red;
                     }
                     else
@@ -6982,13 +7116,31 @@ namespace Risk_Manager
                         settingsStatusBadge.BackColor = AccentGreen;
                     }
                     settingsStatusBadge.Invalidate();
+                    
+                    // DEBUG: Badge UI update confirmation (FILE + Debug)
+                    LogToFileAndDebug($"[UpdateSettingsStatusBadge] Badge UI Updated:");
+                    LogToFileAndDebug($"  Old: Text='{oldBadgeText}', Color={oldBadgeColor.Name}");
+                    LogToFileAndDebug($"  New: Text='{settingsStatusBadge.Text}', Color={settingsStatusBadge.BackColor.Name}");
                 }
+                else
+                {
+                    LogToFileAndDebug($"[UpdateSettingsStatusBadge] Badge UI NOT updated (settingsStatusBadge is NULL)");
+                }
+                
+                // Update the currently displayed account AFTER UI is successfully updated
+                // This ensures we only mark the account as "displayed" once the badge actually shows it
+                _currentSettingsBadgeAccountNumber = accountNumber;
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Current Badge Account Updated: '{_currentSettingsBadgeAccountNumber}' (after UI update)");
+                
+                // DEBUG: Exit point logging (FILE + Debug)
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] === EXIT (Success) === Caller={callerName}, Final Status='{lockStatusString}'");
             }
             catch (Exception ex)
             {
                 // Log error using the structured format with available context
                 LogSettingsBadgeUpdate(callerName ?? "Unknown", accountNumber, null, null, $"ERROR: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Stack trace: {ex.StackTrace}");
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] === EXIT (Exception) === Caller={callerName}");
+                LogToFileAndDebug($"[UpdateSettingsStatusBadge] Stack trace: {ex.StackTrace}");
             }
         }
 
