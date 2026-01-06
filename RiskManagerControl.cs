@@ -5171,9 +5171,12 @@ namespace Risk_Manager
                     // Check Allowed Trading Times - close positions if outside trading hours
                     CheckTradingTimeRestrictions(item.account, uniqueAccountId, settings, settingsService, core);
 
-                    // Check and flatten positions for blocked symbols, contract limits, and P&L limits
-                    // This unified method handles all position-level flattening scenarios
+                    // Check and flatten positions for blocked symbols and contract limit violations
                     CheckAndFlattenBlockedOrLimitExceededPositions(item.account, uniqueAccountId, settings, settingsService, core);
+
+                    // Check position P&L limits (position loss limit and position profit target)
+                    // As documented in POSITION_AND_PROFIT_LIMIT_IMPLEMENTATION.md line 173
+                    CheckPositionPnLLimits(item.account, uniqueAccountId, settings, core);
 
                     // Check Daily P&L limits (account-level checks that may lock the account)
                     CheckDailyPnLLimits(item.account, uniqueAccountId, settings, core);
@@ -5459,21 +5462,39 @@ namespace Risk_Manager
             try
             {
                 if (core.Positions == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Positions null for account {accountId}");
                     return;
+                }
 
                 // Get all positions for this account
                 var accountPositions = core.Positions
                     .Where(p => p != null && p.Account == account)
                     .ToList();
 
+                if (!accountPositions.Any())
+                {
+                    System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] No positions found for account {accountId}");
+                    return;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Checking {accountPositions.Count} positions for account {accountId}, " +
+                    $"PositionLossLimit: {settings.PositionLossLimit?.ToString() ?? "not set"}, " +
+                    $"PositionProfitTarget: {settings.PositionProfitTarget?.ToString() ?? "not set"}");
+
                 foreach (var position in accountPositions)
                 {
                     double openPnL = GetPositionOpenPnL(position);
+                    string symbol = position.Symbol?.Name ?? "Unknown";
 
                     // Check Position Loss Limit (negative value)
                     if (settings.PositionLossLimit.HasValue && settings.PositionLossLimit.Value < 0)
                     {
                         decimal lossLimit = settings.PositionLossLimit.Value;
+                        System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Account: {accountId}, Symbol: {symbol}, " +
+                            $"P&L: ${openPnL:F2}, Loss Limit: ${lossLimit:F2}, " +
+                            $"Trigger: {openPnL:F2} <= {lossLimit:F2} = {(decimal)openPnL <= lossLimit}");
+                        
                         if ((decimal)openPnL <= lossLimit)
                         {
                             // Position loss limit exceeded - close position (but do NOT lock account)
@@ -5489,11 +5510,20 @@ namespace Risk_Manager
                                 $"P&L: ${openPnL:F2}, Limit: ${lossLimit:F2}, Account NOT locked");
                         }
                     }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Account: {accountId}, Symbol: {symbol}, " +
+                            $"P&L: ${openPnL:F2}, No loss limit configured or limit is not negative");
+                    }
 
                     // Check Position Profit Target (positive value)
                     if (settings.PositionProfitTarget.HasValue && settings.PositionProfitTarget.Value > 0)
                     {
                         decimal profitTarget = settings.PositionProfitTarget.Value;
+                        System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Account: {accountId}, Symbol: {symbol}, " +
+                            $"P&L: ${openPnL:F2}, Profit Target: ${profitTarget:F2}, " +
+                            $"Trigger: {openPnL:F2} >= {profitTarget:F2} = {(decimal)openPnL >= profitTarget}");
+                        
                         if ((decimal)openPnL >= profitTarget)
                         {
                             // Position profit target reached - close position (but do NOT lock account)
@@ -5509,6 +5539,11 @@ namespace Risk_Manager
                                 $"P&L: ${openPnL:F2}, Target: ${profitTarget:F2}, Account NOT locked");
                         }
                     }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Account: {accountId}, Symbol: {symbol}, " +
+                            $"P&L: ${openPnL:F2}, No profit target configured or target is not positive");
+                    }
                 }
             }
             catch (Exception ex)
@@ -5518,13 +5553,12 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Unified method to check and flatten positions for blocked symbols, contract limit violations, and P&L limits.
+        /// Checks and flattens positions for blocked symbols and contract limit violations.
         /// Closes positions immediately when any of the following conditions are met:
         /// 1. Symbol is blocked
         /// 2. Position volume exceeds contract limit for the symbol
-        /// 3. Position loss reaches or exceeds the loss limit
-        /// 4. Position profit reaches or exceeds the profit target
         /// Does NOT lock the account - only closes individual positions that breach limits.
+        /// Note: Position P&L limits are checked separately by CheckPositionPnLLimits() method.
         /// </summary>
         private void CheckAndFlattenBlockedOrLimitExceededPositions(Account account, string accountId, AccountSettings settings,
             RiskManagerSettingsService settingsService, Core core)
@@ -5609,50 +5643,6 @@ namespace Risk_Manager
                         System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
                         
                         ClosePosition(position, core);
-                        continue; // Move to next position
-                    }
-
-                    // 2. Check position P&L limits
-                    double openPnL = GetPositionOpenPnL(position);
-
-                    // Check Position Loss Limit (negative value)
-                    if (settings.PositionLossLimit.HasValue && settings.PositionLossLimit.Value < 0)
-                    {
-                        decimal lossLimit = settings.PositionLossLimit.Value;
-                        System.Diagnostics.Debug.WriteLine($"[P&L CHECK] Account: {accountId}, Symbol: {symbol}, P&L: ${openPnL:F2}, Loss Limit: ${lossLimit:F2}, Check: {openPnL:F2} <= {lossLimit:F2} = {(decimal)openPnL <= lossLimit}");
-                        
-                        if ((decimal)openPnL <= lossLimit)
-                        {
-                            string reason = $"Position Loss Limit: P&L ${openPnL:F2} ≤ Limit ${lossLimit:F2}";
-                            System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
-                            
-                            ClosePosition(position, core);
-                            continue; // Move to next position
-                        }
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[P&L CHECK] Account: {accountId}, Symbol: {symbol}, P&L: ${openPnL:F2}, No loss limit configured or limit is not negative");
-                    }
-
-                    // Check Position Profit Target (positive value)
-                    if (settings.PositionProfitTarget.HasValue && settings.PositionProfitTarget.Value > 0)
-                    {
-                        decimal profitTarget = settings.PositionProfitTarget.Value;
-                        System.Diagnostics.Debug.WriteLine($"[P&L CHECK] Account: {accountId}, Symbol: {symbol}, P&L: ${openPnL:F2}, Profit Target: ${profitTarget:F2}, Check: {openPnL:F2} >= {profitTarget:F2} = {(decimal)openPnL >= profitTarget}");
-                        
-                        if ((decimal)openPnL >= profitTarget)
-                        {
-                            string reason = $"Position Profit Target: P&L ${openPnL:F2} ≥ Target ${profitTarget:F2}";
-                            System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
-                            
-                            ClosePosition(position, core);
-                            continue; // Move to next position
-                        }
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[P&L CHECK] Account: {accountId}, Symbol: {symbol}, P&L: ${openPnL:F2}, No profit target configured or target is not positive");
                     }
                 }
             }
