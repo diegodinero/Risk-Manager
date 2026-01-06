@@ -5463,7 +5463,9 @@ namespace Risk_Manager
             {
                 if (core.Positions == null)
                 {
+#if DEBUG
                     System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Positions null for account {accountId}");
+#endif
                     return;
                 }
 
@@ -5474,14 +5476,17 @@ namespace Risk_Manager
 
                 if (!accountPositions.Any())
                 {
+#if DEBUG
                     System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] No positions found for account {accountId}");
+#endif
                     return;
                 }
 
+#if DEBUG
                 System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Checking {accountPositions.Count} positions for account {accountId}, " +
                     $"PositionLossLimit: {settings.PositionLossLimit?.ToString() ?? "not set"}, " +
                     $"PositionProfitTarget: {settings.PositionProfitTarget?.ToString() ?? "not set"}");
-
+#endif
                 foreach (var position in accountPositions)
                 {
                     double openPnL = GetPositionOpenPnL(position);
@@ -5577,7 +5582,9 @@ namespace Risk_Manager
             {
                 if (core.Positions == null)
                 {
+#if DEBUG
                     System.Diagnostics.Debug.WriteLine($"[POSITION FLATTEN] Positions null for account {accountId}");
+#endif
                     return;
                 }
 
@@ -5588,11 +5595,15 @@ namespace Risk_Manager
 
                 if (!accountPositions.Any())
                 {
+#if DEBUG
                     System.Diagnostics.Debug.WriteLine($"[POSITION FLATTEN] No positions found for account {accountId}");
+#endif
                     return;
                 }
 
+#if DEBUG
                 System.Diagnostics.Debug.WriteLine($"[POSITION FLATTEN] Checking {accountPositions.Count} positions for account {accountId} for blocked symbols and contract limits");
+#endif
 
                 // Generate timestamp once for consistent logging across this execution
                 var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
