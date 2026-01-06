@@ -5567,7 +5567,7 @@ namespace Risk_Manager
             {
                 if (core.Positions == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[P&L CHECK] Positions null for account {accountId}");
+                    System.Diagnostics.Debug.WriteLine($"[POSITION FLATTEN] Positions null for account {accountId}");
                     return;
                 }
 
@@ -5578,13 +5578,11 @@ namespace Risk_Manager
 
                 if (!accountPositions.Any())
                 {
-                    System.Diagnostics.Debug.WriteLine($"[P&L CHECK] No positions found for account {accountId}");
+                    System.Diagnostics.Debug.WriteLine($"[POSITION FLATTEN] No positions found for account {accountId}");
                     return;
                 }
 
-                System.Diagnostics.Debug.WriteLine($"[P&L CHECK] Checking {accountPositions.Count} positions for account {accountId}, " +
-                    $"PositionLossLimit: {settings.PositionLossLimit?.ToString() ?? "not set"}, " +
-                    $"PositionProfitTarget: {settings.PositionProfitTarget?.ToString() ?? "not set"}");
+                System.Diagnostics.Debug.WriteLine($"[POSITION FLATTEN] Checking {accountPositions.Count} positions for account {accountId} for blocked symbols and contract limits");
 
                 // Generate timestamp once for consistent logging across this execution
                 var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
