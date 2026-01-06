@@ -6965,6 +6965,11 @@ namespace Risk_Manager
 
                 // DEBUG: Account number retrieved
                 System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Account Number: '{accountNumber}'");
+                System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Current Badge Account: '{_currentBadgeAccountNumber ?? "NULL"}'");
+                
+                // Check if account has changed (account switch detection)
+                bool accountChanged = _currentBadgeAccountNumber != accountNumber;
+                System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Account Changed: {accountChanged}");
 
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (!settingsService.IsInitialized)
@@ -7001,21 +7006,32 @@ namespace Risk_Manager
                 // Log the determination with all relevant context
                 LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, isLocked ? (bool?)true : false, null);
 
-                // Only update UI if the status string has actually changed (detects duration changes)
-                if (previousStatusString != null && previousStatusString == lockStatusString)
+                // Only update UI if the status string has actually changed OR if the account has changed
+                // Account change detection ensures badge updates even if new account has same status as previous account
+                if (!accountChanged && previousStatusString != null && previousStatusString == lockStatusString)
                 {
-                    LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "Status unchanged, skipping UI update to prevent redundant refresh");
-                    System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] === EXIT (Status Unchanged) === Caller={callerName}");
+                    LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "Status unchanged and same account, skipping UI update to prevent redundant refresh");
+                    System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] === EXIT (Status Unchanged, Same Account) === Caller={callerName}");
                     return;
+                }
+                
+                // If we reach here, either status changed OR account changed - update UI
+                if (accountChanged)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] FORCE UPDATE: Account changed from '{_currentBadgeAccountNumber ?? "NULL"}' to '{accountNumber}'");
                 }
                 
                 // Cache the new status string for THIS account (includes duration for accurate comparison)
                 _accountSettingsLockStatusCache[accountNumber] = lockStatusString;
                 
+                // Update the currently displayed account
+                _currentBadgeAccountNumber = accountNumber;
+                
                 // DEBUG: Cache updated
                 System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Cache Updated: Account='{accountNumber}' -> Status='{lockStatusString}'");
+                System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Current Badge Account Updated: '{_currentBadgeAccountNumber}'");
                 
-                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, "Status changed, updating UI");
+                LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, accountChanged ? "Account changed, updating UI" : "Status changed, updating UI");
                 
                 // Update the status table
                 if (statusTableView != null && statusTableView.Rows.Count > STATUS_TABLE_SETTINGS_ROW)
