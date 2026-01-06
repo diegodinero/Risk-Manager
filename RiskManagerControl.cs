@@ -5532,7 +5532,10 @@ namespace Risk_Manager
             try
             {
                 if (core.Positions == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[P&L CHECK] Positions null for account {accountId}");
                     return;
+                }
 
                 // Get all positions for this account
                 var accountPositions = core.Positions
@@ -5540,7 +5543,14 @@ namespace Risk_Manager
                     .ToList();
 
                 if (!accountPositions.Any())
+                {
+                    System.Diagnostics.Debug.WriteLine($"[P&L CHECK] No positions found for account {accountId}");
                     return;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[P&L CHECK] Checking {accountPositions.Count} positions for account {accountId}, " +
+                    $"PositionLossLimit: {settings.PositionLossLimit?.ToString() ?? "not set"}, " +
+                    $"PositionProfitTarget: {settings.PositionProfitTarget?.ToString() ?? "not set"}");
 
                 // Generate timestamp once for consistent logging across this execution
                 var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
@@ -5609,6 +5619,8 @@ namespace Risk_Manager
                     if (settings.PositionLossLimit.HasValue && settings.PositionLossLimit.Value < 0)
                     {
                         decimal lossLimit = settings.PositionLossLimit.Value;
+                        System.Diagnostics.Debug.WriteLine($"[P&L CHECK] Account: {accountId}, Symbol: {symbol}, P&L: ${openPnL:F2}, Loss Limit: ${lossLimit:F2}, Check: {openPnL:F2} <= {lossLimit:F2} = {(decimal)openPnL <= lossLimit}");
+                        
                         if ((decimal)openPnL <= lossLimit)
                         {
                             string reason = $"Position Loss Limit: P&L ${openPnL:F2} ≤ Limit ${lossLimit:F2}";
@@ -5618,11 +5630,17 @@ namespace Risk_Manager
                             continue; // Move to next position
                         }
                     }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[P&L CHECK] Account: {accountId}, Symbol: {symbol}, P&L: ${openPnL:F2}, No loss limit configured or limit is not negative");
+                    }
 
                     // Check Position Profit Target (positive value)
                     if (settings.PositionProfitTarget.HasValue && settings.PositionProfitTarget.Value > 0)
                     {
                         decimal profitTarget = settings.PositionProfitTarget.Value;
+                        System.Diagnostics.Debug.WriteLine($"[P&L CHECK] Account: {accountId}, Symbol: {symbol}, P&L: ${openPnL:F2}, Profit Target: ${profitTarget:F2}, Check: {openPnL:F2} >= {profitTarget:F2} = {(decimal)openPnL >= profitTarget}");
+                        
                         if ((decimal)openPnL >= profitTarget)
                         {
                             string reason = $"Position Profit Target: P&L ${openPnL:F2} ≥ Target ${profitTarget:F2}";
@@ -5631,6 +5649,10 @@ namespace Risk_Manager
                             ClosePosition(position, core);
                             continue; // Move to next position
                         }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[P&L CHECK] Account: {accountId}, Symbol: {symbol}, P&L: ${openPnL:F2}, No profit target configured or target is not positive");
                     }
                 }
             }
