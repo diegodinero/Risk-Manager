@@ -5175,7 +5175,7 @@ namespace Risk_Manager
                     CheckAndFlattenBlockedOrLimitExceededPositions(item.account, uniqueAccountId, settings, settingsService, core);
 
                     // Check position P&L limits (position loss limit and position profit target)
-                    // As documented in POSITION_AND_PROFIT_LIMIT_IMPLEMENTATION.md line 173
+                    // As documented in POSITION_AND_PROFIT_LIMIT_IMPLEMENTATION.md
                     CheckPositionPnLLimits(item.account, uniqueAccountId, settings, core);
 
                     // Check Daily P&L limits (account-level checks that may lock the account)
@@ -5492,9 +5492,10 @@ namespace Risk_Manager
                     {
                         decimal lossLimit = settings.PositionLossLimit.Value;
 #if DEBUG
+                        bool willTrigger = (decimal)openPnL <= lossLimit;
                         System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Account: {accountId}, Symbol: {symbol}, " +
                             $"P&L: ${openPnL:F2}, Loss Limit: ${lossLimit:F2}, " +
-                            $"Trigger: {openPnL:F2} <= {lossLimit:F2} = {(decimal)openPnL <= lossLimit}");
+                            $"Trigger: {openPnL:F2} <= {lossLimit:F2} = {willTrigger}");
 #endif
                         
                         if ((decimal)openPnL <= lossLimit)
@@ -5525,9 +5526,10 @@ namespace Risk_Manager
                     {
                         decimal profitTarget = settings.PositionProfitTarget.Value;
 #if DEBUG
+                        bool willTrigger = (decimal)openPnL >= profitTarget;
                         System.Diagnostics.Debug.WriteLine($"[POSITION P&L CHECK] Account: {accountId}, Symbol: {symbol}, " +
                             $"P&L: ${openPnL:F2}, Profit Target: ${profitTarget:F2}, " +
-                            $"Trigger: {openPnL:F2} >= {profitTarget:F2} = {(decimal)openPnL >= profitTarget}");
+                            $"Trigger: {openPnL:F2} >= {profitTarget:F2} = {willTrigger}");
 #endif
                         
                         if ((decimal)openPnL >= profitTarget)
@@ -5564,7 +5566,7 @@ namespace Risk_Manager
         /// Checks and flattens positions for blocked symbols and contract limit violations.
         /// Closes positions immediately when any of the following conditions are met:
         /// 1. Symbol is blocked
-        /// 2. Position volume exceeds contract limit for the symbol
+        /// 2. Number of open positions for a symbol exceeds the configured contract limit
         /// Does NOT lock the account - only closes individual positions that breach limits.
         /// Note: Position P&L limits are checked separately by CheckPositionPnLLimits() method.
         /// </summary>
