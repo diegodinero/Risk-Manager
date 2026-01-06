@@ -7024,12 +7024,8 @@ namespace Risk_Manager
                 // Cache the new status string for THIS account (includes duration for accurate comparison)
                 _accountSettingsLockStatusCache[accountNumber] = lockStatusString;
                 
-                // Update the currently displayed account
-                _currentBadgeAccountNumber = accountNumber;
-                
                 // DEBUG: Cache updated
                 System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Cache Updated: Account='{accountNumber}' -> Status='{lockStatusString}'");
-                System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Current Badge Account Updated: '{_currentBadgeAccountNumber}'");
                 
                 LogSettingsBadgeUpdate(callerName, accountNumber, isLocked, null, accountChanged ? "Account changed, updating UI" : "Status changed, updating UI");
                 
@@ -7075,6 +7071,11 @@ namespace Risk_Manager
                 {
                     System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Badge UI NOT updated (settingsStatusBadge is NULL)");
                 }
+                
+                // Update the currently displayed account AFTER UI is successfully updated
+                // This ensures we only mark the account as "displayed" once the badge actually shows it
+                _currentBadgeAccountNumber = accountNumber;
+                System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] Current Badge Account Updated: '{_currentBadgeAccountNumber}' (after UI update)");
                 
                 // DEBUG: Exit point logging
                 System.Diagnostics.Debug.WriteLine($"[UpdateSettingsStatusBadge] === EXIT (Success) === Caller={callerName}, Final Status='{lockStatusString}'");
