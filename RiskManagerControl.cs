@@ -2541,22 +2541,15 @@ namespace Risk_Manager
             header.Dock = DockStyle.Top;
             header.Margin = new Padding(10, 0, 0, 0); // External spacing
 
-            // Button panel for Lock All Accounts button
-            var buttonPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 60,
-                BackColor = DarkBackground,
-                Padding = new Padding(10, 10, 10, 10)
-            };
-
-            // Lock All Accounts button with icons on both sides
+            // Lock All Accounts button with icons on both sides - positioned on the right of the header
             var lockAllButton = new Panel
             {
                 Width = 280,
-                Height = 40,
+                Height = 36,
                 BackColor = Color.FromArgb(192, 0, 0), // Dark red
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                Dock = DockStyle.Right,
+                Margin = new Padding(0, 2, 10, 2) // Small margin for alignment
             };
 
             // Load the lock icon once for reuse
@@ -2571,7 +2564,7 @@ namespace Risk_Manager
                         Image = new Bitmap(lockIconResource, new Size(24, 24)),
                         SizeMode = PictureBoxSizeMode.CenterImage,
                         Width = 32,
-                        Height = 40,
+                        Height = 36,
                         Dock = DockStyle.Left,
                         BackColor = Color.Transparent
                     };
@@ -2583,7 +2576,7 @@ namespace Risk_Manager
                         Image = new Bitmap(lockIconResource, new Size(24, 24)),
                         SizeMode = PictureBoxSizeMode.CenterImage,
                         Width = 32,
-                        Height = 40,
+                        Height = 36,
                         Dock = DockStyle.Right,
                         BackColor = Color.Transparent
                     };
@@ -2620,7 +2613,8 @@ namespace Risk_Manager
                 }
             }
 
-            buttonPanel.Controls.Add(lockAllButton);
+            // Add button to header (must be added before text/icon due to dock order)
+            header.Controls.Add(lockAllButton);
 
             statsGrid = new DataGridView
             {
@@ -2688,7 +2682,6 @@ namespace Risk_Manager
             // Add controls in correct order: Fill control first, then Top controls
             // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(statsGrid);
-            mainPanel.Controls.Add(buttonPanel);
             mainPanel.Controls.Add(header);
             return mainPanel;
         }
@@ -4852,7 +4845,7 @@ namespace Risk_Manager
 
         /// <summary>
         /// Handles the Lock All Accounts button click event.
-        /// Locks all connected accounts until 5PM EST with a single confirmation.
+        /// Locks all connected accounts (both trading and settings) until 5PM EST with a single confirmation.
         /// </summary>
         private void BtnLockAllAccounts_Click(object sender, EventArgs e)
         {
@@ -4868,7 +4861,10 @@ namespace Risk_Manager
                 // Show confirmation dialog
                 var confirmResult = MessageBox.Show(
                     "Are you sure you want to lock ALL accounts until 5PM ET?\n\n" +
-                    "This will disable all Buy/Sell buttons for every account until the lock expires.",
+                    "This will:\n" +
+                    "• Disable all Buy/Sell buttons\n" +
+                    "• Lock all settings (limits, symbols, toggles, etc.)\n\n" +
+                    "Both locks will remain until 5PM ET today.",
                     "Confirm Lock All Accounts",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Warning);
@@ -4900,7 +4896,7 @@ namespace Risk_Manager
                 int lockedCount = 0;
                 int accountIndex = 0;
 
-                // Lock all accounts
+                // Lock all accounts (both trading and settings)
                 foreach (var account in core.Accounts)
                 {
                     if (account == null)
@@ -4914,14 +4910,18 @@ namespace Risk_Manager
 
                     try
                     {
-                        // Lock the account via Core API
+                        // Lock the account trading via Core API
                         lockMethod.Invoke(core, new object[] { account });
 
-                        // Update the settings service to track the lock status
-                        string reason = $"Lock All Accounts button - {durationText}";
-                        settingsService.SetTradingLock(accountNumber, true, reason, duration);
+                        // Update the settings service to track the trading lock status
+                        string tradingReason = $"Lock All Accounts button - {durationText}";
+                        settingsService.SetTradingLock(accountNumber, true, tradingReason, duration);
 
-                        System.Diagnostics.Debug.WriteLine($"[LOCK ALL] Locked account: {accountNumber} for {durationText}");
+                        // Also lock the settings for this account
+                        string settingsReason = $"Lock All Accounts button - {durationText}";
+                        settingsService.SetSettingsLock(accountNumber, true, settingsReason, duration);
+
+                        System.Diagnostics.Debug.WriteLine($"[LOCK ALL] Locked account (trading & settings): {accountNumber} for {durationText}");
                         lockedCount++;
                     }
                     catch (Exception ex)
@@ -4937,15 +4937,17 @@ namespace Risk_Manager
 
                 // Update UI
                 UpdateTradingStatusBadge();
+                UpdateSettingsStatusBadge();
                 UpdateLockButtonStates();
                 RefreshAccountsSummary();
                 RefreshAccountStats();
                 UpdateManualLockStatusLabelsRecursive(this);
+                UpdateSettingsControlsEnabledState();
 
                 // Show success message
                 MessageBox.Show(
                     $"Successfully locked {lockedCount} account(s) until 5PM ET.\n\n" +
-                    "All Buy/Sell buttons are now disabled.",
+                    "All Buy/Sell buttons and settings are now locked.",
                     "Accounts Locked",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
