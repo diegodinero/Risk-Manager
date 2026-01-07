@@ -2548,7 +2548,7 @@ namespace Risk_Manager
             var buttonContainer = new Panel
             {
                 Dock = DockStyle.Right,
-                Width = 400, // Fixed width appropriate for button (250px) + margins
+                Width = 1000, // Fixed width appropriate for button (250px) + margins
                 Height = 40,
                 BackColor = Color.Transparent
             };
@@ -2574,9 +2574,9 @@ namespace Risk_Manager
                     // Left icon - adjusted to match button height
                     var leftPicture = new PictureBox
                     {
-                        Image = new Bitmap(lockIconResource, new Size(20, 20)),
+                        Image = new Bitmap(lockIconResource, new Size(30, 30)),
                         SizeMode = PictureBoxSizeMode.CenterImage,
-                        Width = 28,
+                        Width = 40,
                         Height = 26,  // Match button height
                         Dock = DockStyle.Left,
                         BackColor = Color.Transparent
@@ -2586,9 +2586,9 @@ namespace Risk_Manager
                     // Right icon - adjusted to match button height
                     var rightPicture = new PictureBox
                     {
-                        Image = new Bitmap(lockIconResource, new Size(20, 20)),
+                        Image = new Bitmap(lockIconResource, new Size(30, 30)),
                         SizeMode = PictureBoxSizeMode.CenterImage,
-                        Width = 28,
+                        Width = 40,
                         Height = 26,  // Match button height
                         Dock = DockStyle.Right,
                         BackColor = Color.Transparent
