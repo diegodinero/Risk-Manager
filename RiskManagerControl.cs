@@ -2550,40 +2550,86 @@ namespace Risk_Manager
                 Padding = new Padding(10, 10, 10, 10)
             };
 
-            // Lock All Accounts button with icons
-            var lockAllButton = new Button
+            // Lock All Accounts button with icons on both sides
+            var lockAllButton = new Panel
             {
-                Text = "  Lock Trading  ",
-                Width = 250,
+                Width = 280,
                 Height = 40,
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
                 BackColor = Color.FromArgb(192, 0, 0), // Dark red
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                TextImageRelation = TextImageRelation.ImageBeforeText,
-                ImageAlign = ContentAlignment.MiddleLeft,
-                TextAlign = ContentAlignment.MiddleCenter
+                Cursor = Cursors.Hand
             };
-            lockAllButton.FlatAppearance.BorderSize = 0;
 
-            // Add lock icon on the left
+            // Left icon
             try
             {
-                var lockIcon = Properties.Resources.lockallaccounts;
-                if (lockIcon != null)
+                var lockIconLeft = Properties.Resources.lockallaccounts;
+                if (lockIconLeft != null)
                 {
-                    // Resize icon to fit button
-                    var resizedIcon = new Bitmap(lockIcon, new Size(24, 24));
-                    lockAllButton.Image = resizedIcon;
+                    var leftPicture = new PictureBox
+                    {
+                        Image = new Bitmap(lockIconLeft, new Size(24, 24)),
+                        SizeMode = PictureBoxSizeMode.CenterImage,
+                        Width = 32,
+                        Height = 40,
+                        Dock = DockStyle.Left,
+                        BackColor = Color.Transparent
+                    };
+                    lockAllButton.Controls.Add(leftPicture);
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Could not load lockallaccounts icon: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Could not load left lockallaccounts icon: {ex.Message}");
             }
 
+            // Right icon
+            try
+            {
+                var lockIconRight = Properties.Resources.lockallaccounts;
+                if (lockIconRight != null)
+                {
+                    var rightPicture = new PictureBox
+                    {
+                        Image = new Bitmap(lockIconRight, new Size(24, 24)),
+                        SizeMode = PictureBoxSizeMode.CenterImage,
+                        Width = 32,
+                        Height = 40,
+                        Dock = DockStyle.Right,
+                        BackColor = Color.Transparent
+                    };
+                    lockAllButton.Controls.Add(rightPicture);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Could not load right lockallaccounts icon: {ex.Message}");
+            }
+
+            // Center label with text
+            var lockAllLabel = new Label
+            {
+                Text = "Lock Trading",
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.White,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent
+            };
+            lockAllButton.Controls.Add(lockAllLabel);
+
+            // Make the entire panel clickable
             lockAllButton.Click += BtnLockAllAccounts_Click;
+            lockAllLabel.Click += BtnLockAllAccounts_Click;
+            
+            // Add click handlers to icons too (pass through to parent)
+            foreach (Control ctrl in lockAllButton.Controls)
+            {
+                if (ctrl is PictureBox)
+                {
+                    ctrl.Click += BtnLockAllAccounts_Click;
+                }
+            }
+
             buttonPanel.Controls.Add(lockAllButton);
 
             statsGrid = new DataGridView
