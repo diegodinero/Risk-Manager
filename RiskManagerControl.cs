@@ -2559,15 +2559,16 @@ namespace Risk_Manager
                 Cursor = Cursors.Hand
             };
 
-            // Left icon
+            // Load the lock icon once for reuse
             try
             {
-                var lockIconLeft = Properties.Resources.lockallaccounts;
-                if (lockIconLeft != null)
+                var lockIconResource = Properties.Resources.lockallaccounts;
+                if (lockIconResource != null)
                 {
+                    // Left icon
                     var leftPicture = new PictureBox
                     {
-                        Image = new Bitmap(lockIconLeft, new Size(24, 24)),
+                        Image = new Bitmap(lockIconResource, new Size(24, 24)),
                         SizeMode = PictureBoxSizeMode.CenterImage,
                         Width = 32,
                         Height = 40,
@@ -2575,22 +2576,11 @@ namespace Risk_Manager
                         BackColor = Color.Transparent
                     };
                     lockAllButton.Controls.Add(leftPicture);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Could not load left lockallaccounts icon: {ex.Message}");
-            }
 
-            // Right icon
-            try
-            {
-                var lockIconRight = Properties.Resources.lockallaccounts;
-                if (lockIconRight != null)
-                {
+                    // Right icon
                     var rightPicture = new PictureBox
                     {
-                        Image = new Bitmap(lockIconRight, new Size(24, 24)),
+                        Image = new Bitmap(lockIconResource, new Size(24, 24)),
                         SizeMode = PictureBoxSizeMode.CenterImage,
                         Width = 32,
                         Height = 40,
@@ -2602,7 +2592,7 @@ namespace Risk_Manager
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Could not load right lockallaccounts icon: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Could not load lockallaccounts icons: {ex.Message}");
             }
 
             // Center label with text
@@ -4975,6 +4965,8 @@ namespace Risk_Manager
             try
             {
                 // Get current time in Eastern Time
+                // Note: "Eastern Standard Time" is used for consistency with existing code throughout the application.
+                // This timezone ID works on Windows and handles both EST and EDT automatically.
                 TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
                 DateTime nowEt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
 
