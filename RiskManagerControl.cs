@@ -2542,10 +2542,13 @@ namespace Risk_Manager
             header.Margin = new Padding(10, 0, 0, 0); // External spacing
 
             // Create a container panel to hold the centered Lock Trading button
+            // Width of 400px provides adequate space for centering while staying within
+            // typical window widths. The button (250px) centers within this space,
+            // creating approximately 75px margins on each side for visual balance.
             var buttonContainer = new Panel
             {
                 Dock = DockStyle.Right,
-                Width = 400, // Wide enough to provide centering space
+                Width = 400, // Fixed width appropriate for button (250px) + margins
                 Height = 40,
                 BackColor = Color.Transparent
             };
@@ -10183,15 +10186,15 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Centers a control horizontally within its container panel
+        /// Centers a control horizontally and vertically within its container panel
         /// </summary>
         private void CenterControlInContainer(Panel container, Control control)
         {
             if (container == null || control == null) return;
             
-            // Calculate centered position
-            int centerX = (container.Width - control.Width) / 2;
-            int centerY = (container.Height - control.Height) / 2;
+            // Calculate centered position with proper rounding to avoid truncation issues
+            int centerX = (int)Math.Round((container.Width - control.Width) / 2.0);
+            int centerY = (int)Math.Round((container.Height - control.Height) / 2.0);
             
             // Set the control's location to center it
             control.Location = new Point(centerX, centerY);
