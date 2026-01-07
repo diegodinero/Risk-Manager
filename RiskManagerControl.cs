@@ -2541,6 +2541,81 @@ namespace Risk_Manager
             header.Dock = DockStyle.Top;
             header.Margin = new Padding(10, 0, 0, 0); // External spacing
 
+            // Lock All Accounts button with icons on both sides - positioned on the right of the header
+            var lockAllButton = new Panel
+            {
+                Width = 280,
+                Height = 36,
+                BackColor = Color.FromArgb(192, 0, 0), // Dark red
+                Cursor = Cursors.Hand,
+                Dock = DockStyle.Right,
+                Margin = new Padding(0, 2, 10, 2) // Small margin for alignment
+            };
+
+            // Load the lock icon once for reuse
+            try
+            {
+                var lockIconResource = Properties.Resources.lockallaccounts;
+                if (lockIconResource != null)
+                {
+                    // Left icon
+                    var leftPicture = new PictureBox
+                    {
+                        Image = new Bitmap(lockIconResource, new Size(24, 24)),
+                        SizeMode = PictureBoxSizeMode.CenterImage,
+                        Width = 32,
+                        Height = 36,
+                        Dock = DockStyle.Left,
+                        BackColor = Color.Transparent
+                    };
+                    lockAllButton.Controls.Add(leftPicture);
+
+                    // Right icon
+                    var rightPicture = new PictureBox
+                    {
+                        Image = new Bitmap(lockIconResource, new Size(24, 24)),
+                        SizeMode = PictureBoxSizeMode.CenterImage,
+                        Width = 32,
+                        Height = 36,
+                        Dock = DockStyle.Right,
+                        BackColor = Color.Transparent
+                    };
+                    lockAllButton.Controls.Add(rightPicture);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Could not load lockallaccounts icons: {ex.Message}");
+            }
+
+            // Center label with text
+            var lockAllLabel = new Label
+            {
+                Text = "Lock Trading",
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.White,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent
+            };
+            lockAllButton.Controls.Add(lockAllLabel);
+
+            // Make the entire panel clickable
+            lockAllButton.Click += BtnLockAllAccounts_Click;
+            lockAllLabel.Click += BtnLockAllAccounts_Click;
+            
+            // Add click handlers to icons too (pass through to parent)
+            foreach (Control ctrl in lockAllButton.Controls)
+            {
+                if (ctrl is PictureBox)
+                {
+                    ctrl.Click += BtnLockAllAccounts_Click;
+                }
+            }
+
+            // Add button to header (must be added before text/icon due to dock order)
+            header.Controls.Add(lockAllButton);
+
             statsGrid = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -4765,6 +4840,176 @@ namespace Risk_Manager
             {
                 System.Diagnostics.Debug.WriteLine($"[ERROR] Error unlocking account: {ex.Message}\n{ex.StackTrace}");
                 MessageBox.Show($"Error unlocking the account: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Handles the Lock All Accounts button click event.
+        /// Locks all connected accounts (both trading and settings) until 5PM EST with a single confirmation.
+        /// </summary>
+        private void BtnLockAllAccounts_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var core = Core.Instance;
+                if (core == null || core.Accounts == null || !core.Accounts.Any())
+                {
+                    MessageBox.Show("No accounts available to lock.", "No Accounts", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // Show confirmation dialog
+                var confirmResult = MessageBox.Show(
+                    "Are you sure you want to lock ALL accounts until 5PM ET?\n\n" +
+                    "This will:\n" +
+                    "• Disable all Buy/Sell buttons\n" +
+                    "• Lock all settings (limits, symbols, toggles, etc.)\n\n" +
+                    "Both locks will remain until 5PM ET today.",
+                    "Confirm Lock All Accounts",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (confirmResult != DialogResult.Yes)
+                {
+                    return; // User cancelled
+                }
+
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    MessageBox.Show("Settings service not initialized.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Get lock duration for "All Day (Until 5PM ET)"
+                TimeSpan? duration = GetLockDurationForAllDay();
+                string durationText = "All Day (Until 5PM ET)";
+
+                // Check if the LockAccount method exists
+                var lockMethod = core.GetType().GetMethod("LockAccount");
+                if (lockMethod == null)
+                {
+                    MessageBox.Show("LockAccount method not available in Core API.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                int lockedCount = 0;
+                int accountIndex = 0;
+
+                // Lock all accounts (both trading and settings)
+                foreach (var account in core.Accounts)
+                {
+                    if (account == null)
+                    {
+                        accountIndex++;
+                        continue;
+                    }
+
+                    // Generate account identifier
+                    string accountNumber = GetUniqueAccountIdentifier(account, accountIndex);
+
+                    try
+                    {
+                        // Lock the account trading via Core API
+                        lockMethod.Invoke(core, new object[] { account });
+
+                        // Update the settings service to track the trading lock status
+                        string tradingReason = $"Lock All Accounts button - {durationText}";
+                        settingsService.SetTradingLock(accountNumber, true, tradingReason, duration);
+
+                        // Also lock the settings for this account
+                        string settingsReason = $"Lock All Accounts button - {durationText}";
+                        settingsService.SetSettingsLock(accountNumber, true, settingsReason, duration);
+
+                        System.Diagnostics.Debug.WriteLine($"[LOCK ALL] Locked account (trading & settings): {accountNumber} for {durationText}");
+                        lockedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to lock account {accountNumber}: {ex.Message}");
+                    }
+
+                    accountIndex++;
+                }
+
+                // Play success sound
+                PlayLockSound();
+
+                // Update UI
+                UpdateTradingStatusBadge();
+                UpdateSettingsStatusBadge();
+                UpdateLockButtonStates();
+                RefreshAccountsSummary();
+                RefreshAccountStats();
+                UpdateManualLockStatusLabelsRecursive(this);
+                UpdateSettingsControlsEnabledState();
+
+                // Show success message
+                MessageBox.Show(
+                    $"Successfully locked {lockedCount} account(s) until 5PM ET.\n\n" +
+                    "All Buy/Sell buttons and settings are now locked.",
+                    "Accounts Locked",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Error locking all accounts: {ex.Message}\n{ex.StackTrace}");
+                MessageBox.Show($"Error locking accounts: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Calculates the lock duration for "All Day (Until 5PM ET)".
+        /// </summary>
+        private TimeSpan? GetLockDurationForAllDay()
+        {
+            try
+            {
+                // Get current time in Eastern Time
+                // Note: "Eastern Standard Time" is used for consistency with existing code throughout the application.
+                // This timezone ID works on Windows and handles both EST and EDT automatically.
+                TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                DateTime nowEt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
+
+                // Calculate time until 5 PM ET today (or tomorrow if past 5 PM ET)
+                var targetTime = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0); // 5 PM ET today
+                if (nowEt >= targetTime)
+                {
+                    // If past 5 PM ET, lock until 5 PM ET tomorrow
+                    targetTime = targetTime.AddDays(1);
+                }
+                return targetTime - nowEt;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error calculating lock duration: {ex.Message}");
+                return TimeSpan.FromHours(8); // Fallback to 8 hours
+            }
+        }
+
+        /// <summary>
+        /// Plays the metal clink sound effect for lock confirmation.
+        /// </summary>
+        private void PlayLockSound()
+        {
+            try
+            {
+                var audioStream = Properties.Resources.metal_clink;
+                if (audioStream != null)
+                {
+                    // Dispose existing player if any
+                    alertSoundPlayer?.Dispose();
+
+                    // Create and store the player as a field to prevent premature garbage collection
+                    alertSoundPlayer = new SoundPlayer(audioStream);
+                    // Play asynchronously - sound plays in background without blocking
+                    alertSoundPlayer.Play();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error playing lock sound: {ex.Message}");
             }
         }
 
