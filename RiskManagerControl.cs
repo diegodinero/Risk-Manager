@@ -2541,15 +2541,25 @@ namespace Risk_Manager
             header.Dock = DockStyle.Top;
             header.Margin = new Padding(10, 0, 0, 0); // External spacing
 
-            // Lock All Accounts button with icons on both sides - positioned on the right of the header
+            // Create a container panel to hold the centered Lock Trading button
+            var buttonContainer = new Panel
+            {
+                Dock = DockStyle.Right,
+                Width = 400, // Wide enough to provide centering space
+                Height = 40,
+                BackColor = Color.Transparent
+            };
+
+            // Lock All Accounts button with icons on both sides - centered in container
+            // Dimensions match Emergency Flatten button (250x26)
             var lockAllButton = new Panel
             {
-                Width = 280,
-                Height = 36,
+                Width = 250,  // Match Emergency Flatten button width
+                Height = 26,  // Match Emergency Flatten button height
                 BackColor = Color.FromArgb(192, 0, 0), // Dark red
                 Cursor = Cursors.Hand,
-                Dock = DockStyle.Right,
-                Margin = new Padding(0, 2, 10, 2) // Small margin for alignment
+                // Position will be set in buttonContainer.Resize event for centering
+                Anchor = AnchorStyles.None  // Allow free positioning for centering
             };
 
             // Load the lock icon once for reuse
@@ -2558,25 +2568,25 @@ namespace Risk_Manager
                 var lockIconResource = Properties.Resources.lockallaccounts;
                 if (lockIconResource != null)
                 {
-                    // Left icon
+                    // Left icon - adjusted to match button height
                     var leftPicture = new PictureBox
                     {
-                        Image = new Bitmap(lockIconResource, new Size(24, 24)),
+                        Image = new Bitmap(lockIconResource, new Size(20, 20)),
                         SizeMode = PictureBoxSizeMode.CenterImage,
-                        Width = 32,
-                        Height = 36,
+                        Width = 28,
+                        Height = 26,  // Match button height
                         Dock = DockStyle.Left,
                         BackColor = Color.Transparent
                     };
                     lockAllButton.Controls.Add(leftPicture);
 
-                    // Right icon
+                    // Right icon - adjusted to match button height
                     var rightPicture = new PictureBox
                     {
-                        Image = new Bitmap(lockIconResource, new Size(24, 24)),
+                        Image = new Bitmap(lockIconResource, new Size(20, 20)),
                         SizeMode = PictureBoxSizeMode.CenterImage,
-                        Width = 32,
-                        Height = 36,
+                        Width = 28,
+                        Height = 26,  // Match button height
                         Dock = DockStyle.Right,
                         BackColor = Color.Transparent
                     };
@@ -2592,7 +2602,7 @@ namespace Risk_Manager
             var lockAllLabel = new Label
             {
                 Text = "Lock Trading",
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),  // Adjusted for smaller button height
                 ForeColor = Color.White,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Fill,
@@ -2613,8 +2623,17 @@ namespace Risk_Manager
                 }
             }
 
-            // Add button to header (must be added before text/icon due to dock order)
-            header.Controls.Add(lockAllButton);
+            // Center the button in the container
+            CenterControlInContainer(buttonContainer, lockAllButton);
+            
+            // Re-center on resize
+            buttonContainer.Resize += (s, e) => CenterControlInContainer(buttonContainer, lockAllButton);
+
+            // Add button to container
+            buttonContainer.Controls.Add(lockAllButton);
+            
+            // Add container to header (must be added before text/icon due to dock order)
+            header.Controls.Add(buttonContainer);
 
             statsGrid = new DataGridView
             {
@@ -10161,6 +10180,21 @@ namespace Risk_Manager
             mainPanel.Controls.Add(titleLabel);
 
             return mainPanel;
+        }
+
+        /// <summary>
+        /// Centers a control horizontally within its container panel
+        /// </summary>
+        private void CenterControlInContainer(Panel container, Control control)
+        {
+            if (container == null || control == null) return;
+            
+            // Calculate centered position
+            int centerX = (container.Width - control.Width) / 2;
+            int centerY = (container.Height - control.Height) / 2;
+            
+            // Set the control's location to center it
+            control.Location = new Point(centerX, centerY);
         }
 
         /// <summary>
