@@ -162,6 +162,16 @@ namespace Risk_Manager.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap left_and_right_arrows {
+            get {
+                object obj = ResourceManager.GetObject("left-and-right-arrows", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap limit {
             get {
                 object obj = ResourceManager.GetObject("limit", resourceCulture);
