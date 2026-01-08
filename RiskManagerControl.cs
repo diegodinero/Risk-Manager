@@ -249,6 +249,10 @@ namespace Risk_Manager
         // Tooltip for draggable title
         private ToolTip titleToolTip;
         
+        // Navigation collapse state
+        private bool isNavigationCollapsed = false;
+        private Button navToggleButton;
+        
         // Cache for WPF window dragging to avoid repeated reflection
         private object cachedWpfWindow;
         private PropertyInfo cachedLeftProperty;
@@ -368,6 +372,8 @@ namespace Risk_Manager
         };
 
         private const int LeftPanelWidth = 200;
+        private const int LeftPanelCollapsedWidth = 50; // Width when collapsed (show only icons)
+        private const int LeftPanelExpandedWidth = 200; // Width when expanded (show icons + text)
 
         public RiskManagerControl()
         {
@@ -1035,6 +1041,64 @@ namespace Risk_Manager
             
             // Default to Blue theme
             return Theme.Blue;
+        }
+
+        /// <summary>
+        /// Saves the navigation collapse state preference to a file.
+        /// </summary>
+        private void SaveNavigationCollapsePreference()
+        {
+            try
+            {
+                var navStatePath = GetNavigationStatePreferencesPath();
+                File.WriteAllText(navStatePath, isNavigationCollapsed.ToString());
+                System.Diagnostics.Debug.WriteLine($"Navigation collapse state saved: {isNavigationCollapsed}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save navigation collapse state: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Loads the saved navigation collapse state preference from a file.
+        /// </summary>
+        private bool LoadNavigationCollapsePreference()
+        {
+            try
+            {
+                var navStatePath = GetNavigationStatePreferencesPath();
+                if (File.Exists(navStatePath))
+                {
+                    var stateString = File.ReadAllText(navStatePath).Trim();
+                    if (bool.TryParse(stateString, out var isCollapsed))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Navigation collapse state loaded: {isCollapsed}");
+                        return isCollapsed;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load navigation collapse state: {ex.Message}");
+            }
+            
+            // Default to expanded (not collapsed)
+            return false;
+        }
+
+        /// <summary>
+        /// Gets the path to the navigation state preferences file.
+        /// </summary>
+        private string GetNavigationStatePreferencesPath()
+        {
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var folderPath = Path.Combine(appDataPath, "RiskManager");
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+            return Path.Combine(folderPath, "navigation_state.txt");
         }
 
         private void RefreshAccountDropdown()
@@ -2310,16 +2374,46 @@ namespace Risk_Manager
 
         private Panel CreateLeftSidebar()
         {
+            // Load saved navigation collapse state
+            isNavigationCollapsed = LoadNavigationCollapsePreference();
+            
+            var initialWidth = isNavigationCollapsed ? LeftPanelCollapsedWidth : LeftPanelExpandedWidth;
+            
             var sidebarPanel = new Panel
             {
                 Dock = DockStyle.Left,
-                Width = LeftPanelWidth,
-                MinimumSize = new Size(LeftPanelWidth, 0),
+                Width = initialWidth,
+                MinimumSize = new Size(LeftPanelCollapsedWidth, 0),
                 AutoSize = false,
                 AutoScroll = true,
                 BackColor = DarkerBackground,
-                Padding = new Padding(0, 10, 0, 10)
+                Padding = new Padding(0, 0, 0, 10)
             };
+
+            // Create toggle button header
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 40,
+                BackColor = DarkerBackground,
+                Padding = new Padding(5)
+            };
+
+            navToggleButton = new Button
+            {
+                Text = isNavigationCollapsed ? "➡️" : "⬅️",
+                Width = 30,
+                Height = 30,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI Emoji", 10f, FontStyle.Regular),
+                Cursor = Cursors.Hand,
+                Location = new Point(5, 5)
+            };
+            navToggleButton.FlatAppearance.BorderSize = 0;
+            navToggleButton.Click += ToggleNavigation;
+            headerPanel.Controls.Add(navToggleButton);
 
             var navContainer = new FlowLayoutPanel
             {
@@ -2339,6 +2433,7 @@ namespace Risk_Manager
             }
 
             sidebarPanel.Controls.Add(navContainer);
+            sidebarPanel.Controls.Add(headerPanel);
             return sidebarPanel;
         }
 
@@ -2387,25 +2482,30 @@ namespace Risk_Manager
                     xOffset += imgWidth + 8;
                 }
 
-                // Display text without leading emoji token
+                // Display text without leading emoji token (only if not collapsed)
                 var raw = (btn.Text ?? string.Empty).Trim();
                 string displayText = raw;
-                var idx = raw.IndexOf(' ');
-                if (idx >= 0 && IconMap.Any(k => k.Key.Equals(raw.Substring(0, idx), StringComparison.OrdinalIgnoreCase) || k.Key.Equals(raw.Substring(idx + 1), StringComparison.OrdinalIgnoreCase)))
+                
+                // Hide text when collapsed
+                if (!isNavigationCollapsed)
                 {
-                    displayText = raw.Substring(idx + 1);
-                }
-                else if (icon != null)
-                {
-                    // remove leading token if present
-                    if (idx >= 0)
+                    var idx = raw.IndexOf(' ');
+                    if (idx >= 0 && IconMap.Any(k => k.Key.Equals(raw.Substring(0, idx), StringComparison.OrdinalIgnoreCase) || k.Key.Equals(raw.Substring(idx + 1), StringComparison.OrdinalIgnoreCase)))
+                    {
                         displayText = raw.Substring(idx + 1);
-                }
+                    }
+                    else if (icon != null)
+                    {
+                        // remove leading token if present
+                        if (idx >= 0)
+                            displayText = raw.Substring(idx + 1);
+                    }
 
-                using (var brush = new SolidBrush(btn.ForeColor))
-                {
-                    var sf = new StringFormat { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Near };
-                    e.Graphics.DrawString(displayText, btn.Font, brush, new RectangleF(xOffset, 0, btn.Width - xOffset, btn.Height), sf);
+                    using (var brush = new SolidBrush(btn.ForeColor))
+                    {
+                        var sf = new StringFormat { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Near };
+                        e.Graphics.DrawString(displayText, btn.Font, brush, new RectangleF(xOffset, 0, btn.Width - xOffset, btn.Height), sf);
+                    }
                 }
             };
 
@@ -2429,6 +2529,57 @@ namespace Risk_Manager
             };
 
             return button;
+        }
+
+        /// <summary>
+        /// Toggles the navigation panel between collapsed and expanded states with animation.
+        /// </summary>
+        private void ToggleNavigation(object sender, EventArgs e)
+        {
+            isNavigationCollapsed = !isNavigationCollapsed;
+            
+            // Update toggle button arrow
+            navToggleButton.Text = isNavigationCollapsed ? "➡️" : "⬅️";
+            
+            // Calculate target width
+            int targetWidth = isNavigationCollapsed ? LeftPanelCollapsedWidth : LeftPanelExpandedWidth;
+            
+            // Animate the width change
+            var timer = new System.Windows.Forms.Timer { Interval = 10 };
+            int currentWidth = leftPanel.Width;
+            int step = (targetWidth - currentWidth) / 10; // 10 steps for animation
+            if (step == 0) step = targetWidth > currentWidth ? 1 : -1;
+            
+            timer.Tick += (s, args) =>
+            {
+                if (Math.Abs(leftPanel.Width - targetWidth) <= Math.Abs(step))
+                {
+                    leftPanel.Width = targetWidth;
+                    timer.Stop();
+                    timer.Dispose();
+                    
+                    // Update button widths after animation completes
+                    foreach (var btn in navButtons)
+                    {
+                        btn.Width = targetWidth - 4;
+                    }
+                }
+                else
+                {
+                    leftPanel.Width += step;
+                }
+                
+                // Force all buttons to repaint during animation
+                foreach (var btn in navButtons)
+                {
+                    btn.Invalidate();
+                }
+            };
+            
+            timer.Start();
+            
+            // Save preference
+            SaveNavigationCollapsePreference();
         }
 
         private void UpdateNavButtonStates()
@@ -2679,7 +2830,7 @@ namespace Risk_Manager
             statsGrid.Columns.Add("ProfitTarget", "Profit Target");
             statsGrid.Columns.Add("Drawdown", "Drawdown");
 
-            // Allow row selection to populate Stats tab
+            // Allow row selection to populate Stats tab and sync with account dropdown
             statsGrid.SelectionChanged += (s, e) =>
             {
                 if (statsGrid.SelectedRows.Count > 0)
@@ -2691,6 +2842,52 @@ namespace Risk_Manager
                         if (core?.Accounts is System.Collections.ICollection accts && selectedRowIndex < accts.Count)
                         {
                             selectedAccount = core.Accounts.ElementAtOrDefault(selectedRowIndex);
+                        }
+                    }
+                }
+            };
+
+            // Add CellClick handler to sync grid selection with account dropdown
+            statsGrid.CellClick += (s, e) =>
+            {
+                if (e.RowIndex >= 0 && e.RowIndex < statsGrid.Rows.Count)
+                {
+                    var core = Core.Instance;
+                    if (core?.Accounts != null && e.RowIndex < core.Accounts.Count())
+                    {
+                        var clickedAccount = core.Accounts.ElementAtOrDefault(e.RowIndex);
+                        if (clickedAccount != null)
+                        {
+                            // Update the account selector dropdown to match the clicked row
+                            if (accountSelector != null)
+                            {
+                                // Find the account in the dropdown
+                                for (int i = 0; i < accountSelector.Items.Count; i++)
+                                {
+                                    if (accountSelector.Items[i] is Account dropdownAccount && 
+                                        dropdownAccount.Id == clickedAccount.Id)
+                                    {
+                                        // Temporarily disable the event handler to avoid recursive calls
+                                        accountSelector.SelectedIndexChanged -= AccountSelectorOnSelectedIndexChanged;
+                                        accountSelector.SelectedIndex = i;
+                                        accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
+                                        
+                                        // Manually trigger the account selection logic
+                                        selectedAccount = clickedAccount;
+                                        selectedAccountIndex = i;
+                                        displayedAccountNumber = clickedAccount.Id ?? clickedAccount.Name ?? "Unknown";
+                                        
+                                        // Load settings for this account
+                                        LoadAccountSettings(displayedAccountNumber);
+                                        
+                                        // Update badges
+                                        UpdateSettingsStatusBadge();
+                                        UpdateTradingStatusBadge();
+                                        
+                                        break;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
