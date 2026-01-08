@@ -264,6 +264,8 @@ namespace Risk_Manager
         private Image themeButtonScaledImage;
 
         private Image cautionButtonScaledImage;
+        
+        private Image navToggleButtonScaledImage;
 
         // add near other private Image fields in RiskManagerControl class
         private Image cautionButtonBgImage;
@@ -2401,17 +2403,47 @@ namespace Risk_Manager
 
             navToggleButton = new Button
             {
-                Text = isNavigationCollapsed ? "➡️" : "⬅️",
+                Text = "", // use image instead of emoji
                 Width = 30,
                 Height = 30,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = CardBackground,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI Emoji", 10f, FontStyle.Regular),
                 Cursor = Cursors.Hand,
                 Location = new Point(5, 5)
             };
             navToggleButton.FlatAppearance.BorderSize = 0;
+            
+            // Set the left-and-right-arrows image
+            try
+            {
+                var navArrowImg = Properties.Resources.left_and_right_arrows;
+                if (navArrowImg != null)
+                {
+                    // Dispose previous scaled image to avoid leaks
+                    navToggleButtonScaledImage?.Dispose();
+                    
+                    // Scale to fit inside button with small padding
+                    int pad = 4; // padding inside button
+                    navToggleButtonScaledImage = ScaleImageToFit(navArrowImg, Math.Max(8, navToggleButton.Width - pad), Math.Max(8, navToggleButton.Height - pad));
+                    
+                    navToggleButton.Image = navToggleButtonScaledImage;
+                    navToggleButton.ImageAlign = ContentAlignment.MiddleCenter;
+                }
+                else
+                {
+                    // fallback to emoji if resource is missing
+                    navToggleButton.Text = isNavigationCollapsed ? "➡️" : "⬅️";
+                    navToggleButton.Font = new Font("Segoe UI Emoji", 10f, FontStyle.Regular);
+                }
+            }
+            catch
+            {
+                // fallback to emoji if resource loading fails
+                navToggleButton.Text = isNavigationCollapsed ? "➡️" : "⬅️";
+                navToggleButton.Font = new Font("Segoe UI Emoji", 10f, FontStyle.Regular);
+            }
+            
             navToggleButton.Click += ToggleNavigation;
             headerPanel.Controls.Add(navToggleButton);
 
@@ -2538,8 +2570,7 @@ namespace Risk_Manager
         {
             isNavigationCollapsed = !isNavigationCollapsed;
             
-            // Update toggle button arrow
-            navToggleButton.Text = isNavigationCollapsed ? "➡️" : "⬅️";
+            // Note: No need to update toggle button since the left-and-right-arrows image is bidirectional
             
             // Calculate target width
             int targetWidth = isNavigationCollapsed ? LeftPanelCollapsedWidth : LeftPanelExpandedWidth;
@@ -10182,6 +10213,8 @@ namespace Risk_Manager
                 cautionButtonScaledImage = null;
                 try { cautionButtonBgImage?.Dispose(); } catch { }
                 cautionButtonBgImage = null;
+                try { navToggleButtonScaledImage?.Dispose(); } catch { }
+                navToggleButtonScaledImage = null;
                 
                 // Dispose status table view
                 try { statusTableView?.Dispose(); } catch { }
