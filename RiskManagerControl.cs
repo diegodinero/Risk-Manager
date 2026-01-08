@@ -2878,7 +2878,7 @@ namespace Risk_Manager
                                         displayedAccountNumber = clickedAccount.Id ?? clickedAccount.Name ?? "Unknown";
                                         
                                         // Load settings for this account
-                                        LoadAccountSettings(displayedAccountNumber);
+                                        LoadAccountSettings();
                                         
                                         // Update badges
                                         UpdateSettingsStatusBadge();
