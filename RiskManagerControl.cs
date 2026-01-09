@@ -246,6 +246,9 @@ namespace Risk_Manager
         
         private SoundPlayer alertSoundPlayer;
         
+        // Shutdown sound player (separate from alertSoundPlayer to avoid conflicts)
+        private SoundPlayer shutdownSoundPlayer;
+        
         // Tooltip for draggable title
         private ToolTip titleToolTip;
         
@@ -5315,13 +5318,13 @@ namespace Risk_Manager
                 var audioStream = Properties.Resources.leave_get_out;
                 if (audioStream != null)
                 {
-                    // Dispose existing player if any
-                    alertSoundPlayer?.Dispose();
+                    // Dispose existing shutdown sound player if any
+                    shutdownSoundPlayer?.Dispose();
 
                     // Create and store the player as a field to prevent premature garbage collection
-                    alertSoundPlayer = new SoundPlayer(audioStream);
+                    shutdownSoundPlayer = new SoundPlayer(audioStream);
                     // Play asynchronously - sound plays in background without blocking
-                    alertSoundPlayer.Play();
+                    shutdownSoundPlayer.Play();
                 }
             }
             catch (Exception ex)
@@ -5439,15 +5442,15 @@ namespace Risk_Manager
                                 catch (Exception closeEx)
                                 {
                                     System.Diagnostics.Debug.WriteLine($"Error closing parent form: {closeEx.Message}");
-                                    // Last resort - exit the thread
-                                    Application.ExitThread();
+                                    // Last resort - properly exit the application
+                                    Application.Exit();
                                 }
                             }));
                         }
                         else
                         {
-                            // If we can't find the form, exit the current message loop gracefully
-                            Application.ExitThread();
+                            // If we can't find the form, properly exit the application
+                            Application.Exit();
                         }
                     }
                 }
@@ -10466,6 +10469,9 @@ namespace Risk_Manager
 
                 alertSoundPlayer?.Dispose();
                 alertSoundPlayer = null;
+
+                shutdownSoundPlayer?.Dispose();
+                shutdownSoundPlayer = null;
 
                 titleToolTip?.Dispose();
                 titleToolTip = null;
