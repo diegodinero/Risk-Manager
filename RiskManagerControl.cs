@@ -5315,12 +5315,13 @@ namespace Risk_Manager
                 var audioStream = Properties.Resources.leave_get_out;
                 if (audioStream != null)
                 {
-                    // Create and immediately play the sound, then dispose
-                    using (var shutdownSoundPlayer = new SoundPlayer(audioStream))
-                    {
-                        // Play asynchronously
-                        shutdownSoundPlayer.Play();
-                    }
+                    // Dispose existing player if any
+                    alertSoundPlayer?.Dispose();
+
+                    // Create and store the player as a field to prevent premature garbage collection
+                    alertSoundPlayer = new SoundPlayer(audioStream);
+                    // Play asynchronously - sound plays in background without blocking
+                    alertSoundPlayer.Play();
                 }
             }
             catch (Exception ex)
@@ -5424,16 +5425,29 @@ namespace Risk_Manager
                         shutdownCountdownForm?.Dispose();
                         shutdownCountdownForm = null;
 
-                        // Close the application
+                        // Close the application gracefully
                         var parentForm = this.FindForm();
                         if (parentForm != null)
                         {
-                            parentForm.Close();
+                            // Use BeginInvoke to allow the form to close gracefully on the UI thread
+                            parentForm.BeginInvoke(new Action(() => 
+                            {
+                                try
+                                {
+                                    parentForm.Close();
+                                }
+                                catch (Exception closeEx)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"Error closing parent form: {closeEx.Message}");
+                                    // Last resort - exit the thread
+                                    Application.ExitThread();
+                                }
+                            }));
                         }
                         else
                         {
-                            // If we can't find the form, try Application.Exit
-                            Application.Exit();
+                            // If we can't find the form, exit the current message loop gracefully
+                            Application.ExitThread();
                         }
                     }
                 }
@@ -10465,6 +10479,17 @@ namespace Risk_Manager
                 cautionButtonBgImage = null;
                 try { navToggleButtonScaledImage?.Dispose(); } catch { }
                 navToggleButtonScaledImage = null;
+                
+                // Dispose shutdown-related resources
+                try { shutdownButtonScaledImage?.Dispose(); } catch { }
+                shutdownButtonScaledImage = null;
+                
+                shutdownTimer?.Stop();
+                shutdownTimer?.Dispose();
+                shutdownTimer = null;
+                
+                try { shutdownCountdownForm?.Dispose(); } catch { }
+                shutdownCountdownForm = null;
                 
                 // Dispose status table view
                 try { statusTableView?.Dispose(); } catch { }
