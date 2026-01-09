@@ -269,6 +269,13 @@ namespace Risk_Manager
 
         // add near other private Image fields in RiskManagerControl class
         private Image cautionButtonBgImage;
+        
+        // Shutdown button related fields
+        private Button shutdownButton;
+        private Image shutdownButtonScaledImage;
+        private System.Windows.Forms.Timer shutdownTimer;
+        private Form shutdownCountdownForm;
+        private int shutdownCountdownSeconds;
 
         /// <summary>
         /// Sets the WPF window reference for dragging functionality
@@ -2250,6 +2257,56 @@ namespace Risk_Manager
                 }
             };
             badgesPanel.Controls.Add(themeButton);
+
+            // Shutdown button (placed below theme switcher button)
+            shutdownButton = new Button
+            {
+                Text = "",
+                Width = 40,
+                Height = 32,
+                BackColor = Color.Transparent,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(5, 0, 0, 0),
+                Padding = new Padding(0),
+                UseCompatibleTextRendering = true
+            };
+            shutdownButton.FlatAppearance.BorderSize = 0;
+            shutdownButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(231, 76, 60); // Red hover color
+
+            // Set shutdown icon image
+            Image shutdownImg = null;
+            if (IconMap.TryGetValue("Leave", out var leaveImg) && leaveImg != null)
+                shutdownImg = leaveImg;
+            else
+            {
+                try { shutdownImg = Properties.Resources.leave; } catch { shutdownImg = null; }
+            }
+
+            if (shutdownImg != null)
+            {
+                // Dispose previous scaled image to avoid leaks
+                shutdownButtonScaledImage?.Dispose();
+
+                // Scale to fit inside button with small padding
+                int pad = 4;
+                shutdownButtonScaledImage = ScaleImageToFit(shutdownImg, Math.Max(8, shutdownButton.Width - pad), Math.Max(8, shutdownButton.Height - pad));
+
+                shutdownButton.Image = shutdownButtonScaledImage;
+                shutdownButton.ImageAlign = ContentAlignment.MiddleCenter;
+                shutdownButton.Text = "";
+                shutdownButton.TextImageRelation = TextImageRelation.ImageBeforeText;
+            }
+            else
+            {
+                // fallback to text if resource is missing
+                shutdownButton.Text = "🚪";
+                shutdownButton.Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold);
+            }
+
+            shutdownButton.Click += ShutdownButton_Click;
+            badgesPanel.Controls.Add(shutdownButton);
 
             // Position the badges panel initially and on resize
             PositionBadgesPanel(topPanel, badgesPanel);
@@ -5207,6 +5264,155 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"[ERROR] Error locking all accounts: {ex.Message}\n{ex.StackTrace}");
                 MessageBox.Show($"Error locking accounts: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        /// <summary>
+        /// Handles the Shutdown button click event.
+        /// Locks all accounts and closes the application after a countdown with cancel option.
+        /// </summary>
+        private void ShutdownButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Show confirmation dialog
+                var confirmResult = MessageBox.Show(
+                    "Are you sure you want to lock all accounts, settings, and close the application?",
+                    "Confirm Shutdown",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (confirmResult != DialogResult.Yes)
+                {
+                    return; // User cancelled
+                }
+
+                // Execute lock all accounts logic (same as lockAllButton.Click)
+                BtnLockAllAccounts_Click(sender, e);
+
+                // Play the leave-get-out sound
+                PlayShutdownSound();
+
+                // Show countdown dialog with cancel option
+                ShowShutdownCountdown();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Error in ShutdownButton_Click: {ex.Message}\n{ex.StackTrace}");
+                MessageBox.Show($"Error during shutdown: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Plays the leave-get-out.wav sound effect for shutdown.
+        /// </summary>
+        private void PlayShutdownSound()
+        {
+            try
+            {
+                var audioStream = Properties.Resources.leave_get_out;
+                if (audioStream != null)
+                {
+                    // Create a new sound player for the shutdown sound
+                    var shutdownSoundPlayer = new SoundPlayer(audioStream);
+                    // Play asynchronously
+                    shutdownSoundPlayer.Play();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error playing shutdown sound: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Shows a countdown dialog before closing the application with option to cancel.
+        /// </summary>
+        private void ShowShutdownCountdown()
+        {
+            shutdownCountdownSeconds = 5;
+
+            // Create countdown form
+            shutdownCountdownForm = new Form
+            {
+                Text = "Shutting Down...",
+                Width = 400,
+                Height = 180,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterScreen,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                BackColor = CardBackground,
+                ForeColor = TextWhite
+            };
+
+            var countdownLabel = new Label
+            {
+                Text = $"Application will close in {shutdownCountdownSeconds} seconds...",
+                AutoSize = false,
+                Width = 360,
+                Height = 60,
+                Location = new Point(20, 20),
+                Font = new Font("Segoe UI", 11, FontStyle.Regular),
+                ForeColor = TextWhite,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            shutdownCountdownForm.Controls.Add(countdownLabel);
+
+            var cancelButton = new Button
+            {
+                Text = "Cancel Shutdown",
+                Width = 150,
+                Height = 35,
+                Location = new Point(125, 90),
+                BackColor = Color.FromArgb(231, 76, 60),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+            cancelButton.FlatAppearance.BorderSize = 0;
+            cancelButton.Click += (s, e) =>
+            {
+                shutdownTimer?.Stop();
+                shutdownTimer?.Dispose();
+                shutdownCountdownForm?.Close();
+                MessageBox.Show("Shutdown cancelled.", "Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+            shutdownCountdownForm.Controls.Add(cancelButton);
+
+            // Create timer for countdown
+            shutdownTimer = new System.Windows.Forms.Timer
+            {
+                Interval = 1000 // 1 second
+            };
+
+            shutdownTimer.Tick += (s, e) =>
+            {
+                shutdownCountdownSeconds--;
+                countdownLabel.Text = $"Application will close in {shutdownCountdownSeconds} seconds...";
+
+                if (shutdownCountdownSeconds <= 0)
+                {
+                    shutdownTimer.Stop();
+                    shutdownTimer.Dispose();
+                    shutdownCountdownForm?.Close();
+
+                    // Close the application
+                    var parentForm = this.FindForm();
+                    if (parentForm != null)
+                    {
+                        parentForm.Close();
+                    }
+                    else
+                    {
+                        // If we can't find the form, try Application.Exit
+                        Application.Exit();
+                    }
+                }
+            };
+
+            shutdownTimer.Start();
+            shutdownCountdownForm.ShowDialog();
         }
 
         /// <summary>
