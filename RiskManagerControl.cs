@@ -1903,7 +1903,7 @@ namespace Risk_Manager
                     IconMap["ThemeSwitcher"] = themeImg;
 
                 // Shutdown button image (leave.png)
-                IconMap["Leave"] = Properties.Resources.leavetwo;
+                IconMap["Leave"] = Properties.Resources.leavefour;
 
                 DollarImage = Properties.Resources.dollar;
             }
