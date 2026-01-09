@@ -1903,7 +1903,7 @@ namespace Risk_Manager
                     IconMap["ThemeSwitcher"] = themeImg;
 
                 // Shutdown button image (leave.png)
-                IconMap["Leave"] = Properties.Resources.leave;
+                IconMap["Leave"] = Properties.Resources.leavetwo;
 
                 DollarImage = Properties.Resources.dollar;
             }
@@ -1993,13 +1993,13 @@ namespace Risk_Manager
             shutdownButton = new Button
             {
                 Text = "",
-                Width = 50,  // Same size as before
-                Height = 42,
+                Width = 44,  // Same size as before
+                Height = 36,
                 BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Location = new Point(15, 5),  // Position at left edge
+                Location = new Point(0, 5),  // Position at left edge
                 Padding = new Padding(0),
                 UseCompatibleTextRendering = true
             };
@@ -2020,10 +2020,20 @@ namespace Risk_Manager
                 // Dispose previous scaled image to avoid leaks
                 shutdownButtonScaledImage?.Dispose();
 
-                // Scale to fit inside button with less padding for more zoom
-                int pad = 4;
-                shutdownButtonScaledImage = ScaleImageToFit(shutdownImg, Math.Max(8, shutdownButton.Width - pad), Math.Max(8, shutdownButton.Height - pad));
+                // Fill height almost completely
+                float scaleBoost = 1.15f;
+                int targetHeight = (int)((shutdownButton.Height - 2) * scaleBoost);
 
+                float scale = (float)targetHeight / shutdownImg.Height;
+
+                int targetWidth = (int)(shutdownImg.Width * scale);
+
+                shutdownButtonScaledImage = new Bitmap(targetWidth, targetHeight);
+                using (var g = Graphics.FromImage(shutdownButtonScaledImage))
+                {
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(shutdownImg, 0, 0, targetWidth, targetHeight);
+                }
                 shutdownButton.Image = shutdownButtonScaledImage;
                 shutdownButton.ImageAlign = ContentAlignment.MiddleCenter;
                 shutdownButton.Text = "";
@@ -2046,7 +2056,7 @@ namespace Risk_Manager
                 AutoSize = true,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                Location = new Point(80, 8),  // Moved right to accommodate button (15 + 50 + 15 spacing)
+                Location = new Point(40, 6),  // Moved right to accommodate button (15 + 50 + 15 spacing)
                 Cursor = Cursors.SizeAll  // Show move cursor
             };
             // Add tooltip to indicate draggability
@@ -2062,13 +2072,13 @@ namespace Risk_Manager
                 AutoSize = true,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Location = new Point(80, 40)  // Align with title label horizontal position
+                Location = new Point(15, 40)  // Align with title label horizontal position
             };
             topPanel.Controls.Add(accountLabel);
 
             accountSelector = new ComboBox
             {
-                Location = new Point(145, 37),  // Adjusted to accommodate label shift
+                Location = new Point(80, 37),  // Adjusted to accommodate label shift
                 Width = 250,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = new Font("Segoe UI", 9),
@@ -2084,7 +2094,7 @@ namespace Risk_Manager
             var emergencyFlattenButton = new Button
             {
                 Text = "", // painted manually
-                Location = new Point(405, 37),  // Adjusted to align with new account selector position
+                Location = new Point(340, 37),  // Adjusted to align with new account selector position
                 Width = 250,
                 Height = 26,
                 Font = new Font("Arial", 10, FontStyle.Bold),
