@@ -8,8 +8,9 @@ The shutdown button is located in the top-right corner of the Risk Manager appli
 ┌─────────────────────────────────────────────────────────────┐
 │ Risk Manager                    [Settings ✓] [Trading ✓]    │
 │                                                              │
-│                                                      [🎨]    │  ← Theme Switcher (44×36px)
-│                                                      [🚪]    │  ← Shutdown Button (44×36px, 5px gap)
+│                                                     [🎨]     │  ← Theme Switcher (44×36px)
+│                                                              │
+│                                                     [🚪]     │  ← Shutdown Button (50×42px - LARGER)
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -17,12 +18,13 @@ The shutdown button is located in the top-right corner of the Risk Manager appli
 - A vertical `FlowLayoutPanel` (with `TopDown` direction) contains both buttons
 - This buttons panel is added to the horizontal badges panel
 - The shutdown button has a 5px top margin for visual separation
+- **Shutdown button is larger (50×42px) than theme button (44×36px) for better visibility**
 
 ## Button Appearance
 
 ### Default State
-- Size: 44px width × 36px height (matches theme switcher)
-- Icon: leave.png (door icon)
+- Size: 50px width × 42px height (larger than theme switcher for better visibility)
+- Icon: leave.png (door icon) - zoomed in with only 4px padding
 - Background: Transparent
 - Border: None (FlatStyle.Flat)
 
@@ -33,7 +35,7 @@ The shutdown button is located in the top-right corner of the Risk Manager appli
 
 ### Fallback
 - If leave.png not available, shows 🚪 emoji
-- Font: Segoe UI Emoji, 14pt Bold
+- Font: Segoe UI Emoji, 18pt Bold (increased for visibility)
 
 ## Shutdown Flow
 

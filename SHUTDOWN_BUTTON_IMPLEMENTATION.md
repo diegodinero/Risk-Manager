@@ -8,7 +8,7 @@ A new shutdown button has been added to the Risk Manager application, positioned
 ### 1. Button Placement
 - Located in the badges panel, below the theme switcher button (🎨)
 - Positioned in the top-right corner of the application
-- Size: 44px × 36px (matches theme switcher button)
+- Size: 50px × 42px (larger than theme switcher for better visibility)
 
 ### 2. Button Icon
 - Uses the `leave.png` image from the Resources folder
