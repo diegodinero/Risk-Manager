@@ -2278,8 +2278,8 @@ namespace Risk_Manager
             shutdownButton = new Button
             {
                 Text = "",
-                Width = 44,  // Match theme button width
-                Height = 36, // Match theme button height
+                Width = 50,  // Increased from 44 for better visibility
+                Height = 42, // Increased from 36 for better visibility
                 BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -2305,8 +2305,8 @@ namespace Risk_Manager
                 // Dispose previous scaled image to avoid leaks
                 shutdownButtonScaledImage?.Dispose();
 
-                // Scale to fit inside button with small padding
-                int pad = 6; // Match theme button padding
+                // Scale to fit inside button with less padding for more zoom
+                int pad = 4; // Reduced from 6 for more icon visibility
                 shutdownButtonScaledImage = ScaleImageToFit(shutdownImg, Math.Max(8, shutdownButton.Width - pad), Math.Max(8, shutdownButton.Height - pad));
 
                 shutdownButton.Image = shutdownButtonScaledImage;
@@ -2318,7 +2318,7 @@ namespace Risk_Manager
             {
                 // fallback to text if resource is missing
                 shutdownButton.Text = "🚪";
-                shutdownButton.Font = new Font("Segoe UI Emoji", 14, FontStyle.Bold);
+                shutdownButton.Font = new Font("Segoe UI Emoji", 18, FontStyle.Bold); // Increased from 14 for better visibility
             }
 
             shutdownButton.Click += ShutdownButton_Click;
