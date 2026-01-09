@@ -1899,6 +1899,9 @@ namespace Risk_Manager
                 if (Properties.Resources.ResourceManager.GetObject("themeswitcher2") is Image themeImg)
                     IconMap["ThemeSwitcher"] = themeImg;
 
+                // Shutdown button image (leave.png)
+                IconMap["Leave"] = Properties.Resources.leave;
+
                 DollarImage = Properties.Resources.dollar;
             }
             catch (Exception ex)
@@ -5286,8 +5289,8 @@ namespace Risk_Manager
                     return; // User cancelled
                 }
 
-                // Execute lock all accounts logic (same as lockAllButton.Click)
-                BtnLockAllAccounts_Click(sender, e);
+                // Execute lock all accounts logic - call with null sender for separation of concerns
+                BtnLockAllAccounts_Click(null, EventArgs.Empty);
 
                 // Play the leave-get-out sound
                 PlayShutdownSound();
@@ -5312,10 +5315,12 @@ namespace Risk_Manager
                 var audioStream = Properties.Resources.leave_get_out;
                 if (audioStream != null)
                 {
-                    // Create a new sound player for the shutdown sound
-                    var shutdownSoundPlayer = new SoundPlayer(audioStream);
-                    // Play asynchronously
-                    shutdownSoundPlayer.Play();
+                    // Create and immediately play the sound, then dispose
+                    using (var shutdownSoundPlayer = new SoundPlayer(audioStream))
+                    {
+                        // Play asynchronously
+                        shutdownSoundPlayer.Play();
+                    }
                 }
             }
             catch (Exception ex)
@@ -5342,7 +5347,8 @@ namespace Risk_Manager
                 MaximizeBox = false,
                 MinimizeBox = false,
                 BackColor = CardBackground,
-                ForeColor = TextWhite
+                ForeColor = TextWhite,
+                TopMost = true  // Keep on top
             };
 
             var countdownLabel = new Label
@@ -5373,10 +5379,22 @@ namespace Risk_Manager
             cancelButton.FlatAppearance.BorderSize = 0;
             cancelButton.Click += (s, e) =>
             {
-                shutdownTimer?.Stop();
-                shutdownTimer?.Dispose();
-                shutdownCountdownForm?.Close();
-                MessageBox.Show("Shutdown cancelled.", "Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                try
+                {
+                    shutdownTimer?.Stop();
+                    shutdownTimer?.Dispose();
+                    shutdownTimer = null;
+                    
+                    shutdownCountdownForm?.Close();
+                    shutdownCountdownForm?.Dispose();
+                    shutdownCountdownForm = null;
+                    
+                    MessageBox.Show("Shutdown cancelled.", "Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error cancelling shutdown: {ex.Message}");
+                }
             };
             shutdownCountdownForm.Controls.Add(cancelButton);
 
@@ -5388,31 +5406,57 @@ namespace Risk_Manager
 
             shutdownTimer.Tick += (s, e) =>
             {
-                shutdownCountdownSeconds--;
-                countdownLabel.Text = $"Application will close in {shutdownCountdownSeconds} seconds...";
-
-                if (shutdownCountdownSeconds <= 0)
+                try
                 {
-                    shutdownTimer.Stop();
-                    shutdownTimer.Dispose();
-                    shutdownCountdownForm?.Close();
+                    shutdownCountdownSeconds--;
+                    if (countdownLabel != null && !countdownLabel.IsDisposed)
+                    {
+                        countdownLabel.Text = $"Application will close in {shutdownCountdownSeconds} seconds...";
+                    }
 
-                    // Close the application
-                    var parentForm = this.FindForm();
-                    if (parentForm != null)
+                    if (shutdownCountdownSeconds <= 0)
                     {
-                        parentForm.Close();
+                        shutdownTimer?.Stop();
+                        shutdownTimer?.Dispose();
+                        shutdownTimer = null;
+                        
+                        shutdownCountdownForm?.Close();
+                        shutdownCountdownForm?.Dispose();
+                        shutdownCountdownForm = null;
+
+                        // Close the application
+                        var parentForm = this.FindForm();
+                        if (parentForm != null)
+                        {
+                            parentForm.Close();
+                        }
+                        else
+                        {
+                            // If we can't find the form, try Application.Exit
+                            Application.Exit();
+                        }
                     }
-                    else
-                    {
-                        // If we can't find the form, try Application.Exit
-                        Application.Exit();
-                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error in shutdown timer: {ex.Message}");
+                    shutdownTimer?.Stop();
+                    shutdownTimer?.Dispose();
+                    shutdownCountdownForm?.Close();
+                    shutdownCountdownForm?.Dispose();
                 }
             };
 
+            // Handle form closing to cleanup timer
+            shutdownCountdownForm.FormClosing += (s, e) =>
+            {
+                shutdownTimer?.Stop();
+                shutdownTimer?.Dispose();
+                shutdownTimer = null;
+            };
+
             shutdownTimer.Start();
-            shutdownCountdownForm.ShowDialog();
+            shutdownCountdownForm.Show();
         }
 
         /// <summary>
