@@ -2,15 +2,21 @@
 
 ## Button Location
 
-The shutdown button is located in the top-right corner of the Risk Manager application, positioned directly below the theme switcher button:
+The shutdown button is located in the top-right corner of the Risk Manager application, positioned directly below the theme switcher button in a vertical layout:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Risk Manager                    [Settings ✓] [Trading ✓]    │
-│                                                      [🎨]     │  ← Theme Switcher (44×36px)
-│                                                      [🚪]     │  ← Shutdown Button (44×36px)
+│                                                              │
+│                                                      [🎨]    │  ← Theme Switcher (44×36px)
+│                                                      [🚪]    │  ← Shutdown Button (44×36px, 5px gap)
 └─────────────────────────────────────────────────────────────┘
 ```
+
+**Layout Structure:**
+- A vertical `FlowLayoutPanel` (with `TopDown` direction) contains both buttons
+- This buttons panel is added to the horizontal badges panel
+- The shutdown button has a 5px top margin for visual separation
 
 ## Button Appearance
 
