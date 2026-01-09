@@ -210,6 +210,16 @@ namespace Risk_Manager.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap leavesix {
+            get {
+                object obj = ResourceManager.GetObject("leavesix", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap leavetwo {
             get {
                 object obj = ResourceManager.GetObject("leavetwo", resourceCulture);
