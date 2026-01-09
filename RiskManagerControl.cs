@@ -246,6 +246,9 @@ namespace Risk_Manager
         
         private SoundPlayer alertSoundPlayer;
         
+        // Shutdown sound player (separate from alertSoundPlayer to avoid conflicts)
+        private SoundPlayer shutdownSoundPlayer;
+        
         // Tooltip for draggable title
         private ToolTip titleToolTip;
         
@@ -269,6 +272,13 @@ namespace Risk_Manager
 
         // add near other private Image fields in RiskManagerControl class
         private Image cautionButtonBgImage;
+        
+        // Shutdown button related fields
+        private Button shutdownButton;
+        private Image shutdownButtonScaledImage;
+        private System.Windows.Forms.Timer shutdownTimer;
+        private Form shutdownCountdownForm;
+        private int shutdownCountdownSeconds;
 
         /// <summary>
         /// Sets the WPF window reference for dragging functionality
@@ -1892,6 +1902,9 @@ namespace Risk_Manager
                 if (Properties.Resources.ResourceManager.GetObject("themeswitcher2") is Image themeImg)
                     IconMap["ThemeSwitcher"] = themeImg;
 
+                // Shutdown button image (leave.png)
+                IconMap["Leave"] = Properties.Resources.leave;
+
                 DollarImage = Properties.Resources.dollar;
             }
             catch (Exception ex)
@@ -1967,7 +1980,7 @@ namespace Risk_Manager
             topPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 70,
+                Height = 90,  // Increased from 70 to accommodate larger shutdown button below theme button
                 BackColor = DarkBackground,
                 Padding = new Padding(15, 10, 15, 10),
                 Cursor = Cursors.SizeAll  // Show move cursor to indicate draggability
@@ -2179,6 +2192,16 @@ namespace Risk_Manager
             
             badgesPanel.Controls.Add(statusTableView);
 
+            // Create vertical container for theme and shutdown buttons
+            var buttonsPanel = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                FlowDirection = FlowDirection.TopDown,
+                BackColor = Color.Transparent,
+                Margin = new Padding(5, 0, 0, 0),
+                Padding = new Padding(0)
+            };
+
             // Theme Changer button (replaces the X button)
             var themeButton = new Button
             {
@@ -2189,7 +2212,7 @@ namespace Risk_Manager
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Margin = new Padding(5, 0, 0, 0),
+                Margin = new Padding(0, 0, 0, 0),
                 Padding = new Padding(0),
                 UseCompatibleTextRendering = true
             };
@@ -2249,7 +2272,60 @@ namespace Risk_Manager
                         break;
                 }
             };
-            badgesPanel.Controls.Add(themeButton);
+            buttonsPanel.Controls.Add(themeButton);
+
+            // Shutdown button (placed below theme switcher button)
+            shutdownButton = new Button
+            {
+                Text = "",
+                Width = 50,  // Increased from 44 for better visibility
+                Height = 42, // Increased from 36 for better visibility
+                BackColor = Color.Transparent,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 5, 0, 0),  // Add 5px top margin to separate from theme button
+                Padding = new Padding(0),
+                UseCompatibleTextRendering = true
+            };
+            shutdownButton.FlatAppearance.BorderSize = 0;
+            shutdownButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(231, 76, 60); // Red hover color
+
+            // Set shutdown icon image
+            Image shutdownImg = null;
+            if (IconMap.TryGetValue("Leave", out var leaveImg) && leaveImg != null)
+                shutdownImg = leaveImg;
+            else
+            {
+                try { shutdownImg = Properties.Resources.leave; } catch { shutdownImg = null; }
+            }
+
+            if (shutdownImg != null)
+            {
+                // Dispose previous scaled image to avoid leaks
+                shutdownButtonScaledImage?.Dispose();
+
+                // Scale to fit inside button with less padding for more zoom
+                int pad = 4; // Reduced from 6 for more icon visibility
+                shutdownButtonScaledImage = ScaleImageToFit(shutdownImg, Math.Max(8, shutdownButton.Width - pad), Math.Max(8, shutdownButton.Height - pad));
+
+                shutdownButton.Image = shutdownButtonScaledImage;
+                shutdownButton.ImageAlign = ContentAlignment.MiddleCenter;
+                shutdownButton.Text = "";
+                shutdownButton.TextImageRelation = TextImageRelation.ImageBeforeText;
+            }
+            else
+            {
+                // fallback to text if resource is missing
+                shutdownButton.Text = "🚪";
+                shutdownButton.Font = new Font("Segoe UI Emoji", 18, FontStyle.Bold); // Increased from 14 for better visibility
+            }
+
+            shutdownButton.Click += ShutdownButton_Click;
+            buttonsPanel.Controls.Add(shutdownButton);
+
+            // Add the buttons panel to the badges panel
+            badgesPanel.Controls.Add(buttonsPanel);
 
             // Position the badges panel initially and on resize
             PositionBadgesPanel(topPanel, badgesPanel);
@@ -2294,7 +2370,9 @@ namespace Risk_Manager
 
         private static void PositionBadgesPanel(Panel topPanel, FlowLayoutPanel badgesPanel)
         {
-            badgesPanel.Location = new Point(topPanel.Width - badgesPanel.PreferredSize.Width - 20, 15);
+            // Position badges panel in top-right with vertical centering
+            int verticalCenter = (topPanel.Height - badgesPanel.PreferredSize.Height) / 2;
+            badgesPanel.Location = new Point(topPanel.Width - badgesPanel.PreferredSize.Width - 20, Math.Max(10, verticalCenter));
         }
 
         private static void PositionDebugLabel(Panel topPanel, FlowLayoutPanel badgesPanel, Label debugLabel)
@@ -5207,6 +5285,210 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"[ERROR] Error locking all accounts: {ex.Message}\n{ex.StackTrace}");
                 MessageBox.Show($"Error locking accounts: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        /// <summary>
+        /// Handles the Shutdown button click event.
+        /// Locks all accounts and closes the application after a countdown with cancel option.
+        /// </summary>
+        private void ShutdownButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Show confirmation dialog
+                var confirmResult = MessageBox.Show(
+                    "Are you sure you want to lock all accounts, settings, and close the application?",
+                    "Confirm Shutdown",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (confirmResult != DialogResult.Yes)
+                {
+                    return; // User cancelled
+                }
+
+                // Execute lock all accounts logic - call with null sender for separation of concerns
+                BtnLockAllAccounts_Click(null, EventArgs.Empty);
+
+                // Play the leave-get-out sound
+                PlayShutdownSound();
+
+                // Show countdown dialog with cancel option
+                ShowShutdownCountdown();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Error in ShutdownButton_Click: {ex.Message}\n{ex.StackTrace}");
+                MessageBox.Show($"Error during shutdown: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Plays the leave-get-out.wav sound effect for shutdown.
+        /// </summary>
+        private void PlayShutdownSound()
+        {
+            try
+            {
+                var audioStream = Properties.Resources.leave_get_out;
+                if (audioStream != null)
+                {
+                    // Dispose existing shutdown sound player if any
+                    shutdownSoundPlayer?.Dispose();
+
+                    // Create and store the player as a field to prevent premature garbage collection
+                    shutdownSoundPlayer = new SoundPlayer(audioStream);
+                    // Play asynchronously - sound plays in background without blocking
+                    shutdownSoundPlayer.Play();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error playing shutdown sound: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Shows a countdown dialog before closing the application with option to cancel.
+        /// </summary>
+        private void ShowShutdownCountdown()
+        {
+            shutdownCountdownSeconds = 5;
+
+            // Create countdown form
+            shutdownCountdownForm = new Form
+            {
+                Text = "Shutting Down...",
+                Width = 400,
+                Height = 180,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterScreen,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                TopMost = true  // Keep on top
+            };
+
+            var countdownLabel = new Label
+            {
+                Text = $"Application will close in {shutdownCountdownSeconds} seconds...",
+                AutoSize = false,
+                Width = 360,
+                Height = 60,
+                Location = new Point(20, 20),
+                Font = new Font("Segoe UI", 11, FontStyle.Regular),
+                ForeColor = TextWhite,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            shutdownCountdownForm.Controls.Add(countdownLabel);
+
+            var cancelButton = new Button
+            {
+                Text = "Cancel Shutdown",
+                Width = 150,
+                Height = 35,
+                Location = new Point(125, 90),
+                BackColor = Color.FromArgb(231, 76, 60),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+            cancelButton.FlatAppearance.BorderSize = 0;
+            cancelButton.Click += (s, e) =>
+            {
+                try
+                {
+                    shutdownTimer?.Stop();
+                    shutdownTimer?.Dispose();
+                    shutdownTimer = null;
+                    
+                    shutdownCountdownForm?.Close();
+                    shutdownCountdownForm?.Dispose();
+                    shutdownCountdownForm = null;
+                    
+                    MessageBox.Show("Shutdown cancelled.", "Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error cancelling shutdown: {ex.Message}");
+                }
+            };
+            shutdownCountdownForm.Controls.Add(cancelButton);
+
+            // Create timer for countdown
+            shutdownTimer = new System.Windows.Forms.Timer
+            {
+                Interval = 1000 // 1 second
+            };
+
+            shutdownTimer.Tick += (s, e) =>
+            {
+                try
+                {
+                    shutdownCountdownSeconds--;
+                    if (countdownLabel != null && !countdownLabel.IsDisposed)
+                    {
+                        countdownLabel.Text = $"Application will close in {shutdownCountdownSeconds} seconds...";
+                    }
+
+                    if (shutdownCountdownSeconds <= 0)
+                    {
+                        shutdownTimer?.Stop();
+                        shutdownTimer?.Dispose();
+                        shutdownTimer = null;
+                        
+                        shutdownCountdownForm?.Close();
+                        shutdownCountdownForm?.Dispose();
+                        shutdownCountdownForm = null;
+
+                        // Close the application gracefully
+                        var parentForm = this.FindForm();
+                        if (parentForm != null)
+                        {
+                            // Use BeginInvoke to allow the form to close gracefully on the UI thread
+                            parentForm.BeginInvoke(new Action(() => 
+                            {
+                                try
+                                {
+                                    parentForm.Close();
+                                }
+                                catch (Exception closeEx)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"Error closing parent form: {closeEx.Message}");
+                                    // Last resort - properly exit the application
+                                    Application.Exit();
+                                }
+                            }));
+                        }
+                        else
+                        {
+                            // If we can't find the form, properly exit the application
+                            Application.Exit();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error in shutdown timer: {ex.Message}");
+                    shutdownTimer?.Stop();
+                    shutdownTimer?.Dispose();
+                    shutdownCountdownForm?.Close();
+                    shutdownCountdownForm?.Dispose();
+                }
+            };
+
+            // Handle form closing to cleanup timer
+            shutdownCountdownForm.FormClosing += (s, e) =>
+            {
+                shutdownTimer?.Stop();
+                shutdownTimer?.Dispose();
+                shutdownTimer = null;
+            };
+
+            shutdownTimer.Start();
+            shutdownCountdownForm.Show();
         }
 
         /// <summary>
@@ -10203,6 +10485,9 @@ namespace Risk_Manager
                 alertSoundPlayer?.Dispose();
                 alertSoundPlayer = null;
 
+                shutdownSoundPlayer?.Dispose();
+                shutdownSoundPlayer = null;
+
                 titleToolTip?.Dispose();
                 titleToolTip = null;
 
@@ -10215,6 +10500,17 @@ namespace Risk_Manager
                 cautionButtonBgImage = null;
                 try { navToggleButtonScaledImage?.Dispose(); } catch { }
                 navToggleButtonScaledImage = null;
+                
+                // Dispose shutdown-related resources
+                try { shutdownButtonScaledImage?.Dispose(); } catch { }
+                shutdownButtonScaledImage = null;
+                
+                shutdownTimer?.Stop();
+                shutdownTimer?.Dispose();
+                shutdownTimer = null;
+                
+                try { shutdownCountdownForm?.Dispose(); } catch { }
+                shutdownCountdownForm = null;
                 
                 // Dispose status table view
                 try { statusTableView?.Dispose(); } catch { }
