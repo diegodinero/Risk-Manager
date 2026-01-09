@@ -1980,7 +1980,7 @@ namespace Risk_Manager
             topPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 70,
+                Height = 90,  // Increased from 70 to accommodate larger shutdown button below theme button
                 BackColor = DarkBackground,
                 Padding = new Padding(15, 10, 15, 10),
                 Cursor = Cursors.SizeAll  // Show move cursor to indicate draggability
@@ -2370,7 +2370,9 @@ namespace Risk_Manager
 
         private static void PositionBadgesPanel(Panel topPanel, FlowLayoutPanel badgesPanel)
         {
-            badgesPanel.Location = new Point(topPanel.Width - badgesPanel.PreferredSize.Width - 20, 15);
+            // Position badges panel in top-right with vertical centering
+            int verticalCenter = (topPanel.Height - badgesPanel.PreferredSize.Height) / 2;
+            badgesPanel.Location = new Point(topPanel.Width - badgesPanel.PreferredSize.Width - 20, Math.Max(10, verticalCenter));
         }
 
         private static void PositionDebugLabel(Panel topPanel, FlowLayoutPanel badgesPanel, Label debugLabel)
