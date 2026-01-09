@@ -1980,7 +1980,7 @@ namespace Risk_Manager
             topPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 90,  // Increased from 70 to accommodate larger shutdown button below theme button
+                Height = 90,  // Height to accommodate shutdown button on left and status elements
                 BackColor = DarkBackground,
                 Padding = new Padding(15, 10, 15, 10),
                 Cursor = Cursors.SizeAll  // Show move cursor to indicate draggability
