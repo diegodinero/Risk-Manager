@@ -1980,7 +1980,7 @@ namespace Risk_Manager
             topPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 90,  // Increased from 70 to accommodate larger shutdown button below theme button
+                Height = 90,  // Height to accommodate shutdown button on left and status elements
                 BackColor = DarkBackground,
                 Padding = new Padding(15, 10, 15, 10),
                 Cursor = Cursors.SizeAll  // Show move cursor to indicate draggability
@@ -1989,14 +1989,64 @@ namespace Risk_Manager
             // Make the top panel draggable to move the parent window
             EnableDragging(topPanel);
 
-            // Title label
+            // Shutdown button (placed on the left before the title)
+            shutdownButton = new Button
+            {
+                Text = "",
+                Width = 50,  // Same size as before
+                Height = 42,
+                BackColor = Color.Transparent,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Location = new Point(15, 5),  // Position at left edge
+                Padding = new Padding(0),
+                UseCompatibleTextRendering = true
+            };
+            shutdownButton.FlatAppearance.BorderSize = 0;
+            shutdownButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(231, 76, 60); // Red hover color
+
+            // Set shutdown icon image
+            Image shutdownImg = null;
+            if (IconMap.TryGetValue("Leave", out var leaveImg) && leaveImg != null)
+                shutdownImg = leaveImg;
+            else
+            {
+                try { shutdownImg = Properties.Resources.leave; } catch { shutdownImg = null; }
+            }
+
+            if (shutdownImg != null)
+            {
+                // Dispose previous scaled image to avoid leaks
+                shutdownButtonScaledImage?.Dispose();
+
+                // Scale to fit inside button with less padding for more zoom
+                int pad = 4;
+                shutdownButtonScaledImage = ScaleImageToFit(shutdownImg, Math.Max(8, shutdownButton.Width - pad), Math.Max(8, shutdownButton.Height - pad));
+
+                shutdownButton.Image = shutdownButtonScaledImage;
+                shutdownButton.ImageAlign = ContentAlignment.MiddleCenter;
+                shutdownButton.Text = "";
+                shutdownButton.TextImageRelation = TextImageRelation.ImageBeforeText;
+            }
+            else
+            {
+                // fallback to text if resource is missing
+                shutdownButton.Text = "🚪";
+                shutdownButton.Font = new Font("Segoe UI Emoji", 18, FontStyle.Bold);
+            }
+
+            shutdownButton.Click += ShutdownButton_Click;
+            topPanel.Controls.Add(shutdownButton);
+
+            // Title label (positioned after shutdown button with spacing)
             var titleLabel = new Label
             {
                 Text = "Risk Manager",
                 AutoSize = true,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                Location = new Point(15, 8),
+                Location = new Point(80, 8),  // Moved right to accommodate button (15 + 50 + 15 spacing)
                 Cursor = Cursors.SizeAll  // Show move cursor
             };
             // Add tooltip to indicate draggability
@@ -2012,13 +2062,13 @@ namespace Risk_Manager
                 AutoSize = true,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                Location = new Point(15, 40)
+                Location = new Point(80, 40)  // Align with title label horizontal position
             };
             topPanel.Controls.Add(accountLabel);
 
             accountSelector = new ComboBox
             {
-                Location = new Point(80, 37),
+                Location = new Point(145, 37),  // Adjusted to accommodate label shift
                 Width = 250,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Font = new Font("Segoe UI", 9),
@@ -2034,7 +2084,7 @@ namespace Risk_Manager
             var emergencyFlattenButton = new Button
             {
                 Text = "", // painted manually
-                Location = new Point(340, 37),
+                Location = new Point(405, 37),  // Adjusted to align with new account selector position
                 Width = 250,
                 Height = 26,
                 Font = new Font("Arial", 10, FontStyle.Bold),
@@ -2273,56 +2323,6 @@ namespace Risk_Manager
                 }
             };
             buttonsPanel.Controls.Add(themeButton);
-
-            // Shutdown button (placed below theme switcher button)
-            shutdownButton = new Button
-            {
-                Text = "",
-                Width = 50,  // Increased from 44 for better visibility
-                Height = 42, // Increased from 36 for better visibility
-                BackColor = Color.Transparent,
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                Margin = new Padding(0, 5, 0, 0),  // Add 5px top margin to separate from theme button
-                Padding = new Padding(0),
-                UseCompatibleTextRendering = true
-            };
-            shutdownButton.FlatAppearance.BorderSize = 0;
-            shutdownButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(231, 76, 60); // Red hover color
-
-            // Set shutdown icon image
-            Image shutdownImg = null;
-            if (IconMap.TryGetValue("Leave", out var leaveImg) && leaveImg != null)
-                shutdownImg = leaveImg;
-            else
-            {
-                try { shutdownImg = Properties.Resources.leave; } catch { shutdownImg = null; }
-            }
-
-            if (shutdownImg != null)
-            {
-                // Dispose previous scaled image to avoid leaks
-                shutdownButtonScaledImage?.Dispose();
-
-                // Scale to fit inside button with less padding for more zoom
-                int pad = 4; // Reduced from 6 for more icon visibility
-                shutdownButtonScaledImage = ScaleImageToFit(shutdownImg, Math.Max(8, shutdownButton.Width - pad), Math.Max(8, shutdownButton.Height - pad));
-
-                shutdownButton.Image = shutdownButtonScaledImage;
-                shutdownButton.ImageAlign = ContentAlignment.MiddleCenter;
-                shutdownButton.Text = "";
-                shutdownButton.TextImageRelation = TextImageRelation.ImageBeforeText;
-            }
-            else
-            {
-                // fallback to text if resource is missing
-                shutdownButton.Text = "🚪";
-                shutdownButton.Font = new Font("Segoe UI Emoji", 18, FontStyle.Bold); // Increased from 14 for better visibility
-            }
-
-            shutdownButton.Click += ShutdownButton_Click;
-            buttonsPanel.Controls.Add(shutdownButton);
 
             // Add the buttons panel to the badges panel
             badgesPanel.Controls.Add(buttonsPanel);
