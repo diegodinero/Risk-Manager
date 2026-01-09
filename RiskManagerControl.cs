@@ -2192,6 +2192,16 @@ namespace Risk_Manager
             
             badgesPanel.Controls.Add(statusTableView);
 
+            // Create vertical container for theme and shutdown buttons
+            var buttonsPanel = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                FlowDirection = FlowDirection.TopDown,
+                BackColor = Color.Transparent,
+                Margin = new Padding(5, 0, 0, 0),
+                Padding = new Padding(0)
+            };
+
             // Theme Changer button (replaces the X button)
             var themeButton = new Button
             {
@@ -2202,7 +2212,7 @@ namespace Risk_Manager
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Margin = new Padding(5, 0, 0, 0),
+                Margin = new Padding(0, 0, 0, 0),
                 Padding = new Padding(0),
                 UseCompatibleTextRendering = true
             };
@@ -2262,7 +2272,7 @@ namespace Risk_Manager
                         break;
                 }
             };
-            badgesPanel.Controls.Add(themeButton);
+            buttonsPanel.Controls.Add(themeButton);
 
             // Shutdown button (placed below theme switcher button)
             shutdownButton = new Button
@@ -2274,7 +2284,7 @@ namespace Risk_Manager
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Margin = new Padding(5, 0, 0, 0),
+                Margin = new Padding(0, 5, 0, 0),  // Add 5px top margin to separate from theme button
                 Padding = new Padding(0),
                 UseCompatibleTextRendering = true
             };
@@ -2312,7 +2322,10 @@ namespace Risk_Manager
             }
 
             shutdownButton.Click += ShutdownButton_Click;
-            badgesPanel.Controls.Add(shutdownButton);
+            buttonsPanel.Controls.Add(shutdownButton);
+
+            // Add the buttons panel to the badges panel
+            badgesPanel.Controls.Add(buttonsPanel);
 
             // Position the badges panel initially and on resize
             PositionBadgesPanel(topPanel, badgesPanel);
