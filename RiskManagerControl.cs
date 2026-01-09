@@ -2262,8 +2262,8 @@ namespace Risk_Manager
             shutdownButton = new Button
             {
                 Text = "",
-                Width = 40,
-                Height = 32,
+                Width = 44,  // Match theme button width
+                Height = 36, // Match theme button height
                 BackColor = Color.Transparent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
@@ -2290,7 +2290,7 @@ namespace Risk_Manager
                 shutdownButtonScaledImage?.Dispose();
 
                 // Scale to fit inside button with small padding
-                int pad = 4;
+                int pad = 6; // Match theme button padding
                 shutdownButtonScaledImage = ScaleImageToFit(shutdownImg, Math.Max(8, shutdownButton.Width - pad), Math.Max(8, shutdownButton.Height - pad));
 
                 shutdownButton.Image = shutdownButtonScaledImage;
