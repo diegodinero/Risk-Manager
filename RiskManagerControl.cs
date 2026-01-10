@@ -5025,7 +5025,7 @@ namespace Risk_Manager
                 // Show confirmation dialog
                 var confirmResult = MessageBox.Show(
                     $"Are you sure you want to lock account '{accountNumber}' for {durationText}?\n\n" +
-                    "This will flatten all open trades and disable all Buy/Sell buttons until the lock expires.",
+                    "This will close all open positions for this account and disable all Buy/Sell buttons until the lock expires.",
                     "Confirm Lock Trading",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question);
@@ -5034,9 +5034,6 @@ namespace Risk_Manager
                 {
                     return; // User cancelled
                 }
-
-                // Flatten all trades before locking the account
-                FlattenAllTrades();
 
                 // Find the account by the cached identifier
                 var core = Core.Instance;
@@ -5052,6 +5049,9 @@ namespace Risk_Manager
                     MessageBox.Show($"Could not find account: {accountNumber}", "Account Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
+
+                // Close all positions for this account before locking
+                CloseAllPositionsForAccount(targetAccount, core);
 
                 // Check if the method exists before calling (defensive programming)
                 var lockMethod = core.GetType().GetMethod("LockAccount");
@@ -8087,55 +8087,9 @@ namespace Risk_Manager
 
         private void EmergencyFlattenButton_Click(object sender, EventArgs e)
         {
-            try
-            {
-                // Flatten all trades first
-                FlattenAllTrades();
-                PlayAlertSound();
-                
-                // Lock the currently selected account after flattening
-                var accountNumber = GetSelectedAccountNumber();
-                if (!string.IsNullOrEmpty(accountNumber))
-                {
-                    var core = Core.Instance;
-                    if (core != null)
-                    {
-                        var targetAccount = FindAccountByIdentifier(accountNumber);
-                        if (targetAccount != null)
-                        {
-                            var lockMethod = core.GetType().GetMethod("LockAccount");
-                            if (lockMethod != null)
-                            {
-                                lockMethod.Invoke(core, new object[] { targetAccount });
-                                
-                                // Update the settings service to track the lock status
-                                var settingsService = RiskManagerSettingsService.Instance;
-                                if (settingsService.IsInitialized)
-                                {
-                                    // Get lock duration for "All Day (Until 5PM ET)" for emergency situations
-                                    TimeSpan? duration = GetLockDurationForAllDay();
-                                    string reason = "Emergency Flatten - All trades closed and account locked";
-                                    settingsService.SetTradingLock(accountNumber, true, reason, duration);
-                                }
-                                
-                                // Update UI
-                                UpdateTradingStatusBadge();
-                                UpdateLockButtonStates();
-                                RefreshAccountsSummary();
-                                RefreshAccountStats();
-                                UpdateManualLockStatusLabelsRecursive(this);
-                            }
-                        }
-                    }
-                }
-                
-                MessageBox.Show("Emergency Flatten Triggered!\n\nAll trades have been closed and the account is now locked.", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"EmergencyFlattenButton_Click error: {ex.Message}");
-                MessageBox.Show($"Error during emergency flatten: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            FlattenAllTrades();
+            PlayAlertSound();
+            MessageBox.Show("Emergency Flatten Triggered!", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
