@@ -5025,7 +5025,7 @@ namespace Risk_Manager
                 // Show confirmation dialog
                 var confirmResult = MessageBox.Show(
                     $"Are you sure you want to lock account '{accountNumber}' for {durationText}?\n\n" +
-                    "This will disable all Buy/Sell buttons until the lock expires.",
+                    "This will close all open positions for this account and disable all Buy/Sell buttons until the lock expires.",
                     "Confirm Lock Trading",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question);
@@ -5049,6 +5049,9 @@ namespace Risk_Manager
                     MessageBox.Show($"Could not find account: {accountNumber}", "Account Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
+
+                // Close all positions for this account before locking
+                CloseAllPositionsForAccount(targetAccount, core);
 
                 // Check if the method exists before calling (defensive programming)
                 var lockMethod = core.GetType().GetMethod("LockAccount");
@@ -5200,6 +5203,7 @@ namespace Risk_Manager
                 var confirmResult = MessageBox.Show(
                     "Are you sure you want to lock ALL accounts until 5PM ET?\n\n" +
                     "This will:\n" +
+                    "• Flatten all open trades\n" +
                     "• Disable all Buy/Sell buttons\n" +
                     "• Lock all settings (limits, symbols, toggles, etc.)\n\n" +
                     "Both locks will remain until 5PM ET today.",
@@ -5211,6 +5215,9 @@ namespace Risk_Manager
                 {
                     return; // User cancelled
                 }
+
+                // Flatten all trades before locking accounts
+                FlattenAllTrades();
 
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (!settingsService.IsInitialized)
@@ -8082,7 +8089,7 @@ namespace Risk_Manager
         {
             FlattenAllTrades();
             PlayAlertSound();
-            MessageBox.Show("Emergency Flatten Triggered!", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Emergency Flatten Triggered!\n\nAll trades have been closed.", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
