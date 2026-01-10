@@ -86,7 +86,9 @@ namespace Risk_Manager
                 
                 System.IO.File.AppendAllText(log, Environment.NewLine);
 
-                try { MessageBox.Show("RiskManagerPanel.Populate executed. Check Desktop log: RiskManagerPanel_attach_log.txt", "Risk Manager - Debug"); }
+                try { 
+                    //MessageBox.Show("RiskManagerPanel.Populate executed. Check Desktop log: RiskManagerPanel_attach_log.txt", "Risk Manager - Debug");
+                    }
                 catch { /* hosts may prevent UI */ }
             }
             catch (Exception ex)
