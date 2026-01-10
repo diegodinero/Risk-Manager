@@ -8089,7 +8089,7 @@ namespace Risk_Manager
         {
             FlattenAllTrades();
             PlayAlertSound();
-            MessageBox.Show("Emergency Flatten Triggered!", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Emergency Flatten Triggered!\n\nAll trades have been closed.", "Emergency Flatten", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
