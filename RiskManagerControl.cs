@@ -5805,7 +5805,7 @@ namespace Risk_Manager
                     try
                     {
                         // Don't close the main form here - it will be closed separately
-                        var parentForm = this.FindForm();
+                        // Reuse parentForm variable from outer scope instead of redeclaring
                         if (form != null && !form.IsDisposed && form != parentForm)
                         {
                             System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] CloseAllChildForms: Closing open form '{form.Text}'");
