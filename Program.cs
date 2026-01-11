@@ -27,6 +27,28 @@ namespace Risk_Manager
             };
 
             form.Controls.Add(control);
+            
+            // Add FormClosing event handler to ensure graceful shutdown
+            form.FormClosing += (sender, e) =>
+            {
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine("[MAIN] Form closing event triggered");
+                    
+                    // Dispose the control to trigger cleanup
+                    control?.Dispose();
+                    
+                    System.Diagnostics.Debug.WriteLine("[MAIN] Control disposed successfully");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[MAIN] Error during form closing: {ex.Message}");
+                    
+                    // Even if there's an error, allow the form to close
+                    // The shutdown mechanism will handle forceful termination if needed
+                }
+            };
+            
             Application.Run(form);
         }
     }

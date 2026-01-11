@@ -1,6 +1,7 @@
 ﻿using Risk_Manager.Data;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -9,6 +10,7 @@ using System.Linq;
 using System.Media;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
@@ -279,6 +281,10 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer shutdownTimer;
         private Form shutdownCountdownForm;
         private int shutdownCountdownSeconds;
+        
+        // Shutdown coordination fields
+        private System.Threading.CancellationTokenSource shutdownCancellationTokenSource;
+        private bool isShuttingDown = false;
 
         /// <summary>
         /// Sets the WPF window reference for dragging functionality
@@ -389,6 +395,10 @@ namespace Risk_Manager
 
         public RiskManagerControl()
         {
+            // Initialize shutdown coordination
+            shutdownCancellationTokenSource = new System.Threading.CancellationTokenSource();
+            isShuttingDown = false;
+            
             // Load saved theme preference or use default (Blue)
             var savedTheme = LoadThemePreference();
             ApplyTheme(savedTheme);
@@ -5312,6 +5322,13 @@ namespace Risk_Manager
         {
             try
             {
+                // Prevent multiple shutdown attempts
+                if (isShuttingDown)
+                {
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Shutdown already in progress, ignoring duplicate request");
+                    return;
+                }
+                
                 // Show confirmation dialog
                 var confirmResult = MessageBox.Show(
                     "Are you sure you want to lock all accounts, settings, and close the application?",
@@ -5323,6 +5340,10 @@ namespace Risk_Manager
                 {
                     return; // User cancelled
                 }
+
+                // Mark shutdown as in progress
+                isShuttingDown = true;
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Shutdown initiated by user");
 
                 // Execute lock all accounts logic - call with null sender for separation of concerns
                 BtnLockAllAccounts_Click(null, EventArgs.Empty);
@@ -5337,6 +5358,7 @@ namespace Risk_Manager
             {
                 System.Diagnostics.Debug.WriteLine($"[ERROR] Error in ShutdownButton_Click: {ex.Message}\n{ex.StackTrace}");
                 MessageBox.Show($"Error during shutdown: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                isShuttingDown = false; // Reset flag on error
             }
         }
 
@@ -5417,19 +5439,26 @@ namespace Risk_Manager
             {
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] User cancelled shutdown");
+                    
+                    // Stop and cleanup timer
                     shutdownTimer?.Stop();
                     shutdownTimer?.Dispose();
                     shutdownTimer = null;
                     
+                    // Close and cleanup countdown form
                     shutdownCountdownForm?.Close();
                     shutdownCountdownForm?.Dispose();
                     shutdownCountdownForm = null;
+                    
+                    // Reset shutdown flag
+                    isShuttingDown = false;
                     
                     MessageBox.Show("Shutdown cancelled.", "Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error cancelling shutdown: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] Error cancelling shutdown: {ex.Message}");
                 }
             };
             shutdownCountdownForm.Controls.Add(cancelButton);
@@ -5452,47 +5481,33 @@ namespace Risk_Manager
 
                     if (shutdownCountdownSeconds <= 0)
                     {
+                        System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Countdown complete, initiating graceful shutdown");
+                        
+                        // Stop and cleanup timer
                         shutdownTimer?.Stop();
                         shutdownTimer?.Dispose();
                         shutdownTimer = null;
                         
+                        // Close and cleanup countdown form
                         shutdownCountdownForm?.Close();
                         shutdownCountdownForm?.Dispose();
                         shutdownCountdownForm = null;
 
-                        // Close the application gracefully
-                        var parentForm = this.FindForm();
-                        if (parentForm != null)
-                        {
-                            // Use BeginInvoke to allow the form to close gracefully on the UI thread
-                            parentForm.BeginInvoke(new Action(() => 
-                            {
-                                try
-                                {
-                                    parentForm.Close();
-                                }
-                                catch (Exception closeEx)
-                                {
-                                    System.Diagnostics.Debug.WriteLine($"Error closing parent form: {closeEx.Message}");
-                                    // Last resort - properly exit the application
-                                    Application.Exit();
-                                }
-                            }));
-                        }
-                        else
-                        {
-                            // If we can't find the form, properly exit the application
-                            Application.Exit();
-                        }
+                        // Execute graceful shutdown
+                        PerformGracefulShutdown();
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error in shutdown timer: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] Error in shutdown timer: {ex.Message}");
                     shutdownTimer?.Stop();
                     shutdownTimer?.Dispose();
                     shutdownCountdownForm?.Close();
                     shutdownCountdownForm?.Dispose();
+                    
+                    // Attempt forceful shutdown as fallback
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Attempting forceful shutdown due to timer error");
+                    PerformGracefulShutdown();
                 }
             };
 
@@ -5506,6 +5521,367 @@ namespace Risk_Manager
 
             shutdownTimer.Start();
             shutdownCountdownForm.Show();
+        }
+        
+        /// <summary>
+        /// Performs a graceful shutdown of the application with comprehensive resource cleanup.
+        /// Implements a multi-stage shutdown process with fallback mechanisms.
+        /// </summary>
+        private void PerformGracefulShutdown()
+        {
+            System.Diagnostics.Debug.WriteLine("[SHUTDOWN] ===== Starting Graceful Shutdown Process =====");
+            
+            try
+            {
+                // Stage 1: Cancel any background operations using CancellationToken
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 1: Cancelling background operations");
+                try
+                {
+                    shutdownCancellationTokenSource?.Cancel();
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 1: CancellationToken signaled");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] Stage 1: Error cancelling background operations: {ex.Message}");
+                }
+                
+                // Stage 2: Stop and dispose all timers in controlled manner
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 2: Stopping all timers");
+                try
+                {
+                    // Stop all active timers to prevent further processing
+                    StopAllTimers();
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 2: All timers stopped");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] Stage 2: Error stopping timers: {ex.Message}");
+                }
+                
+                // Stage 3: Close all child forms
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 3: Closing child forms");
+                try
+                {
+                    CloseAllChildForms();
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 3: All child forms closed");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] Stage 3: Error closing child forms: {ex.Message}");
+                }
+                
+                // Stage 4: Dispose sound players and release resources
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 4: Releasing resources");
+                try
+                {
+                    DisposeResources();
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 4: Resources disposed");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] Stage 4: Error disposing resources: {ex.Message}");
+                }
+                
+                // Stage 5: Close the main form
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 5: Closing main form");
+                var parentForm = this.FindForm();
+                if (parentForm != null)
+                {
+                    // Use BeginInvoke to allow the form to close gracefully on the UI thread
+                    parentForm.BeginInvoke(new Action(() => 
+                    {
+                        try
+                        {
+                            System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 5: Calling Form.Close()");
+                            parentForm.Close();
+                            System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 5: Form.Close() completed");
+                        }
+                        catch (Exception closeEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] Stage 5: Error closing parent form: {closeEx.Message}");
+                            
+                            // Stage 6: Fallback to Application.Exit() if Form.Close() fails
+                            System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 6: Attempting Application.Exit()");
+                            try
+                            {
+                                Application.Exit();
+                                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 6: Application.Exit() called");
+                            }
+                            catch (Exception exitEx)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] Stage 6: Application.Exit() failed: {exitEx.Message}");
+                                
+                                // Stage 7: Final fallback to Environment.Exit(0) for forceful shutdown
+                                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 7: Forcing shutdown with Environment.Exit(0)");
+                                Environment.Exit(0);
+                            }
+                        }
+                    }));
+                }
+                else
+                {
+                    // If we can't find the form, try Application.Exit()
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Stage 5: Parent form not found, attempting Application.Exit()");
+                    try
+                    {
+                        Application.Exit();
+                        System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Application.Exit() called");
+                    }
+                    catch (Exception exitEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] Application.Exit() failed: {exitEx.Message}");
+                        
+                        // Final fallback to Environment.Exit(0)
+                        System.Diagnostics.Debug.WriteLine("[SHUTDOWN] Forcing shutdown with Environment.Exit(0)");
+                        Environment.Exit(0);
+                    }
+                }
+                
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] ===== Graceful Shutdown Process Complete =====");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] CRITICAL: Unexpected error in graceful shutdown: {ex.Message}\n{ex.StackTrace}");
+                
+                // Absolute last resort - forcefully terminate the process
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] CRITICAL: Forcing immediate shutdown with Environment.Exit(1)");
+                try
+                {
+                    Environment.Exit(1);
+                }
+                catch
+                {
+                    // If even Environment.Exit fails, try Process.Kill as absolute last resort
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] CRITICAL: Attempting Process.Kill()");
+                    try
+                    {
+                        Process.GetCurrentProcess().Kill();
+                    }
+                    catch (Exception killEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] CRITICAL: Process.Kill() failed: {killEx.Message}");
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Stops all timers in a controlled manner to prevent further processing.
+        /// This is a critical step in graceful shutdown to ensure no background operations continue.
+        /// </summary>
+        private void StopAllTimers()
+        {
+            System.Diagnostics.Debug.WriteLine("[SHUTDOWN] StopAllTimers: Beginning timer cleanup");
+            
+            // Stop stats refresh timer
+            if (statsRefreshTimer != null)
+            {
+                try
+                {
+                    statsRefreshTimer.Stop();
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] StopAllTimers: statsRefreshTimer stopped");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] StopAllTimers: Error stopping statsRefreshTimer: {ex.Message}");
+                }
+            }
+            
+            // Stop stats detail refresh timer
+            if (statsDetailRefreshTimer != null)
+            {
+                try
+                {
+                    statsDetailRefreshTimer.Stop();
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] StopAllTimers: statsDetailRefreshTimer stopped");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] StopAllTimers: Error stopping statsDetailRefreshTimer: {ex.Message}");
+                }
+            }
+            
+            // Stop type summary refresh timer
+            if (typeSummaryRefreshTimer != null)
+            {
+                try
+                {
+                    typeSummaryRefreshTimer.Stop();
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] StopAllTimers: typeSummaryRefreshTimer stopped");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] StopAllTimers: Error stopping typeSummaryRefreshTimer: {ex.Message}");
+                }
+            }
+            
+            // Stop lock expiration check timer
+            if (lockExpirationCheckTimer != null)
+            {
+                try
+                {
+                    lockExpirationCheckTimer.Stop();
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] StopAllTimers: lockExpirationCheckTimer stopped");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] StopAllTimers: Error stopping lockExpirationCheckTimer: {ex.Message}");
+                }
+            }
+            
+            // Stop P&L monitor timer
+            if (pnlMonitorTimer != null)
+            {
+                try
+                {
+                    pnlMonitorTimer.Stop();
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] StopAllTimers: pnlMonitorTimer stopped");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] StopAllTimers: Error stopping pnlMonitorTimer: {ex.Message}");
+                }
+            }
+            
+            // Stop badge refresh timer
+            if (badgeRefreshTimer != null)
+            {
+                try
+                {
+                    badgeRefreshTimer.Stop();
+                    System.Diagnostics.Debug.WriteLine("[SHUTDOWN] StopAllTimers: badgeRefreshTimer stopped");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] StopAllTimers: Error stopping badgeRefreshTimer: {ex.Message}");
+                }
+            }
+            
+            System.Diagnostics.Debug.WriteLine("[SHUTDOWN] StopAllTimers: Timer cleanup complete");
+        }
+        
+        /// <summary>
+        /// Closes all child forms to ensure clean shutdown.
+        /// This prevents forms from remaining open after the main application closes.
+        /// </summary>
+        private void CloseAllChildForms()
+        {
+            System.Diagnostics.Debug.WriteLine("[SHUTDOWN] CloseAllChildForms: Beginning child form cleanup");
+            
+            try
+            {
+                // Find the parent form
+                var parentForm = this.FindForm();
+                if (parentForm != null)
+                {
+                    // Get a copy of owned forms to avoid modification during iteration
+                    var ownedForms = parentForm.OwnedForms.ToArray();
+                    
+                    System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] CloseAllChildForms: Found {ownedForms.Length} owned forms");
+                    
+                    foreach (var ownedForm in ownedForms)
+                    {
+                        try
+                        {
+                            if (ownedForm != null && !ownedForm.IsDisposed)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] CloseAllChildForms: Closing form '{ownedForm.Text}'");
+                                ownedForm.Close();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] CloseAllChildForms: Error closing form: {ex.Message}");
+                        }
+                    }
+                }
+                
+                // Also close any open forms from the Application.OpenForms collection
+                var openForms = Application.OpenForms.Cast<Form>().ToArray();
+                System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] CloseAllChildForms: Found {openForms.Length} open forms");
+                
+                foreach (var form in openForms)
+                {
+                    try
+                    {
+                        // Don't close the main form here - it will be closed separately
+                        var parentForm = this.FindForm();
+                        if (form != null && !form.IsDisposed && form != parentForm)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] CloseAllChildForms: Closing open form '{form.Text}'");
+                            form.Close();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] CloseAllChildForms: Error closing open form: {ex.Message}");
+                    }
+                }
+                
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] CloseAllChildForms: Child form cleanup complete");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] CloseAllChildForms: Error in child form cleanup: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Disposes of all resources including sound players, images, and other unmanaged resources.
+        /// This ensures no resources remain locked after shutdown.
+        /// </summary>
+        private void DisposeResources()
+        {
+            System.Diagnostics.Debug.WriteLine("[SHUTDOWN] DisposeResources: Beginning resource cleanup");
+            
+            // Dispose sound players
+            try
+            {
+                alertSoundPlayer?.Dispose();
+                alertSoundPlayer = null;
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] DisposeResources: alertSoundPlayer disposed");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] DisposeResources: Error disposing alertSoundPlayer: {ex.Message}");
+            }
+            
+            try
+            {
+                shutdownSoundPlayer?.Dispose();
+                shutdownSoundPlayer = null;
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] DisposeResources: shutdownSoundPlayer disposed");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] DisposeResources: Error disposing shutdownSoundPlayer: {ex.Message}");
+            }
+            
+            // Dispose CancellationTokenSource
+            try
+            {
+                shutdownCancellationTokenSource?.Dispose();
+                shutdownCancellationTokenSource = null;
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] DisposeResources: shutdownCancellationTokenSource disposed");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] DisposeResources: Error disposing shutdownCancellationTokenSource: {ex.Message}");
+            }
+            
+            // Dispose tooltip
+            try
+            {
+                titleToolTip?.Dispose();
+                titleToolTip = null;
+                System.Diagnostics.Debug.WriteLine("[SHUTDOWN] DisposeResources: titleToolTip disposed");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SHUTDOWN] DisposeResources: Error disposing titleToolTip: {ex.Message}");
+            }
+            
+            System.Diagnostics.Debug.WriteLine("[SHUTDOWN] DisposeResources: Resource cleanup complete");
         }
 
         /// <summary>
@@ -10475,6 +10851,15 @@ namespace Risk_Manager
         {
             if (disposing)
             {
+                // Cancel any ongoing operations before disposing
+                try
+                {
+                    shutdownCancellationTokenSource?.Cancel();
+                    shutdownCancellationTokenSource?.Dispose();
+                    shutdownCancellationTokenSource = null;
+                }
+                catch { }
+                
                 statsRefreshTimer?.Stop();
                 statsRefreshTimer?.Dispose();
                 statsRefreshTimer = null;
