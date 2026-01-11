@@ -5314,7 +5314,7 @@ namespace Risk_Manager
             {
                 // Show confirmation dialog
                 var confirmResult = MessageBox.Show(
-                    "Are you sure you want to lock all accounts, settings, and close the application?",
+                    "Are you sure you want to lock all accounts, settings, and FORCEFULLY close the application?",
                     "Confirm Shutdown",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Warning);
@@ -5474,15 +5474,17 @@ namespace Risk_Manager
                                 catch (Exception closeEx)
                                 {
                                     System.Diagnostics.Debug.WriteLine($"Error closing parent form: {closeEx.Message}");
-                                    // Last resort - properly exit the application
-                                    Application.Exit();
+                                    // Last resort - forcefully exit the application
+                                    Environment.Exit(0);
+
                                 }
                             }));
                         }
                         else
                         {
                             // If we can't find the form, properly exit the application
-                            Application.Exit();
+                            Environment.Exit(0);
+
                         }
                     }
                 }
