@@ -9152,8 +9152,8 @@ namespace Risk_Manager
 
             flowLayout.Controls.Add(CreateRiskOverviewCard(
                 "Symbol Restrictions",
-                new[] { "Blocked Symbols:", "Default Contract Limit:" },
-                new[] { GetBlockedSymbols, GetDefaultContractLimit }
+                new[] { "Blocked Symbols:", "Default Contract Limit:", "Symbol-Specific Limits:" },
+                new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits }
             ));
 
             var tradingTimesCard = CreateTradingTimesOverviewCard();
