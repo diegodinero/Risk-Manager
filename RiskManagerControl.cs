@@ -7036,12 +7036,47 @@ namespace Risk_Manager
                 if (position == null)
                     return;
 
-                core.ClosePosition(position);
-                System.Diagnostics.Debug.WriteLine($"Closed position: {position.Symbol}");
+                // Attempt to close position with retry logic for late responses
+                int maxRetries = 3;
+                int retryDelayMs = 500;
+                bool positionClosed = false;
+
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                {
+                    try
+                    {
+                        core.ClosePosition(position);
+                        System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE SUCCESS] Symbol: {position.Symbol}, Attempt: {attempt}");
+                        positionClosed = true;
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE ATTEMPT {attempt}] Failed for {position.Symbol}: {ex.Message}");
+                        
+                        if (attempt < maxRetries)
+                        {
+                            // Wait before retrying
+                            System.Threading.Thread.Sleep(retryDelayMs);
+                            retryDelayMs *= 2; // Exponential backoff
+                        }
+                        else
+                        {
+                            // Final attempt failed
+                            System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE FAILED] All {maxRetries} attempts failed for {position.Symbol}");
+                            throw;
+                        }
+                    }
+                }
+
+                if (!positionClosed)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE WARNING] Position {position.Symbol} may not have been closed after {maxRetries} attempts");
+                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error closing position {position?.Symbol}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE ERROR] Unrecoverable error closing position {position?.Symbol}: {ex.Message}");
             }
         }
 
@@ -8728,9 +8763,7 @@ namespace Risk_Manager
                 "Positions",
                 "Limits",
                 "Symbols",
-                "Allowed Trading Times",
-                "Weekly Loss",
-                "Weekly Profit Target"
+                "Allowed Trading Times"
             };
 
             for (int i = 0; i < features.Length; i++)
