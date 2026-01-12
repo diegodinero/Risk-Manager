@@ -95,25 +95,36 @@ namespace Risk_Manager.Data
             try
             {
                 if (!File.Exists(filePath))
+                {
+                    System.Diagnostics.Debug.WriteLine($"SetFileReadOnly: File not found: {filePath}");
                     return;
+                }
 
                 var attributes = File.GetAttributes(filePath);
                 if (readOnly)
                 {
                     // Add read-only attribute
                     File.SetAttributes(filePath, attributes | FileAttributes.ReadOnly);
-                    System.Diagnostics.Debug.WriteLine($"Set file read-only: {filePath}");
+                    System.Diagnostics.Debug.WriteLine($"[FILE PROTECTION] Set file read-only: {filePath}");
                 }
                 else
                 {
                     // Remove read-only attribute
                     File.SetAttributes(filePath, attributes & ~FileAttributes.ReadOnly);
-                    System.Diagnostics.Debug.WriteLine($"Removed file read-only: {filePath}");
+                    System.Diagnostics.Debug.WriteLine($"[FILE PROTECTION] Removed file read-only: {filePath}");
                 }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[FILE PROTECTION ERROR] Insufficient permissions to modify file attributes for {filePath}: {ex.Message}");
+            }
+            catch (IOException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[FILE PROTECTION ERROR] File I/O error while modifying attributes for {filePath}: {ex.Message}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error setting file read-only attribute: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[FILE PROTECTION ERROR] Unexpected error setting file attributes for {filePath}: {ex.Message}");
             }
         }
 
