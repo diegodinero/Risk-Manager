@@ -7031,17 +7031,39 @@ namespace Risk_Manager
         /// </summary>
         private void ClosePosition(Position position, Core core)
         {
-            try
-            {
-                if (position == null)
-                    return;
+            if (position == null)
+                return;
 
-                core.ClosePosition(position);
-                System.Diagnostics.Debug.WriteLine($"Closed position: {position.Symbol}");
-            }
-            catch (Exception ex)
+            // Attempt to close position with retry logic for late responses
+            int maxRetries = 3;
+            int retryDelayMs = 500;
+
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
-                System.Diagnostics.Debug.WriteLine($"Error closing position {position?.Symbol}: {ex.Message}");
+                try
+                {
+                    core.ClosePosition(position);
+                    System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE SUCCESS] Symbol: {position.Symbol}, Attempt: {attempt}");
+                    return; // Successfully closed, exit method
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE ATTEMPT {attempt}] Failed for {position.Symbol}: {ex.Message}");
+                    
+                    if (attempt < maxRetries)
+                    {
+                        // Wait before retrying (synchronous delay for simplicity)
+                        System.Threading.Thread.Sleep(retryDelayMs);
+                        retryDelayMs *= 2; // Exponential backoff
+                    }
+                    else
+                    {
+                        // Final attempt failed - log and let outer catch handle it
+                        System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE FAILED] All {maxRetries} attempts failed for {position.Symbol}");
+                        System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE ERROR] Unrecoverable error closing position {position.Symbol}: {ex.Message}");
+                        // Don't rethrow - log and continue to avoid crashing the monitoring loop
+                    }
+                }
             }
         }
 
@@ -8728,10 +8750,11 @@ namespace Risk_Manager
                 "Positions",
                 "Limits",
                 "Symbols",
-                "Allowed Trading Times",
-                "Weekly Loss",
-                "Weekly Profit Target"
+                "Allowed Trading Times"
             };
+
+            // List to store secondary checkboxes that should sync with master toggle
+            var secondaryCheckboxes = new List<CheckBox>();
 
             for (int i = 0; i < features.Length; i++)
             {
@@ -8746,13 +8769,30 @@ namespace Risk_Manager
                     BackColor = CardBackground,
                     Margin = new Padding(0, 8, 0, 8)
                 };
-                contentArea.Controls.Add(checkbox);
                 
                 // Store reference to the master toggle checkbox
                 if (i == 0 && feature == "Enable All Features")
                 {
                     featureToggleEnabledCheckbox = checkbox;
+                    
+                    // Add event handler to sync secondary checkboxes when master toggle changes
+                    checkbox.CheckedChanged += (s, e) =>
+                    {
+                        bool isChecked = checkbox.Checked;
+                        foreach (var secondary in secondaryCheckboxes)
+                        {
+                            secondary.Checked = isChecked;
+                        }
+                    };
                 }
+                else
+                {
+                    // Secondary checkboxes are read-only indicators
+                    checkbox.Enabled = false;
+                    secondaryCheckboxes.Add(checkbox);
+                }
+                
+                contentArea.Controls.Add(checkbox);
             }
 
             var saveButton = CreateDarkSaveButton();
