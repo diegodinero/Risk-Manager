@@ -8728,9 +8728,7 @@ namespace Risk_Manager
                 "Positions",
                 "Limits",
                 "Symbols",
-                "Allowed Trading Times",
-                "Weekly Loss",
-                "Weekly Profit Target"
+                "Allowed Trading Times"
             };
 
             for (int i = 0; i < features.Length; i++)
