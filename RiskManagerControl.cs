@@ -7031,52 +7031,39 @@ namespace Risk_Manager
         /// </summary>
         private void ClosePosition(Position position, Core core)
         {
-            try
+            if (position == null)
+                return;
+
+            // Attempt to close position with retry logic for late responses
+            int maxRetries = 3;
+            int retryDelayMs = 500;
+
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
-                if (position == null)
-                    return;
-
-                // Attempt to close position with retry logic for late responses
-                int maxRetries = 3;
-                int retryDelayMs = 500;
-                bool positionClosed = false;
-
-                for (int attempt = 1; attempt <= maxRetries; attempt++)
+                try
                 {
-                    try
+                    core.ClosePosition(position);
+                    System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE SUCCESS] Symbol: {position.Symbol}, Attempt: {attempt}");
+                    return; // Successfully closed, exit method
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE ATTEMPT {attempt}] Failed for {position.Symbol}: {ex.Message}");
+                    
+                    if (attempt < maxRetries)
                     {
-                        core.ClosePosition(position);
-                        System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE SUCCESS] Symbol: {position.Symbol}, Attempt: {attempt}");
-                        positionClosed = true;
-                        break;
+                        // Wait before retrying (synchronous delay for simplicity)
+                        System.Threading.Thread.Sleep(retryDelayMs);
+                        retryDelayMs *= 2; // Exponential backoff
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE ATTEMPT {attempt}] Failed for {position.Symbol}: {ex.Message}");
-                        
-                        if (attempt < maxRetries)
-                        {
-                            // Wait before retrying
-                            System.Threading.Thread.Sleep(retryDelayMs);
-                            retryDelayMs *= 2; // Exponential backoff
-                        }
-                        else
-                        {
-                            // Final attempt failed
-                            System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE FAILED] All {maxRetries} attempts failed for {position.Symbol}");
-                            throw;
-                        }
+                        // Final attempt failed - log and let outer catch handle it
+                        System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE FAILED] All {maxRetries} attempts failed for {position.Symbol}");
+                        System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE ERROR] Unrecoverable error closing position {position.Symbol}: {ex.Message}");
+                        // Don't rethrow - log and continue to avoid crashing the monitoring loop
                     }
                 }
-
-                if (!positionClosed)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE WARNING] Position {position.Symbol} may not have been closed after {maxRetries} attempts");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[POSITION CLOSE ERROR] Unrecoverable error closing position {position?.Symbol}: {ex.Message}");
             }
         }
 
