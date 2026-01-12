@@ -8766,6 +8766,9 @@ namespace Risk_Manager
                 "Allowed Trading Times"
             };
 
+            // List to store secondary checkboxes that should sync with master toggle
+            var secondaryCheckboxes = new List<CheckBox>();
+
             for (int i = 0; i < features.Length; i++)
             {
                 var feature = features[i];
@@ -8779,13 +8782,30 @@ namespace Risk_Manager
                     BackColor = CardBackground,
                     Margin = new Padding(0, 8, 0, 8)
                 };
-                contentArea.Controls.Add(checkbox);
                 
                 // Store reference to the master toggle checkbox
                 if (i == 0 && feature == "Enable All Features")
                 {
                     featureToggleEnabledCheckbox = checkbox;
+                    
+                    // Add event handler to sync secondary checkboxes when master toggle changes
+                    checkbox.CheckedChanged += (s, e) =>
+                    {
+                        bool isChecked = checkbox.Checked;
+                        foreach (var secondary in secondaryCheckboxes)
+                        {
+                            secondary.Checked = isChecked;
+                        }
+                    };
                 }
+                else
+                {
+                    // Secondary checkboxes are read-only indicators
+                    checkbox.Enabled = false;
+                    secondaryCheckboxes.Add(checkbox);
+                }
+                
+                contentArea.Controls.Add(checkbox);
             }
 
             var saveButton = CreateDarkSaveButton();
