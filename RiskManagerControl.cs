@@ -8225,12 +8225,11 @@ namespace Risk_Manager
             {
                 try
                 {
-                    // Use the cached account number that's displayed in the UI
-                    // This ensures we save to exactly what the user sees
-                    var accountNumber = displayedAccountNumber;
+                    // Get the currently selected account number
+                    var accountNumber = GetSelectedAccountNumber();
                     
                     // Debug logging
-                    System.Diagnostics.Debug.WriteLine($"Save button clicked for account: '{accountNumber}' (using displayed value)");
+                    System.Diagnostics.Debug.WriteLine($"Save button clicked for account: '{accountNumber}'");
                     
                     if (string.IsNullOrEmpty(accountNumber))
                     {
