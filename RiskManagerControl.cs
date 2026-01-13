@@ -322,6 +322,7 @@ namespace Risk_Manager
 
         // Account type constants
         private const string ACCOUNT_TYPE_PA = "PA";
+        private const string ACCOUNT_TYPE_SIM_FUND = "Sim-Fund";
         private const string ACCOUNT_TYPE_EVAL = "Eval";
         private const string ACCOUNT_TYPE_CASH = "Cash";
         private const string ACCOUNT_TYPE_PRAC = "Prac";
@@ -361,6 +362,7 @@ namespace Risk_Manager
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
         private static readonly Regex PAPattern = new Regex(@"\bpa\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex EvalPattern = new Regex(@"\beval\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex SimFundPattern = new Regex(@"\bsim\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex CashPattern = new Regex(@"\bcash\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex PracPattern = new Regex(@"\bprac\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -7197,14 +7199,18 @@ namespace Risk_Manager
 
             var connName = account.Connection.Name?.ToLower() ?? "";
             var accountId = account.Id ?? account.Name ?? "";
-            
+
             // Check account ID prefixes first (most specific matching)
             // These mappings are based on known broker/provider account ID conventions:
+            //   - 7PV: Sim-Fund (Sim Funded Account)
             //   - FFNX: PA (Personal Account)
             //   - FFN: Eval (Evaluation/Funded Account)
             //   - BX: PA (Personal Account)
             //   - APEX: Eval (Evaluation/Funded Account)
-            
+
+            // 5PV prefix -> Sim Funded Account
+            if (accountId.StartsWith("7PV", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_SIM_FUND;
             // FFNX prefix -> PA account
             if (accountId.StartsWith("ffnx", StringComparison.OrdinalIgnoreCase))
                 return ACCOUNT_TYPE_PA;
@@ -7234,7 +7240,12 @@ namespace Risk_Manager
             if (EvalPattern.IsMatch(connName) || EvalPattern.IsMatch(accountId) ||
                 connName.Contains("evaluation"))
                 return ACCOUNT_TYPE_EVAL;
-            
+
+            // Eval (Evaluation)
+            if (SimFundPattern.IsMatch(connName) || EvalPattern.IsMatch(accountId) ||
+                connName.Contains("simFunded"))
+                return ACCOUNT_TYPE_SIM_FUND;
+
             // Cash
             if (CashPattern.IsMatch(connName) || CashPattern.IsMatch(accountId))
                 return ACCOUNT_TYPE_CASH;
