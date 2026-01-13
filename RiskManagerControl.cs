@@ -322,7 +322,7 @@ namespace Risk_Manager
 
         // Account type constants
         private const string ACCOUNT_TYPE_PA = "PA";
-        private const string ACCOUNT_TYPE_SIM_FUND = "Sim-Fund";
+        private const string ACCOUNT_TYPE_SIM_FUND = "Sim-Funded";
         private const string ACCOUNT_TYPE_EVAL = "Eval";
         private const string ACCOUNT_TYPE_CASH = "Cash";
         private const string ACCOUNT_TYPE_PRAC = "Prac";
@@ -7202,7 +7202,7 @@ namespace Risk_Manager
 
             // Check account ID prefixes first (most specific matching)
             // These mappings are based on known broker/provider account ID conventions:
-            //   - 7PV: Sim-Fund (Sim Funded Account)
+            //   - 7PV: Sim-Funded (Sim Funded Account)
             //   - FFNX: PA (Personal Account)
             //   - FFN: Eval (Evaluation/Funded Account)
             //   - BX: PA (Personal Account)
