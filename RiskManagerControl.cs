@@ -6056,9 +6056,6 @@ namespace Risk_Manager
                         LockAccountUntil5PMET(accountId, reason, core, account);
                         CloseAllPositionsForAccount(account, core);
                         
-                        // Send notification to user (only once, when first locking)
-                        NotifyUserAccountLocked(accountId, netPnL, lossLimit);
-                        
                         // Reset warning state since we've breached the limit
                         settingsService.ResetDailyLossWarning(accountId);
                         
@@ -6080,29 +6077,10 @@ namespace Risk_Manager
                                 percentOfLimit = Math.Abs((currentPnL / lossLimit) * 100);
                             }
                             
-                            // Send warning notification
-                            string warningMessage = $"⚠️ Warning: Account {accountId} is approaching daily loss limit!\n\n" +
-                                $"Current Net P&L: ${netPnL:F2}\n" +
-                                $"Daily Loss Limit: ${lossLimit:F2}\n" +
-                                $"You are at {percentOfLimit:F0}% of your limit.\n\n" +
-                                $"Account will be locked if limit is reached.";
-                            
                             // Log the warning
                             System.Diagnostics.Debug.WriteLine($"[WARNING NOTIFICATION] Account: {accountId}, " +
                                 $"Current P&L: ${netPnL:F2}, Limit: ${lossLimit:F2}, " +
                                 $"Threshold: {DAILY_LOSS_WARNING_THRESHOLD * 100:F0}%, Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
-                            
-                            // Show warning notification
-                            try
-                            {
-                                PlayAlertSound();
-                                MessageBox.Show(warningMessage, "Daily Loss Limit Warning", 
-                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            }
-                            catch (Exception notifEx)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"[WARNING] Failed to show notification: {notifEx.Message}");
-                            }
                             
                             // Mark warning as sent
                             settingsService.SetDailyLossWarningSent(accountId, currentPnL);
@@ -6145,9 +6123,6 @@ namespace Risk_Manager
                         // Always lock account even if position closing failed (critical for risk management)
                         LockAccountUntil5PMET(accountId, reason, core, account);
                         
-                        // Send notification to user (only once, when first locking)
-                        NotifyUserProfitTargetReached(accountId, currentPnL, profitTarget);
-                        
                         // Reset warning state since we've reached the target
                         settingsService.ResetDailyProfitWarning(accountId);
                         
@@ -6162,29 +6137,10 @@ namespace Risk_Manager
                             // Calculate percentage of target reached
                             decimal percentOfTarget = (currentPnL / profitTarget) * 100;
                             
-                            // Send warning notification
-                            string warningMessage = $"⚠️ Warning: Account {accountId} is approaching daily profit target!\n\n" +
-                                $"Current Net P&L: ${currentPnL:F2}\n" +
-                                $"Daily Profit Target: ${profitTarget:F2}\n" +
-                                $"You are at {percentOfTarget:F0}% of your target.\n\n" +
-                                $"Account will be locked and all positions closed when target is reached.";
-                            
                             // Log the warning
                             System.Diagnostics.Debug.WriteLine($"[WARNING NOTIFICATION] Account: {accountId}, " +
                                 $"Current P&L: ${currentPnL:F2}, Target: ${profitTarget:F2}, " +
                                 $"Threshold: 80%, Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
-                            
-                            // Show warning notification
-                            try
-                            {
-                                PlayAlertSound();
-                                MessageBox.Show(warningMessage, "Daily Profit Target Warning", 
-                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            }
-                            catch (Exception notifEx)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"[WARNING] Failed to show notification: {notifEx.Message}");
-                            }
                             
                             // Mark warning as sent
                             settingsService.SetDailyProfitWarningSent(accountId, currentPnL);
@@ -6712,52 +6668,6 @@ namespace Risk_Manager
         /// <summary>
         /// Notifies the user when their account is locked due to loss limit breach.
         /// </summary>
-        private void NotifyUserAccountLocked(string accountId, double netPnL, decimal lossLimit)
-        {
-            try
-            {
-                string lockMessage = $"🔒 ACCOUNT LOCKED!\n\n" +
-                    $"Account: {accountId}\n" +
-                    $"Current Net P&L: ${netPnL:F2}\n" +
-                    $"Daily Loss Limit: ${lossLimit:F2}\n\n" +
-                    $"Your account has been locked until 5 PM ET due to exceeding the daily loss limit.\n" +
-                    $"All positions have been closed.\n\n" +
-                    $"Please contact an administrator if you need to unlock the account before the scheduled time.";
-                
-                PlayAlertSound();
-                MessageBox.Show(lockMessage, "Account Locked - Daily Loss Limit", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to show lock notification: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Notifies the user that the account has been locked due to reaching the daily profit target.
-        /// </summary>
-        private void NotifyUserProfitTargetReached(string accountId, decimal currentPnL, decimal profitTarget)
-        {
-            try
-            {
-                string lockMessage = $"🎯 DAILY PROFIT TARGET REACHED!\n\n" +
-                    $"Account: {accountId}\n" +
-                    $"Current Net P&L: ${currentPnL:F2}\n" +
-                    $"Daily Profit Target: ${profitTarget:F2}\n\n" +
-                    $"Congratulations! Your account has been locked until 5 PM ET to protect your profits.\n" +
-                    $"All positions have been closed.\n\n" +
-                    $"Please contact an administrator if you need to unlock the account before the scheduled time.";
-                
-                PlayAlertSound();
-                MessageBox.Show(lockMessage, "Account Locked - Profit Target Reached", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to show profit target notification: {ex.Message}");
-            }
-        }
 
         /// <summary>
         /// Locks an account until 5 PM ET.
