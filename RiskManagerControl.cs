@@ -6666,10 +6666,6 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Notifies the user when their account is locked due to loss limit breach.
-        /// </summary>
-
-        /// <summary>
         /// Locks an account until 5 PM ET.
         /// </summary>
         private void LockAccountUntil5PMET(string accountId, string reason, Core core, Account account)
