@@ -6929,9 +6929,6 @@ namespace Risk_Manager
                     // Close position without canceling orders again (already done above)
                     try
                     {
-                        if (position == null)
-                            continue;
-
                         core.ClosePosition(position);
                         System.Diagnostics.Debug.WriteLine($"Closed position: {position.Symbol}");
                     }
