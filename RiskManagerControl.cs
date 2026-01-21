@@ -6957,7 +6957,7 @@ namespace Risk_Manager
                     return;
 
                 var workingOrders = core.Orders
-                    .Where(order => order != null && order.Account == account && order.IsActive)
+                    .Where(order => order != null && order.Account == account && order.Status == OrderStatus.Working)
                     .ToList();
 
                 foreach (var order in workingOrders)
