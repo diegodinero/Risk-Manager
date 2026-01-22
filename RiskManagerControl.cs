@@ -595,6 +595,9 @@ namespace Risk_Manager
         }
 
         // Helper: returns true if string represents a negative numeric (parentheses or leading '-')
+        // Regex pattern for matching numeric values with optional currency symbols and formatting
+        private static readonly string NumericValuePattern = @"\(?-?\$?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?";
+
         private static bool IsNegativeNumericString(string s)
         {
             if (string.IsNullOrWhiteSpace(s)) return false;
@@ -605,7 +608,7 @@ namespace Risk_Manager
             {
                 // Match a numeric token that may include optional currency symbol and optional parentheses:
                 // Examples matched: "(1,234.56)", "$-1,234.56", "-1234.56", "1234.56"
-                var m = Regex.Match(s, @"\(?-?\$?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?");
+                var m = Regex.Match(s, NumericValuePattern);
                 if (!m.Success) return false;
 
                 var token = m.Value.Trim();
@@ -625,7 +628,12 @@ namespace Risk_Manager
             }
         }
 
-        // Helper method to check if a numeric string represents exactly zero (0.00)
+        /// <summary>
+        /// Determines if a numeric string represents exactly zero (0.00).
+        /// Handles various formats including currency symbols, commas, and parentheses.
+        /// </summary>
+        /// <param name="s">The string to check</param>
+        /// <returns>True if the string represents zero, false otherwise</returns>
         private static bool IsZeroValue(string s)
         {
             if (string.IsNullOrWhiteSpace(s)) return false;
@@ -635,13 +643,13 @@ namespace Risk_Manager
             try
             {
                 // Match a numeric token that may include optional currency symbol and optional parentheses
-                var m = Regex.Match(s, @"\(?-?\$?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?");
+                var m = Regex.Match(s, NumericValuePattern);
                 if (!m.Success) return false;
                 
                 var token = m.Value.Trim();
                 
-                // Remove currency symbols, parentheses, and commas
-                token = token.Replace("$", "").Replace("(", "").Replace(")", "").Replace(",", "");
+                // Remove non-numeric characters for parsing
+                token = Regex.Replace(token, @"[\$\(\),]", "");
                 
                 // Try to parse as decimal and check if it equals zero
                 if (decimal.TryParse(token, out decimal value))
