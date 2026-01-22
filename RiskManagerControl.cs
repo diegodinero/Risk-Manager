@@ -625,6 +625,38 @@ namespace Risk_Manager
             }
         }
 
+        // Helper method to check if a numeric string represents exactly zero (0.00)
+        private static bool IsZeroValue(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return false;
+            // Normalize
+            s = s.Trim();
+            
+            try
+            {
+                // Match a numeric token that may include optional currency symbol and optional parentheses
+                var m = Regex.Match(s, @"\(?-?\$?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?");
+                if (!m.Success) return false;
+                
+                var token = m.Value.Trim();
+                
+                // Remove currency symbols, parentheses, and commas
+                token = token.Replace("$", "").Replace("(", "").Replace(")", "").Replace(",", "");
+                
+                // Try to parse as decimal and check if it equals zero
+                if (decimal.TryParse(token, out decimal value))
+                {
+                    return value == 0m;
+                }
+                
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         // Color numeric cells for specified column keys when YellowBlueBlack theme active
         private void ColorizeNumericCells(DataGridView grid, params string[] columnNames)
         {
@@ -643,7 +675,10 @@ namespace Risk_Manager
                         var raw = (cell.Value ?? string.Empty).ToString();
                         if (applySpecial)
                         {
-                            if (IsNegativeNumericString(raw))
+                            // Check if value is exactly 0.00 - if so, use white (TextWhite)
+                            if (IsZeroValue(raw))
+                                cell.Style.ForeColor = TextWhite;
+                            else if (IsNegativeNumericString(raw))
                                 cell.Style.ForeColor = NegativeValueColor;
                             else
                                 cell.Style.ForeColor = PositiveValueColor;
