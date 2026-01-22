@@ -6917,13 +6917,25 @@ namespace Risk_Manager
                 if (core.Positions == null)
                     return;
 
+                // Cancel all working orders for this account first
+                CancelAllWorkingOrdersForAccount(account, core);
+
                 var accountPositions = core.Positions
                     .Where(p => p != null && p.Account == account)
                     .ToList();
 
                 foreach (var position in accountPositions)
                 {
-                    ClosePosition(position, core);
+                    // Close position without canceling orders again (already done above)
+                    try
+                    {
+                        core.ClosePosition(position);
+                        System.Diagnostics.Debug.WriteLine($"Closed position: {position.Symbol}");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error closing position {position?.Symbol}: {ex.Message}");
+                    }
                 }
 
                 System.Diagnostics.Debug.WriteLine($"Closed {accountPositions.Count} positions for account");
@@ -6931,6 +6943,45 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error closing all positions for account: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Cancels all working orders for a specific account.
+        /// </summary>
+        private void CancelAllWorkingOrdersForAccount(Account account, Core core)
+        {
+            try
+            {
+                if (account == null || core?.Orders == null)
+                    return;
+
+                var workingOrders = core.Orders
+                    .Where(order => order != null && order.Account == account && 
+                           (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
+                    .ToList();
+
+                foreach (var order in workingOrders)
+                {
+                    try
+                    {
+                        core.CancelOrder(order);
+                        System.Diagnostics.Debug.WriteLine($"Canceled working order: {order.Symbol} for account {account.Id}");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error canceling order {order.Symbol}: {ex.Message}");
+                    }
+                }
+
+                if (workingOrders.Count > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Canceled {workingOrders.Count} working orders for account {account.Id}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error canceling working orders for account: {ex.Message}");
             }
         }
 
@@ -6943,6 +6994,9 @@ namespace Risk_Manager
             {
                 if (position == null)
                     return;
+
+                // Cancel all working orders for this account before closing the position
+                CancelAllWorkingOrdersForAccount(position.Account, core);
 
                 core.ClosePosition(position);
                 System.Diagnostics.Debug.WriteLine($"Closed position: {position.Symbol}");
