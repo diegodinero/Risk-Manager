@@ -3434,7 +3434,10 @@ namespace Risk_Manager
                         var raw = (valueCell.Value ?? string.Empty).ToString();
                         if (metric == "Open P&L" || metric == "Daily P&L" || metric == "Gross P&L")
                         {
-                            if (IsNegativeNumericString(raw))
+                            // Check if value is exactly 0.00 - if so, use white (TextWhite)
+                            if (IsZeroValue(raw))
+                                valueCell.Style.ForeColor = TextWhite;
+                            else if (IsNegativeNumericString(raw))
                                 valueCell.Style.ForeColor = NegativeValueColor;
                             else
                                 valueCell.Style.ForeColor = PositiveValueColor;
