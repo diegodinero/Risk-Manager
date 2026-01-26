@@ -190,6 +190,9 @@ namespace Risk_Manager
         private Button lockTradingButton; // Lock Trading button reference
         private Button unlockTradingButton; // Unlock Trading button reference
         private ComboBox lockDurationComboBox; // Lock duration selector
+        private CheckBox showProgressBarsCheckBox; // Show Progress Bars checkbox in General Settings
+        private bool showProgressBars = false; // Whether to show progress bars in data grids
+        private Label currentThemeLabel; // Label to display current theme name
         
         // State caching for badge updates - stored per account to prevent cross-account state confusion
         private readonly Dictionary<string, bool?> _accountTradingLockStateCache = new Dictionary<string, bool?>();
@@ -382,7 +385,7 @@ namespace Risk_Manager
         private static readonly string[] NavItems = new[]
         {
             "📊 Accounts Summary", "📈 Stats", "📋 Type", "🔍 Risk Overview", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
-            "🔒 Lock Settings", "🔒 Manual Lock"
+            "🔒 Lock Settings", "🔒 Manual Lock", "⚙️ General Settings"
         };
 
         private const int LeftPanelWidth = 200;
@@ -394,6 +397,9 @@ namespace Risk_Manager
             // Load saved theme preference or use default (Blue)
             var savedTheme = LoadThemePreference();
             ApplyTheme(savedTheme);
+            
+            // Load progress bar preference
+            showProgressBars = LoadProgressBarPreference();
 
             LoadIcons();
 
@@ -448,6 +454,8 @@ namespace Risk_Manager
                     placeholder = CreateLockSettingsDarkPanel();
                 else if (name.EndsWith("Manual Lock"))
                     placeholder = CreateManualLockDarkPanel();
+                else if (name.EndsWith("General Settings"))
+                    placeholder = CreateGeneralSettingsPanel();
                 else
                     placeholder = CreatePlaceholderPanel(name);
                 pageContents[name] = placeholder;
@@ -1101,6 +1109,26 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Gets a user-friendly display name for the theme
+        /// </summary>
+        private string GetThemeDisplayName(Theme theme)
+        {
+            switch (theme)
+            {
+                case Theme.Blue:
+                    return "Blue";
+                case Theme.Black:
+                    return "Black";
+                case Theme.White:
+                    return "White";
+                case Theme.YellowBlueBlack:
+                    return "Yellow/Blue/Black";
+                default:
+                    return "Unknown";
+            }
+        }
+
+        /// <summary>
         /// Saves the navigation collapse state preference to a file.
         /// </summary>
         private void SaveNavigationCollapsePreference()
@@ -1141,6 +1169,68 @@ namespace Risk_Manager
             }
             
             // Default to expanded (not collapsed)
+            return false;
+        }
+
+        /// <summary>
+        /// Gets the path to the progress bar preference file
+        /// </summary>
+        private string GetProgressBarPreferencesPath()
+        {
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var folderPath = Path.Combine(appDataPath, "RiskManager");
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+            return Path.Combine(folderPath, "progressbar_preference.txt");
+        }
+
+        /// <summary>
+        /// Saves the progress bar preference to disk
+        /// </summary>
+        private void SaveProgressBarPreference()
+        {
+            // Don't save during initialization to avoid unnecessary file I/O
+            if (isInitializing)
+                return;
+                
+            try
+            {
+                var progressBarPath = GetProgressBarPreferencesPath();
+                File.WriteAllText(progressBarPath, showProgressBars.ToString());
+                System.Diagnostics.Debug.WriteLine($"Progress bar preference saved: {showProgressBars}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save progress bar preference: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Loads the progress bar preference from disk
+        /// </summary>
+        private bool LoadProgressBarPreference()
+        {
+            try
+            {
+                var progressBarPath = GetProgressBarPreferencesPath();
+                if (File.Exists(progressBarPath))
+                {
+                    var progressBarString = File.ReadAllText(progressBarPath).Trim();
+                    if (bool.TryParse(progressBarString, out var showBars))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Progress bar preference loaded: {showBars}");
+                        return showBars;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load progress bar preference: {ex.Message}");
+            }
+            
+            // Default to false (show normal columns)
             return false;
         }
 
@@ -1918,6 +2008,17 @@ namespace Risk_Manager
                 {
                     // fallback to generic lock if specific resource missing
                     IconMap["Manual Lock"] = Properties.Resources._lock;
+                }
+
+                // General Settings icon
+                try
+                {
+                    IconMap["General Settings"] = Properties.Resources.generalsettings;
+                }
+                catch
+                {
+                    // fallback to feature toggles icon if missing
+                    IconMap["General Settings"] = Properties.Resources.featuretoggles;
                 }
 
                 // Explicit card header mappings for Risk Overview
@@ -3588,6 +3689,41 @@ namespace Risk_Manager
             mainPanel.Controls.Add(typeSummaryGrid);
             mainPanel.Controls.Add(topPanel);
             return mainPanel;
+        }
+
+        /// <summary>
+        /// Refreshes all data grids to apply or remove progress bars based on the showProgressBars setting
+        /// </summary>
+        private void RefreshAllDataGrids()
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(RefreshAllDataGrids));
+                return;
+            }
+
+            try
+            {
+                // Refresh the grids by calling their existing refresh methods
+                if (statsGrid != null)
+                {
+                    RefreshAccountsSummary();
+                }
+                
+                if (statsDetailGrid != null)
+                {
+                    RefreshAccountStats();
+                }
+                
+                if (typeSummaryGrid != null)
+                {
+                    RefreshTypeSummary();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error refreshing data grids: {ex.Message}");
+            }
         }
 
         private void RefreshTypeSummary()
@@ -8777,6 +8913,214 @@ namespace Risk_Manager
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(featureTogglesHeader);
+
+            return mainPanel;
+        }
+
+        /// <summary>
+        /// Creates the "General Settings" panel with Theme Switcher and Progress Bar checkbox.
+        /// </summary>
+        private Control CreateGeneralSettingsPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title (use exact key "General Settings" so IconMap resolves to generalsettings.png)
+            var generalSettingsHeader = new CustomHeaderControl("General Settings", GetIconForTitle("General Settings"));
+            generalSettingsHeader.Dock = DockStyle.Top;
+            generalSettingsHeader.Margin = new Padding(10, 0, 0, 0);
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Customize your application appearance and behavior:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            // Content area
+            var contentArea = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                AutoScroll = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false
+            };
+
+            // Theme Switcher Section
+            var themeSectionLabel = new Label
+            {
+                Text = "Theme Settings",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            contentArea.Controls.Add(themeSectionLabel);
+
+            // Theme switcher button with current theme label
+            var themePanel = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 20)
+            };
+
+            var themeSwitcherButton = new Button
+            {
+                Width = 50,
+                Height = 40,
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(52, 152, 219),
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 10, 0),
+                Padding = new Padding(0),
+                UseCompatibleTextRendering = true
+            };
+            themeSwitcherButton.FlatAppearance.BorderSize = 0;
+            themeSwitcherButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(41, 128, 185);
+
+            // Set theme switcher image
+            Image themeImg = null;
+            if (IconMap.TryGetValue("ThemeSwitcher", out var img) && img != null)
+                themeImg = img;
+            else
+            {
+                try { themeImg = Properties.Resources.themeswitcher2; } catch { themeImg = null; }
+            }
+
+            if (themeImg != null)
+            {
+                var scaledThemeImg = ScaleImageToFit(themeImg, themeSwitcherButton.Width - 6, themeSwitcherButton.Height - 6);
+                themeSwitcherButton.Image = scaledThemeImg;
+                themeSwitcherButton.ImageAlign = ContentAlignment.MiddleCenter;
+                themeSwitcherButton.Text = "";
+            }
+            else
+            {
+                themeSwitcherButton.Text = "🎨";
+                themeSwitcherButton.Font = new Font("Segoe UI Emoji", 16, FontStyle.Bold);
+            }
+
+            // Current theme label
+            currentThemeLabel = new Label
+            {
+                Text = $"Current Theme: {GetThemeDisplayName(currentTheme)}",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 10, 0, 0)
+            };
+
+            themeSwitcherButton.Click += (s, e) =>
+            {
+                // Cycle through themes: Blue -> Black -> White -> YellowBlueBlack -> Blue
+                switch (currentTheme)
+                {
+                    case Theme.Blue:
+                        ApplyTheme(Theme.Black);
+                        break;
+                    case Theme.Black:
+                        ApplyTheme(Theme.White);
+                        break;
+                    case Theme.White:
+                        ApplyTheme(Theme.YellowBlueBlack);
+                        break;
+                    case Theme.YellowBlueBlack:
+                        ApplyTheme(Theme.Blue);
+                        break;
+                    default:
+                        ApplyTheme(Theme.Blue);
+                        break;
+                }
+                // Update the theme label
+                if (currentThemeLabel != null)
+                {
+                    currentThemeLabel.Text = $"Current Theme: {GetThemeDisplayName(currentTheme)}";
+                }
+            };
+
+            themePanel.Controls.Add(themeSwitcherButton);
+            themePanel.Controls.Add(currentThemeLabel);
+            contentArea.Controls.Add(themePanel);
+
+            // Divider
+            var divider1 = new Panel
+            {
+                Height = 2,
+                Width = 600,
+                BackColor = DarkerBackground,
+                Margin = new Padding(0, 10, 0, 20)
+            };
+            contentArea.Controls.Add(divider1);
+
+            // Progress Bar Section
+            var progressBarSectionLabel = new Label
+            {
+                Text = "Data Grid Display",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            contentArea.Controls.Add(progressBarSectionLabel);
+
+            // Progress bar checkbox
+            showProgressBarsCheckBox = new CheckBox
+            {
+                Text = "Show Progress Bars",
+                AutoSize = true,
+                Checked = showProgressBars,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            
+            showProgressBarsCheckBox.CheckedChanged += (s, e) =>
+            {
+                showProgressBars = showProgressBarsCheckBox.Checked;
+                SaveProgressBarPreference();
+                
+                // Refresh all data grids to apply/remove progress bars
+                RefreshAllDataGrids();
+            };
+
+            contentArea.Controls.Add(showProgressBarsCheckBox);
+
+            // Info label for progress bars
+            var progressBarInfoLabel = new Label
+            {
+                Text = "When enabled, data grid columns will be replaced with progress bars showing:\n" +
+                       "• Gross P&L progress toward Daily Loss Limit or Daily Profit Target\n" +
+                       "• Open P&L progress based on Position Profit and Position Loss Limit\n" +
+                       "• Color-coded bars (green/yellow/red) based on proximity to limits",
+                AutoSize = true,
+                MaximumSize = new Size(600, 0),
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                Margin = new Padding(20, 0, 0, 10)
+            };
+            contentArea.Controls.Add(progressBarInfoLabel);
+
+            // Add controls in correct order for docking
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(generalSettingsHeader);
 
             return mainPanel;
         }
