@@ -10813,13 +10813,28 @@ namespace Risk_Manager
 
         private void AddDisabledOverlay(Panel cardPanel)
         {
-            // Create a very transparent overlay panel (20% opacity for maximum content visibility)
+            // Create a transparent overlay panel using Paint event for true alpha transparency
             var overlay = new Panel
             {
                 Name = "DisabledOverlay", // Identify this as the overlay panel
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(51, 40, 40, 40), // 20% opacity (51/255 ≈ 0.2)
+                BackColor = Color.Transparent, // Set base color to transparent
                 Cursor = Cursors.No
+            };
+            
+            // Enable double buffering to prevent flicker
+            typeof(Panel).InvokeMember("DoubleBuffered",
+                System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+                null, overlay, new object[] { true });
+            
+            // Paint the semi-transparent overlay
+            overlay.Paint += (s, e) =>
+            {
+                // Draw semi-transparent dark overlay (20% opacity)
+                using (var brush = new SolidBrush(Color.FromArgb(51, 40, 40, 40)))
+                {
+                    e.Graphics.FillRectangle(brush, overlay.ClientRectangle);
+                }
             };
 
             // Create the red X label
