@@ -10813,12 +10813,12 @@ namespace Risk_Manager
 
         private void AddDisabledOverlay(Panel cardPanel)
         {
-            // Create a semi-transparent overlay panel (40% opacity for better content visibility)
+            // Create a very transparent overlay panel (20% opacity for maximum content visibility)
             var overlay = new Panel
             {
                 Name = "DisabledOverlay", // Identify this as the overlay panel
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(102, 40, 40, 40), // 40% opacity (102/255 ≈ 0.4)
+                BackColor = Color.FromArgb(51, 40, 40, 40), // 20% opacity (51/255 ≈ 0.2)
                 Cursor = Cursors.No
             };
 
