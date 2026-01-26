@@ -10310,27 +10310,24 @@ namespace Risk_Manager
             ));
 
             flowLayout.Controls.Add(CreateRiskOverviewCard(
-                "Feature Status",
-                new[] { "Positions:", "Limits:", "Symbols:", "Trading Times:" },
-                new[] { GetPositionsFeatureStatus, GetLimitsFeatureStatus, GetSymbolsFeatureStatus, GetTradingTimesFeatureStatus }
-            ));
-
-            flowLayout.Controls.Add(CreateRiskOverviewCard(
                 "Position Limits",
                 new[] { "Loss Limit:", "Profit Target:" },
-                new[] { GetPositionLossLimit, GetPositionProfitTarget }
+                new[] { GetPositionLossLimit, GetPositionProfitTarget },
+                () => IsFeatureEnabled(s => s.PositionsEnabled)
             ));
 
             flowLayout.Controls.Add(CreateRiskOverviewCard(
                 "Daily Limits",
                 new[] { "Daily Loss Limit:", "Daily Profit Target:" },
-                new[] { GetDailyLossLimit, GetDailyProfitTarget }
+                new[] { GetDailyLossLimit, GetDailyProfitTarget },
+                () => IsFeatureEnabled(s => s.LimitsEnabled)
             ));
 
             flowLayout.Controls.Add(CreateRiskOverviewCard(
                 "Symbol Restrictions",
                 new[] { "Blocked Symbols:", "Default Contract Limit:", "Symbol-Specific Limits:" },
-                new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits }
+                new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits },
+                () => IsFeatureEnabled(s => s.SymbolsEnabled)
             ));
 
             var tradingTimesCard = CreateTradingTimesOverviewCard();
@@ -10355,7 +10352,7 @@ namespace Risk_Manager
         /// <summary>
         /// Creates a card panel for displaying risk overview information.
         /// </summary>
-        private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters)
+        private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters, Func<bool> isFeatureEnabled = null)
         {
             var cardPanel = new Panel
             {
@@ -10443,6 +10440,13 @@ namespace Risk_Manager
             }
 
             cardPanel.Controls.Add(cardLayout);
+            
+            // Add disabled overlay if feature is disabled
+            if (isFeatureEnabled != null && !isFeatureEnabled())
+            {
+                AddDisabledOverlay(cardPanel);
+            }
+            
             return cardPanel;
         }
 
@@ -10559,6 +10563,13 @@ namespace Risk_Manager
             }
 
             cardPanel.Controls.Add(cardLayout);
+            
+            // Add disabled overlay if feature is disabled
+            if (!IsFeatureEnabled(s => s.TradingTimesEnabled))
+            {
+                AddDisabledOverlay(cardPanel);
+            }
+            
             return cardPanel;
         }
 
@@ -10600,22 +10611,44 @@ namespace Risk_Manager
             return isLocked ? "🔒 Locked" : "🔓 Unlocked";
         }
 
-        private string GetFeatureStatus(Func<AccountSettings, bool> featureGetter)
+        private bool IsFeatureEnabled(Func<AccountSettings, bool> featureGetter)
         {
             var accountNumber = GetSelectedAccountNumber();
-            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
+            if (string.IsNullOrEmpty(accountNumber)) return true; // Default to enabled if no account
 
             var settingsService = RiskManagerSettingsService.Instance;
-            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
+            if (!settingsService.IsInitialized) return true; // Default to enabled if service not initialized
 
             var settings = settingsService.GetSettings(accountNumber);
-            return (settings != null ? featureGetter(settings) : true) ? "✅ Enabled" : "❌ Disabled";
+            return settings != null ? featureGetter(settings) : true;
         }
 
-        private string GetPositionsFeatureStatus() => GetFeatureStatus(s => s.PositionsEnabled);
-        private string GetLimitsFeatureStatus() => GetFeatureStatus(s => s.LimitsEnabled);
-        private string GetSymbolsFeatureStatus() => GetFeatureStatus(s => s.SymbolsEnabled);
-        private string GetTradingTimesFeatureStatus() => GetFeatureStatus(s => s.TradingTimesEnabled);
+        private void AddDisabledOverlay(Panel cardPanel)
+        {
+            // Create a semi-transparent overlay panel
+            var overlay = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(180, 40, 40, 40), // Semi-transparent dark overlay
+                Cursor = Cursors.No
+            };
+
+            // Create the red X label
+            var disabledLabel = new Label
+            {
+                Text = "✖",
+                Font = new Font("Segoe UI", 72, FontStyle.Bold),
+                ForeColor = Color.FromArgb(220, 50, 50), // Red color
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Fill,
+                UseCompatibleTextRendering = false
+            };
+
+            overlay.Controls.Add(disabledLabel);
+            cardPanel.Controls.Add(overlay);
+            overlay.BringToFront();
+        }
 
         private string GetPositionLossLimit()
         {
