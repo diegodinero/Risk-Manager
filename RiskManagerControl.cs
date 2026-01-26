@@ -7017,19 +7017,25 @@ namespace Risk_Manager
                             $"Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC, Mode: {settings.EnforcementMode}");
                         
                         // Take action based on enforcement mode
-                        if (settings.EnforcementMode == Risk_Manager.Data.RiskEnforcementMode.Strict)
+                        switch (settings.EnforcementMode)
                         {
-                            // Strict mode: Lock account and close positions
-                            LockAccountUntil5PMET(accountId, reason, core, account);
-                            CloseAllPositionsForAccount(account, core);
-                            System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily loss limit breach at ${netPnL:F2}");
+                            case Risk_Manager.Data.RiskEnforcementMode.Strict:
+                                // Strict mode: Lock account and close positions
+                                LockAccountUntil5PMET(accountId, reason, core, account);
+                                CloseAllPositionsForAccount(account, core);
+                                System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily loss limit breach at ${netPnL:F2}");
+                                break;
+                                
+                            case Risk_Manager.Data.RiskEnforcementMode.Warning:
+                                // Warning mode: Just log the breach
+                                System.Diagnostics.Debug.WriteLine($"[WARNING ONLY] Account {accountId} breached daily loss limit at ${netPnL:F2} - no enforcement action taken");
+                                break;
+                                
+                            case Risk_Manager.Data.RiskEnforcementMode.Monitor:
+                                // Monitor mode: Silent tracking only (already logged above)
+                                System.Diagnostics.Debug.WriteLine($"[MONITOR MODE] Account {accountId} breached daily loss limit at ${netPnL:F2} - silent tracking only");
+                                break;
                         }
-                        else if (settings.EnforcementMode == Risk_Manager.Data.RiskEnforcementMode.Warning)
-                        {
-                            // Warning mode: Just log the breach
-                            System.Diagnostics.Debug.WriteLine($"[WARNING ONLY] Account {accountId} breached daily loss limit at ${netPnL:F2} - no enforcement action taken");
-                        }
-                        // Monitor mode: Do nothing (already logged above)
                         
                         // Reset warning state since we've breached the limit
                         settingsService.ResetDailyLossWarning(accountId);
@@ -7271,7 +7277,9 @@ namespace Risk_Manager
         {
             try
             {
-                // Check if Symbols or Positions features are enabled - skip enforcement if both are disabled
+                // Check if Symbols or Positions features are enabled
+                // Skip enforcement entirely only if BOTH are disabled, since this method handles both feature types
+                // If at least one is enabled, we proceed and check individual features below
                 if (!settings.SymbolsEnabled && !settings.PositionsEnabled)
                 {
                     return;
