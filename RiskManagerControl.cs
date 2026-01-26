@@ -4413,12 +4413,21 @@ namespace Risk_Manager
                     typeSummaryGrid.Columns[0].HeaderText = filterByFirm ? FILTER_MODE_FIRM : FILTER_MODE_TYPE;
                 }
 
+                // Get settings service for loading account limits
+                var settingsService = RiskManagerSettingsService.Instance;
+
                 // Dictionary to store aggregated data by type or firm
                 var aggregatedData = new Dictionary<string, TypeSummaryData>();
 
+                // Track account index for GetUniqueAccountIdentifier
+                int accountIndex = 0;
                 foreach (var account in core.Accounts)
                 {
-                    if (account == null) continue;
+                    if (account == null)
+                    {
+                        accountIndex++;
+                        continue;
+                    }
 
                     // Get the grouping key based on filter mode
                     string groupKey = filterByFirm ? GetAccountIbId(account) : DetermineAccountType(account);
@@ -4436,17 +4445,21 @@ namespace Risk_Manager
                     // Aggregate limits from settings for this account
                     try
                     {
-                        var accountNumber = GetAccountNumber(account);
-                        if (!string.IsNullOrEmpty(accountNumber))
+                        if (settingsService != null && settingsService.IsInitialized)
                         {
-                            var settings = settingsService.GetAccountSettings(accountNumber);
-                            if (settings != null)
+                            // Get unique account identifier
+                            var accountNumber = GetUniqueAccountIdentifier(account, accountIndex);
+                            if (!string.IsNullOrEmpty(accountNumber))
                             {
-                                // Aggregate limits (sum them up for the group)
-                                data.DailyLossLimit += (double)(settings.DailyLossLimit ?? 0);
-                                data.DailyProfitTarget += (double)(settings.DailyProfitTarget ?? 0);
-                                data.PositionLossLimit += (double)(settings.PositionLossLimit ?? 0);
-                                data.PositionProfitTarget += (double)(settings.PositionProfitTarget ?? 0);
+                                var settings = settingsService.GetSettings(accountNumber);
+                                if (settings != null)
+                                {
+                                    // Aggregate limits (sum them up for the group)
+                                    data.DailyLossLimit += (double)(settings.DailyLossLimit ?? 0);
+                                    data.DailyProfitTarget += (double)(settings.DailyProfitTarget ?? 0);
+                                    data.PositionLossLimit += (double)(settings.PositionLossLimit ?? 0);
+                                    data.PositionProfitTarget += (double)(settings.PositionProfitTarget ?? 0);
+                                }
                             }
                         }
                     }
@@ -4454,6 +4467,8 @@ namespace Risk_Manager
                     {
                         System.Diagnostics.Debug.WriteLine($"Error loading limits for account in type summary: {ex.Message}");
                     }
+
+                    accountIndex++;
 
                     // Get Open P&L, Closed P&L and Drawdown from AdditionalInfo
                     if (account.AdditionalInfo != null)
