@@ -10792,67 +10792,83 @@ namespace Risk_Manager
         {
             if (cardPanel == null) return;
             
-            // Check if card already has overlay
-            var hasOverlay = false;
-            var featureChecker = cardPanel.Tag as Func<bool>;
+            // Get the feature checker from Tag (might be wrapped in anonymous object)
+            Func<bool> featureChecker = null;
             
-            // If Tag is an anonymous object with HasOverlay property
-            if (cardPanel.Tag != null && cardPanel.Tag.GetType().GetProperty("HasOverlay") != null)
+            if (cardPanel.Tag != null)
             {
-                hasOverlay = (bool)cardPanel.Tag.GetType().GetProperty("HasOverlay").GetValue(cardPanel.Tag);
-                var checkerProp = cardPanel.Tag.GetType().GetProperty("FeatureChecker");
-                if (checkerProp != null)
+                // Try to get FeatureChecker from anonymous object
+                var featureCheckerProp = cardPanel.Tag.GetType().GetProperty("FeatureChecker");
+                if (featureCheckerProp != null)
                 {
-                    featureChecker = checkerProp.GetValue(cardPanel.Tag) as Func<bool>;
+                    featureChecker = featureCheckerProp.GetValue(cardPanel.Tag) as Func<bool>;
                 }
-            }
-            
-            // Remove existing overlay by clearing Paint event handlers and resetting cursor
-            if (hasOverlay)
-            {
-                // Clear paint handlers (we'll re-add if needed)
-                var field = typeof(Control).GetField("EventPaint", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                if (field != null)
+                else
                 {
-                    var eventKey = field.GetValue(null);
-                    var eventsProp = typeof(Component).GetProperty("Events", 
-                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    if (eventsProp != null)
-                    {
-                        var events = eventsProp.GetValue(cardPanel);
-                        var removeMethod = events.GetType().GetMethod("RemoveHandler");
-                        if (removeMethod != null)
-                        {
-                            removeMethod.Invoke(events, new[] { eventKey, null });
-                        }
-                    }
+                    // Tag is directly the feature checker
+                    featureChecker = cardPanel.Tag as Func<bool>;
                 }
-                cardPanel.Cursor = Cursors.Default;
-                cardPanel.Tag = featureChecker; // Reset tag to just the feature checker
-                cardPanel.Invalidate();
             }
             
             // Check if this card has a feature checker
             if (featureChecker != null)
             {
-                // Add overlay if feature is disabled
-                if (!featureChecker())
+                // Determine if overlay should be shown
+                bool shouldShowOverlay = !featureChecker();
+                
+                // Check current overlay state
+                bool hasOverlay = cardPanel.Tag != null && 
+                                 cardPanel.Tag.GetType().GetProperty("HasOverlay") != null &&
+                                 (bool)cardPanel.Tag.GetType().GetProperty("HasOverlay").GetValue(cardPanel.Tag);
+                
+                if (shouldShowOverlay && !hasOverlay)
                 {
+                    // Add overlay
                     AddDisabledOverlay(cardPanel);
+                }
+                else if (!shouldShowOverlay && hasOverlay)
+                {
+                    // Remove overlay - reset tag and cursor, invalidate
+                    cardPanel.Tag = featureChecker;
+                    cardPanel.Cursor = Cursors.Default;
+                    cardPanel.Invalidate();
                 }
             }
         }
 
         private void AddDisabledOverlay(Panel cardPanel)
         {
+            // Check if overlay already exists
+            if (cardPanel.Tag != null && cardPanel.Tag.GetType().GetProperty("HasOverlay") != null)
+            {
+                var hasOverlay = (bool)cardPanel.Tag.GetType().GetProperty("HasOverlay").GetValue(cardPanel.Tag);
+                if (hasOverlay)
+                {
+                    return; // Already has overlay, don't add another
+                }
+            }
+            
+            // Get the original feature checker if it exists
+            var originalTag = cardPanel.Tag;
+            
             // Mark the card as having an overlay (for removal later)
-            cardPanel.Tag = new { FeatureChecker = cardPanel.Tag, HasOverlay = true };
+            cardPanel.Tag = new { FeatureChecker = originalTag, HasOverlay = true };
             
             // Paint the semi-transparent overlay directly on the card panel
             PaintEventHandler paintHandler = null;
             paintHandler = (s, e) =>
             {
+                // Only paint if HasOverlay is true
+                if (cardPanel.Tag != null && cardPanel.Tag.GetType().GetProperty("HasOverlay") != null)
+                {
+                    var shouldPaint = (bool)cardPanel.Tag.GetType().GetProperty("HasOverlay").GetValue(cardPanel.Tag);
+                    if (!shouldPaint) return;
+                }
+                else
+                {
+                    return; // No overlay marker, don't paint
+                }
+                
                 // Draw semi-transparent dark overlay (20% opacity) over entire card
                 using (var brush = new SolidBrush(Color.FromArgb(51, 40, 40, 40)))
                 {
