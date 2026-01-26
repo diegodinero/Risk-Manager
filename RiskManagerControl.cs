@@ -10360,7 +10360,8 @@ namespace Risk_Manager
                 AutoSize = true,
                 BackColor = CardBackground,
                 Padding = new Padding(20),
-                Margin = new Padding(0, 0, 15, 15) // Add right and bottom margin for spacing
+                Margin = new Padding(0, 0, 15, 15), // Add right and bottom margin for spacing
+                Tag = isFeatureEnabled // Store the feature checker for later refresh
             };
 
             var cardLayout = new FlowLayoutPanel
@@ -10442,10 +10443,7 @@ namespace Risk_Manager
             cardPanel.Controls.Add(cardLayout);
             
             // Add disabled overlay if feature is disabled
-            if (isFeatureEnabled != null && !isFeatureEnabled())
-            {
-                AddDisabledOverlay(cardPanel);
-            }
+            UpdateCardOverlay(cardPanel);
             
             return cardPanel;
         }
@@ -10626,6 +10624,30 @@ namespace Risk_Manager
             return settings != null ? featureGetter(settings) : true;
         }
 
+        private void UpdateCardOverlay(Panel cardPanel)
+        {
+            if (cardPanel == null) return;
+            
+            // Remove any existing overlay
+            var existingOverlay = cardPanel.Controls.OfType<Panel>()
+                .FirstOrDefault(p => p.Cursor == Cursors.No && p.BackColor.A > 0);
+            if (existingOverlay != null)
+            {
+                cardPanel.Controls.Remove(existingOverlay);
+                existingOverlay.Dispose();
+            }
+            
+            // Check if this card has a feature checker stored in its Tag
+            if (cardPanel.Tag is Func<bool> isFeatureEnabled)
+            {
+                // Add overlay if feature is disabled
+                if (!isFeatureEnabled())
+                {
+                    AddDisabledOverlay(cardPanel);
+                }
+            }
+        }
+
         private void AddDisabledOverlay(Panel cardPanel)
         {
             // Create a semi-transparent overlay panel (70% opacity for clear visibility)
@@ -10797,14 +10819,21 @@ namespace Risk_Manager
         {
             if (control == null) return;
 
-            // Check if this is the Trading Times card - needs special refresh
-            if (control is Panel panel && panel.Tag as string == "TradingTimesCard")
+            // Check if this is a card panel with feature overlay support
+            if (control is Panel panel && panel.Tag is Func<bool>)
             {
-                var parent = panel.Parent;
-                var index = parent?.Controls.GetChildIndex(panel) ?? -1;
+                // Update the overlay state for this card
+                UpdateCardOverlay(panel);
+            }
+
+            // Check if this is the Trading Times card - needs special refresh
+            if (control is Panel tradingPanel && tradingPanel.Tag as string == "TradingTimesCard")
+            {
+                var parent = tradingPanel.Parent;
+                var index = parent?.Controls.GetChildIndex(tradingPanel) ?? -1;
                 if (parent != null && index >= 0)
                 {
-                    parent.Controls.Remove(panel);
+                    parent.Controls.Remove(tradingPanel);
                     var newCard = CreateTradingTimesOverviewCard();
                     parent.Controls.Add(newCard);
                     parent.Controls.SetChildIndex(newCard, index);
