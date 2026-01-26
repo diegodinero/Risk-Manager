@@ -10791,20 +10791,52 @@ namespace Risk_Manager
         {
             if (cardPanel == null) return;
             
-            // Remove any existing overlay (identified by a special name)
-            var existingOverlay = cardPanel.Controls.OfType<Panel>()
-                .FirstOrDefault(p => p.Name == "DisabledOverlay");
-            if (existingOverlay != null)
+            // Check if card already has overlay
+            var hasOverlay = false;
+            var featureChecker = cardPanel.Tag as Func<bool>;
+            
+            // If Tag is an anonymous object with HasOverlay property
+            if (cardPanel.Tag != null && cardPanel.Tag.GetType().GetProperty("HasOverlay") != null)
             {
-                cardPanel.Controls.Remove(existingOverlay);
-                existingOverlay.Dispose();
+                hasOverlay = (bool)cardPanel.Tag.GetType().GetProperty("HasOverlay").GetValue(cardPanel.Tag);
+                var checkerProp = cardPanel.Tag.GetType().GetProperty("FeatureChecker");
+                if (checkerProp != null)
+                {
+                    featureChecker = checkerProp.GetValue(cardPanel.Tag) as Func<bool>;
+                }
             }
             
-            // Check if this card has a feature checker stored in its Tag
-            if (cardPanel.Tag is Func<bool> isFeatureEnabled)
+            // Remove existing overlay by clearing Paint event handlers and resetting cursor
+            if (hasOverlay)
+            {
+                // Clear paint handlers (we'll re-add if needed)
+                var field = typeof(Control).GetField("EventPaint", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                if (field != null)
+                {
+                    var eventKey = field.GetValue(null);
+                    var eventsProp = typeof(Component).GetProperty("Events", 
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    if (eventsProp != null)
+                    {
+                        var events = eventsProp.GetValue(cardPanel);
+                        var removeMethod = events.GetType().GetMethod("RemoveHandler");
+                        if (removeMethod != null)
+                        {
+                            removeMethod.Invoke(events, new[] { eventKey, null });
+                        }
+                    }
+                }
+                cardPanel.Cursor = Cursors.Default;
+                cardPanel.Tag = featureChecker; // Reset tag to just the feature checker
+                cardPanel.Invalidate();
+            }
+            
+            // Check if this card has a feature checker
+            if (featureChecker != null)
             {
                 // Add overlay if feature is disabled
-                if (!isFeatureEnabled())
+                if (!featureChecker())
                 {
                     AddDisabledOverlay(cardPanel);
                 }
@@ -10813,45 +10845,34 @@ namespace Risk_Manager
 
         private void AddDisabledOverlay(Panel cardPanel)
         {
-            // Create a transparent overlay panel using Paint event for true alpha transparency
-            var overlay = new Panel
-            {
-                Name = "DisabledOverlay", // Identify this as the overlay panel
-                Dock = DockStyle.Fill,
-                BackColor = Color.Transparent, // Set base color to transparent
-                Cursor = Cursors.No
-            };
+            // Mark the card as having an overlay (for removal later)
+            cardPanel.Tag = new { FeatureChecker = cardPanel.Tag, HasOverlay = true };
             
-            // Enable double buffering to prevent flicker
-            typeof(Panel).InvokeMember("DoubleBuffered",
-                System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
-                null, overlay, new object[] { true });
-            
-            // Paint the semi-transparent overlay
-            overlay.Paint += (s, e) =>
+            // Paint the semi-transparent overlay directly on the card panel
+            EventHandler paintHandler = null;
+            paintHandler = (s, e) =>
             {
-                // Draw semi-transparent dark overlay (20% opacity)
+                // Draw semi-transparent dark overlay (20% opacity) over entire card
                 using (var brush = new SolidBrush(Color.FromArgb(51, 40, 40, 40)))
                 {
-                    e.Graphics.FillRectangle(brush, overlay.ClientRectangle);
+                    e.Graphics.FillRectangle(brush, cardPanel.ClientRectangle);
+                }
+                
+                // Draw the red X in the center
+                string xText = "✖";
+                using (var font = new Font("Segoe UI", 72, FontStyle.Bold))
+                using (var xBrush = new SolidBrush(Color.FromArgb(220, 50, 50)))
+                {
+                    var textSize = e.Graphics.MeasureString(xText, font);
+                    var x = (cardPanel.Width - textSize.Width) / 2;
+                    var y = (cardPanel.Height - textSize.Height) / 2;
+                    e.Graphics.DrawString(xText, font, xBrush, x, y);
                 }
             };
-
-            // Create the red X label
-            var disabledLabel = new Label
-            {
-                Text = "✖",
-                Font = new Font("Segoe UI", 72, FontStyle.Bold),
-                ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Fill,
-                UseCompatibleTextRendering = false
-            };
-
-            overlay.Controls.Add(disabledLabel);
-            cardPanel.Controls.Add(overlay);
-            overlay.BringToFront();
+            
+            cardPanel.Paint += paintHandler;
+            cardPanel.Cursor = Cursors.No;
+            cardPanel.Invalidate(); // Force repaint
         }
 
         private string GetPositionLossLimit()
