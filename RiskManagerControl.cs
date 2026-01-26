@@ -3689,6 +3689,10 @@ namespace Risk_Manager
             {
                 // Gross P&L: use Daily Loss Limit and Daily Profit Target
                 // Note: Loss limits are stored as negative values in the settings
+                
+                // Debug: Log the values being used for Gross P&L calculation
+                System.Diagnostics.Debug.WriteLine($"Gross P&L Calculation: pnlValue={pnlValue:F2}, dailyLossLimit={dailyLossLimit:F2}, dailyProfitTarget={dailyProfitTarget:F2}");
+                
                 if (pnlValue < 0 && dailyLossLimit < 0)
                 {
                     // Negative P&L approaching loss limit (both values are negative)
@@ -3704,6 +3708,8 @@ namespace Risk_Manager
                         barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                     else
                         barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
+                    
+                    System.Diagnostics.Debug.WriteLine($"Gross P&L: Loss scenario - percentage={percentage:F1}%");
                 }
                 else if (pnlValue > 0 && dailyProfitTarget > 0)
                 {
@@ -3717,18 +3723,25 @@ namespace Risk_Manager
                         barColor = Color.FromArgb(40, 167, 69);      // Medium green
                     else
                         barColor = Color.FromArgb(100, 180, 100);    // Light green
+                    
+                    System.Diagnostics.Debug.WriteLine($"Gross P&L: Profit scenario - percentage={percentage:F1}%");
                 }
                 else
                 {
                     // No limits configured, show small bar with neutral color
                     percentage = 10;  // Show at least 10% so it's visible
                     barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
+                    System.Diagnostics.Debug.WriteLine($"Gross P&L: No limits configured - showing 10% gray bar (pnlValue={pnlValue:F2}, lossLimit={dailyLossLimit:F2}, profitTarget={dailyProfitTarget:F2})");
                 }
             }
             else if (isOpenPnL)
             {
                 // Open P&L: use Position Loss Limit and Position Profit Target
                 // Note: Loss limits are stored as negative values in the settings
+                
+                // Debug: Log the values being used for Open P&L calculation
+                System.Diagnostics.Debug.WriteLine($"Open P&L Calculation: pnlValue={pnlValue:F2}, positionLossLimit={positionLossLimit:F2}, positionProfitTarget={positionProfitTarget:F2}");
+                
                 if (pnlValue < 0 && positionLossLimit < 0)
                 {
                     // Negative P&L approaching position loss limit (both values are negative)
@@ -3744,6 +3757,8 @@ namespace Risk_Manager
                         barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                     else
                         barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
+                    
+                    System.Diagnostics.Debug.WriteLine($"Open P&L: Loss scenario - percentage={percentage:F1}%");
                 }
                 else if (pnlValue > 0 && positionProfitTarget > 0)
                 {
@@ -3757,12 +3772,15 @@ namespace Risk_Manager
                         barColor = Color.FromArgb(40, 167, 69);      // Medium green
                     else
                         barColor = Color.FromArgb(100, 180, 100);    // Light green
+                    
+                    System.Diagnostics.Debug.WriteLine($"Open P&L: Profit scenario - percentage={percentage:F1}%");
                 }
                 else
                 {
                     // No limits configured, show small bar with neutral color
                     percentage = 10;  // Show at least 10% so it's visible
                     barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
+                    System.Diagnostics.Debug.WriteLine($"Open P&L: No limits configured - showing 10% gray bar (pnlValue={pnlValue:F2}, lossLimit={positionLossLimit:F2}, profitTarget={positionProfitTarget:F2})");
                 }
             }
 
