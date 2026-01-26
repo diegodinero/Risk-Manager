@@ -572,6 +572,12 @@ namespace Risk_Manager
 
             // Save theme preference
             SaveThemePreference();
+            
+            // Update the current theme label in General Settings if it exists
+            if (currentThemeLabel != null)
+            {
+                currentThemeLabel.Text = $"Current Theme: {GetThemeDisplayName(currentTheme)}";
+            }
 
             // Apply theme to all controls
             UpdateAllControlColors();
