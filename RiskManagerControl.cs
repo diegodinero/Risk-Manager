@@ -16,24 +16,6 @@ using TradingPlatform.PresentationLayer.Renderers.Chart;
 using DockStyle = System.Windows.Forms.DockStyle;
 
 
-public class TransparentOverlayPanel : Panel
-{
-    public TransparentOverlayPanel()
-    {
-        // Enable double buffering
-        this.SetStyle(ControlStyles.DoubleBuffer | 
-                     ControlStyles.UserPaint | 
-                     ControlStyles.AllPaintingInWmPaint, true);
-        
-        // Enable transparent background support
-        this.SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-        this.SetStyle(ControlStyles.Opaque, false);
-        this.SetStyle(ControlStyles.ResizeRedraw, true);
-        
-        this.UpdateStyles();
-    }
-}
-
 public class CustomValueLabel : Panel
 {
     public Label TextLabel { get; }
@@ -10836,7 +10818,7 @@ namespace Risk_Manager
                 
                 // Check if overlay panel exists
                 var existingOverlay = cardPanel.Controls.OfType<Panel>()
-                    .FirstOrDefault(p => p.Name == "DisabledOverlayPanel");
+                    .FirstOrDefault(p => p.Name == "DisabledOverlay");
                 bool hasOverlay = existingOverlay != null;
                 
                 if (shouldShowOverlay && !hasOverlay)
@@ -10859,51 +10841,36 @@ namespace Risk_Manager
         {
             // Check if overlay already exists
             var existingOverlay = cardPanel.Controls.OfType<Panel>()
-                .FirstOrDefault(p => p.Name == "DisabledOverlayPanel");
+                .FirstOrDefault(p => p.Name == "DisabledOverlay");
             if (existingOverlay != null)
             {
                 return; // Already has overlay
             }
             
-            // Get the original feature checker if it exists
-            var originalTag = cardPanel.Tag;
-            
-            // Mark the card as having an overlay (for removal later)
-            cardPanel.Tag = new { FeatureChecker = originalTag, HasOverlay = true };
-            
-            // Create a transparent overlay panel that sits on top
-            var overlayPanel = new TransparentOverlayPanel
+            // Create a semi-transparent overlay panel (20% opacity for better visibility)
+            var overlay = new Panel
             {
-                Name = "DisabledOverlayPanel",
+                Name = "DisabledOverlay", // Identify this as the overlay panel
                 Dock = DockStyle.Fill,
-                BackColor = Color.Transparent,
+                BackColor = Color.FromArgb(51, 40, 40, 40), // 20% opacity (51/255 ≈ 0.2)
                 Cursor = Cursors.No
             };
-            
-            // Paint the overlay on this panel
-            overlayPanel.Paint += (s, e) =>
+
+            // Create the red X label
+            var disabledLabel = new Label
             {
-                // Draw semi-transparent dark overlay (20% opacity) over entire card
-                using (var brush = new SolidBrush(Color.FromArgb(51, 40, 40, 40)))
-                {
-                    e.Graphics.FillRectangle(brush, overlayPanel.ClientRectangle);
-                }
-                
-                // Draw the red X in the center
-                string xText = "✖";
-                using (var font = new Font("Segoe UI", 72, FontStyle.Bold))
-                using (var xBrush = new SolidBrush(Color.FromArgb(220, 50, 50)))
-                {
-                    var textSize = e.Graphics.MeasureString(xText, font);
-                    var x = (overlayPanel.Width - textSize.Width) / 2;
-                    var y = (overlayPanel.Height - textSize.Height) / 2;
-                    e.Graphics.DrawString(xText, font, xBrush, x, y);
-                }
+                Text = "✖",
+                Font = new Font("Segoe UI", 72, FontStyle.Bold),
+                ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Fill,
+                UseCompatibleTextRendering = false
             };
-            
-            // Add overlay panel on top of everything
-            cardPanel.Controls.Add(overlayPanel);
-            overlayPanel.BringToFront();
+
+            overlay.Controls.Add(disabledLabel);
+            cardPanel.Controls.Add(overlay);
+            overlay.BringToFront();
         }
 
         private string GetPositionLossLimit()
