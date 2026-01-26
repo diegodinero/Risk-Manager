@@ -3791,6 +3791,120 @@ namespace Risk_Manager
             e.Handled = true;
         }
 
+        /// <summary>
+        /// Custom cell painting for progress bars in the type summary grid
+        /// </summary>
+        private void TypeSummaryGrid_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            // Only paint progress bars if the feature is enabled
+            if (!showProgressBars)
+                return;
+
+            // Skip header row
+            if (e.RowIndex < 0)
+                return;
+
+            var grid = sender as DataGridView;
+            if (grid == null)
+                return;
+
+            // Determine which columns should have progress bars
+            string columnName = grid.Columns[e.ColumnIndex].Name;
+            
+            // Progress bars for: TotalPnL and OpenPnL
+            bool isTotalPnL = columnName == "TotalPnL";
+            bool isOpenPnL = columnName == "OpenPnL";
+            
+            if (!isTotalPnL && !isOpenPnL)
+                return;
+
+            // Get the cell value
+            var cellValue = e.Value;
+            if (cellValue == null)
+                return;
+
+            // Parse the P&L value (handle formatted strings like "$1,234.56")
+            string valueStr = cellValue.ToString().Replace("$", "").Replace(",", "").Trim();
+            if (!double.TryParse(valueStr, out double pnlValue))
+                return;
+
+            // For Type Summary, we use aggregated limits (average or max of all accounts of this type)
+            // For simplicity, we'll use fixed thresholds or a default limit
+            // This is a simplified implementation - in a real scenario you'd aggregate limits by type
+            double defaultLimit = 1000; // Default threshold for visualization
+            
+            // Calculate progress percentage and color
+            double percentage = 0;
+            Color barColor = Color.Green;
+
+            if (pnlValue < 0)
+            {
+                // Negative P&L
+                percentage = Math.Min(100, Math.Abs(pnlValue) / defaultLimit * 100);
+                
+                // Color based on magnitude
+                if (percentage >= 90)
+                    barColor = Color.Red;
+                else if (percentage >= 70)
+                    barColor = Color.Orange;
+                else if (percentage >= 50)
+                    barColor = Color.Yellow;
+                else
+                    barColor = Color.Green;
+            }
+            else if (pnlValue > 0)
+            {
+                // Positive P&L
+                percentage = Math.Min(100, pnlValue / defaultLimit * 100);
+                
+                // Color based on magnitude
+                if (percentage >= 90)
+                    barColor = Color.Lime;
+                else if (percentage >= 70)
+                    barColor = Color.LightGreen;
+                else
+                    barColor = Color.Green;
+            }
+            else
+            {
+                // Zero
+                percentage = 5;
+                barColor = Color.Gray;
+            }
+
+            // Paint the cell with progress bar
+            e.Paint(e.CellBounds, DataGridViewPaintParts.All & ~DataGridViewPaintParts.ContentForeground);
+
+            // Calculate progress bar dimensions
+            var progressWidth = (int)(e.CellBounds.Width * percentage / 100);
+            var progressRect = new Rectangle(e.CellBounds.X + 2, e.CellBounds.Y + 2, 
+                                            progressWidth - 4, e.CellBounds.Height - 4);
+
+            // Draw progress bar
+            if (progressWidth > 0)
+            {
+                using (var brush = new SolidBrush(barColor))
+                {
+                    e.Graphics.FillRectangle(brush, progressRect);
+                }
+            }
+
+            // Draw the value text on top
+            var textFormat = new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            };
+            
+            using (var textBrush = new SolidBrush(e.CellStyle.ForeColor))
+            {
+                e.Graphics.DrawString(cellValue.ToString(), e.CellStyle.Font, 
+                    textBrush, e.CellBounds, textFormat);
+            }
+
+            e.Handled = true;
+        }
+
         private Control CreateTypeSummaryPanel()
         {
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
@@ -3871,6 +3985,9 @@ namespace Risk_Manager
             typeSummaryGrid.Columns.Add("TotalPnL", "Total P&L");
             typeSummaryGrid.Columns.Add("Drawdown", "Drawdown");
 
+            // Add CellPainting event handler for progress bars
+            typeSummaryGrid.CellPainting += TypeSummaryGrid_CellPainting;
+
             RefreshTypeSummary();
             typeSummaryRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             typeSummaryRefreshTimer.Tick += (s, e) => RefreshTypeSummary();
@@ -3899,16 +4016,19 @@ namespace Risk_Manager
                 if (statsGrid != null)
                 {
                     RefreshAccountsSummary();
+                    statsGrid.Invalidate(); // Force redraw
                 }
                 
                 if (statsDetailGrid != null)
                 {
                     RefreshAccountStats();
+                    statsDetailGrid.Invalidate(); // Force redraw
                 }
                 
                 if (typeSummaryGrid != null)
                 {
                     RefreshTypeSummary();
+                    typeSummaryGrid.Invalidate(); // Force redraw
                 }
             }
             catch (Exception ex)
