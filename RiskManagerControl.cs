@@ -10614,22 +10614,25 @@ namespace Risk_Manager
         private bool IsFeatureEnabled(Func<AccountSettings, bool> featureGetter)
         {
             var accountNumber = GetSelectedAccountNumber();
-            if (string.IsNullOrEmpty(accountNumber)) return true; // Default to enabled if no account
+            // Default to enabled (no overlay) if no account selected - avoid misleading disabled state
+            if (string.IsNullOrEmpty(accountNumber)) return true;
 
             var settingsService = RiskManagerSettingsService.Instance;
-            if (!settingsService.IsInitialized) return true; // Default to enabled if service not initialized
+            // Default to enabled (no overlay) if service not ready - avoid misleading disabled state
+            if (!settingsService.IsInitialized) return true;
 
             var settings = settingsService.GetSettings(accountNumber);
+            // If settings exist, use the feature flag; otherwise default to enabled
             return settings != null ? featureGetter(settings) : true;
         }
 
         private void AddDisabledOverlay(Panel cardPanel)
         {
-            // Create a semi-transparent overlay panel
+            // Create a semi-transparent overlay panel (70% opacity for clear visibility)
             var overlay = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(180, 40, 40, 40), // Semi-transparent dark overlay
+                BackColor = Color.FromArgb(178, 40, 40, 40), // 70% opacity (178/255 ≈ 0.7)
                 Cursor = Cursors.No
             };
 
@@ -10638,7 +10641,7 @@ namespace Risk_Manager
             {
                 Text = "✖",
                 Font = new Font("Segoe UI", 72, FontStyle.Bold),
-                ForeColor = Color.FromArgb(220, 50, 50), // Red color
+                ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Fill,
