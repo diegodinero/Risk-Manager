@@ -10840,13 +10840,11 @@ namespace Risk_Manager
         private void AddDisabledOverlay(Panel cardPanel)
         {
             // Check if overlay already exists
-            if (cardPanel.Tag != null && cardPanel.Tag.GetType().GetProperty("HasOverlay") != null)
+            var existingOverlay = cardPanel.Controls.OfType<Panel>()
+                .FirstOrDefault(p => p.Name == "DisabledOverlayPanel");
+            if (existingOverlay != null)
             {
-                var hasOverlay = (bool)cardPanel.Tag.GetType().GetProperty("HasOverlay").GetValue(cardPanel.Tag);
-                if (hasOverlay)
-                {
-                    return; // Already has overlay, don't add another
-                }
+                return; // Already has overlay
             }
             
             // Get the original feature checker if it exists
@@ -10863,6 +10861,16 @@ namespace Risk_Manager
                 BackColor = Color.Transparent,
                 Cursor = Cursors.No
             };
+            
+            // Set the control style to support transparency
+            typeof(Panel).InvokeMember("DoubleBuffered",
+                System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+                null, overlayPanel, new object[] { true });
+            
+            // Make the panel support transparent background
+            overlayPanel.SetStyle(System.Windows.Forms.ControlStyles.SupportsTransparentBackColor, true);
+            overlayPanel.SetStyle(System.Windows.Forms.ControlStyles.Opaque, false);
+            overlayPanel.SetStyle(System.Windows.Forms.ControlStyles.ResizeRedraw, true);
             
             // Paint the overlay on this panel
             overlayPanel.Paint += (s, e) =>
