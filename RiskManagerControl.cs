@@ -1613,13 +1613,13 @@ namespace Risk_Manager
                 {
                     switch (settings.EnforcementMode)
                     {
-                        case Risk_Manager.Data.RiskEnforcementMode.Strict:
+                        case RiskEnforcementMode.Strict:
                             strictModeRadioButton.Checked = true;
                             break;
-                        case Risk_Manager.Data.RiskEnforcementMode.Warning:
+                        case RiskEnforcementMode.Warning:
                             warningModeRadioButton.Checked = true;
                             break;
-                        case Risk_Manager.Data.RiskEnforcementMode.Monitor:
+                        case RiskEnforcementMode.Monitor:
                             monitorModeRadioButton.Checked = true;
                             break;
                     }
@@ -7019,19 +7019,19 @@ namespace Risk_Manager
                         // Take action based on enforcement mode
                         switch (settings.EnforcementMode)
                         {
-                            case Risk_Manager.Data.RiskEnforcementMode.Strict:
+                            case RiskEnforcementMode.Strict:
                                 // Strict mode: Lock account and close positions
                                 LockAccountUntil5PMET(accountId, reason, core, account);
                                 CloseAllPositionsForAccount(account, core);
                                 System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily loss limit breach at ${netPnL:F2}");
                                 break;
                                 
-                            case Risk_Manager.Data.RiskEnforcementMode.Warning:
+                            case RiskEnforcementMode.Warning:
                                 // Warning mode: Just log the breach
                                 System.Diagnostics.Debug.WriteLine($"[WARNING ONLY] Account {accountId} breached daily loss limit at ${netPnL:F2} - no enforcement action taken");
                                 break;
                                 
-                            case Risk_Manager.Data.RiskEnforcementMode.Monitor:
+                            case RiskEnforcementMode.Monitor:
                                 // Monitor mode: Silent tracking only (already logged above)
                                 System.Diagnostics.Debug.WriteLine($"[MONITOR MODE] Account {accountId} breached daily loss limit at ${netPnL:F2} - silent tracking only");
                                 break;
@@ -9435,11 +9435,11 @@ namespace Risk_Manager
                     // Save Enforcement Mode
                     if (strictModeRadioButton != null && warningModeRadioButton != null && monitorModeRadioButton != null)
                     {
-                        Risk_Manager.Data.RiskEnforcementMode mode = Risk_Manager.Data.RiskEnforcementMode.Strict;
+                        RiskEnforcementMode mode = RiskEnforcementMode.Strict;
                         if (warningModeRadioButton.Checked)
-                            mode = Risk_Manager.Data.RiskEnforcementMode.Warning;
+                            mode = RiskEnforcementMode.Warning;
                         else if (monitorModeRadioButton.Checked)
-                            mode = Risk_Manager.Data.RiskEnforcementMode.Monitor;
+                            mode = RiskEnforcementMode.Monitor;
                         
                         service.UpdateEnforcementMode(accountNumber, mode);
                     }
