@@ -401,6 +401,19 @@ namespace Risk_Manager.Data
         }
 
         /// <summary>
+        /// Updates the risk enforcement mode for an account.
+        /// </summary>
+        public void UpdateEnforcementMode(string accountNumber, RiskEnforcementMode mode)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.EnforcementMode = mode;
+                SaveSettings(settings);
+            }
+        }
+
+        /// <summary>
         /// Copies all settings from one account to multiple target accounts.
         /// </summary>
         /// <param name="sourceAccountNumber">The account to copy settings from</param>
@@ -448,6 +461,7 @@ namespace Risk_Manager.Data
                     targetSettings.LimitsEnabled = sourceSettings.LimitsEnabled;
                     targetSettings.SymbolsEnabled = sourceSettings.SymbolsEnabled;
                     targetSettings.TradingTimesEnabled = sourceSettings.TradingTimesEnabled;
+                    targetSettings.EnforcementMode = sourceSettings.EnforcementMode;
                     targetSettings.DailyLossLimit = sourceSettings.DailyLossLimit;
                     targetSettings.DailyProfitTarget = sourceSettings.DailyProfitTarget;
                     targetSettings.PositionLossLimit = sourceSettings.PositionLossLimit;
@@ -1269,6 +1283,27 @@ namespace Risk_Manager.Data
     #region Data Classes
 
     /// <summary>
+    /// Risk enforcement mode - defines how strictly risk limits are enforced.
+    /// </summary>
+    public enum RiskEnforcementMode
+    {
+        /// <summary>
+        /// Strict mode: Immediately enforce all limits by closing positions and locking accounts
+        /// </summary>
+        Strict = 0,
+        
+        /// <summary>
+        /// Warning mode: Only show warnings when limits are reached, no automatic enforcement
+        /// </summary>
+        Warning = 1,
+        
+        /// <summary>
+        /// Monitor mode: Track limits silently without warnings or enforcement
+        /// </summary>
+        Monitor = 2
+    }
+
+    /// <summary>
     /// Account settings data class.
     /// </summary>
     public class AccountSettings
@@ -1283,6 +1318,9 @@ namespace Risk_Manager.Data
         public bool LimitsEnabled { get; set; } = true;
         public bool SymbolsEnabled { get; set; } = true;
         public bool TradingTimesEnabled { get; set; } = true;
+        
+        // Risk Enforcement Mode (mutually exclusive options)
+        public RiskEnforcementMode EnforcementMode { get; set; } = RiskEnforcementMode.Strict;
         
         // Daily Limits
         public decimal? DailyLossLimit { get; set; }

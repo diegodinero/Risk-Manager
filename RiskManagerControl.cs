@@ -252,6 +252,11 @@ namespace Risk_Manager
         private CheckBox symbolsFeatureCheckbox;
         private CheckBox tradingTimesFeatureCheckbox;
         
+        // Risk enforcement mode radio buttons
+        private RadioButton strictModeRadioButton;
+        private RadioButton warningModeRadioButton;
+        private RadioButton monitorModeRadioButton;
+        
         // Copy Settings controls
         private ComboBox copySettingsSourceComboBox;
         private FlowLayoutPanel copySettingsTargetPanel;
@@ -1601,6 +1606,23 @@ namespace Risk_Manager
                 if (tradingTimesFeatureCheckbox != null)
                 {
                     tradingTimesFeatureCheckbox.Checked = settings.TradingTimesEnabled;
+                }
+
+                // Load Enforcement Mode
+                if (strictModeRadioButton != null && warningModeRadioButton != null && monitorModeRadioButton != null)
+                {
+                    switch (settings.EnforcementMode)
+                    {
+                        case Risk_Manager.Data.RiskEnforcementMode.Strict:
+                            strictModeRadioButton.Checked = true;
+                            break;
+                        case Risk_Manager.Data.RiskEnforcementMode.Warning:
+                            warningModeRadioButton.Checked = true;
+                            break;
+                        case Risk_Manager.Data.RiskEnforcementMode.Monitor:
+                            monitorModeRadioButton.Checked = true;
+                            break;
+                    }
                 }
 
                 // Load Daily Limits
@@ -6987,21 +7009,32 @@ namespace Risk_Manager
                     // Check if loss limit is breached
                     if (currentPnL <= lossLimit)
                     {
-                        // Loss limit exceeded - lock account until 5 PM ET
+                        // Loss limit exceeded
                         string reason = $"Daily Loss Limit reached: Net P&L ${netPnL:F2} ≤ Limit ${lossLimit:F2}";
                         
                         // Enhanced logging
-                        System.Diagnostics.Debug.WriteLine($"[ACCOUNT LOCK] Account: {accountId}, Reason: {reason}, " +
-                            $"Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+                        System.Diagnostics.Debug.WriteLine($"[LIMIT BREACH] Account: {accountId}, Reason: {reason}, " +
+                            $"Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC, Mode: {settings.EnforcementMode}");
                         
-                        LockAccountUntil5PMET(accountId, reason, core, account);
-                        CloseAllPositionsForAccount(account, core);
+                        // Take action based on enforcement mode
+                        if (settings.EnforcementMode == Risk_Manager.Data.RiskEnforcementMode.Strict)
+                        {
+                            // Strict mode: Lock account and close positions
+                            LockAccountUntil5PMET(accountId, reason, core, account);
+                            CloseAllPositionsForAccount(account, core);
+                            System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily loss limit breach at ${netPnL:F2}");
+                        }
+                        else if (settings.EnforcementMode == Risk_Manager.Data.RiskEnforcementMode.Warning)
+                        {
+                            // Warning mode: Just log the breach
+                            System.Diagnostics.Debug.WriteLine($"[WARNING ONLY] Account {accountId} breached daily loss limit at ${netPnL:F2} - no enforcement action taken");
+                        }
+                        // Monitor mode: Do nothing (already logged above)
                         
                         // Reset warning state since we've breached the limit
                         settingsService.ResetDailyLossWarning(accountId);
                         
-                        System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily loss limit breach at ${netPnL:F2}");
-                        return; // Exit after locking
+                        return; // Exit after handling breach
                     }
                     // Check if warning threshold is reached
                     else if (currentPnL <= warningThreshold)
@@ -9391,6 +9424,18 @@ namespace Risk_Manager
                         );
                     }
 
+                    // Save Enforcement Mode
+                    if (strictModeRadioButton != null && warningModeRadioButton != null && monitorModeRadioButton != null)
+                    {
+                        Risk_Manager.Data.RiskEnforcementMode mode = Risk_Manager.Data.RiskEnforcementMode.Strict;
+                        if (warningModeRadioButton.Checked)
+                            mode = Risk_Manager.Data.RiskEnforcementMode.Warning;
+                        else if (monitorModeRadioButton.Checked)
+                            mode = Risk_Manager.Data.RiskEnforcementMode.Monitor;
+                        
+                        service.UpdateEnforcementMode(accountNumber, mode);
+                    }
+
                     // Save Blocked Symbols
                     if (blockedSymbolsEnabled?.Checked == true && blockedSymbolsInput != null && !string.IsNullOrWhiteSpace(blockedSymbolsInput.Text))
                     {
@@ -9731,6 +9776,77 @@ namespace Risk_Manager
                     tradingTimesFeatureCheckbox = checkbox;
                 }
             }
+
+            // Add a separator
+            var separatorLabel = new Label
+            {
+                Text = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8, FontStyle.Regular),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                BackColor = CardBackground,
+                Margin = new Padding(0, 15, 0, 10)
+            };
+            contentArea.Controls.Add(separatorLabel);
+
+            // Add enforcement mode section header
+            var enforcementModeHeader = new Label
+            {
+                Text = "Risk Enforcement Mode:",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 5, 0, 8)
+            };
+            contentArea.Controls.Add(enforcementModeHeader);
+
+            // Add enforcement mode description
+            var enforcementModeDesc = new Label
+            {
+                Text = "Select how risk limits are enforced (only one can be active):",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            contentArea.Controls.Add(enforcementModeDesc);
+
+            // Create radio buttons for enforcement modes
+            strictModeRadioButton = new RadioButton
+            {
+                Text = "Strict Mode - Immediately enforce all limits (close positions and lock account)",
+                AutoSize = true,
+                Checked = true, // Default
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 4, 0, 4)
+            };
+            contentArea.Controls.Add(strictModeRadioButton);
+
+            warningModeRadioButton = new RadioButton
+            {
+                Text = "Warning Mode - Show warnings only, no automatic enforcement",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 4, 0, 4)
+            };
+            contentArea.Controls.Add(warningModeRadioButton);
+
+            monitorModeRadioButton = new RadioButton
+            {
+                Text = "Monitor Mode - Track limits silently without warnings or enforcement",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 4, 0, 12)
+            };
+            contentArea.Controls.Add(monitorModeRadioButton);
 
             var saveButton = CreateDarkSaveButton();
 
