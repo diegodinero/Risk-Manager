@@ -3661,10 +3661,10 @@ namespace Risk_Manager
                         var settings = settingsService.GetSettings(accountNumber);
                         if (settings != null)
                         {
-                            dailyLossLimit = settings.DailyLossLimit ?? 0;
-                            dailyProfitTarget = settings.DailyProfitTarget ?? 0;
-                            positionLossLimit = settings.PositionLossLimit ?? 0;
-                            positionProfitTarget = settings.PositionProfitTarget ?? 0;
+                            dailyLossLimit = (double)(settings.DailyLossLimit ?? 0);
+                            dailyProfitTarget = (double)(settings.DailyProfitTarget ?? 0);
+                            positionLossLimit = (double)(settings.PositionLossLimit ?? 0);
+                            positionProfitTarget = (double)(settings.PositionProfitTarget ?? 0);
                         }
                     }
                 }
