@@ -4001,6 +4001,8 @@ namespace Risk_Manager
                     statsGrid.Invalidate(); // Force redraw
                 }
                 
+                // statsDetailGrid displays individual metrics (not P&L columns), so no progress bars are shown
+                // We still refresh it to keep data in sync
                 if (statsDetailGrid != null)
                 {
                     RefreshAccountStats();
