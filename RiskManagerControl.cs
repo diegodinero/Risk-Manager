@@ -6891,7 +6891,11 @@ namespace Risk_Manager
                         continue;
 
                     // Enforce trading time locks (lock/unlock based on allowed trading times)
-                    EnforceTradingTimeLocks(uniqueAccountId, settingsService);
+                    // Only enforce if Trading Times feature is enabled
+                    if (settings.TradingTimesEnabled)
+                    {
+                        EnforceTradingTimeLocks(uniqueAccountId, settingsService);
+                    }
 
                     // Skip if account is already locked
                     if (settingsService.IsTradingLocked(uniqueAccountId))
@@ -6949,6 +6953,12 @@ namespace Risk_Manager
             try
             {
                 var settingsService = RiskManagerSettingsService.Instance;
+                
+                // Check if Limits feature is enabled - skip enforcement if disabled
+                if (!settings.LimitsEnabled)
+                {
+                    return;
+                }
                 
                 // IMPORTANT: Check if account is already locked first to prevent any further processing
                 // This prevents infinite notifications by ensuring we don't re-process already locked accounts
@@ -7094,6 +7104,12 @@ namespace Risk_Manager
         {
             try
             {
+                // Check if Limits feature is enabled - skip enforcement if disabled
+                if (!settings.LimitsEnabled)
+                {
+                    return;
+                }
+                
                 // Get daily P&L (we'll use this as proxy for weekly P&L tracking)
                 // In a production system, you would track cumulative weekly P&L separately
                 double dailyPnL = GetAccountDailyPnL(account);
@@ -7143,6 +7159,12 @@ namespace Risk_Manager
         {
             try
             {
+                // Check if Positions feature is enabled - skip enforcement if disabled
+                if (!settings.PositionsEnabled)
+                {
+                    return;
+                }
+                
                 if (core.Positions == null)
                     return;
 
@@ -7216,6 +7238,12 @@ namespace Risk_Manager
         {
             try
             {
+                // Check if Symbols or Positions features are enabled - skip enforcement if both are disabled
+                if (!settings.SymbolsEnabled && !settings.PositionsEnabled)
+                {
+                    return;
+                }
+                
                 if (core.Positions == null)
                     return;
 
@@ -7234,8 +7262,10 @@ namespace Risk_Manager
                 var closedPositions = new HashSet<Position>();
 
                 // First, check and close positions for contract limit violations (by symbol)
-                if (settings.DefaultContractLimit.HasValue || 
-                    (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any()))
+                // Only enforce symbol restrictions if Symbols feature is enabled
+                if (settings.SymbolsEnabled && 
+                    (settings.DefaultContractLimit.HasValue || 
+                    (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any())))
                 {
                     // Group positions by symbol, filtering out invalid symbols early
                     var positionsBySymbol = accountPositions
@@ -7277,8 +7307,8 @@ namespace Risk_Manager
                     if (string.IsNullOrEmpty(symbol))
                         continue;
 
-                    // 1. Check if symbol is blocked
-                    if (settingsService.IsSymbolBlocked(accountId, symbol))
+                    // 1. Check if symbol is blocked (only if Symbols feature is enabled)
+                    if (settings.SymbolsEnabled && settingsService.IsSymbolBlocked(accountId, symbol))
                     {
                         string reason = $"Symbol Blocked: {symbol}";
                         System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
@@ -7287,34 +7317,37 @@ namespace Risk_Manager
                         continue; // Move to next position
                     }
 
-                    // 2. Check position P&L limits
-                    double openPnL = GetPositionOpenPnL(position);
-
-                    // Check Position Loss Limit (negative value)
-                    if (settings.PositionLossLimit.HasValue && settings.PositionLossLimit.Value < 0)
+                    // 2. Check position P&L limits (only if Positions feature is enabled)
+                    if (settings.PositionsEnabled)
                     {
-                        decimal lossLimit = settings.PositionLossLimit.Value;
-                        if ((decimal)openPnL <= lossLimit)
+                        double openPnL = GetPositionOpenPnL(position);
+
+                        // Check Position Loss Limit (negative value)
+                        if (settings.PositionLossLimit.HasValue && settings.PositionLossLimit.Value < 0)
                         {
-                            string reason = $"Position Loss Limit: P&L ${openPnL:F2} ≤ Limit ${lossLimit:F2}";
-                            System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
-                            
-                            ClosePosition(position, core);
-                            continue; // Move to next position
+                            decimal lossLimit = settings.PositionLossLimit.Value;
+                            if ((decimal)openPnL <= lossLimit)
+                            {
+                                string reason = $"Position Loss Limit: P&L ${openPnL:F2} ≤ Limit ${lossLimit:F2}";
+                                System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
+                                
+                                ClosePosition(position, core);
+                                continue; // Move to next position
+                            }
                         }
-                    }
 
-                    // Check Position Profit Target (positive value)
-                    if (settings.PositionProfitTarget.HasValue && settings.PositionProfitTarget.Value > 0)
-                    {
-                        decimal profitTarget = settings.PositionProfitTarget.Value;
-                        if ((decimal)openPnL >= profitTarget)
+                        // Check Position Profit Target (positive value)
+                        if (settings.PositionProfitTarget.HasValue && settings.PositionProfitTarget.Value > 0)
                         {
-                            string reason = $"Position Profit Target: P&L ${openPnL:F2} ≥ Target ${profitTarget:F2}";
-                            System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
-                            
-                            ClosePosition(position, core);
-                            continue; // Move to next position
+                            decimal profitTarget = settings.PositionProfitTarget.Value;
+                            if ((decimal)openPnL >= profitTarget)
+                            {
+                                string reason = $"Position Profit Target: P&L ${openPnL:F2} ≥ Target ${profitTarget:F2}";
+                                System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
+                                
+                                ClosePosition(position, core);
+                                continue; // Move to next position
+                            }
                         }
                     }
                 }
@@ -7333,6 +7366,12 @@ namespace Risk_Manager
         {
             try
             {
+                // Check if Trading Times feature is enabled - skip enforcement if disabled
+                if (!settings.TradingTimesEnabled)
+                {
+                    return;
+                }
+                
                 // Check if trading is allowed right now
                 if (settingsService.IsTradingAllowedNow(accountId))
                     return;
@@ -10650,12 +10689,12 @@ namespace Risk_Manager
 
         private void AddDisabledOverlay(Panel cardPanel)
         {
-            // Create a semi-transparent overlay panel (70% opacity for clear visibility)
+            // Create a semi-transparent overlay panel (40% opacity for better content visibility)
             var overlay = new Panel
             {
                 Name = "DisabledOverlay", // Identify this as the overlay panel
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(178, 40, 40, 40), // 70% opacity (178/255 ≈ 0.7)
+                BackColor = Color.FromArgb(102, 40, 40, 40), // 40% opacity (102/255 ≈ 0.4)
                 Cursor = Cursors.No
             };
 
