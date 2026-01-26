@@ -3608,6 +3608,20 @@ namespace Risk_Manager
         /// </summary>
         private void StatsGrid_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
+            // Debug: Log when method is called
+            if (e.RowIndex >= 0)
+            {
+                var grid = sender as DataGridView;
+                if (grid != null && e.ColumnIndex >= 0 && e.ColumnIndex < grid.Columns.Count)
+                {
+                    var columnName = grid.Columns[e.ColumnIndex].Name;
+                    if (columnName == "GrossPnL" || columnName == "OpenPnL")
+                    {
+                        System.Diagnostics.Debug.WriteLine($"CellPainting called: Row={e.RowIndex}, Column={columnName}, ShowProgressBars={showProgressBars}");
+                    }
+                }
+            }
+            
             // Only paint progress bars if the feature is enabled
             if (!showProgressBars)
                 return;
@@ -3677,7 +3691,7 @@ namespace Risk_Manager
 
             // Calculate progress percentage and color
             double percentage = 0;
-            Color barColor = Color.Green;
+            Color barColor = Color.FromArgb(100, 180, 100); // Modern green
 
             if (isGrossPnL)
             {
@@ -3687,34 +3701,34 @@ namespace Risk_Manager
                     // Negative P&L approaching loss limit
                     percentage = Math.Abs(pnlValue) / dailyLossLimit * 100;
                     
-                    // Color based on proximity to limit
+                    // Modern color scheme based on proximity to limit
                     if (percentage >= 90)
-                        barColor = Color.Red;
+                        barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
                     else if (percentage >= 70)
-                        barColor = Color.Orange;
+                        barColor = Color.FromArgb(255, 133, 27);     // Modern orange
                     else if (percentage >= 50)
-                        barColor = Color.Yellow;
+                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                     else
-                        barColor = Color.Green;
+                        barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
                 }
                 else if (pnlValue > 0 && dailyProfitTarget > 0)
                 {
                     // Positive P&L approaching profit target
                     percentage = pnlValue / dailyProfitTarget * 100;
                     
-                    // Color based on proximity to target
+                    // Modern color scheme for profits
                     if (percentage >= 90)
-                        barColor = Color.Lime;
+                        barColor = Color.FromArgb(0, 192, 118);      // Bright success green
                     else if (percentage >= 70)
-                        barColor = Color.LightGreen;
+                        barColor = Color.FromArgb(40, 167, 69);      // Medium green
                     else
-                        barColor = Color.Green;
+                        barColor = Color.FromArgb(100, 180, 100);    // Light green
                 }
                 else
                 {
-                    // No limits configured, show small bar
-                    percentage = 5;
-                    barColor = Color.Gray;
+                    // No limits configured, show small bar with neutral color
+                    percentage = 10;  // Show at least 10% so it's visible
+                    barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
                 }
             }
             else if (isOpenPnL)
@@ -3725,39 +3739,42 @@ namespace Risk_Manager
                     // Negative P&L approaching position loss limit
                     percentage = Math.Abs(pnlValue) / positionLossLimit * 100;
                     
-                    // Color based on proximity to limit
+                    // Modern color scheme based on proximity to limit
                     if (percentage >= 90)
-                        barColor = Color.Red;
+                        barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
                     else if (percentage >= 70)
-                        barColor = Color.Orange;
+                        barColor = Color.FromArgb(255, 133, 27);     // Modern orange
                     else if (percentage >= 50)
-                        barColor = Color.Yellow;
+                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                     else
-                        barColor = Color.Green;
+                        barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
                 }
                 else if (pnlValue > 0 && positionProfitTarget > 0)
                 {
                     // Positive P&L approaching position profit target
                     percentage = pnlValue / positionProfitTarget * 100;
                     
-                    // Color based on proximity to target
+                    // Modern color scheme for profits
                     if (percentage >= 90)
-                        barColor = Color.Lime;
+                        barColor = Color.FromArgb(0, 192, 118);      // Bright success green
                     else if (percentage >= 70)
-                        barColor = Color.LightGreen;
+                        barColor = Color.FromArgb(40, 167, 69);      // Medium green
                     else
-                        barColor = Color.Green;
+                        barColor = Color.FromArgb(100, 180, 100);    // Light green
                 }
                 else
                 {
-                    // No limits configured, show small bar
-                    percentage = 5;
-                    barColor = Color.Gray;
+                    // No limits configured, show small bar with neutral color
+                    percentage = 10;  // Show at least 10% so it's visible
+                    barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
                 }
             }
 
             // Clamp percentage to 0-100
             percentage = Math.Max(0, Math.Min(100, percentage));
+
+            // Debug logging to help troubleshoot
+            System.Diagnostics.Debug.WriteLine($"Progress Bar: Column={columnName}, Value={pnlValue:F2}, Percentage={percentage:F1}%, Color={barColor.Name}");
 
             // Draw the progress bar
             DrawProgressBarInCell(e, percentage, barColor, cellValue.ToString());
@@ -3765,39 +3782,173 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Helper method to draw a progress bar in a DataGridView cell
+        /// Helper method to draw a modern progress bar in a DataGridView cell
         /// </summary>
         private void DrawProgressBarInCell(DataGridViewCellPaintingEventArgs e, double percentage, Color barColor, string text)
         {
-            // Paint the cell with progress bar
+            // Paint the cell background
             e.Paint(e.CellBounds, DataGridViewPaintParts.All & ~DataGridViewPaintParts.ContentForeground);
 
-            // Calculate progress bar dimensions
-            var progressWidth = (int)(e.CellBounds.Width * percentage / 100);
-            var progressRect = new Rectangle(e.CellBounds.X + 2, e.CellBounds.Y + 2, 
-                                            progressWidth - 4, e.CellBounds.Height - 4);
+            // Set high quality rendering
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            // Draw progress bar
-            if (progressWidth > 0)
+            // Add padding for better appearance
+            int padding = 4;
+            int barHeight = e.CellBounds.Height - (padding * 2);
+            
+            // Background bar (track) - slightly darker background with rounded corners
+            var trackRect = new Rectangle(
+                e.CellBounds.X + padding, 
+                e.CellBounds.Y + padding, 
+                e.CellBounds.Width - (padding * 2), 
+                barHeight
+            );
+            
+            // Draw track background with subtle border
+            using (var trackPath = GetRoundedRectanglePath(trackRect, 3))
             {
-                using (var brush = new SolidBrush(barColor))
+                // Fill track with subtle background
+                using (var trackBrush = new SolidBrush(Color.FromArgb(30, Color.Gray)))
                 {
-                    e.Graphics.FillRectangle(brush, progressRect);
+                    e.Graphics.FillPath(trackBrush, trackPath);
+                }
+                
+                // Draw track border
+                using (var trackPen = new Pen(Color.FromArgb(50, Color.Gray), 1))
+                {
+                    e.Graphics.DrawPath(trackPen, trackPath);
                 }
             }
 
-            // Draw the value text on top
+            // Calculate progress bar dimensions
+            if (percentage > 0)
+            {
+                var progressWidth = (int)((trackRect.Width) * percentage / 100);
+                progressWidth = Math.Max(1, progressWidth); // Ensure at least 1 pixel if percentage > 0
+                
+                var progressRect = new Rectangle(
+                    trackRect.X, 
+                    trackRect.Y, 
+                    progressWidth, 
+                    trackRect.Height
+                );
+
+                // Draw progress bar with gradient and rounded corners
+                using (var progressPath = GetRoundedRectanglePath(progressRect, 3))
+                {
+                    // Create gradient brush for more modern look
+                    var lighterColor = LightenColor(barColor, 0.2f);
+                    using (var gradientBrush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                        progressRect, 
+                        lighterColor, 
+                        barColor, 
+                        System.Drawing.Drawing2D.LinearGradientMode.Vertical))
+                    {
+                        e.Graphics.FillPath(gradientBrush, progressPath);
+                    }
+                    
+                    // Add subtle inner glow for depth
+                    using (var glowPen = new Pen(Color.FromArgb(100, Color.White), 1))
+                    {
+                        var glowRect = new Rectangle(
+                            progressRect.X + 1, 
+                            progressRect.Y + 1, 
+                            progressRect.Width - 2, 
+                            progressRect.Height / 2 - 1
+                        );
+                        if (glowRect.Width > 0 && glowRect.Height > 0)
+                        {
+                            using (var glowPath = GetRoundedRectanglePath(glowRect, 2))
+                            {
+                                e.Graphics.DrawPath(glowPen, glowPath);
+                            }
+                        }
+                    }
+                    
+                    // Draw progress border
+                    using (var progressPen = new Pen(DarkenColor(barColor, 0.2f), 1))
+                    {
+                        e.Graphics.DrawPath(progressPen, progressPath);
+                    }
+                }
+            }
+
+            // Draw the value text on top with shadow for better readability
             var textFormat = new StringFormat
             {
                 Alignment = StringAlignment.Center,
                 LineAlignment = StringAlignment.Center
             };
             
+            // Text shadow for better contrast
+            using (var shadowBrush = new SolidBrush(Color.FromArgb(100, Color.Black)))
+            {
+                var shadowBounds = new RectangleF(
+                    e.CellBounds.X + 1, 
+                    e.CellBounds.Y + 1, 
+                    e.CellBounds.Width, 
+                    e.CellBounds.Height
+                );
+                e.Graphics.DrawString(text, e.CellStyle.Font, shadowBrush, shadowBounds, textFormat);
+            }
+            
+            // Main text
             using (var textBrush = new SolidBrush(e.CellStyle.ForeColor))
             {
-                e.Graphics.DrawString(text, e.CellStyle.Font, 
-                    textBrush, e.CellBounds, textFormat);
+                e.Graphics.DrawString(text, e.CellStyle.Font, textBrush, e.CellBounds, textFormat);
             }
+        }
+
+        /// <summary>
+        /// Creates a rounded rectangle path for smooth corners
+        /// </summary>
+        private System.Drawing.Drawing2D.GraphicsPath GetRoundedRectanglePath(Rectangle rect, int radius)
+        {
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            
+            if (rect.Width < radius * 2 || rect.Height < radius * 2)
+            {
+                // Rectangle too small for rounded corners, use regular rectangle
+                path.AddRectangle(rect);
+                return path;
+            }
+            
+            int diameter = radius * 2;
+            
+            path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
+            path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
+            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
+            path.CloseFigure();
+            
+            return path;
+        }
+
+        /// <summary>
+        /// Lightens a color by a specified factor
+        /// </summary>
+        private Color LightenColor(Color color, float factor)
+        {
+            return Color.FromArgb(
+                color.A,
+                Math.Min(255, (int)(color.R + (255 - color.R) * factor)),
+                Math.Min(255, (int)(color.G + (255 - color.G) * factor)),
+                Math.Min(255, (int)(color.B + (255 - color.B) * factor))
+            );
+        }
+
+        /// <summary>
+        /// Darkens a color by a specified factor
+        /// </summary>
+        private Color DarkenColor(Color color, float factor)
+        {
+            return Color.FromArgb(
+                color.A,
+                Math.Max(0, (int)(color.R * (1 - factor))),
+                Math.Max(0, (int)(color.G * (1 - factor))),
+                Math.Max(0, (int)(color.B * (1 - factor)))
+            );
         }
 
         /// <summary>
@@ -3845,41 +3996,41 @@ namespace Risk_Manager
             
             // Calculate progress percentage and color
             double percentage = 0;
-            Color barColor = Color.Green;
+            Color barColor = Color.FromArgb(100, 180, 100); // Modern green
 
             if (pnlValue < 0)
             {
                 // Negative P&L
                 percentage = Math.Min(100, Math.Abs(pnlValue) / defaultLimit * 100);
                 
-                // Color based on magnitude
+                // Modern color scheme based on magnitude
                 if (percentage >= 90)
-                    barColor = Color.Red;
+                    barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
                 else if (percentage >= 70)
-                    barColor = Color.Orange;
+                    barColor = Color.FromArgb(255, 133, 27);     // Modern orange
                 else if (percentage >= 50)
-                    barColor = Color.Yellow;
+                    barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                 else
-                    barColor = Color.Green;
+                    barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
             }
             else if (pnlValue > 0)
             {
                 // Positive P&L
                 percentage = Math.Min(100, pnlValue / defaultLimit * 100);
                 
-                // Color based on magnitude
+                // Modern color scheme for profits
                 if (percentage >= 90)
-                    barColor = Color.Lime;
+                    barColor = Color.FromArgb(0, 192, 118);      // Bright success green
                 else if (percentage >= 70)
-                    barColor = Color.LightGreen;
+                    barColor = Color.FromArgb(40, 167, 69);      // Medium green
                 else
-                    barColor = Color.Green;
+                    barColor = Color.FromArgb(100, 180, 100);    // Light green
             }
             else
             {
                 // Zero
-                percentage = 5;
-                barColor = Color.Gray;
+                percentage = 10;  // Show at least 10% so it's visible
+                barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
             }
 
             // Draw the progress bar using helper method
