@@ -3688,10 +3688,12 @@ namespace Risk_Manager
             if (isGrossPnL)
             {
                 // Gross P&L: use Daily Loss Limit and Daily Profit Target
-                if (pnlValue < 0 && dailyLossLimit > 0)
+                // Note: Loss limits are stored as negative values in the settings
+                if (pnlValue < 0 && dailyLossLimit < 0)
                 {
-                    // Negative P&L approaching loss limit
-                    percentage = Math.Abs(pnlValue) / dailyLossLimit * 100;
+                    // Negative P&L approaching loss limit (both values are negative)
+                    // Calculate what percentage of the limit we've used
+                    percentage = Math.Abs(pnlValue) / Math.Abs(dailyLossLimit) * 100;
                     
                     // Modern color scheme based on proximity to limit
                     if (percentage >= 90)
@@ -3726,10 +3728,12 @@ namespace Risk_Manager
             else if (isOpenPnL)
             {
                 // Open P&L: use Position Loss Limit and Position Profit Target
-                if (pnlValue < 0 && positionLossLimit > 0)
+                // Note: Loss limits are stored as negative values in the settings
+                if (pnlValue < 0 && positionLossLimit < 0)
                 {
-                    // Negative P&L approaching position loss limit
-                    percentage = Math.Abs(pnlValue) / positionLossLimit * 100;
+                    // Negative P&L approaching position loss limit (both values are negative)
+                    // Calculate what percentage of the limit we've used
+                    percentage = Math.Abs(pnlValue) / Math.Abs(positionLossLimit) * 100;
                     
                     // Modern color scheme based on proximity to limit
                     if (percentage >= 90)
@@ -3766,7 +3770,7 @@ namespace Risk_Manager
             percentage = Math.Max(0, Math.Min(100, percentage));
 
             // Debug logging to help troubleshoot
-            System.Diagnostics.Debug.WriteLine($"Progress Bar: Column={columnName}, Value={pnlValue:F2}, Percentage={percentage:F1}%, Color={barColor.Name}");
+            System.Diagnostics.Debug.WriteLine($"Progress Bar: Column={columnName}, Value={pnlValue:F2}, DailyLossLimit={dailyLossLimit:F2}, DailyProfitTarget={dailyProfitTarget:F2}, PositionLossLimit={positionLossLimit:F2}, PositionProfitTarget={positionProfitTarget:F2}, Percentage={percentage:F1}%, Color={barColor.Name}");
 
             // Draw the progress bar
             DrawProgressBarInCell(e, percentage, barColor, cellValue.ToString());
