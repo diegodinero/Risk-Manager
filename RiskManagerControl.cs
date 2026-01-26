@@ -190,6 +190,12 @@ namespace Risk_Manager
         private Button lockTradingButton; // Lock Trading button reference
         private Button unlockTradingButton; // Unlock Trading button reference
         private ComboBox lockDurationComboBox; // Lock duration selector
+        private CheckBox showProgressBarsCheckBox; // Show Progress Bars checkbox in General Settings
+        private bool showProgressBars = false; // Whether to show progress bars in data grids
+        private CheckBox showPercentageCheckBox; // Show Percentage checkbox in General Settings
+        private bool showPercentage = false; // Whether to show percentage instead of dollar amount in progress bars
+        private Label currentThemeLabel; // Label to display current theme name
+        private Dictionary<string, TypeSummaryData> typeSummaryAggregatedData = new Dictionary<string, TypeSummaryData>(); // Aggregated data for type summary rows
         
         // State caching for badge updates - stored per account to prevent cross-account state confusion
         private readonly Dictionary<string, bool?> _accountTradingLockStateCache = new Dictionary<string, bool?>();
@@ -382,7 +388,7 @@ namespace Risk_Manager
         private static readonly string[] NavItems = new[]
         {
             "📊 Accounts Summary", "📈 Stats", "📋 Type", "🔍 Risk Overview", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
-            "🔒 Lock Settings", "🔒 Manual Lock"
+            "🔒 Lock Settings", "🔒 Manual Lock", "⚙️ General Settings"
         };
 
         private const int LeftPanelWidth = 200;
@@ -394,6 +400,12 @@ namespace Risk_Manager
             // Load saved theme preference or use default (Blue)
             var savedTheme = LoadThemePreference();
             ApplyTheme(savedTheme);
+            
+            // Load progress bar preference
+            showProgressBars = LoadProgressBarPreference();
+            
+            // Load show percentage preference
+            showPercentage = LoadShowPercentagePreference();
 
             LoadIcons();
 
@@ -448,6 +460,8 @@ namespace Risk_Manager
                     placeholder = CreateLockSettingsDarkPanel();
                 else if (name.EndsWith("Manual Lock"))
                     placeholder = CreateManualLockDarkPanel();
+                else if (name.EndsWith("General Settings"))
+                    placeholder = CreateGeneralSettingsPanel();
                 else
                     placeholder = CreatePlaceholderPanel(name);
                 pageContents[name] = placeholder;
@@ -564,6 +578,12 @@ namespace Risk_Manager
 
             // Save theme preference
             SaveThemePreference();
+            
+            // Update the current theme label in General Settings if it exists
+            if (currentThemeLabel != null)
+            {
+                currentThemeLabel.Text = $"Current Theme: {GetThemeDisplayName(currentTheme)}";
+            }
 
             // Apply theme to all controls
             UpdateAllControlColors();
@@ -1101,6 +1121,26 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Gets a user-friendly display name for the theme
+        /// </summary>
+        private string GetThemeDisplayName(Theme theme)
+        {
+            switch (theme)
+            {
+                case Theme.Blue:
+                    return "Blue";
+                case Theme.Black:
+                    return "Black";
+                case Theme.White:
+                    return "White";
+                case Theme.YellowBlueBlack:
+                    return "Yellow/Blue/Black";
+                default:
+                    return "Unknown";
+            }
+        }
+
+        /// <summary>
         /// Saves the navigation collapse state preference to a file.
         /// </summary>
         private void SaveNavigationCollapsePreference()
@@ -1141,6 +1181,130 @@ namespace Risk_Manager
             }
             
             // Default to expanded (not collapsed)
+            return false;
+        }
+
+        /// <summary>
+        /// Gets the path to the progress bar preference file
+        /// </summary>
+        private string GetProgressBarPreferencesPath()
+        {
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var folderPath = Path.Combine(appDataPath, "RiskManager");
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+            return Path.Combine(folderPath, "progressbar_preference.txt");
+        }
+
+        /// <summary>
+        /// Gets the path where show percentage preference is stored
+        /// </summary>
+        private string GetShowPercentagePreferencesPath()
+        {
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var folderPath = Path.Combine(appDataPath, "RiskManager");
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+            return Path.Combine(folderPath, "showpercentage_preference.txt");
+        }
+
+        /// <summary>
+        /// Saves the progress bar preference to disk
+        /// </summary>
+        private void SaveProgressBarPreference()
+        {
+            // Don't save during initialization to avoid unnecessary file I/O
+            if (isInitializing)
+                return;
+                
+            try
+            {
+                var progressBarPath = GetProgressBarPreferencesPath();
+                File.WriteAllText(progressBarPath, showProgressBars.ToString());
+                System.Diagnostics.Debug.WriteLine($"Progress bar preference saved: {showProgressBars}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save progress bar preference: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Saves the show percentage preference to disk
+        /// </summary>
+        private void SaveShowPercentagePreference()
+        {
+            // Don't save during initialization to avoid unnecessary file I/O
+            if (isInitializing)
+                return;
+                
+            try
+            {
+                var percentagePath = GetShowPercentagePreferencesPath();
+                File.WriteAllText(percentagePath, showPercentage.ToString());
+                System.Diagnostics.Debug.WriteLine($"Show percentage preference saved: {showPercentage}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save show percentage preference: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Loads the progress bar preference from disk
+        /// </summary>
+        private bool LoadProgressBarPreference()
+        {
+            try
+            {
+                var progressBarPath = GetProgressBarPreferencesPath();
+                if (File.Exists(progressBarPath))
+                {
+                    var progressBarString = File.ReadAllText(progressBarPath).Trim();
+                    if (bool.TryParse(progressBarString, out var showBars))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Progress bar preference loaded: {showBars}");
+                        return showBars;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load progress bar preference: {ex.Message}");
+            }
+            
+            // Default to false (show normal columns)
+            return false;
+        }
+
+        /// <summary>
+        /// Loads the show percentage preference from disk
+        /// </summary>
+        private bool LoadShowPercentagePreference()
+        {
+            try
+            {
+                var percentagePath = GetShowPercentagePreferencesPath();
+                if (File.Exists(percentagePath))
+                {
+                    var percentageString = File.ReadAllText(percentagePath).Trim();
+                    if (bool.TryParse(percentageString, out var showPct))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Show percentage preference loaded: {showPct}");
+                        return showPct;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load show percentage preference: {ex.Message}");
+            }
+            
+            // Default to false (show dollar amount)
             return false;
         }
 
@@ -1918,6 +2082,17 @@ namespace Risk_Manager
                 {
                     // fallback to generic lock if specific resource missing
                     IconMap["Manual Lock"] = Properties.Resources._lock;
+                }
+
+                // General Settings icon
+                try
+                {
+                    IconMap["General Settings"] = Properties.Resources.generalsettings;
+                }
+                catch
+                {
+                    // fallback to feature toggles icon if missing
+                    IconMap["General Settings"] = Properties.Resources.featuretoggles;
                 }
 
                 // Explicit card header mappings for Risk Overview
@@ -3057,6 +3232,9 @@ namespace Risk_Manager
                 }
             };
 
+            // Add CellPainting event handler for progress bars
+            statsGrid.CellPainting += StatsGrid_CellPainting;
+
             RefreshAccountsSummary();
             statsRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             statsRefreshTimer.Tick += (s, e) => RefreshAccountsSummary();
@@ -3499,6 +3677,591 @@ namespace Risk_Manager
             }
         }
 
+        /// <summary>
+        /// Custom cell painting for progress bars in the stats grid
+        /// </summary>
+        private void StatsGrid_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            // Only paint progress bars if the feature is enabled
+            if (!showProgressBars)
+                return;
+
+            // Skip header row
+            if (e.RowIndex < 0)
+                return;
+
+            var grid = sender as DataGridView;
+            if (grid == null)
+                return;
+
+            // Determine which columns should have progress bars
+            string columnName = grid.Columns[e.ColumnIndex].Name;
+            
+            // Debug: Log when method is called for P&L columns
+            if (columnName == "GrossPnL" || columnName == "OpenPnL")
+            {
+                System.Diagnostics.Debug.WriteLine($"CellPainting called: Row={e.RowIndex}, Column={columnName}, ShowProgressBars={showProgressBars}");
+            }
+            
+            // Progress bars for: GrossPnL and OpenPnL
+            bool isGrossPnL = columnName == "GrossPnL";
+            bool isOpenPnL = columnName == "OpenPnL";
+            
+            if (!isGrossPnL && !isOpenPnL)
+                return;
+
+            // Get the cell value
+            var cellValue = e.Value;
+            if (cellValue == null)
+                return;
+
+            // Parse the P&L value (handle formatted strings like "$1,234.56")
+            string valueStr = cellValue.ToString().Replace("$", "").Replace(",", "").Trim();
+            if (!double.TryParse(valueStr, out double pnlValue))
+                return;
+
+            // Get account-specific limits from the row data
+            double dailyLossLimit = 0;
+            double dailyProfitTarget = 0;
+            double positionLossLimit = 0;
+            double positionProfitTarget = 0;
+
+            try
+            {
+                // Get the account from Core.Accounts using the row index
+                // This matches the same order used when populating the grid
+                var core = Core.Instance;
+                if (core?.Accounts != null && e.RowIndex < core.Accounts.Count())
+                {
+                    var account = core.Accounts.ElementAtOrDefault(e.RowIndex);
+                    if (account != null)
+                    {
+                        // Generate unique account identifier using same logic as RefreshAccountsSummary
+                        var uniqueAccountId = GetUniqueAccountIdentifier(account, e.RowIndex);
+                        
+                        // Load settings for this account
+                        var settingsService = RiskManagerSettingsService.Instance;
+                        if (settingsService.IsInitialized)
+                        {
+                            var settings = settingsService.GetSettings(uniqueAccountId);
+                            if (settings != null)
+                            {
+                                dailyLossLimit = (double)(settings.DailyLossLimit ?? 0);
+                                dailyProfitTarget = (double)(settings.DailyProfitTarget ?? 0);
+                                positionLossLimit = (double)(settings.PositionLossLimit ?? 0);
+                                positionProfitTarget = (double)(settings.PositionProfitTarget ?? 0);
+                                
+                                System.Diagnostics.Debug.WriteLine($"Loaded settings for account {uniqueAccountId}: DailyLossLimit={dailyLossLimit}, DailyProfitTarget={dailyProfitTarget}, PositionLossLimit={positionLossLimit}, PositionProfitTarget={positionProfitTarget}");
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine($"No settings found for account {uniqueAccountId}");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error and continue with default values
+                System.Diagnostics.Debug.WriteLine($"Error loading settings for progress bar: {ex.Message}");
+            }
+
+            // Calculate progress percentage and color
+            double percentage = 0;
+            Color barColor = Color.FromArgb(100, 180, 100); // Modern green
+
+            if (isGrossPnL)
+            {
+                // Gross P&L: use Daily Loss Limit and Daily Profit Target
+                // Note: Loss limits are stored as negative values in the settings
+                
+                // Debug: Log the values being used for Gross P&L calculation
+                System.Diagnostics.Debug.WriteLine($"Gross P&L Calculation: pnlValue={pnlValue:F2}, dailyLossLimit={dailyLossLimit:F2}, dailyProfitTarget={dailyProfitTarget:F2}");
+                
+                if (pnlValue == 0)
+                {
+                    // Zero value = 0% bar
+                    percentage = 0;
+                    barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
+                    System.Diagnostics.Debug.WriteLine($"Gross P&L: Zero value - showing 0% bar");
+                }
+                else if (pnlValue < 0 && dailyLossLimit < 0)
+                {
+                    // Negative P&L approaching loss limit (both values are negative)
+                    // Calculate what percentage of the limit we've used
+                    percentage = Math.Abs(pnlValue) / Math.Abs(dailyLossLimit) * 100;
+                    
+                    // Modern color scheme based on proximity to limit
+                    if (percentage >= 90)
+                        barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
+                    else if (percentage >= 70)
+                        barColor = Color.FromArgb(255, 133, 27);     // Modern orange
+                    else if (percentage >= 50)
+                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+                    else
+                        barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
+                    
+                    System.Diagnostics.Debug.WriteLine($"Gross P&L: Loss scenario - percentage={percentage:F1}%");
+                }
+                else if (pnlValue > 0 && dailyProfitTarget > 0)
+                {
+                    // Positive P&L approaching profit target
+                    percentage = pnlValue / dailyProfitTarget * 100;
+                    
+                    // Modern color scheme for profits
+                    if (percentage >= 90)
+                        barColor = Color.FromArgb(0, 192, 118);      // Bright success green
+                    else if (percentage >= 70)
+                        barColor = Color.FromArgb(40, 167, 69);      // Medium green
+                    else
+                        barColor = Color.FromArgb(100, 180, 100);    // Light green
+                    
+                    System.Diagnostics.Debug.WriteLine($"Gross P&L: Profit scenario - percentage={percentage:F1}%");
+                }
+                else
+                {
+                    // No limits configured but value is non-zero, show small bar with neutral color
+                    percentage = 10;  // Show at least 10% so it's visible
+                    barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
+                    System.Diagnostics.Debug.WriteLine($"Gross P&L: No limits configured - showing 10% gray bar (pnlValue={pnlValue:F2}, lossLimit={dailyLossLimit:F2}, profitTarget={dailyProfitTarget:F2})");
+                }
+            }
+            else if (isOpenPnL)
+            {
+                // Open P&L: use Position Loss Limit and Position Profit Target
+                // Note: Loss limits are stored as negative values in the settings
+                
+                // Debug: Log the values being used for Open P&L calculation
+                System.Diagnostics.Debug.WriteLine($"Open P&L Calculation: pnlValue={pnlValue:F2}, positionLossLimit={positionLossLimit:F2}, positionProfitTarget={positionProfitTarget:F2}");
+                
+                if (pnlValue == 0)
+                {
+                    // Zero value = 0% bar
+                    percentage = 0;
+                    barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
+                    System.Diagnostics.Debug.WriteLine($"Open P&L: Zero value - showing 0% bar");
+                }
+                else if (pnlValue < 0 && positionLossLimit < 0)
+                {
+                    // Negative P&L approaching position loss limit (both values are negative)
+                    // Calculate what percentage of the limit we've used
+                    percentage = Math.Abs(pnlValue) / Math.Abs(positionLossLimit) * 100;
+                    
+                    // Modern color scheme based on proximity to limit
+                    if (percentage >= 90)
+                        barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
+                    else if (percentage >= 70)
+                        barColor = Color.FromArgb(255, 133, 27);     // Modern orange
+                    else if (percentage >= 50)
+                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+                    else
+                        barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
+                    
+                    System.Diagnostics.Debug.WriteLine($"Open P&L: Loss scenario - percentage={percentage:F1}%");
+                }
+                else if (pnlValue > 0 && positionProfitTarget > 0)
+                {
+                    // Positive P&L approaching position profit target
+                    percentage = pnlValue / positionProfitTarget * 100;
+                    
+                    // Modern color scheme for profits
+                    if (percentage >= 90)
+                        barColor = Color.FromArgb(0, 192, 118);      // Bright success green
+                    else if (percentage >= 70)
+                        barColor = Color.FromArgb(40, 167, 69);      // Medium green
+                    else
+                        barColor = Color.FromArgb(100, 180, 100);    // Light green
+                    
+                    System.Diagnostics.Debug.WriteLine($"Open P&L: Profit scenario - percentage={percentage:F1}%");
+                }
+                else
+                {
+                    // No limits configured but value is non-zero, show small bar with neutral color
+                    percentage = 10;  // Show at least 10% so it's visible
+                    barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
+                    System.Diagnostics.Debug.WriteLine($"Open P&L: No limits configured - showing 10% gray bar (pnlValue={pnlValue:F2}, lossLimit={positionLossLimit:F2}, profitTarget={positionProfitTarget:F2})");
+                }
+            }
+
+            // Clamp percentage to 0-100
+            percentage = Math.Max(0, Math.Min(100, percentage));
+
+            // Debug logging to help troubleshoot
+            System.Diagnostics.Debug.WriteLine($"Progress Bar: Column={columnName}, Value={pnlValue:F2}, DailyLossLimit={dailyLossLimit:F2}, DailyProfitTarget={dailyProfitTarget:F2}, PositionLossLimit={positionLossLimit:F2}, PositionProfitTarget={positionProfitTarget:F2}, Percentage={percentage:F1}%, Color={barColor.Name}");
+
+            // Determine display text based on showPercentage setting
+            string displayText = showPercentage ? $"{percentage:F1}%" : cellValue.ToString();
+
+            // Draw the progress bar
+            DrawProgressBarInCell(e, percentage, barColor, displayText);
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Helper method to draw a modern progress bar in a DataGridView cell
+        /// </summary>
+        private void DrawProgressBarInCell(DataGridViewCellPaintingEventArgs e, double percentage, Color barColor, string text)
+        {
+            // Paint the cell background
+            e.Paint(e.CellBounds, DataGridViewPaintParts.All & ~DataGridViewPaintParts.ContentForeground);
+
+            // Set high quality rendering
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+            // Add padding for better appearance
+            int padding = 4;
+            int barHeight = e.CellBounds.Height - (padding * 2);
+            
+            // Background bar (track) - slightly darker background with rounded corners
+            var trackRect = new Rectangle(
+                e.CellBounds.X + padding, 
+                e.CellBounds.Y + padding, 
+                e.CellBounds.Width - (padding * 2), 
+                barHeight
+            );
+            
+            // Draw track background with subtle border
+            using (var trackPath = GetRoundedRectanglePath(trackRect, 3))
+            {
+                // Fill track with subtle background
+                using (var trackBrush = new SolidBrush(Color.FromArgb(30, Color.Gray)))
+                {
+                    e.Graphics.FillPath(trackBrush, trackPath);
+                }
+                
+                // Draw track border
+                using (var trackPen = new Pen(Color.FromArgb(50, Color.Gray), 1))
+                {
+                    e.Graphics.DrawPath(trackPen, trackPath);
+                }
+            }
+
+            // Calculate progress bar dimensions
+            if (percentage > 0)
+            {
+                var progressWidth = (int)((trackRect.Width) * percentage / 100);
+                progressWidth = Math.Max(1, progressWidth); // Ensure at least 1 pixel if percentage > 0
+                
+                var progressRect = new Rectangle(
+                    trackRect.X, 
+                    trackRect.Y, 
+                    progressWidth, 
+                    trackRect.Height
+                );
+
+                // Draw progress bar with gradient and rounded corners
+                using (var progressPath = GetRoundedRectanglePath(progressRect, 3))
+                {
+                    // Create gradient brush for more modern look
+                    var lighterColor = LightenColor(barColor, 0.2f);
+                    using (var gradientBrush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                        progressRect, 
+                        lighterColor, 
+                        barColor, 
+                        System.Drawing.Drawing2D.LinearGradientMode.Vertical))
+                    {
+                        e.Graphics.FillPath(gradientBrush, progressPath);
+                    }
+                    
+                    // Add subtle inner glow for depth
+                    using (var glowPen = new Pen(Color.FromArgb(100, Color.White), 1))
+                    {
+                        var glowRect = new Rectangle(
+                            progressRect.X + 1, 
+                            progressRect.Y + 1, 
+                            progressRect.Width - 2, 
+                            progressRect.Height / 2 - 1
+                        );
+                        if (glowRect.Width > 0 && glowRect.Height > 0)
+                        {
+                            using (var glowPath = GetRoundedRectanglePath(glowRect, 2))
+                            {
+                                e.Graphics.DrawPath(glowPen, glowPath);
+                            }
+                        }
+                    }
+                    
+                    // Draw progress border
+                    using (var progressPen = new Pen(DarkenColor(barColor, 0.2f), 1))
+                    {
+                        e.Graphics.DrawPath(progressPen, progressPath);
+                    }
+                }
+            }
+
+            // Draw the value text on top with shadow for better readability
+            var textFormat = new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            };
+            
+            // Text shadow for better contrast
+            using (var shadowBrush = new SolidBrush(Color.FromArgb(100, Color.Black)))
+            {
+                var shadowBounds = new RectangleF(
+                    e.CellBounds.X + 1, 
+                    e.CellBounds.Y + 1, 
+                    e.CellBounds.Width, 
+                    e.CellBounds.Height
+                );
+                e.Graphics.DrawString(text, e.CellStyle.Font, shadowBrush, shadowBounds, textFormat);
+            }
+            
+            // Main text
+            using (var textBrush = new SolidBrush(e.CellStyle.ForeColor))
+            {
+                e.Graphics.DrawString(text, e.CellStyle.Font, textBrush, e.CellBounds, textFormat);
+            }
+        }
+
+        /// <summary>
+        /// Creates a rounded rectangle path for smooth corners
+        /// </summary>
+        private System.Drawing.Drawing2D.GraphicsPath GetRoundedRectanglePath(Rectangle rect, int radius)
+        {
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            
+            if (rect.Width < radius * 2 || rect.Height < radius * 2)
+            {
+                // Rectangle too small for rounded corners, use regular rectangle
+                path.AddRectangle(rect);
+                return path;
+            }
+            
+            int diameter = radius * 2;
+            
+            path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
+            path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
+            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
+            path.CloseFigure();
+            
+            return path;
+        }
+
+        /// <summary>
+        /// Lightens a color by a specified factor
+        /// </summary>
+        private Color LightenColor(Color color, float factor)
+        {
+            return Color.FromArgb(
+                color.A,
+                Math.Min(255, (int)(color.R + (255 - color.R) * factor)),
+                Math.Min(255, (int)(color.G + (255 - color.G) * factor)),
+                Math.Min(255, (int)(color.B + (255 - color.B) * factor))
+            );
+        }
+
+        /// <summary>
+        /// Darkens a color by a specified factor
+        /// </summary>
+        private Color DarkenColor(Color color, float factor)
+        {
+            return Color.FromArgb(
+                color.A,
+                Math.Max(0, (int)(color.R * (1 - factor))),
+                Math.Max(0, (int)(color.G * (1 - factor))),
+                Math.Max(0, (int)(color.B * (1 - factor)))
+            );
+        }
+
+        /// <summary>
+        /// Custom cell painting for progress bars in the type summary grid
+        /// </summary>
+        private void TypeSummaryGrid_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            // Only paint progress bars if the feature is enabled
+            if (!showProgressBars)
+                return;
+
+            // Skip header row
+            if (e.RowIndex < 0)
+                return;
+
+            var grid = sender as DataGridView;
+            if (grid == null)
+                return;
+
+            // Determine which columns should have progress bars
+            string columnName = grid.Columns[e.ColumnIndex].Name;
+            
+            // Progress bars for: TotalPnL and OpenPnL
+            bool isTotalPnL = columnName == "TotalPnL";
+            bool isOpenPnL = columnName == "OpenPnL";
+            
+            if (!isTotalPnL && !isOpenPnL)
+                return;
+
+            // Get the cell value
+            var cellValue = e.Value;
+            if (cellValue == null)
+                return;
+
+            // Parse the P&L value (handle formatted strings like "$1,234.56")
+            string valueStr = cellValue.ToString().Replace("$", "").Replace(",", "").Trim();
+            if (!double.TryParse(valueStr, out double pnlValue))
+                return;
+
+            // Get the type/group name from the first column
+            string typeName = "";
+            if (e.RowIndex < grid.Rows.Count && grid.Rows[e.RowIndex].Cells.Count > 0)
+            {
+                var typeCell = grid.Rows[e.RowIndex].Cells[0].Value;
+                if (typeCell != null)
+                    typeName = typeCell.ToString();
+            }
+
+            // Get aggregated limits for this type/group
+            double dailyLossLimit = 0;
+            double dailyProfitTarget = 0;
+            double positionLossLimit = 0;
+            double positionProfitTarget = 0;
+
+            if (!string.IsNullOrEmpty(typeName) && typeSummaryAggregatedData.ContainsKey(typeName))
+            {
+                var data = typeSummaryAggregatedData[typeName];
+                dailyLossLimit = data.DailyLossLimit;
+                dailyProfitTarget = data.DailyProfitTarget;
+                positionLossLimit = data.PositionLossLimit;
+                positionProfitTarget = data.PositionProfitTarget;
+            }
+            
+            // Calculate progress percentage and color
+            double percentage = 0;
+            Color barColor = Color.FromArgb(100, 180, 100); // Modern green
+
+            if (pnlValue == 0)
+            {
+                // Zero value = 0% bar
+                percentage = 0;
+                barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
+            }
+            else if (isTotalPnL)
+            {
+                // Total P&L: use Daily Loss Limit and Daily Profit Target (aggregated)
+                if (pnlValue < 0 && dailyLossLimit < 0)
+                {
+                    // Negative P&L approaching loss limit
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / Math.Abs(dailyLossLimit) * 100);
+                    
+                    // Modern color scheme based on magnitude
+                    if (percentage >= 90)
+                        barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
+                    else if (percentage >= 70)
+                        barColor = Color.FromArgb(255, 133, 27);     // Modern orange
+                    else if (percentage >= 50)
+                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+                    else
+                        barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
+                }
+                else if (pnlValue > 0 && dailyProfitTarget > 0)
+                {
+                    // Positive P&L approaching profit target
+                    percentage = Math.Min(100, pnlValue / dailyProfitTarget * 100);
+                    
+                    // Modern color scheme for profits
+                    if (percentage >= 90)
+                        barColor = Color.FromArgb(0, 192, 118);      // Bright success green
+                    else if (percentage >= 70)
+                        barColor = Color.FromArgb(40, 167, 69);      // Medium green
+                    else
+                        barColor = Color.FromArgb(100, 180, 100);    // Light green
+                }
+                else
+                {
+                    // No limits configured, use default threshold for visualization
+                    double defaultLimit = 1000;
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / defaultLimit * 100);
+                    
+                    if (pnlValue < 0)
+                    {
+                        // Negative - red tones
+                        if (percentage >= 70)
+                            barColor = Color.FromArgb(220, 53, 69);
+                        else if (percentage >= 50)
+                            barColor = Color.FromArgb(255, 133, 27);
+                        else
+                            barColor = Color.FromArgb(255, 193, 7);
+                    }
+                    else
+                    {
+                        // Positive - green tones
+                        if (percentage >= 70)
+                            barColor = Color.FromArgb(0, 192, 118);
+                        else
+                            barColor = Color.FromArgb(40, 167, 69);
+                    }
+                }
+            }
+            else if (isOpenPnL)
+            {
+                // Open P&L: use Position Loss Limit and Position Profit Target (aggregated)
+                if (pnlValue < 0 && positionLossLimit < 0)
+                {
+                    // Negative P&L approaching position loss limit
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / Math.Abs(positionLossLimit) * 100);
+                    
+                    // Modern color scheme based on magnitude
+                    if (percentage >= 90)
+                        barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
+                    else if (percentage >= 70)
+                        barColor = Color.FromArgb(255, 133, 27);     // Modern orange
+                    else if (percentage >= 50)
+                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+                    else
+                        barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
+                }
+                else if (pnlValue > 0 && positionProfitTarget > 0)
+                {
+                    // Positive P&L approaching position profit target
+                    percentage = Math.Min(100, pnlValue / positionProfitTarget * 100);
+                    
+                    // Modern color scheme for profits
+                    if (percentage >= 90)
+                        barColor = Color.FromArgb(0, 192, 118);      // Bright success green
+                    else if (percentage >= 70)
+                        barColor = Color.FromArgb(40, 167, 69);      // Medium green
+                    else
+                        barColor = Color.FromArgb(100, 180, 100);    // Light green
+                }
+                else
+                {
+                    // No limits configured, use default threshold for visualization
+                    double defaultLimit = 1000;
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / defaultLimit * 100);
+                    
+                    if (pnlValue < 0)
+                    {
+                        // Negative - red tones
+                        if (percentage >= 70)
+                            barColor = Color.FromArgb(220, 53, 69);
+                        else if (percentage >= 50)
+                            barColor = Color.FromArgb(255, 133, 27);
+                        else
+                            barColor = Color.FromArgb(255, 193, 7);
+                    }
+                    else
+                    {
+                        // Positive - green tones
+                        if (percentage >= 70)
+                            barColor = Color.FromArgb(0, 192, 118);
+                        else
+                            barColor = Color.FromArgb(40, 167, 69);
+                    }
+                }
+            }
+
+            // Determine display text based on showPercentage setting
+            string displayText = showPercentage ? $"{percentage:F1}%" : cellValue.ToString();
+
+            // Draw the progress bar using helper method
+            DrawProgressBarInCell(e, percentage, barColor, displayText);
+            e.Handled = true;
+        }
+
         private Control CreateTypeSummaryPanel()
         {
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
@@ -3579,6 +4342,9 @@ namespace Risk_Manager
             typeSummaryGrid.Columns.Add("TotalPnL", "Total P&L");
             typeSummaryGrid.Columns.Add("Drawdown", "Drawdown");
 
+            // Add CellPainting event handler for progress bars
+            typeSummaryGrid.CellPainting += TypeSummaryGrid_CellPainting;
+
             RefreshTypeSummary();
             typeSummaryRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             typeSummaryRefreshTimer.Tick += (s, e) => RefreshTypeSummary();
@@ -3588,6 +4354,46 @@ namespace Risk_Manager
             mainPanel.Controls.Add(typeSummaryGrid);
             mainPanel.Controls.Add(topPanel);
             return mainPanel;
+        }
+
+        /// <summary>
+        /// Refreshes all data grids to apply or remove progress bars based on the showProgressBars setting
+        /// </summary>
+        private void RefreshAllDataGrids()
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(RefreshAllDataGrids));
+                return;
+            }
+
+            try
+            {
+                // Refresh the grids by calling their existing refresh methods
+                if (statsGrid != null)
+                {
+                    RefreshAccountsSummary();
+                    statsGrid.Invalidate(); // Force redraw
+                }
+                
+                // statsDetailGrid displays individual metrics (not P&L columns), so no progress bars are shown
+                // We still refresh it to keep data in sync
+                if (statsDetailGrid != null)
+                {
+                    RefreshAccountStats();
+                    statsDetailGrid.Invalidate(); // Force redraw
+                }
+                
+                if (typeSummaryGrid != null)
+                {
+                    RefreshTypeSummary();
+                    typeSummaryGrid.Invalidate(); // Force redraw
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error refreshing data grids: {ex.Message}");
+            }
         }
 
         private void RefreshTypeSummary()
@@ -3619,12 +4425,21 @@ namespace Risk_Manager
                     typeSummaryGrid.Columns[0].HeaderText = filterByFirm ? FILTER_MODE_FIRM : FILTER_MODE_TYPE;
                 }
 
+                // Get settings service for loading account limits
+                var settingsService = RiskManagerSettingsService.Instance;
+
                 // Dictionary to store aggregated data by type or firm
                 var aggregatedData = new Dictionary<string, TypeSummaryData>();
 
+                // Track account index for GetUniqueAccountIdentifier
+                int accountIndex = 0;
                 foreach (var account in core.Accounts)
                 {
-                    if (account == null) continue;
+                    if (account == null)
+                    {
+                        accountIndex++;
+                        continue;
+                    }
 
                     // Get the grouping key based on filter mode
                     string groupKey = filterByFirm ? GetAccountIbId(account) : DetermineAccountType(account);
@@ -3638,6 +4453,34 @@ namespace Risk_Manager
                     var data = aggregatedData[groupKey];
                     data.Count++;
                     data.Equity += account.Balance;
+
+                    // Aggregate limits from settings for this account
+                    try
+                    {
+                        if (settingsService != null && settingsService.IsInitialized)
+                        {
+                            // Get unique account identifier
+                            var accountNumber = GetUniqueAccountIdentifier(account, accountIndex);
+                            if (!string.IsNullOrEmpty(accountNumber))
+                            {
+                                var settings = settingsService.GetSettings(accountNumber);
+                                if (settings != null)
+                                {
+                                    // Aggregate limits (sum them up for the group)
+                                    data.DailyLossLimit += (double)(settings.DailyLossLimit ?? 0);
+                                    data.DailyProfitTarget += (double)(settings.DailyProfitTarget ?? 0);
+                                    data.PositionLossLimit += (double)(settings.PositionLossLimit ?? 0);
+                                    data.PositionProfitTarget += (double)(settings.PositionProfitTarget ?? 0);
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error loading limits for account in type summary: {ex.Message}");
+                    }
+
+                    accountIndex++;
 
                     // Get Open P&L, Closed P&L and Drawdown from AdditionalInfo
                     if (account.AdditionalInfo != null)
@@ -3677,7 +4520,16 @@ namespace Risk_Manager
                     totalData.OpenPnL += kvp.Value.OpenPnL;
                     totalData.ClosedPnL += kvp.Value.ClosedPnL;
                     totalData.TrailingDrawdown += kvp.Value.TrailingDrawdown;
+                    // Aggregate limits for total row
+                    totalData.DailyLossLimit += kvp.Value.DailyLossLimit;
+                    totalData.DailyProfitTarget += kvp.Value.DailyProfitTarget;
+                    totalData.PositionLossLimit += kvp.Value.PositionLossLimit;
+                    totalData.PositionProfitTarget += kvp.Value.PositionProfitTarget;
                 }
+
+                // Store aggregated data for CellPainting to access
+                typeSummaryAggregatedData = new Dictionary<string, TypeSummaryData>(aggregatedData);
+                typeSummaryAggregatedData["Total"] = totalData;
 
                 // Add rows for each group
                 foreach (var kvp in aggregatedData.OrderBy(x => x.Key))
@@ -3760,6 +4612,11 @@ namespace Risk_Manager
             public double OpenPnL { get; set; }
             public double ClosedPnL { get; set; }
             public double TrailingDrawdown { get; set; }
+            // Aggregated limits for progress bar calculations
+            public double DailyLossLimit { get; set; }
+            public double DailyProfitTarget { get; set; }
+            public double PositionLossLimit { get; set; }
+            public double PositionProfitTarget { get; set; }
         }
 
         // Replace body of ReapplyThemeColoringAfterRefresh to omit statsDetailGrid full-column coloring
@@ -8777,6 +9634,237 @@ namespace Risk_Manager
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(featureTogglesHeader);
+
+            return mainPanel;
+        }
+
+        /// <summary>
+        /// Creates the "General Settings" panel with Theme Switcher and Progress Bar checkbox.
+        /// </summary>
+        private Control CreateGeneralSettingsPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            // Title (use exact key "General Settings" so IconMap resolves to generalsettings.png)
+            var generalSettingsHeader = new CustomHeaderControl("General Settings", GetIconForTitle("General Settings"));
+            generalSettingsHeader.Dock = DockStyle.Top;
+            generalSettingsHeader.Margin = new Padding(10, 0, 0, 0);
+
+            // Subtitle
+            var subtitleLabel = new Label
+            {
+                Text = "Customize your application appearance and behavior:",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                Padding = new Padding(10, 0, 10, 0),
+                BackColor = DarkBackground,
+                ForeColor = TextGray,
+                AutoSize = false
+            };
+
+            // Content area
+            var contentArea = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                AutoScroll = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false
+            };
+
+            // Theme Switcher Section
+            var themeSectionLabel = new Label
+            {
+                Text = "Theme Settings",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            contentArea.Controls.Add(themeSectionLabel);
+
+            // Theme switcher button with current theme label
+            var themePanel = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 20)
+            };
+
+            var themeSwitcherButton = new Button
+            {
+                Width = 50,
+                Height = 40,
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(52, 152, 219),
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 10, 0),
+                Padding = new Padding(0),
+                UseCompatibleTextRendering = true
+            };
+            themeSwitcherButton.FlatAppearance.BorderSize = 0;
+            themeSwitcherButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(41, 128, 185);
+
+            // Set theme switcher image
+            Image themeImg = null;
+            if (IconMap.TryGetValue("ThemeSwitcher", out var img) && img != null)
+                themeImg = img;
+            else
+            {
+                try { themeImg = Properties.Resources.themeswitcher2; } catch { themeImg = null; }
+            }
+
+            if (themeImg != null)
+            {
+                var scaledThemeImg = ScaleImageToFit(themeImg, themeSwitcherButton.Width - 6, themeSwitcherButton.Height - 6);
+                themeSwitcherButton.Image = scaledThemeImg;
+                themeSwitcherButton.ImageAlign = ContentAlignment.MiddleCenter;
+                themeSwitcherButton.Text = "";
+            }
+            else
+            {
+                themeSwitcherButton.Text = "🎨";
+                themeSwitcherButton.Font = new Font("Segoe UI Emoji", 16, FontStyle.Bold);
+            }
+
+            // Current theme label
+            currentThemeLabel = new Label
+            {
+                Text = $"Current Theme: {GetThemeDisplayName(currentTheme)}",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 10, 0, 0)
+            };
+
+            themeSwitcherButton.Click += (s, e) =>
+            {
+                // Cycle through themes: Blue -> Black -> White -> YellowBlueBlack -> Blue
+                switch (currentTheme)
+                {
+                    case Theme.Blue:
+                        ApplyTheme(Theme.Black);
+                        break;
+                    case Theme.Black:
+                        ApplyTheme(Theme.White);
+                        break;
+                    case Theme.White:
+                        ApplyTheme(Theme.YellowBlueBlack);
+                        break;
+                    case Theme.YellowBlueBlack:
+                        ApplyTheme(Theme.Blue);
+                        break;
+                    default:
+                        ApplyTheme(Theme.Blue);
+                        break;
+                }
+                // Update the theme label
+                if (currentThemeLabel != null)
+                {
+                    currentThemeLabel.Text = $"Current Theme: {GetThemeDisplayName(currentTheme)}";
+                }
+            };
+
+            themePanel.Controls.Add(themeSwitcherButton);
+            themePanel.Controls.Add(currentThemeLabel);
+            contentArea.Controls.Add(themePanel);
+
+            // Divider
+            var divider1 = new Panel
+            {
+                Height = 2,
+                Width = 600,
+                BackColor = DarkerBackground,
+                Margin = new Padding(0, 10, 0, 20)
+            };
+            contentArea.Controls.Add(divider1);
+
+            // Progress Bar Section
+            var progressBarSectionLabel = new Label
+            {
+                Text = "Data Grid Display",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            contentArea.Controls.Add(progressBarSectionLabel);
+
+            // Progress bar checkbox
+            showProgressBarsCheckBox = new CheckBox
+            {
+                Text = "Show Progress Bars",
+                AutoSize = true,
+                Checked = showProgressBars,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            
+            showProgressBarsCheckBox.CheckedChanged += (s, e) =>
+            {
+                showProgressBars = showProgressBarsCheckBox.Checked;
+                SaveProgressBarPreference();
+                
+                // Refresh all data grids to apply/remove progress bars
+                RefreshAllDataGrids();
+            };
+
+            contentArea.Controls.Add(showProgressBarsCheckBox);
+
+            // Show percentage checkbox
+            showPercentageCheckBox = new CheckBox
+            {
+                Text = "Show Percentage Instead of Dollar Amount",
+                AutoSize = true,
+                Checked = showPercentage,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            
+            showPercentageCheckBox.CheckedChanged += (s, e) =>
+            {
+                showPercentage = showPercentageCheckBox.Checked;
+                SaveShowPercentagePreference();
+                
+                // Refresh all data grids to update display format
+                RefreshAllDataGrids();
+            };
+
+            contentArea.Controls.Add(showPercentageCheckBox);
+
+            // Info label for progress bars
+            var progressBarInfoLabel = new Label
+            {
+                Text = "When enabled, data grid columns will be replaced with progress bars showing:\n" +
+                       "• Gross P&L progress toward Daily Loss Limit or Daily Profit Target\n" +
+                       "• Open P&L progress based on Position Profit and Position Loss Limit\n" +
+                       "• Color-coded bars (green/yellow/red) based on proximity to limits",
+                AutoSize = true,
+                MaximumSize = new Size(600, 0),
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                Margin = new Padding(20, 0, 0, 10)
+            };
+            contentArea.Controls.Add(progressBarInfoLabel);
+
+            // Add controls in correct order for docking
+            mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(subtitleLabel);
+            mainPanel.Controls.Add(generalSettingsHeader);
 
             return mainPanel;
         }
