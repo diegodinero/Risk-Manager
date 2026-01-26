@@ -1,6 +1,7 @@
 ﻿using Risk_Manager.Data;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -10849,7 +10850,7 @@ namespace Risk_Manager
             cardPanel.Tag = new { FeatureChecker = cardPanel.Tag, HasOverlay = true };
             
             // Paint the semi-transparent overlay directly on the card panel
-            EventHandler paintHandler = null;
+            PaintEventHandler paintHandler = null;
             paintHandler = (s, e) =>
             {
                 // Draw semi-transparent dark overlay (20% opacity) over entire card
