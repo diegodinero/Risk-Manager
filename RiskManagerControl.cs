@@ -195,6 +195,7 @@ namespace Risk_Manager
         private CheckBox showPercentageCheckBox; // Show Percentage checkbox in General Settings
         private bool showPercentage = false; // Whether to show percentage instead of dollar amount in progress bars
         private Label currentThemeLabel; // Label to display current theme name
+        private Dictionary<string, TypeSummaryData> typeSummaryAggregatedData = new Dictionary<string, TypeSummaryData>(); // Aggregated data for type summary rows
         
         // State caching for badge updates - stored per account to prevent cross-account state confusion
         private readonly Dictionary<string, bool?> _accountTradingLockStateCache = new Dictionary<string, bool?>();
@@ -3766,7 +3767,14 @@ namespace Risk_Manager
                 // Debug: Log the values being used for Gross P&L calculation
                 System.Diagnostics.Debug.WriteLine($"Gross P&L Calculation: pnlValue={pnlValue:F2}, dailyLossLimit={dailyLossLimit:F2}, dailyProfitTarget={dailyProfitTarget:F2}");
                 
-                if (pnlValue < 0 && dailyLossLimit < 0)
+                if (pnlValue == 0)
+                {
+                    // Zero value = 0% bar
+                    percentage = 0;
+                    barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
+                    System.Diagnostics.Debug.WriteLine($"Gross P&L: Zero value - showing 0% bar");
+                }
+                else if (pnlValue < 0 && dailyLossLimit < 0)
                 {
                     // Negative P&L approaching loss limit (both values are negative)
                     // Calculate what percentage of the limit we've used
@@ -3801,7 +3809,7 @@ namespace Risk_Manager
                 }
                 else
                 {
-                    // No limits configured, show small bar with neutral color
+                    // No limits configured but value is non-zero, show small bar with neutral color
                     percentage = 10;  // Show at least 10% so it's visible
                     barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
                     System.Diagnostics.Debug.WriteLine($"Gross P&L: No limits configured - showing 10% gray bar (pnlValue={pnlValue:F2}, lossLimit={dailyLossLimit:F2}, profitTarget={dailyProfitTarget:F2})");
@@ -3815,7 +3823,14 @@ namespace Risk_Manager
                 // Debug: Log the values being used for Open P&L calculation
                 System.Diagnostics.Debug.WriteLine($"Open P&L Calculation: pnlValue={pnlValue:F2}, positionLossLimit={positionLossLimit:F2}, positionProfitTarget={positionProfitTarget:F2}");
                 
-                if (pnlValue < 0 && positionLossLimit < 0)
+                if (pnlValue == 0)
+                {
+                    // Zero value = 0% bar
+                    percentage = 0;
+                    barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
+                    System.Diagnostics.Debug.WriteLine($"Open P&L: Zero value - showing 0% bar");
+                }
+                else if (pnlValue < 0 && positionLossLimit < 0)
                 {
                     // Negative P&L approaching position loss limit (both values are negative)
                     // Calculate what percentage of the limit we've used
@@ -3850,7 +3865,7 @@ namespace Risk_Manager
                 }
                 else
                 {
-                    // No limits configured, show small bar with neutral color
+                    // No limits configured but value is non-zero, show small bar with neutral color
                     percentage = 10;  // Show at least 10% so it's visible
                     barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
                     System.Diagnostics.Debug.WriteLine($"Open P&L: No limits configured - showing 10% gray bar (pnlValue={pnlValue:F2}, lossLimit={positionLossLimit:F2}, profitTarget={positionProfitTarget:F2})");
@@ -4078,49 +4093,153 @@ namespace Risk_Manager
             if (!double.TryParse(valueStr, out double pnlValue))
                 return;
 
-            // For Type Summary, we use aggregated limits (average or max of all accounts of this type)
-            // In a production implementation, you would aggregate limits by querying all accounts of this type
-            // For now, we use a default threshold for visualization purposes
-            // TODO: Consider aggregating actual limits from all accounts of each type for more accurate visualization
-            double defaultLimit = 1000; // Default threshold for visualization
+            // Get the type/group name from the first column
+            string typeName = "";
+            if (e.RowIndex < grid.Rows.Count && grid.Rows[e.RowIndex].Cells.Count > 0)
+            {
+                var typeCell = grid.Rows[e.RowIndex].Cells[0].Value;
+                if (typeCell != null)
+                    typeName = typeCell.ToString();
+            }
+
+            // Get aggregated limits for this type/group
+            double dailyLossLimit = 0;
+            double dailyProfitTarget = 0;
+            double positionLossLimit = 0;
+            double positionProfitTarget = 0;
+
+            if (!string.IsNullOrEmpty(typeName) && typeSummaryAggregatedData.ContainsKey(typeName))
+            {
+                var data = typeSummaryAggregatedData[typeName];
+                dailyLossLimit = data.DailyLossLimit;
+                dailyProfitTarget = data.DailyProfitTarget;
+                positionLossLimit = data.PositionLossLimit;
+                positionProfitTarget = data.PositionProfitTarget;
+            }
             
             // Calculate progress percentage and color
             double percentage = 0;
             Color barColor = Color.FromArgb(100, 180, 100); // Modern green
 
-            if (pnlValue < 0)
+            if (pnlValue == 0)
             {
-                // Negative P&L
-                percentage = Math.Min(100, Math.Abs(pnlValue) / defaultLimit * 100);
-                
-                // Modern color scheme based on magnitude
-                if (percentage >= 90)
-                    barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
-                else if (percentage >= 70)
-                    barColor = Color.FromArgb(255, 133, 27);     // Modern orange
-                else if (percentage >= 50)
-                    barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
-                else
-                    barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
-            }
-            else if (pnlValue > 0)
-            {
-                // Positive P&L
-                percentage = Math.Min(100, pnlValue / defaultLimit * 100);
-                
-                // Modern color scheme for profits
-                if (percentage >= 90)
-                    barColor = Color.FromArgb(0, 192, 118);      // Bright success green
-                else if (percentage >= 70)
-                    barColor = Color.FromArgb(40, 167, 69);      // Medium green
-                else
-                    barColor = Color.FromArgb(100, 180, 100);    // Light green
-            }
-            else
-            {
-                // Zero
-                percentage = 10;  // Show at least 10% so it's visible
+                // Zero value = 0% bar
+                percentage = 0;
                 barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
+            }
+            else if (isTotalPnL)
+            {
+                // Total P&L: use Daily Loss Limit and Daily Profit Target (aggregated)
+                if (pnlValue < 0 && dailyLossLimit < 0)
+                {
+                    // Negative P&L approaching loss limit
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / Math.Abs(dailyLossLimit) * 100);
+                    
+                    // Modern color scheme based on magnitude
+                    if (percentage >= 90)
+                        barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
+                    else if (percentage >= 70)
+                        barColor = Color.FromArgb(255, 133, 27);     // Modern orange
+                    else if (percentage >= 50)
+                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+                    else
+                        barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
+                }
+                else if (pnlValue > 0 && dailyProfitTarget > 0)
+                {
+                    // Positive P&L approaching profit target
+                    percentage = Math.Min(100, pnlValue / dailyProfitTarget * 100);
+                    
+                    // Modern color scheme for profits
+                    if (percentage >= 90)
+                        barColor = Color.FromArgb(0, 192, 118);      // Bright success green
+                    else if (percentage >= 70)
+                        barColor = Color.FromArgb(40, 167, 69);      // Medium green
+                    else
+                        barColor = Color.FromArgb(100, 180, 100);    // Light green
+                }
+                else
+                {
+                    // No limits configured, use default threshold for visualization
+                    double defaultLimit = 1000;
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / defaultLimit * 100);
+                    
+                    if (pnlValue < 0)
+                    {
+                        // Negative - red tones
+                        if (percentage >= 70)
+                            barColor = Color.FromArgb(220, 53, 69);
+                        else if (percentage >= 50)
+                            barColor = Color.FromArgb(255, 133, 27);
+                        else
+                            barColor = Color.FromArgb(255, 193, 7);
+                    }
+                    else
+                    {
+                        // Positive - green tones
+                        if (percentage >= 70)
+                            barColor = Color.FromArgb(0, 192, 118);
+                        else
+                            barColor = Color.FromArgb(40, 167, 69);
+                    }
+                }
+            }
+            else if (isOpenPnL)
+            {
+                // Open P&L: use Position Loss Limit and Position Profit Target (aggregated)
+                if (pnlValue < 0 && positionLossLimit < 0)
+                {
+                    // Negative P&L approaching position loss limit
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / Math.Abs(positionLossLimit) * 100);
+                    
+                    // Modern color scheme based on magnitude
+                    if (percentage >= 90)
+                        barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
+                    else if (percentage >= 70)
+                        barColor = Color.FromArgb(255, 133, 27);     // Modern orange
+                    else if (percentage >= 50)
+                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+                    else
+                        barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
+                }
+                else if (pnlValue > 0 && positionProfitTarget > 0)
+                {
+                    // Positive P&L approaching position profit target
+                    percentage = Math.Min(100, pnlValue / positionProfitTarget * 100);
+                    
+                    // Modern color scheme for profits
+                    if (percentage >= 90)
+                        barColor = Color.FromArgb(0, 192, 118);      // Bright success green
+                    else if (percentage >= 70)
+                        barColor = Color.FromArgb(40, 167, 69);      // Medium green
+                    else
+                        barColor = Color.FromArgb(100, 180, 100);    // Light green
+                }
+                else
+                {
+                    // No limits configured, use default threshold for visualization
+                    double defaultLimit = 1000;
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / defaultLimit * 100);
+                    
+                    if (pnlValue < 0)
+                    {
+                        // Negative - red tones
+                        if (percentage >= 70)
+                            barColor = Color.FromArgb(220, 53, 69);
+                        else if (percentage >= 50)
+                            barColor = Color.FromArgb(255, 133, 27);
+                        else
+                            barColor = Color.FromArgb(255, 193, 7);
+                    }
+                    else
+                    {
+                        // Positive - green tones
+                        if (percentage >= 70)
+                            barColor = Color.FromArgb(0, 192, 118);
+                        else
+                            barColor = Color.FromArgb(40, 167, 69);
+                    }
+                }
             }
 
             // Determine display text based on showPercentage setting
@@ -4314,6 +4433,28 @@ namespace Risk_Manager
                     data.Count++;
                     data.Equity += account.Balance;
 
+                    // Aggregate limits from settings for this account
+                    try
+                    {
+                        var accountNumber = GetAccountNumber(account);
+                        if (!string.IsNullOrEmpty(accountNumber))
+                        {
+                            var settings = settingsService.GetAccountSettings(accountNumber);
+                            if (settings != null)
+                            {
+                                // Aggregate limits (sum them up for the group)
+                                data.DailyLossLimit += (double)(settings.DailyLossLimit ?? 0);
+                                data.DailyProfitTarget += (double)(settings.DailyProfitTarget ?? 0);
+                                data.PositionLossLimit += (double)(settings.PositionLossLimit ?? 0);
+                                data.PositionProfitTarget += (double)(settings.PositionProfitTarget ?? 0);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error loading limits for account in type summary: {ex.Message}");
+                    }
+
                     // Get Open P&L, Closed P&L and Drawdown from AdditionalInfo
                     if (account.AdditionalInfo != null)
                     {
@@ -4352,7 +4493,16 @@ namespace Risk_Manager
                     totalData.OpenPnL += kvp.Value.OpenPnL;
                     totalData.ClosedPnL += kvp.Value.ClosedPnL;
                     totalData.TrailingDrawdown += kvp.Value.TrailingDrawdown;
+                    // Aggregate limits for total row
+                    totalData.DailyLossLimit += kvp.Value.DailyLossLimit;
+                    totalData.DailyProfitTarget += kvp.Value.DailyProfitTarget;
+                    totalData.PositionLossLimit += kvp.Value.PositionLossLimit;
+                    totalData.PositionProfitTarget += kvp.Value.PositionProfitTarget;
                 }
+
+                // Store aggregated data for CellPainting to access
+                typeSummaryAggregatedData = new Dictionary<string, TypeSummaryData>(aggregatedData);
+                typeSummaryAggregatedData["Total"] = totalData;
 
                 // Add rows for each group
                 foreach (var kvp in aggregatedData.OrderBy(x => x.Key))
@@ -4435,6 +4585,11 @@ namespace Risk_Manager
             public double OpenPnL { get; set; }
             public double ClosedPnL { get; set; }
             public double TrailingDrawdown { get; set; }
+            // Aggregated limits for progress bar calculations
+            public double DailyLossLimit { get; set; }
+            public double DailyProfitTarget { get; set; }
+            public double PositionLossLimit { get; set; }
+            public double PositionProfitTarget { get; set; }
         }
 
         // Replace body of ReapplyThemeColoringAfterRefresh to omit statsDetailGrid full-column coloring
