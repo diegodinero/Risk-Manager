@@ -10600,7 +10600,7 @@ namespace Risk_Manager
             return isLocked ? "🔒 Locked" : "🔓 Unlocked";
         }
 
-        private string GetPositionsFeatureStatus()
+        private string GetFeatureStatus(Func<AccountSettings, bool> featureGetter)
         {
             var accountNumber = GetSelectedAccountNumber();
             if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
@@ -10609,44 +10609,13 @@ namespace Risk_Manager
             if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
 
             var settings = settingsService.GetSettings(accountNumber);
-            return (settings?.PositionsEnabled ?? true) ? "✅ Enabled" : "❌ Disabled";
+            return (settings != null ? featureGetter(settings) : true) ? "✅ Enabled" : "❌ Disabled";
         }
 
-        private string GetLimitsFeatureStatus()
-        {
-            var accountNumber = GetSelectedAccountNumber();
-            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
-
-            var settingsService = RiskManagerSettingsService.Instance;
-            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
-
-            var settings = settingsService.GetSettings(accountNumber);
-            return (settings?.LimitsEnabled ?? true) ? "✅ Enabled" : "❌ Disabled";
-        }
-
-        private string GetSymbolsFeatureStatus()
-        {
-            var accountNumber = GetSelectedAccountNumber();
-            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
-
-            var settingsService = RiskManagerSettingsService.Instance;
-            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
-
-            var settings = settingsService.GetSettings(accountNumber);
-            return (settings?.SymbolsEnabled ?? true) ? "✅ Enabled" : "❌ Disabled";
-        }
-
-        private string GetTradingTimesFeatureStatus()
-        {
-            var accountNumber = GetSelectedAccountNumber();
-            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
-
-            var settingsService = RiskManagerSettingsService.Instance;
-            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
-
-            var settings = settingsService.GetSettings(accountNumber);
-            return (settings?.TradingTimesEnabled ?? true) ? "✅ Enabled" : "❌ Disabled";
-        }
+        private string GetPositionsFeatureStatus() => GetFeatureStatus(s => s.PositionsEnabled);
+        private string GetLimitsFeatureStatus() => GetFeatureStatus(s => s.LimitsEnabled);
+        private string GetSymbolsFeatureStatus() => GetFeatureStatus(s => s.SymbolsEnabled);
+        private string GetTradingTimesFeatureStatus() => GetFeatureStatus(s => s.TradingTimesEnabled);
 
         private string GetPositionLossLimit()
         {
