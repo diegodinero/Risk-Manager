@@ -385,6 +385,22 @@ namespace Risk_Manager.Data
         }
 
         /// <summary>
+        /// Updates individual feature toggle states for an account.
+        /// </summary>
+        public void UpdateIndividualFeatureToggles(string accountNumber, bool positionsEnabled, bool limitsEnabled, bool symbolsEnabled, bool tradingTimesEnabled)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.PositionsEnabled = positionsEnabled;
+                settings.LimitsEnabled = limitsEnabled;
+                settings.SymbolsEnabled = symbolsEnabled;
+                settings.TradingTimesEnabled = tradingTimesEnabled;
+                SaveSettings(settings);
+            }
+        }
+
+        /// <summary>
         /// Copies all settings from one account to multiple target accounts.
         /// </summary>
         /// <param name="sourceAccountNumber">The account to copy settings from</param>
@@ -428,6 +444,10 @@ namespace Risk_Manager.Data
                     
                     // Copy all settings (except account number and timestamps)
                     targetSettings.FeatureToggleEnabled = sourceSettings.FeatureToggleEnabled;
+                    targetSettings.PositionsEnabled = sourceSettings.PositionsEnabled;
+                    targetSettings.LimitsEnabled = sourceSettings.LimitsEnabled;
+                    targetSettings.SymbolsEnabled = sourceSettings.SymbolsEnabled;
+                    targetSettings.TradingTimesEnabled = sourceSettings.TradingTimesEnabled;
                     targetSettings.DailyLossLimit = sourceSettings.DailyLossLimit;
                     targetSettings.DailyProfitTarget = sourceSettings.DailyProfitTarget;
                     targetSettings.PositionLossLimit = sourceSettings.PositionLossLimit;
@@ -1257,6 +1277,12 @@ namespace Risk_Manager.Data
         
         // Feature Toggle Master Switch
         public bool FeatureToggleEnabled { get; set; } = true;
+        
+        // Individual Feature Toggles
+        public bool PositionsEnabled { get; set; } = true;
+        public bool LimitsEnabled { get; set; } = true;
+        public bool SymbolsEnabled { get; set; } = true;
+        public bool TradingTimesEnabled { get; set; } = true;
         
         // Daily Limits
         public decimal? DailyLossLimit { get; set; }

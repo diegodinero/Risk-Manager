@@ -246,6 +246,12 @@ namespace Risk_Manager
         // Feature toggle master switch
         private CheckBox featureToggleEnabledCheckbox;
         
+        // Individual feature toggle checkboxes
+        private CheckBox positionsFeatureCheckbox;
+        private CheckBox limitsFeatureCheckbox;
+        private CheckBox symbolsFeatureCheckbox;
+        private CheckBox tradingTimesFeatureCheckbox;
+        
         // Copy Settings controls
         private ComboBox copySettingsSourceComboBox;
         private FlowLayoutPanel copySettingsTargetPanel;
@@ -1579,6 +1585,24 @@ namespace Risk_Manager
                     featureToggleEnabledCheckbox.Checked = settings.FeatureToggleEnabled;
                 }
 
+                // Load Individual Feature Toggles
+                if (positionsFeatureCheckbox != null)
+                {
+                    positionsFeatureCheckbox.Checked = settings.PositionsEnabled;
+                }
+                if (limitsFeatureCheckbox != null)
+                {
+                    limitsFeatureCheckbox.Checked = settings.LimitsEnabled;
+                }
+                if (symbolsFeatureCheckbox != null)
+                {
+                    symbolsFeatureCheckbox.Checked = settings.SymbolsEnabled;
+                }
+                if (tradingTimesFeatureCheckbox != null)
+                {
+                    tradingTimesFeatureCheckbox.Checked = settings.TradingTimesEnabled;
+                }
+
                 // Load Daily Limits
                 if (dailyLossLimitEnabled != null && dailyLossLimitInput != null)
                 {
@@ -2030,6 +2054,10 @@ namespace Risk_Manager
             if (settingsLockCheckBox != null) settingsLockCheckBox.Checked = false;
             
             if (featureToggleEnabledCheckbox != null) featureToggleEnabledCheckbox.Checked = true;
+            if (positionsFeatureCheckbox != null) positionsFeatureCheckbox.Checked = true;
+            if (limitsFeatureCheckbox != null) limitsFeatureCheckbox.Checked = true;
+            if (symbolsFeatureCheckbox != null) symbolsFeatureCheckbox.Checked = true;
+            if (tradingTimesFeatureCheckbox != null) tradingTimesFeatureCheckbox.Checked = true;
         }
 
         // Add this helper method in the RiskManagerControl class (anywhere above CreateTopPanel)
@@ -9311,6 +9339,19 @@ namespace Risk_Manager
                         service.UpdateFeatureToggleEnabled(accountNumber, featureToggleEnabledCheckbox.Checked);
                     }
 
+                    // Save Individual Feature Toggles
+                    if (positionsFeatureCheckbox != null && limitsFeatureCheckbox != null && 
+                        symbolsFeatureCheckbox != null && tradingTimesFeatureCheckbox != null)
+                    {
+                        service.UpdateIndividualFeatureToggles(
+                            accountNumber,
+                            positionsFeatureCheckbox.Checked,
+                            limitsFeatureCheckbox.Checked,
+                            symbolsFeatureCheckbox.Checked,
+                            tradingTimesFeatureCheckbox.Checked
+                        );
+                    }
+
                     // Save Blocked Symbols
                     if (blockedSymbolsEnabled?.Checked == true && blockedSymbolsInput != null && !string.IsNullOrWhiteSpace(blockedSymbolsInput.Text))
                     {
@@ -9619,10 +9660,36 @@ namespace Risk_Manager
                 };
                 contentArea.Controls.Add(checkbox);
                 
-                // Store reference to the master toggle checkbox
+                // Store reference to checkboxes
                 if (i == 0 && feature == "Enable All Features")
                 {
                     featureToggleEnabledCheckbox = checkbox;
+                    // Add event handler for master toggle
+                    checkbox.CheckedChanged += (s, e) =>
+                    {
+                        // When master toggle changes, sync individual toggles
+                        var masterChecked = featureToggleEnabledCheckbox.Checked;
+                        if (positionsFeatureCheckbox != null) positionsFeatureCheckbox.Checked = masterChecked;
+                        if (limitsFeatureCheckbox != null) limitsFeatureCheckbox.Checked = masterChecked;
+                        if (symbolsFeatureCheckbox != null) symbolsFeatureCheckbox.Checked = masterChecked;
+                        if (tradingTimesFeatureCheckbox != null) tradingTimesFeatureCheckbox.Checked = masterChecked;
+                    };
+                }
+                else if (feature == "Positions")
+                {
+                    positionsFeatureCheckbox = checkbox;
+                }
+                else if (feature == "Limits")
+                {
+                    limitsFeatureCheckbox = checkbox;
+                }
+                else if (feature == "Symbols")
+                {
+                    symbolsFeatureCheckbox = checkbox;
+                }
+                else if (feature == "Allowed Trading Times")
+                {
+                    tradingTimesFeatureCheckbox = checkbox;
                 }
             }
 
@@ -10243,6 +10310,12 @@ namespace Risk_Manager
             ));
 
             flowLayout.Controls.Add(CreateRiskOverviewCard(
+                "Feature Status",
+                new[] { "Positions:", "Limits:", "Symbols:", "Trading Times:" },
+                new[] { GetPositionsFeatureStatus, GetLimitsFeatureStatus, GetSymbolsFeatureStatus, GetTradingTimesFeatureStatus }
+            ));
+
+            flowLayout.Controls.Add(CreateRiskOverviewCard(
                 "Position Limits",
                 new[] { "Loss Limit:", "Profit Target:" },
                 new[] { GetPositionLossLimit, GetPositionProfitTarget }
@@ -10525,6 +10598,54 @@ namespace Risk_Manager
 
             var isLocked = settingsService.AreSettingsLocked(accountNumber);
             return isLocked ? "🔒 Locked" : "🔓 Unlocked";
+        }
+
+        private string GetPositionsFeatureStatus()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            return (settings?.PositionsEnabled ?? true) ? "✅ Enabled" : "❌ Disabled";
+        }
+
+        private string GetLimitsFeatureStatus()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            return (settings?.LimitsEnabled ?? true) ? "✅ Enabled" : "❌ Disabled";
+        }
+
+        private string GetSymbolsFeatureStatus()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            return (settings?.SymbolsEnabled ?? true) ? "✅ Enabled" : "❌ Disabled";
+        }
+
+        private string GetTradingTimesFeatureStatus()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            return (settings?.TradingTimesEnabled ?? true) ? "✅ Enabled" : "❌ Disabled";
         }
 
         private string GetPositionLossLimit()
