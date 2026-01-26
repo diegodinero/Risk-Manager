@@ -3608,20 +3608,6 @@ namespace Risk_Manager
         /// </summary>
         private void StatsGrid_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
-            // Debug: Log when method is called
-            if (e.RowIndex >= 0)
-            {
-                var grid = sender as DataGridView;
-                if (grid != null && e.ColumnIndex >= 0 && e.ColumnIndex < grid.Columns.Count)
-                {
-                    var columnName = grid.Columns[e.ColumnIndex].Name;
-                    if (columnName == "GrossPnL" || columnName == "OpenPnL")
-                    {
-                        System.Diagnostics.Debug.WriteLine($"CellPainting called: Row={e.RowIndex}, Column={columnName}, ShowProgressBars={showProgressBars}");
-                    }
-                }
-            }
-            
             // Only paint progress bars if the feature is enabled
             if (!showProgressBars)
                 return;
@@ -3636,6 +3622,12 @@ namespace Risk_Manager
 
             // Determine which columns should have progress bars
             string columnName = grid.Columns[e.ColumnIndex].Name;
+            
+            // Debug: Log when method is called for P&L columns
+            if (columnName == "GrossPnL" || columnName == "OpenPnL")
+            {
+                System.Diagnostics.Debug.WriteLine($"CellPainting called: Row={e.RowIndex}, Column={columnName}, ShowProgressBars={showProgressBars}");
+            }
             
             // Progress bars for: GrossPnL and OpenPnL
             bool isGrossPnL = columnName == "GrossPnL";
