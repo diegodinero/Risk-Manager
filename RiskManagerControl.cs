@@ -192,6 +192,8 @@ namespace Risk_Manager
         private ComboBox lockDurationComboBox; // Lock duration selector
         private CheckBox showProgressBarsCheckBox; // Show Progress Bars checkbox in General Settings
         private bool showProgressBars = false; // Whether to show progress bars in data grids
+        private CheckBox showPercentageCheckBox; // Show Percentage checkbox in General Settings
+        private bool showPercentage = false; // Whether to show percentage instead of dollar amount in progress bars
         private Label currentThemeLabel; // Label to display current theme name
         
         // State caching for badge updates - stored per account to prevent cross-account state confusion
@@ -400,6 +402,9 @@ namespace Risk_Manager
             
             // Load progress bar preference
             showProgressBars = LoadProgressBarPreference();
+            
+            // Load show percentage preference
+            showPercentage = LoadShowPercentagePreference();
 
             LoadIcons();
 
@@ -1193,6 +1198,20 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Gets the path where show percentage preference is stored
+        /// </summary>
+        private string GetShowPercentagePreferencesPath()
+        {
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var folderPath = Path.Combine(appDataPath, "RiskManager");
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+            return Path.Combine(folderPath, "showpercentage_preference.txt");
+        }
+
+        /// <summary>
         /// Saves the progress bar preference to disk
         /// </summary>
         private void SaveProgressBarPreference()
@@ -1210,6 +1229,27 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to save progress bar preference: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Saves the show percentage preference to disk
+        /// </summary>
+        private void SaveShowPercentagePreference()
+        {
+            // Don't save during initialization to avoid unnecessary file I/O
+            if (isInitializing)
+                return;
+                
+            try
+            {
+                var percentagePath = GetShowPercentagePreferencesPath();
+                File.WriteAllText(percentagePath, showPercentage.ToString());
+                System.Diagnostics.Debug.WriteLine($"Show percentage preference saved: {showPercentage}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save show percentage preference: {ex.Message}");
             }
         }
 
@@ -1237,6 +1277,33 @@ namespace Risk_Manager
             }
             
             // Default to false (show normal columns)
+            return false;
+        }
+
+        /// <summary>
+        /// Loads the show percentage preference from disk
+        /// </summary>
+        private bool LoadShowPercentagePreference()
+        {
+            try
+            {
+                var percentagePath = GetShowPercentagePreferencesPath();
+                if (File.Exists(percentagePath))
+                {
+                    var percentageString = File.ReadAllText(percentagePath).Trim();
+                    if (bool.TryParse(percentageString, out var showPct))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Show percentage preference loaded: {showPct}");
+                        return showPct;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load show percentage preference: {ex.Message}");
+            }
+            
+            // Default to false (show dollar amount)
             return false;
         }
 
@@ -3796,8 +3863,11 @@ namespace Risk_Manager
             // Debug logging to help troubleshoot
             System.Diagnostics.Debug.WriteLine($"Progress Bar: Column={columnName}, Value={pnlValue:F2}, DailyLossLimit={dailyLossLimit:F2}, DailyProfitTarget={dailyProfitTarget:F2}, PositionLossLimit={positionLossLimit:F2}, PositionProfitTarget={positionProfitTarget:F2}, Percentage={percentage:F1}%, Color={barColor.Name}");
 
+            // Determine display text based on showPercentage setting
+            string displayText = showPercentage ? $"{percentage:F1}%" : cellValue.ToString();
+
             // Draw the progress bar
-            DrawProgressBarInCell(e, percentage, barColor, cellValue.ToString());
+            DrawProgressBarInCell(e, percentage, barColor, displayText);
             e.Handled = true;
         }
 
@@ -4053,8 +4123,11 @@ namespace Risk_Manager
                 barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
             }
 
+            // Determine display text based on showPercentage setting
+            string displayText = showPercentage ? $"{percentage:F1}%" : cellValue.ToString();
+
             // Draw the progress bar using helper method
-            DrawProgressBarInCell(e, percentage, barColor, cellValue.ToString());
+            DrawProgressBarInCell(e, percentage, barColor, displayText);
             e.Handled = true;
         }
 
@@ -9566,6 +9639,29 @@ namespace Risk_Manager
             };
 
             contentArea.Controls.Add(showProgressBarsCheckBox);
+
+            // Show percentage checkbox
+            showPercentageCheckBox = new CheckBox
+            {
+                Text = "Show Percentage Instead of Dollar Amount",
+                AutoSize = true,
+                Checked = showPercentage,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            
+            showPercentageCheckBox.CheckedChanged += (s, e) =>
+            {
+                showPercentage = showPercentageCheckBox.Checked;
+                SaveShowPercentagePreference();
+                
+                // Refresh all data grids to update display format
+                RefreshAllDataGrids();
+            };
+
+            contentArea.Controls.Add(showPercentageCheckBox);
 
             // Info label for progress bars
             var progressBarInfoLabel = new Label
