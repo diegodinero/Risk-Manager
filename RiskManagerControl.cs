@@ -246,6 +246,12 @@ namespace Risk_Manager
         // Feature toggle master switch
         private CheckBox featureToggleEnabledCheckbox;
         
+        // Individual feature toggle checkboxes
+        private CheckBox positionsFeatureCheckbox;
+        private CheckBox limitsFeatureCheckbox;
+        private CheckBox symbolsFeatureCheckbox;
+        private CheckBox tradingTimesFeatureCheckbox;
+        
         // Copy Settings controls
         private ComboBox copySettingsSourceComboBox;
         private FlowLayoutPanel copySettingsTargetPanel;
@@ -1579,6 +1585,24 @@ namespace Risk_Manager
                     featureToggleEnabledCheckbox.Checked = settings.FeatureToggleEnabled;
                 }
 
+                // Load Individual Feature Toggles
+                if (positionsFeatureCheckbox != null)
+                {
+                    positionsFeatureCheckbox.Checked = settings.PositionsEnabled;
+                }
+                if (limitsFeatureCheckbox != null)
+                {
+                    limitsFeatureCheckbox.Checked = settings.LimitsEnabled;
+                }
+                if (symbolsFeatureCheckbox != null)
+                {
+                    symbolsFeatureCheckbox.Checked = settings.SymbolsEnabled;
+                }
+                if (tradingTimesFeatureCheckbox != null)
+                {
+                    tradingTimesFeatureCheckbox.Checked = settings.TradingTimesEnabled;
+                }
+
                 // Load Daily Limits
                 if (dailyLossLimitEnabled != null && dailyLossLimitInput != null)
                 {
@@ -2030,6 +2054,10 @@ namespace Risk_Manager
             if (settingsLockCheckBox != null) settingsLockCheckBox.Checked = false;
             
             if (featureToggleEnabledCheckbox != null) featureToggleEnabledCheckbox.Checked = true;
+            if (positionsFeatureCheckbox != null) positionsFeatureCheckbox.Checked = true;
+            if (limitsFeatureCheckbox != null) limitsFeatureCheckbox.Checked = true;
+            if (symbolsFeatureCheckbox != null) symbolsFeatureCheckbox.Checked = true;
+            if (tradingTimesFeatureCheckbox != null) tradingTimesFeatureCheckbox.Checked = true;
         }
 
         // Add this helper method in the RiskManagerControl class (anywhere above CreateTopPanel)
@@ -9311,6 +9339,19 @@ namespace Risk_Manager
                         service.UpdateFeatureToggleEnabled(accountNumber, featureToggleEnabledCheckbox.Checked);
                     }
 
+                    // Save Individual Feature Toggles
+                    if (positionsFeatureCheckbox != null && limitsFeatureCheckbox != null && 
+                        symbolsFeatureCheckbox != null && tradingTimesFeatureCheckbox != null)
+                    {
+                        service.UpdateIndividualFeatureToggles(
+                            accountNumber,
+                            positionsFeatureCheckbox.Checked,
+                            limitsFeatureCheckbox.Checked,
+                            symbolsFeatureCheckbox.Checked,
+                            tradingTimesFeatureCheckbox.Checked
+                        );
+                    }
+
                     // Save Blocked Symbols
                     if (blockedSymbolsEnabled?.Checked == true && blockedSymbolsInput != null && !string.IsNullOrWhiteSpace(blockedSymbolsInput.Text))
                     {
@@ -9619,10 +9660,36 @@ namespace Risk_Manager
                 };
                 contentArea.Controls.Add(checkbox);
                 
-                // Store reference to the master toggle checkbox
+                // Store reference to checkboxes
                 if (i == 0 && feature == "Enable All Features")
                 {
                     featureToggleEnabledCheckbox = checkbox;
+                    // Add event handler for master toggle
+                    checkbox.CheckedChanged += (s, e) =>
+                    {
+                        // When master toggle changes, sync individual toggles
+                        var masterChecked = featureToggleEnabledCheckbox.Checked;
+                        if (positionsFeatureCheckbox != null) positionsFeatureCheckbox.Checked = masterChecked;
+                        if (limitsFeatureCheckbox != null) limitsFeatureCheckbox.Checked = masterChecked;
+                        if (symbolsFeatureCheckbox != null) symbolsFeatureCheckbox.Checked = masterChecked;
+                        if (tradingTimesFeatureCheckbox != null) tradingTimesFeatureCheckbox.Checked = masterChecked;
+                    };
+                }
+                else if (feature == "Positions")
+                {
+                    positionsFeatureCheckbox = checkbox;
+                }
+                else if (feature == "Limits")
+                {
+                    limitsFeatureCheckbox = checkbox;
+                }
+                else if (feature == "Symbols")
+                {
+                    symbolsFeatureCheckbox = checkbox;
+                }
+                else if (feature == "Allowed Trading Times")
+                {
+                    tradingTimesFeatureCheckbox = checkbox;
                 }
             }
 
@@ -10245,19 +10312,22 @@ namespace Risk_Manager
             flowLayout.Controls.Add(CreateRiskOverviewCard(
                 "Position Limits",
                 new[] { "Loss Limit:", "Profit Target:" },
-                new[] { GetPositionLossLimit, GetPositionProfitTarget }
+                new[] { GetPositionLossLimit, GetPositionProfitTarget },
+                () => IsFeatureEnabled(s => s.PositionsEnabled)
             ));
 
             flowLayout.Controls.Add(CreateRiskOverviewCard(
                 "Daily Limits",
                 new[] { "Daily Loss Limit:", "Daily Profit Target:" },
-                new[] { GetDailyLossLimit, GetDailyProfitTarget }
+                new[] { GetDailyLossLimit, GetDailyProfitTarget },
+                () => IsFeatureEnabled(s => s.LimitsEnabled)
             ));
 
             flowLayout.Controls.Add(CreateRiskOverviewCard(
                 "Symbol Restrictions",
                 new[] { "Blocked Symbols:", "Default Contract Limit:", "Symbol-Specific Limits:" },
-                new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits }
+                new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits },
+                () => IsFeatureEnabled(s => s.SymbolsEnabled)
             ));
 
             var tradingTimesCard = CreateTradingTimesOverviewCard();
@@ -10282,7 +10352,7 @@ namespace Risk_Manager
         /// <summary>
         /// Creates a card panel for displaying risk overview information.
         /// </summary>
-        private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters)
+        private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters, Func<bool> isFeatureEnabled = null)
         {
             var cardPanel = new Panel
             {
@@ -10290,7 +10360,8 @@ namespace Risk_Manager
                 AutoSize = true,
                 BackColor = CardBackground,
                 Padding = new Padding(20),
-                Margin = new Padding(0, 0, 15, 15) // Add right and bottom margin for spacing
+                Margin = new Padding(0, 0, 15, 15), // Add right and bottom margin for spacing
+                Tag = isFeatureEnabled // Store the feature checker for later refresh
             };
 
             var cardLayout = new FlowLayoutPanel
@@ -10370,6 +10441,10 @@ namespace Risk_Manager
             }
 
             cardPanel.Controls.Add(cardLayout);
+            
+            // Add disabled overlay if feature is disabled
+            UpdateCardOverlay(cardPanel);
+            
             return cardPanel;
         }
 
@@ -10486,6 +10561,13 @@ namespace Risk_Manager
             }
 
             cardPanel.Controls.Add(cardLayout);
+            
+            // Add disabled overlay if feature is disabled
+            if (!IsFeatureEnabled(s => s.TradingTimesEnabled))
+            {
+                AddDisabledOverlay(cardPanel);
+            }
+            
             return cardPanel;
         }
 
@@ -10525,6 +10607,73 @@ namespace Risk_Manager
 
             var isLocked = settingsService.AreSettingsLocked(accountNumber);
             return isLocked ? "🔒 Locked" : "🔓 Unlocked";
+        }
+
+        private bool IsFeatureEnabled(Func<AccountSettings, bool> featureGetter)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            // Default to enabled (no overlay) if no account selected - avoid misleading disabled state
+            if (string.IsNullOrEmpty(accountNumber)) return true;
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            // Default to enabled (no overlay) if service not ready - avoid misleading disabled state
+            if (!settingsService.IsInitialized) return true;
+
+            var settings = settingsService.GetSettings(accountNumber);
+            // If settings exist, use the feature flag; otherwise default to enabled
+            return settings != null ? featureGetter(settings) : true;
+        }
+
+        private void UpdateCardOverlay(Panel cardPanel)
+        {
+            if (cardPanel == null) return;
+            
+            // Remove any existing overlay (identified by a special name)
+            var existingOverlay = cardPanel.Controls.OfType<Panel>()
+                .FirstOrDefault(p => p.Name == "DisabledOverlay");
+            if (existingOverlay != null)
+            {
+                cardPanel.Controls.Remove(existingOverlay);
+                existingOverlay.Dispose();
+            }
+            
+            // Check if this card has a feature checker stored in its Tag
+            if (cardPanel.Tag is Func<bool> isFeatureEnabled)
+            {
+                // Add overlay if feature is disabled
+                if (!isFeatureEnabled())
+                {
+                    AddDisabledOverlay(cardPanel);
+                }
+            }
+        }
+
+        private void AddDisabledOverlay(Panel cardPanel)
+        {
+            // Create a semi-transparent overlay panel (70% opacity for clear visibility)
+            var overlay = new Panel
+            {
+                Name = "DisabledOverlay", // Identify this as the overlay panel
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(178, 40, 40, 40), // 70% opacity (178/255 ≈ 0.7)
+                Cursor = Cursors.No
+            };
+
+            // Create the red X label
+            var disabledLabel = new Label
+            {
+                Text = "✖",
+                Font = new Font("Segoe UI", 72, FontStyle.Bold),
+                ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Fill,
+                UseCompatibleTextRendering = false
+            };
+
+            overlay.Controls.Add(disabledLabel);
+            cardPanel.Controls.Add(overlay);
+            overlay.BringToFront();
         }
 
         private string GetPositionLossLimit()
@@ -10671,14 +10820,21 @@ namespace Risk_Manager
         {
             if (control == null) return;
 
-            // Check if this is the Trading Times card - needs special refresh
-            if (control is Panel panel && panel.Tag as string == "TradingTimesCard")
+            // Check if this is a card panel with feature overlay support
+            if (control is Panel panel && panel.Tag is Func<bool>)
             {
-                var parent = panel.Parent;
-                var index = parent?.Controls.GetChildIndex(panel) ?? -1;
+                // Update the overlay state for this card
+                UpdateCardOverlay(panel);
+            }
+
+            // Check if this is the Trading Times card - needs special refresh
+            if (control is Panel tradingPanel && tradingPanel.Tag as string == "TradingTimesCard")
+            {
+                var parent = tradingPanel.Parent;
+                var index = parent?.Controls.GetChildIndex(tradingPanel) ?? -1;
                 if (parent != null && index >= 0)
                 {
-                    parent.Controls.Remove(panel);
+                    parent.Controls.Remove(tradingPanel);
                     var newCard = CreateTradingTimesOverviewCard();
                     parent.Controls.Add(newCard);
                     parent.Controls.SetChildIndex(newCard, index);
