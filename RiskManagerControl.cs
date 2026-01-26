@@ -10628,9 +10628,9 @@ namespace Risk_Manager
         {
             if (cardPanel == null) return;
             
-            // Remove any existing overlay
+            // Remove any existing overlay (identified by a special name)
             var existingOverlay = cardPanel.Controls.OfType<Panel>()
-                .FirstOrDefault(p => p.Cursor == Cursors.No && p.BackColor.A > 0);
+                .FirstOrDefault(p => p.Name == "DisabledOverlay");
             if (existingOverlay != null)
             {
                 cardPanel.Controls.Remove(existingOverlay);
@@ -10653,6 +10653,7 @@ namespace Risk_Manager
             // Create a semi-transparent overlay panel (70% opacity for clear visibility)
             var overlay = new Panel
             {
+                Name = "DisabledOverlay", // Identify this as the overlay panel
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(178, 40, 40, 40), // 70% opacity (178/255 ≈ 0.7)
                 Cursor = Cursors.No
