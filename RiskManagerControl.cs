@@ -3158,6 +3158,9 @@ namespace Risk_Manager
                 }
             };
 
+            // Add CellPainting event handler for progress bars
+            statsGrid.CellPainting += StatsGrid_CellPainting;
+
             RefreshAccountsSummary();
             statsRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             statsRefreshTimer.Tick += (s, e) => RefreshAccountsSummary();
@@ -3598,6 +3601,194 @@ namespace Risk_Manager
                 // Do NOT color the entire statsDetailGrid here.
                 ApplyValueLabelColoring(statsDetailGrid.Parent ?? this);
             }
+        }
+
+        /// <summary>
+        /// Custom cell painting for progress bars in the stats grid
+        /// </summary>
+        private void StatsGrid_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        {
+            // Only paint progress bars if the feature is enabled
+            if (!showProgressBars)
+                return;
+
+            // Skip header row
+            if (e.RowIndex < 0)
+                return;
+
+            var grid = sender as DataGridView;
+            if (grid == null)
+                return;
+
+            // Determine which columns should have progress bars
+            string columnName = grid.Columns[e.ColumnIndex].Name;
+            
+            // Progress bars for: GrossPnL and OpenPnL
+            bool isGrossPnL = columnName == "GrossPnL";
+            bool isOpenPnL = columnName == "OpenPnL";
+            
+            if (!isGrossPnL && !isOpenPnL)
+                return;
+
+            // Get the cell value
+            var cellValue = e.Value;
+            if (cellValue == null)
+                return;
+
+            // Parse the P&L value (handle formatted strings like "$1,234.56")
+            string valueStr = cellValue.ToString().Replace("$", "").Replace(",", "").Trim();
+            if (!double.TryParse(valueStr, out double pnlValue))
+                return;
+
+            // Get account-specific limits from the row data
+            double dailyLossLimit = 0;
+            double dailyProfitTarget = 0;
+            double positionLossLimit = 0;
+            double positionProfitTarget = 0;
+
+            try
+            {
+                // Try to get the account number from the row
+                var accountCell = grid.Rows[e.RowIndex].Cells["Account"];
+                if (accountCell?.Value != null)
+                {
+                    string accountNumber = accountCell.Value.ToString();
+                    
+                    // Load settings for this account
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (settingsService.IsInitialized)
+                    {
+                        var settings = settingsService.GetSettings(accountNumber);
+                        if (settings != null)
+                        {
+                            dailyLossLimit = settings.DailyLossLimit ?? 0;
+                            dailyProfitTarget = settings.DailyProfitTarget ?? 0;
+                            positionLossLimit = settings.PositionLossLimit ?? 0;
+                            positionProfitTarget = settings.PositionProfitTarget ?? 0;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Silently fail if we can't get settings
+            }
+
+            // Calculate progress percentage and color
+            double percentage = 0;
+            Color barColor = Color.Green;
+
+            if (isGrossPnL)
+            {
+                // Gross P&L: use Daily Loss Limit and Daily Profit Target
+                if (pnlValue < 0 && dailyLossLimit > 0)
+                {
+                    // Negative P&L approaching loss limit
+                    percentage = Math.Abs(pnlValue) / dailyLossLimit * 100;
+                    
+                    // Color based on proximity to limit
+                    if (percentage >= 90)
+                        barColor = Color.Red;
+                    else if (percentage >= 70)
+                        barColor = Color.Orange;
+                    else if (percentage >= 50)
+                        barColor = Color.Yellow;
+                    else
+                        barColor = Color.Green;
+                }
+                else if (pnlValue > 0 && dailyProfitTarget > 0)
+                {
+                    // Positive P&L approaching profit target
+                    percentage = pnlValue / dailyProfitTarget * 100;
+                    
+                    // Color based on proximity to target
+                    if (percentage >= 90)
+                        barColor = Color.Lime;
+                    else if (percentage >= 70)
+                        barColor = Color.LightGreen;
+                    else
+                        barColor = Color.Green;
+                }
+                else
+                {
+                    // No limits configured, show small bar
+                    percentage = 5;
+                    barColor = Color.Gray;
+                }
+            }
+            else if (isOpenPnL)
+            {
+                // Open P&L: use Position Loss Limit and Position Profit Target
+                if (pnlValue < 0 && positionLossLimit > 0)
+                {
+                    // Negative P&L approaching position loss limit
+                    percentage = Math.Abs(pnlValue) / positionLossLimit * 100;
+                    
+                    // Color based on proximity to limit
+                    if (percentage >= 90)
+                        barColor = Color.Red;
+                    else if (percentage >= 70)
+                        barColor = Color.Orange;
+                    else if (percentage >= 50)
+                        barColor = Color.Yellow;
+                    else
+                        barColor = Color.Green;
+                }
+                else if (pnlValue > 0 && positionProfitTarget > 0)
+                {
+                    // Positive P&L approaching position profit target
+                    percentage = pnlValue / positionProfitTarget * 100;
+                    
+                    // Color based on proximity to target
+                    if (percentage >= 90)
+                        barColor = Color.Lime;
+                    else if (percentage >= 70)
+                        barColor = Color.LightGreen;
+                    else
+                        barColor = Color.Green;
+                }
+                else
+                {
+                    // No limits configured, show small bar
+                    percentage = 5;
+                    barColor = Color.Gray;
+                }
+            }
+
+            // Clamp percentage to 0-100
+            percentage = Math.Max(0, Math.Min(100, percentage));
+
+            // Paint the cell with progress bar
+            e.Paint(e.CellBounds, DataGridViewPaintParts.All & ~DataGridViewPaintParts.ContentForeground);
+
+            // Calculate progress bar dimensions
+            var progressWidth = (int)(e.CellBounds.Width * percentage / 100);
+            var progressRect = new Rectangle(e.CellBounds.X + 2, e.CellBounds.Y + 2, 
+                                            progressWidth - 4, e.CellBounds.Height - 4);
+
+            // Draw progress bar
+            if (progressWidth > 0)
+            {
+                using (var brush = new SolidBrush(barColor))
+                {
+                    e.Graphics.FillRectangle(brush, progressRect);
+                }
+            }
+
+            // Draw the value text on top
+            var textFormat = new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            };
+            
+            using (var textBrush = new SolidBrush(e.CellStyle.ForeColor))
+            {
+                e.Graphics.DrawString(cellValue.ToString(), e.CellStyle.Font, 
+                    textBrush, e.CellBounds, textFormat);
+            }
+
+            e.Handled = true;
         }
 
         private Control CreateTypeSummaryPanel()
