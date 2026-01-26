@@ -3669,9 +3669,10 @@ namespace Risk_Manager
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Silently fail if we can't get settings
+                // Log the error and continue with default values
+                System.Diagnostics.Debug.WriteLine($"Error loading settings for progress bar: {ex.Message}");
             }
 
             // Calculate progress percentage and color
@@ -3758,6 +3759,16 @@ namespace Risk_Manager
             // Clamp percentage to 0-100
             percentage = Math.Max(0, Math.Min(100, percentage));
 
+            // Draw the progress bar
+            DrawProgressBarInCell(e, percentage, barColor, cellValue.ToString());
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Helper method to draw a progress bar in a DataGridView cell
+        /// </summary>
+        private void DrawProgressBarInCell(DataGridViewCellPaintingEventArgs e, double percentage, Color barColor, string text)
+        {
             // Paint the cell with progress bar
             e.Paint(e.CellBounds, DataGridViewPaintParts.All & ~DataGridViewPaintParts.ContentForeground);
 
@@ -3784,11 +3795,9 @@ namespace Risk_Manager
             
             using (var textBrush = new SolidBrush(e.CellStyle.ForeColor))
             {
-                e.Graphics.DrawString(cellValue.ToString(), e.CellStyle.Font, 
+                e.Graphics.DrawString(text, e.CellStyle.Font, 
                     textBrush, e.CellBounds, textFormat);
             }
-
-            e.Handled = true;
         }
 
         /// <summary>
@@ -3829,8 +3838,9 @@ namespace Risk_Manager
                 return;
 
             // For Type Summary, we use aggregated limits (average or max of all accounts of this type)
-            // For simplicity, we'll use fixed thresholds or a default limit
-            // This is a simplified implementation - in a real scenario you'd aggregate limits by type
+            // In a production implementation, you would aggregate limits by querying all accounts of this type
+            // For now, we use a default threshold for visualization purposes
+            // TODO: Consider aggregating actual limits from all accounts of each type for more accurate visualization
             double defaultLimit = 1000; // Default threshold for visualization
             
             // Calculate progress percentage and color
@@ -3872,36 +3882,8 @@ namespace Risk_Manager
                 barColor = Color.Gray;
             }
 
-            // Paint the cell with progress bar
-            e.Paint(e.CellBounds, DataGridViewPaintParts.All & ~DataGridViewPaintParts.ContentForeground);
-
-            // Calculate progress bar dimensions
-            var progressWidth = (int)(e.CellBounds.Width * percentage / 100);
-            var progressRect = new Rectangle(e.CellBounds.X + 2, e.CellBounds.Y + 2, 
-                                            progressWidth - 4, e.CellBounds.Height - 4);
-
-            // Draw progress bar
-            if (progressWidth > 0)
-            {
-                using (var brush = new SolidBrush(barColor))
-                {
-                    e.Graphics.FillRectangle(brush, progressRect);
-                }
-            }
-
-            // Draw the value text on top
-            var textFormat = new StringFormat
-            {
-                Alignment = StringAlignment.Center,
-                LineAlignment = StringAlignment.Center
-            };
-            
-            using (var textBrush = new SolidBrush(e.CellStyle.ForeColor))
-            {
-                e.Graphics.DrawString(cellValue.ToString(), e.CellStyle.Font, 
-                    textBrush, e.CellBounds, textFormat);
-            }
-
+            // Draw the progress bar using helper method
+            DrawProgressBarInCell(e, percentage, barColor, cellValue.ToString());
             e.Handled = true;
         }
 
