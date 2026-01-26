@@ -10816,10 +10816,10 @@ namespace Risk_Manager
                 // Determine if overlay should be shown
                 bool shouldShowOverlay = !featureChecker();
                 
-                // Check current overlay state
-                bool hasOverlay = cardPanel.Tag != null && 
-                                 cardPanel.Tag.GetType().GetProperty("HasOverlay") != null &&
-                                 (bool)cardPanel.Tag.GetType().GetProperty("HasOverlay").GetValue(cardPanel.Tag);
+                // Check if overlay panel exists
+                var existingOverlay = cardPanel.Controls.OfType<Panel>()
+                    .FirstOrDefault(p => p.Name == "DisabledOverlayPanel");
+                bool hasOverlay = existingOverlay != null;
                 
                 if (shouldShowOverlay && !hasOverlay)
                 {
@@ -10828,10 +10828,11 @@ namespace Risk_Manager
                 }
                 else if (!shouldShowOverlay && hasOverlay)
                 {
-                    // Remove overlay - reset tag and cursor, invalidate
+                    // Remove overlay panel
+                    cardPanel.Controls.Remove(existingOverlay);
+                    existingOverlay?.Dispose();
                     cardPanel.Tag = featureChecker;
                     cardPanel.Cursor = Cursors.Default;
-                    cardPanel.Invalidate();
                 }
             }
         }
@@ -10854,25 +10855,22 @@ namespace Risk_Manager
             // Mark the card as having an overlay (for removal later)
             cardPanel.Tag = new { FeatureChecker = originalTag, HasOverlay = true };
             
-            // Paint the semi-transparent overlay directly on the card panel
-            PaintEventHandler paintHandler = null;
-            paintHandler = (s, e) =>
+            // Create a transparent overlay panel that sits on top
+            var overlayPanel = new Panel
             {
-                // Only paint if HasOverlay is true
-                if (cardPanel.Tag != null && cardPanel.Tag.GetType().GetProperty("HasOverlay") != null)
-                {
-                    var shouldPaint = (bool)cardPanel.Tag.GetType().GetProperty("HasOverlay").GetValue(cardPanel.Tag);
-                    if (!shouldPaint) return;
-                }
-                else
-                {
-                    return; // No overlay marker, don't paint
-                }
-                
+                Name = "DisabledOverlayPanel",
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Cursor = Cursors.No
+            };
+            
+            // Paint the overlay on this panel
+            overlayPanel.Paint += (s, e) =>
+            {
                 // Draw semi-transparent dark overlay (20% opacity) over entire card
                 using (var brush = new SolidBrush(Color.FromArgb(51, 40, 40, 40)))
                 {
-                    e.Graphics.FillRectangle(brush, cardPanel.ClientRectangle);
+                    e.Graphics.FillRectangle(brush, overlayPanel.ClientRectangle);
                 }
                 
                 // Draw the red X in the center
@@ -10881,15 +10879,15 @@ namespace Risk_Manager
                 using (var xBrush = new SolidBrush(Color.FromArgb(220, 50, 50)))
                 {
                     var textSize = e.Graphics.MeasureString(xText, font);
-                    var x = (cardPanel.Width - textSize.Width) / 2;
-                    var y = (cardPanel.Height - textSize.Height) / 2;
+                    var x = (overlayPanel.Width - textSize.Width) / 2;
+                    var y = (overlayPanel.Height - textSize.Height) / 2;
                     e.Graphics.DrawString(xText, font, xBrush, x, y);
                 }
             };
             
-            cardPanel.Paint += paintHandler;
-            cardPanel.Cursor = Cursors.No;
-            cardPanel.Invalidate(); // Force repaint
+            // Add overlay panel on top of everything
+            cardPanel.Controls.Add(overlayPanel);
+            overlayPanel.BringToFront();
         }
 
         private string GetPositionLossLimit()
