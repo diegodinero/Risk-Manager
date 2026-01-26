@@ -16,6 +16,24 @@ using TradingPlatform.PresentationLayer.Renderers.Chart;
 using DockStyle = System.Windows.Forms.DockStyle;
 
 
+public class TransparentOverlayPanel : Panel
+{
+    public TransparentOverlayPanel()
+    {
+        // Enable double buffering
+        this.SetStyle(ControlStyles.DoubleBuffer | 
+                     ControlStyles.UserPaint | 
+                     ControlStyles.AllPaintingInWmPaint, true);
+        
+        // Enable transparent background support
+        this.SetStyle(ControlStyles.SupportsTransparentBackColor, true);
+        this.SetStyle(ControlStyles.Opaque, false);
+        this.SetStyle(ControlStyles.ResizeRedraw, true);
+        
+        this.UpdateStyles();
+    }
+}
+
 public class CustomValueLabel : Panel
 {
     public Label TextLabel { get; }
@@ -10854,23 +10872,13 @@ namespace Risk_Manager
             cardPanel.Tag = new { FeatureChecker = originalTag, HasOverlay = true };
             
             // Create a transparent overlay panel that sits on top
-            var overlayPanel = new Panel
+            var overlayPanel = new TransparentOverlayPanel
             {
                 Name = "DisabledOverlayPanel",
                 Dock = DockStyle.Fill,
                 BackColor = Color.Transparent,
                 Cursor = Cursors.No
             };
-            
-            // Set the control style to support transparency
-            typeof(Panel).InvokeMember("DoubleBuffered",
-                System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
-                null, overlayPanel, new object[] { true });
-            
-            // Make the panel support transparent background
-            overlayPanel.SetStyle(System.Windows.Forms.ControlStyles.SupportsTransparentBackColor, true);
-            overlayPanel.SetStyle(System.Windows.Forms.ControlStyles.Opaque, false);
-            overlayPanel.SetStyle(System.Windows.Forms.ControlStyles.ResizeRedraw, true);
             
             // Paint the overlay on this panel
             overlayPanel.Paint += (s, e) =>
