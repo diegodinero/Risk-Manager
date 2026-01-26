@@ -3728,23 +3728,35 @@ namespace Risk_Manager
 
             try
             {
-                // Try to get the account number from the row
-                var accountCell = grid.Rows[e.RowIndex].Cells["Account"];
-                if (accountCell?.Value != null)
+                // Get the account from Core.Accounts using the row index
+                // This matches the same order used when populating the grid
+                var core = Core.Instance;
+                if (core?.Accounts != null && e.RowIndex < core.Accounts.Count())
                 {
-                    string accountNumber = accountCell.Value.ToString();
-                    
-                    // Load settings for this account
-                    var settingsService = RiskManagerSettingsService.Instance;
-                    if (settingsService.IsInitialized)
+                    var account = core.Accounts.ElementAtOrDefault(e.RowIndex);
+                    if (account != null)
                     {
-                        var settings = settingsService.GetSettings(accountNumber);
-                        if (settings != null)
+                        // Generate unique account identifier using same logic as RefreshAccountsSummary
+                        var uniqueAccountId = GetUniqueAccountIdentifier(account, e.RowIndex);
+                        
+                        // Load settings for this account
+                        var settingsService = RiskManagerSettingsService.Instance;
+                        if (settingsService.IsInitialized)
                         {
-                            dailyLossLimit = (double)(settings.DailyLossLimit ?? 0);
-                            dailyProfitTarget = (double)(settings.DailyProfitTarget ?? 0);
-                            positionLossLimit = (double)(settings.PositionLossLimit ?? 0);
-                            positionProfitTarget = (double)(settings.PositionProfitTarget ?? 0);
+                            var settings = settingsService.GetSettings(uniqueAccountId);
+                            if (settings != null)
+                            {
+                                dailyLossLimit = (double)(settings.DailyLossLimit ?? 0);
+                                dailyProfitTarget = (double)(settings.DailyProfitTarget ?? 0);
+                                positionLossLimit = (double)(settings.PositionLossLimit ?? 0);
+                                positionProfitTarget = (double)(settings.PositionProfitTarget ?? 0);
+                                
+                                System.Diagnostics.Debug.WriteLine($"Loaded settings for account {uniqueAccountId}: DailyLossLimit={dailyLossLimit}, DailyProfitTarget={dailyProfitTarget}, PositionLossLimit={positionLossLimit}, PositionProfitTarget={positionProfitTarget}");
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine($"No settings found for account {uniqueAccountId}");
+                            }
                         }
                     }
                 }
