@@ -1495,7 +1495,7 @@ namespace Risk_Manager
                 return;
             
             // Get the display text (with masking if privacy mode is enabled)
-            string displayText = MaskAccountNumber(account.Number);
+            string displayText = MaskAccountNumber(GetAccountIdentifier(account));
             
             // Use the same colors as the combo box
             using (var textBrush = new SolidBrush(e.ForeColor))
@@ -1524,7 +1524,7 @@ namespace Risk_Manager
                 return;
             
             // Get the display text (with masking if privacy mode is enabled)
-            string displayText = MaskAccountNumber(account.Number);
+            string displayText = MaskAccountNumber(GetAccountIdentifier(account));
             
             // Use the same colors as the combo box
             using (var textBrush = new SolidBrush(e.ForeColor))
