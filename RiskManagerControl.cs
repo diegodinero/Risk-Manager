@@ -10976,10 +10976,10 @@ namespace Risk_Manager
 
             cardPanel.Controls.Add(cardLayout);
             
-            // Add disabled overlay if feature is disabled
+            // Apply disabled state if feature is disabled
             if (!IsFeatureEnabled(s => s.TradingTimesEnabled))
             {
-                AddDisabledOverlay(cardPanel);
+                SetCardDisabled(cardPanel);
             }
             
             return cardPanel;
