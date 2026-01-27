@@ -1,6 +1,7 @@
 ﻿using Risk_Manager.Data;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -251,6 +252,11 @@ namespace Risk_Manager
         private CheckBox limitsFeatureCheckbox;
         private CheckBox symbolsFeatureCheckbox;
         private CheckBox tradingTimesFeatureCheckbox;
+        
+        // Risk enforcement mode radio buttons
+        private RadioButton strictModeRadioButton;
+        private RadioButton warningModeRadioButton;
+        private RadioButton monitorModeRadioButton;
         
         // Copy Settings controls
         private ComboBox copySettingsSourceComboBox;
@@ -1475,6 +1481,98 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Custom draw handler for account selector to support privacy mode masking.
+        /// </summary>
+        private void AccountSelector_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            e.DrawBackground();
+            
+            if (e.Index < 0 || e.Index >= accountSelector.Items.Count)
+                return;
+            
+            var account = accountSelector.Items[e.Index] as Account;
+            if (account == null)
+                return;
+            
+            // Get the account identifier for settings lookup
+            string accountIdentifier = GetAccountIdentifier(account);
+            
+            // Check if privacy mode is enabled for this account
+            var settings = RiskManagerSettingsService.Instance.GetSettings(accountIdentifier);
+            bool privacyModeEnabled = settings?.PrivacyModeEnabled ?? false;
+            
+            // Use account.ToString() when privacy is OFF to maintain original display format
+            // Only use GetAccountIdentifier when privacy mode is ON (for masking)
+            string displayText;
+            if (privacyModeEnabled)
+            {
+                displayText = MaskAccountNumber(accountIdentifier);
+            }
+            else
+            {
+                // Use original display format (account.ToString())
+                displayText = account.ToString();
+            }
+            
+            // Use the same colors as the combo box
+            using (var textBrush = new SolidBrush(e.ForeColor))
+            {
+                var font = accountSelector.Font;
+                
+                // Draw the text
+                e.Graphics.DrawString(displayText, font, textBrush, e.Bounds);
+                
+                e.DrawFocusRectangle();
+            }
+        }
+
+        /// <summary>
+        /// Custom draw handler for copy settings source combo box to support privacy mode masking.
+        /// </summary>
+        private void CopySettingsSourceComboBox_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            e.DrawBackground();
+            
+            if (e.Index < 0 || e.Index >= copySettingsSourceComboBox.Items.Count)
+                return;
+            
+            var account = copySettingsSourceComboBox.Items[e.Index] as Account;
+            if (account == null)
+                return;
+            
+            // Get the account identifier for settings lookup
+            string accountIdentifier = GetAccountIdentifier(account);
+            
+            // Check if privacy mode is enabled for this account
+            var settings = RiskManagerSettingsService.Instance.GetSettings(accountIdentifier);
+            bool privacyModeEnabled = settings?.PrivacyModeEnabled ?? false;
+            
+            // Use account.ToString() when privacy is OFF to maintain original display format
+            // Only use GetAccountIdentifier when privacy mode is ON (for masking)
+            string displayText;
+            if (privacyModeEnabled)
+            {
+                displayText = MaskAccountNumber(accountIdentifier);
+            }
+            else
+            {
+                // Use original display format (account.ToString())
+                displayText = account.ToString();
+            }
+            
+            // Use the same colors as the combo box
+            using (var textBrush = new SolidBrush(e.ForeColor))
+            {
+                var font = copySettingsSourceComboBox.Font;
+                
+                // Draw the text
+                e.Graphics.DrawString(displayText, font, textBrush, e.Bounds);
+                
+                e.DrawFocusRectangle();
+            }
+        }
+
+        /// <summary>
         /// Refreshes the Copy Settings panel source dropdown with connected accounts.
         /// </summary>
         private void RefreshCopySettingsAccounts()
@@ -1601,6 +1699,23 @@ namespace Risk_Manager
                 if (tradingTimesFeatureCheckbox != null)
                 {
                     tradingTimesFeatureCheckbox.Checked = settings.TradingTimesEnabled;
+                }
+
+                // Load Enforcement Mode
+                if (strictModeRadioButton != null && warningModeRadioButton != null && monitorModeRadioButton != null)
+                {
+                    switch (settings.EnforcementMode)
+                    {
+                        case RiskEnforcementMode.Strict:
+                            strictModeRadioButton.Checked = true;
+                            break;
+                        case RiskEnforcementMode.Warning:
+                            warningModeRadioButton.Checked = true;
+                            break;
+                        case RiskEnforcementMode.Monitor:
+                            monitorModeRadioButton.Checked = true;
+                            break;
+                    }
                 }
 
                 // Load Daily Limits
@@ -2332,8 +2447,10 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 9),
                 BackColor = CardBackground,
                 ForeColor = TextWhite,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                DrawMode = DrawMode.OwnerDrawFixed
             };
+            accountSelector.DrawItem += AccountSelector_DrawItem;
             accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
             topPanel.Controls.Add(accountSelector);
 
@@ -3289,8 +3406,8 @@ namespace Risk_Manager
                 if (core == null || core.Accounts == null || !core.Accounts.Any())
                 {
                     // Demo data - last column is Drawdown (Equity - Trailing Drawdown)
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn", MaskAccountNumber("ACC123"), "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", MaskAccountNumber("ACC456"), "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
                     return;
                 }
 
@@ -3415,7 +3532,7 @@ namespace Risk_Manager
                     statsGrid.Rows.Add(
                         provider, 
                         connectionName, 
-                        accountId, 
+                        MaskAccountNumber(accountId, uniqueAccountId), // Display accountId, check privacy with uniqueAccountId
                         accountType,
                         FormatNumeric(equity), 
                         FormatNumeric(openPnL), 
@@ -3601,24 +3718,26 @@ namespace Risk_Manager
                 // Get trading lock status from settings service
                 var settingsService = RiskManagerSettingsService.Instance;
                 var lockStatus = "Unlocked";
+                
+                // Find the account index to generate unique identifier
+                int accountIndex = 0;
+                if (core != null && core.Accounts != null)
+                {
+                    foreach (var acc in core.Accounts)
+                    {
+                        if (acc == accountToDisplay)
+                        {
+                            break;
+                        }
+                        accountIndex++;
+                    }
+                }
+                
+                // Generate unique account identifier for privacy mode and settings lookup
+                var accountNumber = GetUniqueAccountIdentifier(accountToDisplay, accountIndex);
+                
                 if (settingsService.IsInitialized)
                 {
-                    // Generate the account identifier from accountToDisplay to ensure we check the correct account
-                    // Find the account index
-                    int accountIndex = 0;
-                    if (core != null && core.Accounts != null)
-                    {
-                        foreach (var acc in core.Accounts)
-                        {
-                            if (acc == accountToDisplay)
-                            {
-                                break;
-                            }
-                            accountIndex++;
-                        }
-                    }
-                    
-                    var accountNumber = GetUniqueAccountIdentifier(accountToDisplay, accountIndex);
                     if (!string.IsNullOrEmpty(accountNumber))
                     {
                         // Use the new method that includes remaining time
@@ -3629,7 +3748,7 @@ namespace Risk_Manager
                 // Display all stats matching Accounts Summary data
                 statsDetailGrid.Rows.Add("Provider", provider);
                 statsDetailGrid.Rows.Add("Connection", connectionName);
-                statsDetailGrid.Rows.Add("Account", accountId);
+                statsDetailGrid.Rows.Add("Account", MaskAccountNumber(accountId, accountNumber)); // Display accountId, check privacy with accountNumber
                 statsDetailGrid.Rows.Add("Balance", FormatNumeric(balance));
                 statsDetailGrid.Rows.Add("Open P&L", FormatNumeric(openPnL));
                 statsDetailGrid.Rows.Add("Daily P&L", FormatNumeric(dailyPnL));
@@ -6891,7 +7010,11 @@ namespace Risk_Manager
                         continue;
 
                     // Enforce trading time locks (lock/unlock based on allowed trading times)
-                    EnforceTradingTimeLocks(uniqueAccountId, settingsService);
+                    // Only enforce if Trading Times feature is enabled
+                    if (settings.TradingTimesEnabled)
+                    {
+                        EnforceTradingTimeLocks(uniqueAccountId, settingsService);
+                    }
 
                     // Skip if account is already locked
                     if (settingsService.IsTradingLocked(uniqueAccountId))
@@ -6950,6 +7073,12 @@ namespace Risk_Manager
             {
                 var settingsService = RiskManagerSettingsService.Instance;
                 
+                // Check if Limits feature is enabled - skip enforcement if disabled
+                if (!settings.LimitsEnabled)
+                {
+                    return;
+                }
+                
                 // IMPORTANT: Check if account is already locked first to prevent any further processing
                 // This prevents infinite notifications by ensuring we don't re-process already locked accounts
                 if (settingsService.IsTradingLocked(accountId))
@@ -6977,21 +7106,38 @@ namespace Risk_Manager
                     // Check if loss limit is breached
                     if (currentPnL <= lossLimit)
                     {
-                        // Loss limit exceeded - lock account until 5 PM ET
+                        // Loss limit exceeded
                         string reason = $"Daily Loss Limit reached: Net P&L ${netPnL:F2} ≤ Limit ${lossLimit:F2}";
                         
                         // Enhanced logging
-                        System.Diagnostics.Debug.WriteLine($"[ACCOUNT LOCK] Account: {accountId}, Reason: {reason}, " +
-                            $"Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+                        System.Diagnostics.Debug.WriteLine($"[LIMIT BREACH] Account: {accountId}, Reason: {reason}, " +
+                            $"Timestamp: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC, Mode: {settings.EnforcementMode}");
                         
-                        LockAccountUntil5PMET(accountId, reason, core, account);
-                        CloseAllPositionsForAccount(account, core);
+                        // Take action based on enforcement mode
+                        switch (settings.EnforcementMode)
+                        {
+                            case RiskEnforcementMode.Strict:
+                                // Strict mode: Lock account and close positions
+                                LockAccountUntil5PMET(accountId, reason, core, account);
+                                CloseAllPositionsForAccount(account, core);
+                                System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily loss limit breach at ${netPnL:F2}");
+                                break;
+                                
+                            case RiskEnforcementMode.Warning:
+                                // Warning mode: Just log the breach
+                                System.Diagnostics.Debug.WriteLine($"[WARNING ONLY] Account {accountId} breached daily loss limit at ${netPnL:F2} - no enforcement action taken");
+                                break;
+                                
+                            case RiskEnforcementMode.Monitor:
+                                // Monitor mode: Silent tracking only (already logged above)
+                                System.Diagnostics.Debug.WriteLine($"[MONITOR MODE] Account {accountId} breached daily loss limit at ${netPnL:F2} - silent tracking only");
+                                break;
+                        }
                         
                         // Reset warning state since we've breached the limit
                         settingsService.ResetDailyLossWarning(accountId);
                         
-                        System.Diagnostics.Debug.WriteLine($"[AUDIT LOG] Account {accountId} locked due to daily loss limit breach at ${netPnL:F2}");
-                        return; // Exit after locking
+                        return; // Exit after handling breach
                     }
                     // Check if warning threshold is reached
                     else if (currentPnL <= warningThreshold)
@@ -7094,6 +7240,12 @@ namespace Risk_Manager
         {
             try
             {
+                // Check if Limits feature is enabled - skip enforcement if disabled
+                if (!settings.LimitsEnabled)
+                {
+                    return;
+                }
+                
                 // Get daily P&L (we'll use this as proxy for weekly P&L tracking)
                 // In a production system, you would track cumulative weekly P&L separately
                 double dailyPnL = GetAccountDailyPnL(account);
@@ -7143,6 +7295,12 @@ namespace Risk_Manager
         {
             try
             {
+                // Check if Positions feature is enabled - skip enforcement if disabled
+                if (!settings.PositionsEnabled)
+                {
+                    return;
+                }
+                
                 if (core.Positions == null)
                     return;
 
@@ -7216,6 +7374,14 @@ namespace Risk_Manager
         {
             try
             {
+                // Check if Symbols or Positions features are enabled
+                // Skip enforcement entirely only if BOTH are disabled, since this method handles both feature types
+                // If at least one is enabled, we proceed and check individual features below
+                if (!settings.SymbolsEnabled && !settings.PositionsEnabled)
+                {
+                    return;
+                }
+                
                 if (core.Positions == null)
                     return;
 
@@ -7234,8 +7400,10 @@ namespace Risk_Manager
                 var closedPositions = new HashSet<Position>();
 
                 // First, check and close positions for contract limit violations (by symbol)
-                if (settings.DefaultContractLimit.HasValue || 
-                    (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any()))
+                // Only enforce symbol restrictions if Symbols feature is enabled
+                if (settings.SymbolsEnabled && 
+                    (settings.DefaultContractLimit.HasValue || 
+                    (settings.SymbolContractLimits != null && settings.SymbolContractLimits.Any())))
                 {
                     // Group positions by symbol, filtering out invalid symbols early
                     var positionsBySymbol = accountPositions
@@ -7277,8 +7445,8 @@ namespace Risk_Manager
                     if (string.IsNullOrEmpty(symbol))
                         continue;
 
-                    // 1. Check if symbol is blocked
-                    if (settingsService.IsSymbolBlocked(accountId, symbol))
+                    // 1. Check if symbol is blocked (only if Symbols feature is enabled)
+                    if (settings.SymbolsEnabled && settingsService.IsSymbolBlocked(accountId, symbol))
                     {
                         string reason = $"Symbol Blocked: {symbol}";
                         System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
@@ -7287,34 +7455,37 @@ namespace Risk_Manager
                         continue; // Move to next position
                     }
 
-                    // 2. Check position P&L limits
-                    double openPnL = GetPositionOpenPnL(position);
-
-                    // Check Position Loss Limit (negative value)
-                    if (settings.PositionLossLimit.HasValue && settings.PositionLossLimit.Value < 0)
+                    // 2. Check position P&L limits (only if Positions feature is enabled)
+                    if (settings.PositionsEnabled)
                     {
-                        decimal lossLimit = settings.PositionLossLimit.Value;
-                        if ((decimal)openPnL <= lossLimit)
+                        double openPnL = GetPositionOpenPnL(position);
+
+                        // Check Position Loss Limit (negative value)
+                        if (settings.PositionLossLimit.HasValue && settings.PositionLossLimit.Value < 0)
                         {
-                            string reason = $"Position Loss Limit: P&L ${openPnL:F2} ≤ Limit ${lossLimit:F2}";
-                            System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
-                            
-                            ClosePosition(position, core);
-                            continue; // Move to next position
+                            decimal lossLimit = settings.PositionLossLimit.Value;
+                            if ((decimal)openPnL <= lossLimit)
+                            {
+                                string reason = $"Position Loss Limit: P&L ${openPnL:F2} ≤ Limit ${lossLimit:F2}";
+                                System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
+                                
+                                ClosePosition(position, core);
+                                continue; // Move to next position
+                            }
                         }
-                    }
 
-                    // Check Position Profit Target (positive value)
-                    if (settings.PositionProfitTarget.HasValue && settings.PositionProfitTarget.Value > 0)
-                    {
-                        decimal profitTarget = settings.PositionProfitTarget.Value;
-                        if ((decimal)openPnL >= profitTarget)
+                        // Check Position Profit Target (positive value)
+                        if (settings.PositionProfitTarget.HasValue && settings.PositionProfitTarget.Value > 0)
                         {
-                            string reason = $"Position Profit Target: P&L ${openPnL:F2} ≥ Target ${profitTarget:F2}";
-                            System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
-                            
-                            ClosePosition(position, core);
-                            continue; // Move to next position
+                            decimal profitTarget = settings.PositionProfitTarget.Value;
+                            if ((decimal)openPnL >= profitTarget)
+                            {
+                                string reason = $"Position Profit Target: P&L ${openPnL:F2} ≥ Target ${profitTarget:F2}";
+                                System.Diagnostics.Debug.WriteLine($"[FLATTEN POSITION] Account: {accountId}, Symbol: {symbol}, Reason: {reason}, Timestamp: {timestamp} UTC");
+                                
+                                ClosePosition(position, core);
+                                continue; // Move to next position
+                            }
                         }
                     }
                 }
@@ -7333,6 +7504,12 @@ namespace Risk_Manager
         {
             try
             {
+                // Check if Trading Times feature is enabled - skip enforcement if disabled
+                if (!settings.TradingTimesEnabled)
+                {
+                    return;
+                }
+                
                 // Check if trading is allowed right now
                 if (settingsService.IsTradingAllowedNow(accountId))
                     return;
@@ -8237,6 +8414,46 @@ namespace Risk_Manager
             
             // Use absolute value to avoid confusing double negatives like (-(-500.00))
             return $"({Math.Abs(value.Value).ToString($"N{decimals}")})";
+        }
+
+        /// <summary>
+        /// Masks an account number for privacy mode.
+        /// Shows first 7 characters and masks everything after with asterisks.
+        /// Only applies masking if privacy mode is enabled for the account.
+        /// </summary>
+        private string MaskAccountNumber(string accountNumber)
+        {
+            // When only one parameter is provided, use it for both display and settings lookup
+            return MaskAccountNumber(accountNumber, accountNumber);
+        }
+        
+        /// <summary>
+        /// Masks an account number for privacy mode display.
+        /// </summary>
+        /// <param name="displayValue">The value to display (and potentially mask)</param>
+        /// <param name="settingsKey">The key to use for looking up privacy settings</param>
+        /// <returns>The original or masked display value depending on privacy mode</returns>
+        private string MaskAccountNumber(string displayValue, string settingsKey)
+        {
+            if (string.IsNullOrEmpty(displayValue))
+                return displayValue;
+            
+            // Check if privacy mode is enabled for this account using the settings key
+            var settings = RiskManagerSettingsService.Instance.GetSettings(settingsKey);
+            if (settings == null || !settings.PrivacyModeEnabled)
+                return displayValue; // Return as-is if privacy mode is off
+            
+            // Mask the display value: show first 7 characters, mask everything after
+            // Example: "1234567890" becomes "1234567***"
+            // If display value is 7 or fewer characters, show it all (no masking needed)
+            if (displayValue.Length <= 7)
+            {
+                // For short account numbers (7 chars or less), no masking needed
+                return displayValue;
+            }
+            
+            // Show first 7 characters, mask the rest
+            return displayValue.Substring(0, 7) + new string('*', displayValue.Length - 7);
         }
 
         private Label GetTradingStatusLabel(Button button)
@@ -9352,6 +9569,18 @@ namespace Risk_Manager
                         );
                     }
 
+                    // Save Enforcement Mode
+                    if (strictModeRadioButton != null && warningModeRadioButton != null && monitorModeRadioButton != null)
+                    {
+                        RiskEnforcementMode mode = RiskEnforcementMode.Strict;
+                        if (warningModeRadioButton.Checked)
+                            mode = RiskEnforcementMode.Warning;
+                        else if (monitorModeRadioButton.Checked)
+                            mode = RiskEnforcementMode.Monitor;
+                        
+                        service.UpdateEnforcementMode(accountNumber, mode);
+                    }
+
                     // Save Blocked Symbols
                     if (blockedSymbolsEnabled?.Checked == true && blockedSymbolsInput != null && !string.IsNullOrWhiteSpace(blockedSymbolsInput.Text))
                     {
@@ -9693,6 +9922,77 @@ namespace Risk_Manager
                 }
             }
 
+            // Add a separator
+            var separatorLabel = new Label
+            {
+                Text = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8, FontStyle.Regular),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                BackColor = CardBackground,
+                Margin = new Padding(0, 15, 0, 10)
+            };
+            contentArea.Controls.Add(separatorLabel);
+
+            // Add enforcement mode section header
+            var enforcementModeHeader = new Label
+            {
+                Text = "Risk Enforcement Mode:",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 5, 0, 8)
+            };
+            contentArea.Controls.Add(enforcementModeHeader);
+
+            // Add enforcement mode description
+            var enforcementModeDesc = new Label
+            {
+                Text = "Select how risk limits are enforced (only one can be active):",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            contentArea.Controls.Add(enforcementModeDesc);
+
+            // Create radio buttons for enforcement modes
+            strictModeRadioButton = new RadioButton
+            {
+                Text = "Strict Mode - Immediately enforce all limits (close positions and lock account)",
+                AutoSize = true,
+                Checked = true, // Default
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 4, 0, 4)
+            };
+            contentArea.Controls.Add(strictModeRadioButton);
+
+            warningModeRadioButton = new RadioButton
+            {
+                Text = "Warning Mode - Show warnings only, no automatic enforcement",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 4, 0, 4)
+            };
+            contentArea.Controls.Add(warningModeRadioButton);
+
+            monitorModeRadioButton = new RadioButton
+            {
+                Text = "Monitor Mode - Track limits silently without warnings or enforcement",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 4, 0, 12)
+            };
+            contentArea.Controls.Add(monitorModeRadioButton);
+
             var saveButton = CreateDarkSaveButton();
 
             // Add controls in correct order: Bottom first, Fill second, Top last
@@ -9866,30 +10166,7 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(progressBarSectionLabel);
 
-            // Progress bar checkbox
-            showProgressBarsCheckBox = new CheckBox
-            {
-                Text = "Show Progress Bars",
-                AutoSize = true,
-                Checked = showProgressBars,
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                ForeColor = TextWhite,
-                BackColor = CardBackground,
-                Margin = new Padding(0, 0, 0, 8)
-            };
-            
-            showProgressBarsCheckBox.CheckedChanged += (s, e) =>
-            {
-                showProgressBars = showProgressBarsCheckBox.Checked;
-                SaveProgressBarPreference();
-                
-                // Refresh all data grids to apply/remove progress bars
-                RefreshAllDataGrids();
-            };
-
-            contentArea.Controls.Add(showProgressBarsCheckBox);
-
-            // Show percentage checkbox
+            // Show percentage checkbox (moved before progress bars checkbox)
             showPercentageCheckBox = new CheckBox
             {
                 Text = "Show Percentage Instead of Dollar Amount",
@@ -9912,6 +10189,29 @@ namespace Risk_Manager
 
             contentArea.Controls.Add(showPercentageCheckBox);
 
+            // Progress bar checkbox (moved after percentage checkbox)
+            showProgressBarsCheckBox = new CheckBox
+            {
+                Text = "Show Progress Bars",
+                AutoSize = true,
+                Checked = showProgressBars,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            
+            showProgressBarsCheckBox.CheckedChanged += (s, e) =>
+            {
+                showProgressBars = showProgressBarsCheckBox.Checked;
+                SaveProgressBarPreference();
+                
+                // Refresh all data grids to apply/remove progress bars
+                RefreshAllDataGrids();
+            };
+
+            contentArea.Controls.Add(showProgressBarsCheckBox);
+
             // Info label for progress bars
             var progressBarInfoLabel = new Label
             {
@@ -9927,6 +10227,90 @@ namespace Risk_Manager
                 Margin = new Padding(20, 0, 0, 10)
             };
             contentArea.Controls.Add(progressBarInfoLabel);
+
+            // Divider
+            var divider2 = new Panel
+            {
+                Height = 2,
+                Width = 600,
+                BackColor = DarkerBackground,
+                Margin = new Padding(0, 10, 0, 20)
+            };
+            contentArea.Controls.Add(divider2);
+
+            // Privacy Mode Section
+            var privacyModeSectionLabel = new Label
+            {
+                Text = "Privacy Settings",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            contentArea.Controls.Add(privacyModeSectionLabel);
+
+            // Privacy mode checkbox
+            var privacyModeCheckBox = new CheckBox
+            {
+                Text = "Privacy Mode (mask account numbers)",
+                AutoSize = true,
+                Checked = false,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            
+            // Load current privacy mode setting
+            if (accountSelector != null && accountSelector.SelectedItem is Account selectedAcc)
+            {
+                var accountNumber = GetAccountIdentifier(selectedAcc);
+                var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
+                if (settings != null)
+                {
+                    privacyModeCheckBox.Checked = settings.PrivacyModeEnabled;
+                }
+            }
+            
+            privacyModeCheckBox.CheckedChanged += (s, e) =>
+            {
+                if (accountSelector != null)
+                {
+                    // Apply privacy mode to ALL accounts
+                    foreach (var item in accountSelector.Items)
+                    {
+                        if (item is Account account)
+                        {
+                            var accountNumber = GetAccountIdentifier(account);
+                            RiskManagerSettingsService.Instance.UpdatePrivacyMode(accountNumber, privacyModeCheckBox.Checked);
+                        }
+                    }
+                    
+                    // Refresh ALL UI elements to apply/remove masking in real-time
+                    RefreshAccountDropdown(); // Refresh main account selector
+                    RefreshAccountsSummary(); // Refresh stats grid (account column)
+                    RefreshAccountStats(); // Refresh stats detail grid (account row)
+                }
+            };
+
+            contentArea.Controls.Add(privacyModeCheckBox);
+
+            // Info label for privacy mode
+            var privacyModeInfoLabel = new Label
+            {
+                Text = "When enabled, account numbers will be partially masked with asterisks (*) for ALL accounts.\n" +
+                       "The first 7 characters will be visible, the rest will be masked (e.g., \"1234567***\").\n" +
+                       "This is useful when streaming or taking screenshots to protect your account privacy.\n" +
+                       "Note: This only affects the display - it does not change any backend data.",
+                AutoSize = true,
+                MaximumSize = new Size(600, 0),
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                Margin = new Padding(20, 0, 0, 10)
+            };
+            contentArea.Controls.Add(privacyModeInfoLabel);
 
             // Add controls in correct order for docking
             mainPanel.Controls.Add(contentArea);
@@ -10000,8 +10384,10 @@ namespace Risk_Manager
                 BackColor = DarkBackground,
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
-                Margin = new Padding(0, 0, 0, 20)
+                Margin = new Padding(0, 0, 0, 20),
+                DrawMode = DrawMode.OwnerDrawFixed
             };
+            copySettingsSourceComboBox.DrawItem += CopySettingsSourceComboBox_DrawItem;
             contentFlow.Controls.Add(copySettingsSourceComboBox);
 
             // Target Accounts Section
@@ -10048,9 +10434,13 @@ namespace Risk_Manager
                     {
                         if (account == sourceAccount) continue;
 
+                        // Get account identifier and apply masking if needed
+                        string accountIdentifier = GetAccountIdentifier(account);
+                        string displayIdentifier = MaskAccountNumber(accountIdentifier);
+                        
                         var checkbox = new CheckBox
                         {
-                            Text = $"{account.Name} ({GetAccountIdentifier(account)})",
+                            Text = $"{account.Name} ({displayIdentifier})",
                             Tag = account,
                             AutoSize = true,
                             Font = new Font("Segoe UI", 9.5f),
@@ -10628,34 +11018,67 @@ namespace Risk_Manager
         {
             if (cardPanel == null) return;
             
-            // Remove any existing overlay (identified by a special name)
-            var existingOverlay = cardPanel.Controls.OfType<Panel>()
-                .FirstOrDefault(p => p.Name == "DisabledOverlay");
-            if (existingOverlay != null)
+            // Get the feature checker from Tag (might be wrapped in anonymous object)
+            Func<bool> featureChecker = null;
+            
+            if (cardPanel.Tag != null)
             {
-                cardPanel.Controls.Remove(existingOverlay);
-                existingOverlay.Dispose();
+                // Try to get FeatureChecker from anonymous object
+                var featureCheckerProp = cardPanel.Tag.GetType().GetProperty("FeatureChecker");
+                if (featureCheckerProp != null)
+                {
+                    featureChecker = featureCheckerProp.GetValue(cardPanel.Tag) as Func<bool>;
+                }
+                else
+                {
+                    // Tag is directly the feature checker
+                    featureChecker = cardPanel.Tag as Func<bool>;
+                }
             }
             
-            // Check if this card has a feature checker stored in its Tag
-            if (cardPanel.Tag is Func<bool> isFeatureEnabled)
+            // Check if this card has a feature checker
+            if (featureChecker != null)
             {
-                // Add overlay if feature is disabled
-                if (!isFeatureEnabled())
+                // Determine if overlay should be shown
+                bool shouldShowOverlay = !featureChecker();
+                
+                // Check if overlay panel exists
+                var existingOverlay = cardPanel.Controls.OfType<Panel>()
+                    .FirstOrDefault(p => p.Name == "DisabledOverlay");
+                bool hasOverlay = existingOverlay != null;
+                
+                if (shouldShowOverlay && !hasOverlay)
                 {
+                    // Add overlay
                     AddDisabledOverlay(cardPanel);
+                }
+                else if (!shouldShowOverlay && hasOverlay)
+                {
+                    // Remove overlay panel
+                    cardPanel.Controls.Remove(existingOverlay);
+                    existingOverlay?.Dispose();
+                    cardPanel.Tag = featureChecker;
+                    cardPanel.Cursor = Cursors.Default;
                 }
             }
         }
 
         private void AddDisabledOverlay(Panel cardPanel)
         {
-            // Create a semi-transparent overlay panel (70% opacity for clear visibility)
+            // Check if overlay already exists
+            var existingOverlay = cardPanel.Controls.OfType<Panel>()
+                .FirstOrDefault(p => p.Name == "DisabledOverlay");
+            if (existingOverlay != null)
+            {
+                return; // Already has overlay
+            }
+            
+            // Create a semi-transparent overlay panel (20% opacity for better visibility)
             var overlay = new Panel
             {
                 Name = "DisabledOverlay", // Identify this as the overlay panel
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(178, 40, 40, 40), // 70% opacity (178/255 ≈ 0.7)
+                BackColor = Color.FromArgb(51, 40, 40, 40), // 20% opacity (51/255 ≈ 0.2)
                 Cursor = Cursors.No
             };
 
