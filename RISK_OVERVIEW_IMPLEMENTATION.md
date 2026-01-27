@@ -139,7 +139,7 @@ Cards can now display a disabled state when their associated feature is not enab
   - **Dark Themes**: Bright red `RGB(220, 50, 50)` for visibility
 - **Reduced Opacity**: Card content is displayed at 40% opacity to indicate disabled state
 - **Cursor Change**: Mouse cursor changes to "No" symbol when hovering over disabled cards
-- **Non-Interactive**: Card is set to Enabled = false, preventing all user interaction
+- **Non-Interactive**: Mouse events are blocked to prevent interaction
 
 ### Cards with Disabled State Support
 1. **Position Limits** - Disabled when PositionsEnabled = false
@@ -158,29 +158,37 @@ Cards can now display a disabled state when their associated feature is not enab
    - Shows red X in card header with theme-appropriate color
    - Stores original colors of all controls before modification
    - Reduces opacity of card content (40%)
-   - Sets card Enabled property to false, disabling all interaction
-   - Sets cursor to "No" to indicate non-interactive state
+   - Changes cursor to "No" to indicate non-interactive state
+   - Blocks mouse events via `DisableMouseInteraction()` method
+   - **Important**: Does NOT set `Enabled = false` to avoid display/update issues
    - Stores disabled state and original colors in card Tag
 
-3. **SetCardEnabled()** - Restores the enabled state of a card
+3. **DisableMouseInteraction()** - Prevents interaction without disabling controls
+   - Adds empty event handlers to MouseClick, MouseDown, MouseUp
+   - Blocks user interaction while allowing controls to remain enabled
+   - Recursively applies to all child controls
+   - Prevents interference with card display and updates
+
+4. **SetCardEnabled()** - Restores the enabled state of a card
    - Hides red X in card header
    - Restores original colors from stored dictionary
-   - Sets card Enabled property to true, re-enabling interaction
    - Restores default cursor
+   - Mouse event handlers remain (not removed to avoid complexity)
 
-4. **UpdateCardOverlay()** - Manages state transitions
+5. **UpdateCardOverlay()** - Manages state transitions
    - Checks feature enabled status via stored function delegate
    - Transitions between enabled and disabled states as needed
    - Used consistently by all cards
 
 ### Non-Interactive Behavior
 When a card is disabled:
-- Card Enabled property is set to false, disabling all child controls
+- Mouse events (click, down, up) are blocked via event handlers
 - All click events and user interactions are prevented
 - Card content remains visible but faded (40% opacity)
 - Red X provides clear visual indicator without overlay
 - Original colors are preserved and restored when re-enabled
 - Card maintains its layout and structure
+- **Controls remain enabled** to allow proper display and updates
 
 ## Testing Recommendations
 
@@ -209,6 +217,9 @@ When a card is disabled:
      - Constructor now accepts `Func<Color>` parameter to detect current theme
      - `GetDisabledLabelColor()` returns appropriate red color based on theme
    - Added `SetCardDisabled()` method to apply disabled state with color preservation
+     - Does NOT set `Enabled = false` to avoid display/update issues
+     - Uses `DisableMouseInteraction()` to block interaction without disabling
+   - Added `DisableMouseInteraction()` method to block mouse events
    - Added `SetCardEnabled()` method to restore enabled state with original colors
    - Enhanced `UpdateCardOverlay()` to handle state transitions
    - Added `StoreOriginalColors()` helper method to preserve original colors

@@ -111,10 +111,12 @@ When the user re-enables a previously disabled feature:
 - **Storage**: Original colors stored in Dictionary<Control, Color>
 
 ### Interaction Blocking
-- **Method**: Set Panel.Enabled = false on the card panel
-- **Effect**: All child controls become non-interactive
+- **Method**: Block mouse events via `DisableMouseInteraction()` method
+- **Effect**: Empty event handlers prevent click, mouse down, and mouse up events
 - **Visual**: Cursor changes to Cursors.No
-- **Result**: No click events, no text selection, no tooltips
+- **Result**: No click events, no user interaction
+- **Important**: Controls remain enabled to allow proper display and updates
+- **Note**: Does NOT set `Enabled = false` to avoid display/refresh issues
 
 ### State Tracking
 The card's Tag property stores an anonymous object with:
