@@ -3532,7 +3532,7 @@ namespace Risk_Manager
                     statsGrid.Rows.Add(
                         provider, 
                         connectionName, 
-                        MaskAccountNumber(uniqueAccountId), // Apply privacy mode masking using unique identifier
+                        MaskAccountNumber(accountId, uniqueAccountId), // Display accountId, check privacy with uniqueAccountId
                         accountType,
                         FormatNumeric(equity), 
                         FormatNumeric(openPnL), 
@@ -3748,7 +3748,7 @@ namespace Risk_Manager
                 // Display all stats matching Accounts Summary data
                 statsDetailGrid.Rows.Add("Provider", provider);
                 statsDetailGrid.Rows.Add("Connection", connectionName);
-                statsDetailGrid.Rows.Add("Account", MaskAccountNumber(accountNumber)); // Apply privacy mode masking using unique identifier
+                statsDetailGrid.Rows.Add("Account", MaskAccountNumber(accountId, accountNumber)); // Display accountId, check privacy with accountNumber
                 statsDetailGrid.Rows.Add("Balance", FormatNumeric(balance));
                 statsDetailGrid.Rows.Add("Open P&L", FormatNumeric(openPnL));
                 statsDetailGrid.Rows.Add("Daily P&L", FormatNumeric(dailyPnL));
@@ -8423,25 +8423,37 @@ namespace Risk_Manager
         /// </summary>
         private string MaskAccountNumber(string accountNumber)
         {
-            if (string.IsNullOrEmpty(accountNumber))
-                return accountNumber;
+            // When only one parameter is provided, use it for both display and settings lookup
+            return MaskAccountNumber(accountNumber, accountNumber);
+        }
+        
+        /// <summary>
+        /// Masks an account number for privacy mode display.
+        /// </summary>
+        /// <param name="displayValue">The value to display (and potentially mask)</param>
+        /// <param name="settingsKey">The key to use for looking up privacy settings</param>
+        /// <returns>The original or masked display value depending on privacy mode</returns>
+        private string MaskAccountNumber(string displayValue, string settingsKey)
+        {
+            if (string.IsNullOrEmpty(displayValue))
+                return displayValue;
             
-            // Check if privacy mode is enabled for this account
-            var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
+            // Check if privacy mode is enabled for this account using the settings key
+            var settings = RiskManagerSettingsService.Instance.GetSettings(settingsKey);
             if (settings == null || !settings.PrivacyModeEnabled)
-                return accountNumber; // Return as-is if privacy mode is off
+                return displayValue; // Return as-is if privacy mode is off
             
-            // Mask the account number: show first 7 characters, mask everything after
+            // Mask the display value: show first 7 characters, mask everything after
             // Example: "1234567890" becomes "1234567***"
-            // If account number is 7 or fewer characters, show it all (no masking needed)
-            if (accountNumber.Length <= 7)
+            // If display value is 7 or fewer characters, show it all (no masking needed)
+            if (displayValue.Length <= 7)
             {
                 // For short account numbers (7 chars or less), no masking needed
-                return accountNumber;
+                return displayValue;
             }
             
             // Show first 7 characters, mask the rest
-            return accountNumber.Substring(0, 7) + new string('*', accountNumber.Length - 7);
+            return displayValue.Substring(0, 7) + new string('*', displayValue.Length - 7);
         }
 
         private Label GetTradingStatusLabel(Button button)
