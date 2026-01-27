@@ -1494,8 +1494,25 @@ namespace Risk_Manager
             if (account == null)
                 return;
             
-            // Get the display text (with masking if privacy mode is enabled)
-            string displayText = MaskAccountNumber(GetAccountIdentifier(account));
+            // Get the account identifier for settings lookup
+            string accountIdentifier = GetAccountIdentifier(account);
+            
+            // Check if privacy mode is enabled for this account
+            var settings = RiskManagerSettingsService.Instance.GetSettings(accountIdentifier);
+            bool privacyModeEnabled = settings?.PrivacyModeEnabled ?? false;
+            
+            // Use account.ToString() when privacy is OFF to maintain original display format
+            // Only use GetAccountIdentifier when privacy mode is ON (for masking)
+            string displayText;
+            if (privacyModeEnabled)
+            {
+                displayText = MaskAccountNumber(accountIdentifier);
+            }
+            else
+            {
+                // Use original display format (account.ToString())
+                displayText = account.ToString();
+            }
             
             // Use the same colors as the combo box
             using (var textBrush = new SolidBrush(e.ForeColor))
@@ -1523,8 +1540,25 @@ namespace Risk_Manager
             if (account == null)
                 return;
             
-            // Get the display text (with masking if privacy mode is enabled)
-            string displayText = MaskAccountNumber(GetAccountIdentifier(account));
+            // Get the account identifier for settings lookup
+            string accountIdentifier = GetAccountIdentifier(account);
+            
+            // Check if privacy mode is enabled for this account
+            var settings = RiskManagerSettingsService.Instance.GetSettings(accountIdentifier);
+            bool privacyModeEnabled = settings?.PrivacyModeEnabled ?? false;
+            
+            // Use account.ToString() when privacy is OFF to maintain original display format
+            // Only use GetAccountIdentifier when privacy mode is ON (for masking)
+            string displayText;
+            if (privacyModeEnabled)
+            {
+                displayText = MaskAccountNumber(accountIdentifier);
+            }
+            else
+            {
+                // Use original display format (account.ToString())
+                displayText = account.ToString();
+            }
             
             // Use the same colors as the combo box
             using (var textBrush = new SolidBrush(e.ForeColor))
@@ -10120,30 +10154,7 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(progressBarSectionLabel);
 
-            // Progress bar checkbox
-            showProgressBarsCheckBox = new CheckBox
-            {
-                Text = "Show Progress Bars",
-                AutoSize = true,
-                Checked = showProgressBars,
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                ForeColor = TextWhite,
-                BackColor = CardBackground,
-                Margin = new Padding(0, 0, 0, 8)
-            };
-            
-            showProgressBarsCheckBox.CheckedChanged += (s, e) =>
-            {
-                showProgressBars = showProgressBarsCheckBox.Checked;
-                SaveProgressBarPreference();
-                
-                // Refresh all data grids to apply/remove progress bars
-                RefreshAllDataGrids();
-            };
-
-            contentArea.Controls.Add(showProgressBarsCheckBox);
-
-            // Show percentage checkbox
+            // Show percentage checkbox (moved before progress bars checkbox)
             showPercentageCheckBox = new CheckBox
             {
                 Text = "Show Percentage Instead of Dollar Amount",
@@ -10165,6 +10176,29 @@ namespace Risk_Manager
             };
 
             contentArea.Controls.Add(showPercentageCheckBox);
+
+            // Progress bar checkbox (moved after percentage checkbox)
+            showProgressBarsCheckBox = new CheckBox
+            {
+                Text = "Show Progress Bars",
+                AutoSize = true,
+                Checked = showProgressBars,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            
+            showProgressBarsCheckBox.CheckedChanged += (s, e) =>
+            {
+                showProgressBars = showProgressBarsCheckBox.Checked;
+                SaveProgressBarPreference();
+                
+                // Refresh all data grids to apply/remove progress bars
+                RefreshAllDataGrids();
+            };
+
+            contentArea.Controls.Add(showProgressBarsCheckBox);
 
             // Info label for progress bars
             var progressBarInfoLabel = new Label
