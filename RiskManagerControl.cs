@@ -3684,24 +3684,26 @@ namespace Risk_Manager
                 // Get trading lock status from settings service
                 var settingsService = RiskManagerSettingsService.Instance;
                 var lockStatus = "Unlocked";
+                
+                // Find the account index to generate unique identifier
+                int accountIndex = 0;
+                if (core != null && core.Accounts != null)
+                {
+                    foreach (var acc in core.Accounts)
+                    {
+                        if (acc == accountToDisplay)
+                        {
+                            break;
+                        }
+                        accountIndex++;
+                    }
+                }
+                
+                // Generate unique account identifier for privacy mode and settings lookup
+                var accountNumber = GetUniqueAccountIdentifier(accountToDisplay, accountIndex);
+                
                 if (settingsService.IsInitialized)
                 {
-                    // Generate the account identifier from accountToDisplay to ensure we check the correct account
-                    // Find the account index
-                    int accountIndex = 0;
-                    if (core != null && core.Accounts != null)
-                    {
-                        foreach (var acc in core.Accounts)
-                        {
-                            if (acc == accountToDisplay)
-                            {
-                                break;
-                            }
-                            accountIndex++;
-                        }
-                    }
-                    
-                    var accountNumber = GetUniqueAccountIdentifier(accountToDisplay, accountIndex);
                     if (!string.IsNullOrEmpty(accountNumber))
                     {
                         // Use the new method that includes remaining time
