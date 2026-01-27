@@ -8382,7 +8382,7 @@ namespace Risk_Manager
 
         /// <summary>
         /// Masks an account number for privacy mode.
-        /// Shows first few characters and masks the rest with asterisks.
+        /// Shows first 7 characters and masks everything after with asterisks.
         /// Only applies masking if privacy mode is enabled for the account.
         /// </summary>
         private string MaskAccountNumber(string accountNumber)
@@ -8395,17 +8395,17 @@ namespace Risk_Manager
             if (settings == null || !settings.PrivacyModeEnabled)
                 return accountNumber; // Return as-is if privacy mode is off
             
-            // Mask the account number: show all characters except last 7, which are masked
-            // Example: "1234567890" becomes "123*******"
-            // If account number is 7 or fewer characters, mask all but first character
+            // Mask the account number: show first 7 characters, mask everything after
+            // Example: "1234567890" becomes "1234567***"
+            // If account number is 7 or fewer characters, show it all (no masking needed)
             if (accountNumber.Length <= 7)
             {
-                // For short account numbers, show first character and mask the rest
-                return accountNumber.Substring(0, 1) + new string('*', accountNumber.Length - 1);
+                // For short account numbers (7 chars or less), no masking needed
+                return accountNumber;
             }
             
-            int visibleChars = accountNumber.Length - 7;
-            return accountNumber.Substring(0, visibleChars) + new string('*', 7);
+            // Show first 7 characters, mask the rest
+            return accountNumber.Substring(0, 7) + new string('*', accountNumber.Length - 7);
         }
 
         private Label GetTradingStatusLabel(Button button)
