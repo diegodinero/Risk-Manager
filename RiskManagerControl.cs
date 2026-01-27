@@ -1481,6 +1481,64 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Custom draw handler for account selector to support privacy mode masking.
+        /// </summary>
+        private void AccountSelector_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            e.DrawBackground();
+            
+            if (e.Index < 0 || e.Index >= accountSelector.Items.Count)
+                return;
+            
+            var account = accountSelector.Items[e.Index] as Account;
+            if (account == null)
+                return;
+            
+            // Get the display text (with masking if privacy mode is enabled)
+            string displayText = MaskAccountNumber(account.Number);
+            
+            // Use the same colors as the combo box
+            var textBrush = new SolidBrush(e.ForeColor);
+            var font = accountSelector.Font;
+            
+            // Draw the text
+            e.Graphics.DrawString(displayText, font, textBrush, e.Bounds);
+            
+            e.DrawFocusRectangle();
+            
+            textBrush.Dispose();
+        }
+
+        /// <summary>
+        /// Custom draw handler for copy settings source combo box to support privacy mode masking.
+        /// </summary>
+        private void CopySettingsSourceComboBox_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            e.DrawBackground();
+            
+            if (e.Index < 0 || e.Index >= copySettingsSourceComboBox.Items.Count)
+                return;
+            
+            var account = copySettingsSourceComboBox.Items[e.Index] as Account;
+            if (account == null)
+                return;
+            
+            // Get the display text (with masking if privacy mode is enabled)
+            string displayText = MaskAccountNumber(account.Number);
+            
+            // Use the same colors as the combo box
+            var textBrush = new SolidBrush(e.ForeColor);
+            var font = copySettingsSourceComboBox.Font;
+            
+            // Draw the text
+            e.Graphics.DrawString(displayText, font, textBrush, e.Bounds);
+            
+            e.DrawFocusRectangle();
+            
+            textBrush.Dispose();
+        }
+
+        /// <summary>
         /// Refreshes the Copy Settings panel source dropdown with connected accounts.
         /// </summary>
         private void RefreshCopySettingsAccounts()
@@ -2355,8 +2413,10 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 9),
                 BackColor = CardBackground,
                 ForeColor = TextWhite,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                DrawMode = DrawMode.OwnerDrawFixed
             };
+            accountSelector.DrawItem += AccountSelector_DrawItem;
             accountSelector.SelectedIndexChanged += AccountSelectorOnSelectedIndexChanged;
             topPanel.Controls.Add(accountSelector);
 
@@ -8320,6 +8380,29 @@ namespace Risk_Manager
             return $"({Math.Abs(value.Value).ToString($"N{decimals}")})";
         }
 
+        /// <summary>
+        /// Masks an account number for privacy mode.
+        /// Shows first few characters and masks the rest with asterisks.
+        /// Only applies masking if privacy mode is enabled for the account.
+        /// </summary>
+        private string MaskAccountNumber(string accountNumber)
+        {
+            if (string.IsNullOrEmpty(accountNumber))
+                return accountNumber;
+            
+            // Check if privacy mode is enabled for this account
+            var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
+            if (settings == null || !settings.PrivacyModeEnabled)
+                return accountNumber; // Return as-is if privacy mode is off
+            
+            // Mask the account number: show first 4 characters, mask the rest
+            // Example: "12345678" becomes "1234****"
+            int visibleChars = Math.Min(4, accountNumber.Length);
+            int maskedChars = Math.Max(0, accountNumber.Length - visibleChars);
+            
+            return accountNumber.Substring(0, visibleChars) + new string('*', maskedChars);
+        }
+
         private Label GetTradingStatusLabel(Button button)
         {
             var contentPanel = button?.Parent;
@@ -10092,6 +10175,78 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(progressBarInfoLabel);
 
+            // Divider
+            var divider2 = new Panel
+            {
+                Height = 2,
+                Width = 600,
+                BackColor = DarkerBackground,
+                Margin = new Padding(0, 10, 0, 20)
+            };
+            contentArea.Controls.Add(divider2);
+
+            // Privacy Mode Section
+            var privacyModeSectionLabel = new Label
+            {
+                Text = "Privacy Settings",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            contentArea.Controls.Add(privacyModeSectionLabel);
+
+            // Privacy mode checkbox
+            var privacyModeCheckBox = new CheckBox
+            {
+                Text = "Privacy Mode (mask account numbers)",
+                AutoSize = true,
+                Checked = false,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            
+            // Load current privacy mode setting
+            if (currentAccount != null)
+            {
+                var settings = RiskManagerSettingsService.Instance.GetSettings(currentAccount.Number);
+                if (settings != null)
+                {
+                    privacyModeCheckBox.Checked = settings.PrivacyModeEnabled;
+                }
+            }
+            
+            privacyModeCheckBox.CheckedChanged += (s, e) =>
+            {
+                if (currentAccount != null)
+                {
+                    RiskManagerSettingsService.Instance.UpdatePrivacyMode(currentAccount.Number, privacyModeCheckBox.Checked);
+                    
+                    // Refresh account selector to show/hide masked account numbers
+                    RefreshAccountSelector();
+                }
+            };
+
+            contentArea.Controls.Add(privacyModeCheckBox);
+
+            // Info label for privacy mode
+            var privacyModeInfoLabel = new Label
+            {
+                Text = "When enabled, the last digits of account numbers will be masked with asterisks (*).\n" +
+                       "This is useful when streaming or taking screenshots to protect your account privacy.\n" +
+                       "Note: This only affects the display - it does not change any backend data.",
+                AutoSize = true,
+                MaximumSize = new Size(600, 0),
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                Margin = new Padding(20, 0, 0, 10)
+            };
+            contentArea.Controls.Add(privacyModeInfoLabel);
+
             // Add controls in correct order for docking
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
@@ -10164,8 +10319,10 @@ namespace Risk_Manager
                 BackColor = DarkBackground,
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
-                Margin = new Padding(0, 0, 0, 20)
+                Margin = new Padding(0, 0, 0, 20),
+                DrawMode = DrawMode.OwnerDrawFixed
             };
+            copySettingsSourceComboBox.DrawItem += CopySettingsSourceComboBox_DrawItem;
             contentFlow.Controls.Add(copySettingsSourceComboBox);
 
             // Target Accounts Section
@@ -10212,9 +10369,13 @@ namespace Risk_Manager
                     {
                         if (account == sourceAccount) continue;
 
+                        // Get account identifier and apply masking if needed
+                        string accountIdentifier = GetAccountIdentifier(account);
+                        string displayIdentifier = MaskAccountNumber(accountIdentifier);
+                        
                         var checkbox = new CheckBox
                         {
-                            Text = $"{account.Name} ({GetAccountIdentifier(account)})",
+                            Text = $"{account.Name} ({displayIdentifier})",
                             Tag = account,
                             AutoSize = true,
                             Font = new Font("Segoe UI", 9.5f),

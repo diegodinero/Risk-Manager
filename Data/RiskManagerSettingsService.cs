@@ -414,6 +414,20 @@ namespace Risk_Manager.Data
         }
 
         /// <summary>
+        /// Updates the privacy mode setting for an account.
+        /// Privacy mode masks account numbers in the UI for streaming/screenshots.
+        /// </summary>
+        public void UpdatePrivacyMode(string accountNumber, bool enabled)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.PrivacyModeEnabled = enabled;
+                SaveSettings(settings);
+            }
+        }
+
+        /// <summary>
         /// Copies all settings from one account to multiple target accounts.
         /// </summary>
         /// <param name="sourceAccountNumber">The account to copy settings from</param>
@@ -1321,6 +1335,9 @@ namespace Risk_Manager.Data
         
         // Risk Enforcement Mode (mutually exclusive options)
         public RiskEnforcementMode EnforcementMode { get; set; } = RiskEnforcementMode.Strict;
+        
+        // Privacy Mode - masks account numbers in UI for streaming/screenshots
+        public bool PrivacyModeEnabled { get; set; } = false;
         
         // Daily Limits
         public decimal? DailyLossLimit { get; set; }
