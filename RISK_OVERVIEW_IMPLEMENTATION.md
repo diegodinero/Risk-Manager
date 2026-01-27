@@ -131,22 +131,31 @@ Potential improvements for future versions:
 ## Disabled Card State Feature
 
 ### Overview
-Cards can now display a disabled state when their associated feature is not enabled in the account settings. This provides clear visual feedback without obscuring the card content.
+Cards can now display a disabled state when their associated feature is not enabled in the account settings. This provides clear visual feedback without obscuring the card content. **All cards with feature toggles now support this functionality.**
 
 ### Visual Indicators
-- **Red 'X' Symbol**: A red ✖ symbol (28pt font, #DC3232 color) appears in the top-right corner of the card header
+- **Red 'X' Symbol**: A red ✖ symbol (28pt font) appears in the top-right corner of the card header
+  - **White Theme**: Darker red `RGB(200, 30, 30)` for better contrast
+  - **Dark Themes**: Bright red `RGB(220, 50, 50)` for visibility
 - **Reduced Opacity**: Card content is displayed at 40% opacity to indicate disabled state
 - **Cursor Change**: Mouse cursor changes to "No" symbol when hovering over disabled cards
 - **Non-Interactive**: Card is set to Enabled = false, preventing all user interaction
+
+### Cards with Disabled State Support
+1. **Position Limits** - Disabled when PositionsEnabled = false
+2. **Daily Limits** - Disabled when LimitsEnabled = false
+3. **Symbol Restrictions** - Disabled when SymbolsEnabled = false
+4. **Allowed Trading Times** - Disabled when TradingTimesEnabled = false
 
 ### Implementation Details
 1. **CustomCardHeaderControl** - Enhanced to include a disabled label that can be shown/hidden
    - `SetDisabled(bool)` method controls visibility of the red X
    - Disabled label is positioned on the right side of the header
    - Disabled label itself is set to Enabled = false to prevent interaction
+   - **Theme-aware color**: Accepts `Func<Color>` parameter to detect theme and adjust red X color
 
 2. **SetCardDisabled()** - Applies the disabled state to a card
-   - Shows red X in card header
+   - Shows red X in card header with theme-appropriate color
    - Stores original colors of all controls before modification
    - Reduces opacity of card content (40%)
    - Sets card Enabled property to false, disabling all interaction
@@ -162,6 +171,7 @@ Cards can now display a disabled state when their associated feature is not enab
 4. **UpdateCardOverlay()** - Manages state transitions
    - Checks feature enabled status via stored function delegate
    - Transitions between enabled and disabled states as needed
+   - Used consistently by all cards
 
 ### Non-Interactive Behavior
 When a card is disabled:
@@ -195,11 +205,15 @@ When a card is disabled:
    - Implemented `CreateRiskOverviewCard()` helper method (line 5417)
    - Added 10 data retrieval helper methods (lines 5489-5630)
    - Enhanced `CustomCardHeaderControl` class with disabled state support
+     - Added theme-aware color support for red X indicator
+     - Constructor now accepts `Func<Color>` parameter to detect current theme
+     - `GetDisabledLabelColor()` returns appropriate red color based on theme
    - Added `SetCardDisabled()` method to apply disabled state with color preservation
    - Added `SetCardEnabled()` method to restore enabled state with original colors
    - Enhanced `UpdateCardOverlay()` to handle state transitions
    - Added `StoreOriginalColors()` helper method to preserve original colors
    - Added `SetControlOpacity()` helper method to reduce opacity
+   - Fixed Trading Times card to use consistent Tag-based disabled state pattern
 
 3. **RISK_OVERVIEW_IMPLEMENTATION.md**
    - Added documentation for disabled card state feature

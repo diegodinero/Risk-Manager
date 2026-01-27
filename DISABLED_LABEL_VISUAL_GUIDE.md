@@ -12,8 +12,11 @@ When a risk management feature is disabled in the account settings, the correspo
 - **Location**: Top-right corner of the card header
 - **Symbol**: ✖ (Heavy Multiplication X)
 - **Font**: Segoe UI, 28pt, Bold
-- **Color**: RGB(220, 50, 50) - Bright red
+- **Color (Theme-Aware)**: 
+  - **White Theme**: RGB(200, 30, 30) - Darker red for better contrast
+  - **Dark Themes**: RGB(220, 50, 50) - Bright red for visibility
 - **Purpose**: Provides immediate visual feedback that the card represents a disabled feature
+- **Adaptive**: Color automatically adjusts based on the current theme
 
 ### 2. Reduced Opacity
 - **Effect**: All card content (except the header) is displayed at 40% opacity
@@ -96,6 +99,12 @@ When the user re-enables a previously disabled feature:
 
 ## Technical Details
 
+### Red X Color (Theme-Aware)
+- **White Theme**: RGB(200, 30, 30) - Darker red for better contrast against light backgrounds
+- **Dark Themes**: RGB(220, 50, 50) - Bright red for visibility against dark backgrounds
+- **Detection**: Uses `Func<Color>` parameter passed to CustomCardHeaderControl to detect current theme
+- **Logic**: If TextWhite color is dark (R, G, B all < 128), use darker red; otherwise use bright red
+
 ### Color Calculation
 - **Enabled**: ForeColor with alpha = 255 (100% opacity)
 - **Disabled**: ForeColor with alpha = 102 (40% opacity)
@@ -113,18 +122,38 @@ The card's Tag property stores an anonymous object with:
 - `IsDisabled`: bool flag indicating current disabled state
 - `OriginalColors`: Dictionary<Control, Color> of original colors
 
+### Supported Cards
+All cards with feature toggles now use the same disabled state pattern:
+1. **Position Limits** - Uses `() => IsFeatureEnabled(s => s.PositionsEnabled)`
+2. **Daily Limits** - Uses `() => IsFeatureEnabled(s => s.LimitsEnabled)`
+3. **Symbol Restrictions** - Uses `() => IsFeatureEnabled(s => s.SymbolsEnabled)`
+4. **Allowed Trading Times** - Uses `() => IsFeatureEnabled(s => s.TradingTimesEnabled)`
+
 ## Testing Recommendations
 
 To verify the implementation:
 1. Open Risk Manager and navigate to Risk Overview tab
-2. Disable a feature (e.g., Positions) in the settings
-3. Observe the corresponding card:
-   - ✓ Red X appears in top-right corner
+2. **Test in White Theme**:
+   - Switch to white theme
+   - Disable a feature (e.g., Positions) in the settings
+   - Observe the darker red X is visible against white background
+3. **Test in Dark Themes**:
+   - Switch to blue or black theme
+   - Disable a feature
+   - Observe the bright red X is visible against dark background
+4. **Test All Cards**:
+   - Disable each feature one by one (Positions, Limits, Symbols, Trading Times)
+   - Verify each corresponding card shows red X and faded content
+5. **Test Re-enabling**:
+   - Re-enable each feature
+   - Verify red X disappears and content returns to full brightness
+6. Observe the corresponding card:
+   - ✓ Red X appears in top-right corner (appropriate color for theme)
    - ✓ Content is visibly faded but still readable
    - ✓ Hovering shows "No" cursor
    - ✓ Clicking has no effect
-4. Re-enable the feature
-5. Observe the card returns to normal:
+7. Re-enable the feature
+8. Observe the card returns to normal:
    - ✓ Red X disappears
    - ✓ Content returns to full brightness
    - ✓ Normal cursor on hover
@@ -145,12 +174,12 @@ Placing the indicator in the header:
 - Works well with existing card design patterns
 - Matches user expectations from other UI frameworks
 
-### Why 40% Opacity?
-40% opacity strikes a balance:
-- Not so faded that content becomes unreadable
-- Faded enough to clearly indicate disabled state
-- Consistent with Windows Forms design guidelines
-- Tested across all three theme modes (Blue, Black, White)
+### Why Theme-Aware Red X?
+The red X color adapts to the current theme for optimal visibility:
+- **White Theme**: Darker red (RGB 200, 30, 30) provides better contrast
+- **Dark Themes**: Bright red (RGB 220, 50, 50) stands out against dark backgrounds
+- **User Benefit**: Red X is always visible regardless of theme choice
+- **Implementation**: Automatically detects theme by checking TextWhite color value
 
 ## Conclusion
 
