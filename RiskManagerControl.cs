@@ -3498,7 +3498,7 @@ namespace Risk_Manager
                     statsGrid.Rows.Add(
                         provider, 
                         connectionName, 
-                        MaskAccountNumber(accountId), // Apply privacy mode masking
+                        MaskAccountNumber(uniqueAccountId), // Apply privacy mode masking using unique identifier
                         accountType,
                         FormatNumeric(equity), 
                         FormatNumeric(openPnL), 
@@ -3712,7 +3712,7 @@ namespace Risk_Manager
                 // Display all stats matching Accounts Summary data
                 statsDetailGrid.Rows.Add("Provider", provider);
                 statsDetailGrid.Rows.Add("Connection", connectionName);
-                statsDetailGrid.Rows.Add("Account", MaskAccountNumber(accountId)); // Apply privacy mode masking
+                statsDetailGrid.Rows.Add("Account", MaskAccountNumber(accountNumber)); // Apply privacy mode masking using unique identifier
                 statsDetailGrid.Rows.Add("Balance", FormatNumeric(balance));
                 statsDetailGrid.Rows.Add("Open P&L", FormatNumeric(openPnL));
                 statsDetailGrid.Rows.Add("Daily P&L", FormatNumeric(dailyPnL));
