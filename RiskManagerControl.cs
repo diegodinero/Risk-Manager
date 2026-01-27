@@ -3372,8 +3372,8 @@ namespace Risk_Manager
                 if (core == null || core.Accounts == null || !core.Accounts.Any())
                 {
                     // Demo data - last column is Drawdown (Equity - Trailing Drawdown)
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn", "ACC123", "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", "ACC456", "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn", MaskAccountNumber("ACC123"), "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", MaskAccountNumber("ACC456"), "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
                     return;
                 }
 
@@ -3498,7 +3498,7 @@ namespace Risk_Manager
                     statsGrid.Rows.Add(
                         provider, 
                         connectionName, 
-                        accountId, 
+                        MaskAccountNumber(accountId), // Apply privacy mode masking
                         accountType,
                         FormatNumeric(equity), 
                         FormatNumeric(openPnL), 
@@ -3712,7 +3712,7 @@ namespace Risk_Manager
                 // Display all stats matching Accounts Summary data
                 statsDetailGrid.Rows.Add("Provider", provider);
                 statsDetailGrid.Rows.Add("Connection", connectionName);
-                statsDetailGrid.Rows.Add("Account", accountId);
+                statsDetailGrid.Rows.Add("Account", MaskAccountNumber(accountId)); // Apply privacy mode masking
                 statsDetailGrid.Rows.Add("Balance", FormatNumeric(balance));
                 statsDetailGrid.Rows.Add("Open P&L", FormatNumeric(openPnL));
                 statsDetailGrid.Rows.Add("Daily P&L", FormatNumeric(dailyPnL));
@@ -10232,8 +10232,32 @@ namespace Risk_Manager
                     var accountNumber = GetAccountIdentifier(selectedAcc);
                     RiskManagerSettingsService.Instance.UpdatePrivacyMode(accountNumber, privacyModeCheckBox.Checked);
                     
-                    // Refresh account selector to show/hide masked account numbers
-                    RefreshAccountDropdown();
+                    // Refresh ALL UI elements to apply/remove masking in real-time
+                    RefreshAccountDropdown(); // Refresh main account selector
+                    RefreshAccountsSummary(); // Refresh stats grid (account column)
+                    RefreshStatsDetailView(); // Refresh stats detail grid (account row)
+                    
+                    // Refresh copy settings dropdowns if they exist
+                    var copySettingsTab = tabControl?.TabPages.Cast<TabPage>().FirstOrDefault(tp => tp.Text == "Copy Settings");
+                    if (copySettingsTab != null)
+                    {
+                        // Find and refresh the copy settings source dropdown
+                        foreach (Control ctrl in copySettingsTab.Controls)
+                        {
+                            if (ctrl is Panel panel)
+                            {
+                                foreach (Control innerCtrl in panel.Controls)
+                                {
+                                    if (innerCtrl is ComboBox comboBox && comboBox.Name == "copySettingsSourceComboBox")
+                                    {
+                                        // Re-trigger custom drawing by invalidating
+                                        comboBox.Invalidate();
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             };
 
