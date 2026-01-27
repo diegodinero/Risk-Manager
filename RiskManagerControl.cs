@@ -1498,15 +1498,15 @@ namespace Risk_Manager
             string displayText = MaskAccountNumber(account.Number);
             
             // Use the same colors as the combo box
-            var textBrush = new SolidBrush(e.ForeColor);
-            var font = accountSelector.Font;
-            
-            // Draw the text
-            e.Graphics.DrawString(displayText, font, textBrush, e.Bounds);
-            
-            e.DrawFocusRectangle();
-            
-            textBrush.Dispose();
+            using (var textBrush = new SolidBrush(e.ForeColor))
+            {
+                var font = accountSelector.Font;
+                
+                // Draw the text
+                e.Graphics.DrawString(displayText, font, textBrush, e.Bounds);
+                
+                e.DrawFocusRectangle();
+            }
         }
 
         /// <summary>
@@ -1527,15 +1527,15 @@ namespace Risk_Manager
             string displayText = MaskAccountNumber(account.Number);
             
             // Use the same colors as the combo box
-            var textBrush = new SolidBrush(e.ForeColor);
-            var font = copySettingsSourceComboBox.Font;
-            
-            // Draw the text
-            e.Graphics.DrawString(displayText, font, textBrush, e.Bounds);
-            
-            e.DrawFocusRectangle();
-            
-            textBrush.Dispose();
+            using (var textBrush = new SolidBrush(e.ForeColor))
+            {
+                var font = copySettingsSourceComboBox.Font;
+                
+                // Draw the text
+                e.Graphics.DrawString(displayText, font, textBrush, e.Bounds);
+                
+                e.DrawFocusRectangle();
+            }
         }
 
         /// <summary>
@@ -10226,7 +10226,7 @@ namespace Risk_Manager
                     RiskManagerSettingsService.Instance.UpdatePrivacyMode(currentAccount.Number, privacyModeCheckBox.Checked);
                     
                     // Refresh account selector to show/hide masked account numbers
-                    RefreshAccountSelector();
+                    RefreshAccountDropdown();
                 }
             };
 
@@ -10235,7 +10235,8 @@ namespace Risk_Manager
             // Info label for privacy mode
             var privacyModeInfoLabel = new Label
             {
-                Text = "When enabled, the last digits of account numbers will be masked with asterisks (*).\n" +
+                Text = "When enabled, account numbers will be partially masked with asterisks (*).\n" +
+                       "Only the first 4 characters will be visible, the rest will be masked.\n" +
                        "This is useful when streaming or taking screenshots to protect your account privacy.\n" +
                        "Note: This only affects the display - it does not change any backend data.",
                 AutoSize = true,
