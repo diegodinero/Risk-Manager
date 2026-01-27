@@ -11137,8 +11137,7 @@ namespace Risk_Manager
                 }
             }
             
-            // Re-enable card interaction
-            cardPanel.Enabled = true;
+            // Restore cursor (note: we don't need to re-enable since we never disabled)
             cardPanel.Cursor = Cursors.Default;
             
             // Restore Tag to just the feature checker
@@ -11199,9 +11198,12 @@ namespace Risk_Manager
                 }
             }
             
-            // Disable card interaction and change cursor to indicate non-interactive state
-            cardPanel.Enabled = false;
+            // Change cursor to indicate non-interactive state (but don't disable the panel)
+            // Note: We don't set cardPanel.Enabled = false because it can interfere with display/updates
             cardPanel.Cursor = Cursors.No;
+            
+            // Disable mouse events to prevent interaction
+            DisableMouseInteraction(cardPanel);
             
             // Store disabled state and original colors in Tag to prevent re-processing
             var featureChecker = cardPanel.Tag as Func<bool>;
@@ -11209,6 +11211,25 @@ namespace Risk_Manager
             {
                 // Wrap the feature checker with a disabled flag and original colors
                 cardPanel.Tag = new { FeatureChecker = featureChecker, IsDisabled = true, OriginalColors = originalColors };
+            }
+        }
+        
+        /// <summary>
+        /// Disables mouse interaction on a panel and its children without setting Enabled = false
+        /// </summary>
+        private void DisableMouseInteraction(Control control)
+        {
+            if (control == null) return;
+            
+            // Add mouse event handlers that do nothing (prevent interaction)
+            control.MouseClick += (s, e) => { /* Block clicks */ };
+            control.MouseDown += (s, e) => { /* Block mouse down */ };
+            control.MouseUp += (s, e) => { /* Block mouse up */ };
+            
+            // Recursively disable for child controls
+            foreach (Control child in control.Controls)
+            {
+                DisableMouseInteraction(child);
             }
         }
         
