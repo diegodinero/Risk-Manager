@@ -70,12 +70,14 @@ class CustomCardHeaderControl : Panel
     private Label titleLabel;
     private PictureBox iconBox;
     private Label disabledLabel;
+    private Func<Color> getTextColor; // Function to get current theme's text color
     
-    public CustomCardHeaderControl(string title, Image icon)
+    public CustomCardHeaderControl(string title, Image icon, Func<Color> textColorGetter = null)
     {
         this.Dock = DockStyle.Top;
         this.Height = 40;
         this.BackColor = Color.Transparent;
+        this.getTextColor = textColorGetter;
 
         // Title (Label)
         titleLabel = new Label
@@ -110,7 +112,7 @@ class CustomCardHeaderControl : Panel
         {
             Text = "✖",
             Font = new Font("Segoe UI", 28, FontStyle.Bold),
-            ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
+            ForeColor = GetDisabledLabelColor(), // Theme-aware color
             BackColor = Color.Transparent,
             TextAlign = ContentAlignment.MiddleRight,
             Dock = DockStyle.Right,
@@ -130,11 +132,35 @@ class CustomCardHeaderControl : Panel
     public Label DisabledLabel => disabledLabel;
     
     /// <summary>
+    /// Gets the appropriate color for the disabled label based on the current theme
+    /// </summary>
+    private Color GetDisabledLabelColor()
+    {
+        // If we have a text color getter, use it to determine theme
+        if (getTextColor != null)
+        {
+            var textColor = getTextColor();
+            // If text is dark (white theme), use a darker red for better contrast
+            if (textColor.R < 128 && textColor.G < 128 && textColor.B < 128)
+            {
+                return Color.FromArgb(200, 30, 30); // Darker red for white theme
+            }
+        }
+        // Default bright red for dark themes
+        return Color.FromArgb(220, 50, 50);
+    }
+    
+    /// <summary>
     /// Shows or hides the disabled label (red X)
     /// </summary>
     public void SetDisabled(bool disabled)
     {
         disabledLabel.Visible = disabled;
+        // Update color when showing, in case theme changed
+        if (disabled)
+        {
+            disabledLabel.ForeColor = GetDisabledLabelColor();
+        }
     }
 }
 class CustomHeaderControl : Panel
@@ -10787,7 +10813,7 @@ namespace Risk_Manager
                 BackColor = CardBackground
             };
 
-            var header = new CustomCardHeaderControl(title, GetIconForTitle(title))
+            var header = new CustomCardHeaderControl(title, GetIconForTitle(title), () => TextWhite)
             {
                 Dock = DockStyle.Top,
                 Margin = new Padding(0, 0, 0, 15)
@@ -10874,7 +10900,7 @@ namespace Risk_Manager
                 BackColor = CardBackground,
                 Padding = new Padding(20),
                 Margin = new Padding(0, 0, 15, 15),
-                Tag = "TradingTimesCard" // Tag to identify this card for refresh
+                Tag = (Func<bool>)(() => IsFeatureEnabled(s => s.TradingTimesEnabled)) // Store feature checker
             };
 
             var cardLayout = new FlowLayoutPanel
@@ -10887,7 +10913,7 @@ namespace Risk_Manager
             };
 
             // Card title
-            var header = new CustomCardHeaderControl("Allowed Trading Times", GetIconForTitle("Allowed Trading Times"))
+            var header = new CustomCardHeaderControl("Allowed Trading Times", GetIconForTitle("Allowed Trading Times"), () => TextWhite)
             {
                 Dock = DockStyle.Top,
                 Margin = new Padding(0, 0, 0, 10)
@@ -10977,10 +11003,7 @@ namespace Risk_Manager
             cardPanel.Controls.Add(cardLayout);
             
             // Apply disabled state if feature is disabled
-            if (!IsFeatureEnabled(s => s.TradingTimesEnabled))
-            {
-                SetCardDisabled(cardPanel);
-            }
+            UpdateCardOverlay(cardPanel);
             
             return cardPanel;
         }
