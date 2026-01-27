@@ -10210,9 +10210,10 @@ namespace Risk_Manager
             };
             
             // Load current privacy mode setting
-            if (currentAccount != null)
+            if (accountSelector != null && accountSelector.SelectedItem is Account selectedAcc)
             {
-                var settings = RiskManagerSettingsService.Instance.GetSettings(currentAccount.Number);
+                var accountNumber = GetAccountIdentifier(selectedAcc);
+                var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
                 if (settings != null)
                 {
                     privacyModeCheckBox.Checked = settings.PrivacyModeEnabled;
@@ -10221,9 +10222,10 @@ namespace Risk_Manager
             
             privacyModeCheckBox.CheckedChanged += (s, e) =>
             {
-                if (currentAccount != null)
+                if (accountSelector != null && accountSelector.SelectedItem is Account selectedAcc)
                 {
-                    RiskManagerSettingsService.Instance.UpdatePrivacyMode(currentAccount.Number, privacyModeCheckBox.Checked);
+                    var accountNumber = GetAccountIdentifier(selectedAcc);
+                    RiskManagerSettingsService.Instance.UpdatePrivacyMode(accountNumber, privacyModeCheckBox.Checked);
                     
                     // Refresh account selector to show/hide masked account numbers
                     RefreshAccountDropdown();
