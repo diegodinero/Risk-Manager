@@ -10229,10 +10229,17 @@ namespace Risk_Manager
             
             privacyModeCheckBox.CheckedChanged += (s, e) =>
             {
-                if (accountSelector != null && accountSelector.SelectedItem is Account selectedAcc)
+                if (accountSelector != null)
                 {
-                    var accountNumber = GetAccountIdentifier(selectedAcc);
-                    RiskManagerSettingsService.Instance.UpdatePrivacyMode(accountNumber, privacyModeCheckBox.Checked);
+                    // Apply privacy mode to ALL accounts
+                    foreach (var item in accountSelector.Items)
+                    {
+                        if (item is Account account)
+                        {
+                            var accountNumber = GetAccountIdentifier(account);
+                            RiskManagerSettingsService.Instance.UpdatePrivacyMode(accountNumber, privacyModeCheckBox.Checked);
+                        }
+                    }
                     
                     // Refresh ALL UI elements to apply/remove masking in real-time
                     RefreshAccountDropdown(); // Refresh main account selector
@@ -10246,8 +10253,8 @@ namespace Risk_Manager
             // Info label for privacy mode
             var privacyModeInfoLabel = new Label
             {
-                Text = "When enabled, account numbers will be partially masked with asterisks (*).\n" +
-                       "Only the first 4 characters will be visible, the rest will be masked.\n" +
+                Text = "When enabled, account numbers will be partially masked with asterisks (*) for ALL accounts.\n" +
+                       "The first 7 characters will be visible, the rest will be masked (e.g., \"1234567***\").\n" +
                        "This is useful when streaming or taking screenshots to protect your account privacy.\n" +
                        "Note: This only affects the display - it does not change any backend data.",
                 AutoSize = true,
