@@ -10235,29 +10235,7 @@ namespace Risk_Manager
                     // Refresh ALL UI elements to apply/remove masking in real-time
                     RefreshAccountDropdown(); // Refresh main account selector
                     RefreshAccountsSummary(); // Refresh stats grid (account column)
-                    RefreshStatsDetailView(); // Refresh stats detail grid (account row)
-                    
-                    // Refresh copy settings dropdowns if they exist
-                    var copySettingsTab = tabControl?.TabPages.Cast<TabPage>().FirstOrDefault(tp => tp.Text == "Copy Settings");
-                    if (copySettingsTab != null)
-                    {
-                        // Find and refresh the copy settings source dropdown
-                        foreach (Control ctrl in copySettingsTab.Controls)
-                        {
-                            if (ctrl is Panel panel)
-                            {
-                                foreach (Control innerCtrl in panel.Controls)
-                                {
-                                    if (innerCtrl is ComboBox comboBox && comboBox.Name == "copySettingsSourceComboBox")
-                                    {
-                                        // Re-trigger custom drawing by invalidating
-                                        comboBox.Invalidate();
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    RefreshAccountStats(); // Refresh stats detail grid (account row)
                 }
             };
 
