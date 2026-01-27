@@ -69,6 +69,7 @@ class CustomCardHeaderControl : Panel
 {
     private Label titleLabel;
     private PictureBox iconBox;
+    private Label disabledLabel;
     
     public CustomCardHeaderControl(string title, Image icon)
     {
@@ -104,7 +105,20 @@ class CustomCardHeaderControl : Panel
             this.Controls.Add(iconBox);
         }
 
-        
+        // Disabled label (red X) - initially hidden
+        disabledLabel = new Label
+        {
+            Text = "✖",
+            Font = new Font("Segoe UI", 28, FontStyle.Bold),
+            ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
+            BackColor = Color.Transparent,
+            TextAlign = ContentAlignment.MiddleRight,
+            Dock = DockStyle.Right,
+            Width = 50,
+            UseCompatibleTextRendering = false,
+            Visible = false // Initially hidden
+        };
+        this.Controls.Add(disabledLabel);
 
         // Add spacing below the header
         this.Padding = new Padding(0, 0, 0, 10); // Add padding below the header
@@ -112,6 +126,15 @@ class CustomCardHeaderControl : Panel
     
     public Label TitleLabel => titleLabel;
     public PictureBox IconBox => iconBox;
+    public Label DisabledLabel => disabledLabel;
+    
+    /// <summary>
+    /// Shows or hides the disabled label (red X)
+    /// </summary>
+    public void SetDisabled(bool disabled)
+    {
+        disabledLabel.Visible = disabled;
+    }
 }
 class CustomHeaderControl : Panel
 {
@@ -11020,6 +11043,7 @@ namespace Risk_Manager
             
             // Get the feature checker from Tag (might be wrapped in anonymous object)
             Func<bool> featureChecker = null;
+            bool currentlyDisabled = false;
             
             if (cardPanel.Tag != null)
             {
@@ -11028,6 +11052,13 @@ namespace Risk_Manager
                 if (featureCheckerProp != null)
                 {
                     featureChecker = featureCheckerProp.GetValue(cardPanel.Tag) as Func<bool>;
+                    
+                    // Check if currently disabled
+                    var isDisabledProp = cardPanel.Tag.GetType().GetProperty("IsDisabled");
+                    if (isDisabledProp != null && isDisabledProp.GetValue(cardPanel.Tag) is bool isDisabled)
+                    {
+                        currentlyDisabled = isDisabled;
+                    }
                 }
                 else
                 {
@@ -11039,64 +11070,148 @@ namespace Risk_Manager
             // Check if this card has a feature checker
             if (featureChecker != null)
             {
-                // Determine if overlay should be shown
-                bool shouldShowOverlay = !featureChecker();
+                // Determine if card should be disabled
+                bool shouldBeDisabled = !featureChecker();
                 
-                // Check if overlay panel exists
-                var existingOverlay = cardPanel.Controls.OfType<Panel>()
-                    .FirstOrDefault(p => p.Name == "DisabledOverlay");
-                bool hasOverlay = existingOverlay != null;
-                
-                if (shouldShowOverlay && !hasOverlay)
+                if (shouldBeDisabled && !currentlyDisabled)
                 {
-                    // Add overlay
+                    // Add disabled state
                     AddDisabledOverlay(cardPanel);
                 }
-                else if (!shouldShowOverlay && hasOverlay)
+                else if (!shouldBeDisabled && currentlyDisabled)
                 {
-                    // Remove overlay panel
-                    cardPanel.Controls.Remove(existingOverlay);
-                    existingOverlay?.Dispose();
+                    // Remove disabled state
+                    RemoveDisabledOverlay(cardPanel);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Removes the disabled state from a card panel
+        /// </summary>
+        private void RemoveDisabledOverlay(Panel cardPanel)
+        {
+            if (cardPanel == null) return;
+            
+            // Find the header control and hide the disabled label
+            var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
+            if (header != null)
+            {
+                header.SetDisabled(false);
+            }
+            
+            // Restore opacity of all content controls
+            foreach (Control control in cardPanel.Controls)
+            {
+                if (control != header)
+                {
+                    RestoreControlOpacity(control);
+                }
+            }
+            
+            // Restore cursor
+            cardPanel.Cursor = Cursors.Default;
+            
+            // Restore Tag to just the feature checker
+            if (cardPanel.Tag != null)
+            {
+                var featureCheckerProp = cardPanel.Tag.GetType().GetProperty("FeatureChecker");
+                if (featureCheckerProp != null)
+                {
+                    var featureChecker = featureCheckerProp.GetValue(cardPanel.Tag) as Func<bool>;
                     cardPanel.Tag = featureChecker;
-                    cardPanel.Cursor = Cursors.Default;
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Restores the original opacity of a control and its children
+        /// </summary>
+        private void RestoreControlOpacity(Control control)
+        {
+            if (control == null) return;
+            
+            // Restore control's foreground color to full opacity
+            if (control is Label label)
+            {
+                // Restore to full opacity by setting alpha to 255
+                label.ForeColor = Color.FromArgb(255, label.ForeColor);
+            }
+            else if (control is Panel panel)
+            {
+                // Recursively restore opacity for child controls
+                foreach (Control child in panel.Controls)
+                {
+                    RestoreControlOpacity(child);
                 }
             }
         }
 
         private void AddDisabledOverlay(Panel cardPanel)
         {
-            // Check if overlay already exists
-            var existingOverlay = cardPanel.Controls.OfType<Panel>()
-                .FirstOrDefault(p => p.Name == "DisabledOverlay");
-            if (existingOverlay != null)
+            // Check if already marked as disabled
+            if (cardPanel.Tag is Func<bool> || (cardPanel.Tag != null && 
+                cardPanel.Tag.GetType().GetProperty("IsDisabled")?.GetValue(cardPanel.Tag) is bool isDisabled && isDisabled))
             {
-                return; // Already has overlay
+                return; // Already disabled
             }
             
-            // Create a semi-transparent overlay panel (20% opacity for better visibility)
-            var overlay = new Panel
+            // Find the header control and show the disabled label
+            var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
+            if (header != null)
             {
-                Name = "DisabledOverlay", // Identify this as the overlay panel
-                Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(51, 40, 40, 40), // 20% opacity (51/255 ≈ 0.2)
-                Cursor = Cursors.No
-            };
-
-            // Create the red X label
-            var disabledLabel = new Label
+                header.SetDisabled(true);
+            }
+            
+            // Reduce opacity of all content controls (except header) to indicate disabled state
+            foreach (Control control in cardPanel.Controls)
             {
-                Text = "✖",
-                Font = new Font("Segoe UI", 72, FontStyle.Bold),
-                ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Fill,
-                UseCompatibleTextRendering = false
-            };
-
-            overlay.Controls.Add(disabledLabel);
-            cardPanel.Controls.Add(overlay);
-            overlay.BringToFront();
+                if (control != header)
+                {
+                    // Make content semi-transparent to indicate disabled state
+                    SetControlOpacity(control, 0.4); // 40% opacity
+                }
+            }
+            
+            // Disable pointer events - set cursor to No
+            cardPanel.Cursor = Cursors.No;
+            
+            // Store disabled state in Tag to prevent re-processing
+            var featureChecker = cardPanel.Tag as Func<bool>;
+            if (featureChecker != null)
+            {
+                // Wrap the feature checker with a disabled flag
+                cardPanel.Tag = new { FeatureChecker = featureChecker, IsDisabled = true };
+            }
+            else
+            {
+                cardPanel.Tag = new { IsDisabled = true };
+            }
+        }
+        
+        /// <summary>
+        /// Sets the opacity of a control and its children by adjusting ForeColor alpha
+        /// </summary>
+        private void SetControlOpacity(Control control, double opacity)
+        {
+            if (control == null) return;
+            
+            // Calculate alpha value (0-255)
+            int alpha = (int)(opacity * 255);
+            
+            // Update control's foreground color with new alpha
+            if (control is Label label)
+            {
+                label.ForeColor = Color.FromArgb(alpha, label.ForeColor);
+            }
+            else if (control is Panel panel)
+            {
+                // Recursively set opacity for child controls
+                foreach (Control child in panel.Controls)
+                {
+                    SetControlOpacity(child, opacity);
+                }
+            }
         }
 
         private string GetPositionLossLimit()

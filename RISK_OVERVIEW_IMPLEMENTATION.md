@@ -128,6 +128,43 @@ Potential improvements for future versions:
 5. **Comparison View**: Compare risk settings across multiple accounts
 6. **Quick Actions**: Add buttons for common actions (lock/unlock, reset limits)
 
+## Disabled Card State Feature
+
+### Overview
+Cards can now display a disabled state when their associated feature is not enabled in the account settings. This provides clear visual feedback without obscuring the card content.
+
+### Visual Indicators
+- **Red 'X' Symbol**: A red ✖ symbol (28pt font, #DC3232 color) appears in the top-right corner of the card header
+- **Reduced Opacity**: Card content is displayed at 40% opacity to indicate disabled state
+- **Cursor Change**: Mouse cursor changes to "No" symbol when hovering over disabled cards
+
+### Implementation Details
+1. **CustomCardHeaderControl** - Enhanced to include a disabled label that can be shown/hidden
+   - `SetDisabled(bool)` method controls visibility of the red X
+   - Disabled label is positioned on the right side of the header
+
+2. **AddDisabledOverlay()** - Modified to implement non-overlay disabled state
+   - Shows red X in card header
+   - Reduces opacity of card content (40%)
+   - Sets cursor to "No" to indicate non-interactive state
+   - Stores disabled state in card Tag
+
+3. **RemoveDisabledOverlay()** - Added to restore enabled state
+   - Hides red X in card header
+   - Restores full opacity of card content (100%)
+   - Restores default cursor
+
+4. **UpdateCardOverlay()** - Enhanced to handle state transitions
+   - Checks feature enabled status via stored function delegate
+   - Transitions between enabled and disabled states as needed
+
+### Non-Interactive Behavior
+When a card is disabled:
+- Pointer events are disabled (cursor shows "No" symbol)
+- Card content remains visible but faded (40% opacity)
+- Red X provides clear visual indicator without overlay
+- Card maintains its layout and structure
+
 ## Testing Recommendations
 
 1. **Account Selection**: Verify data updates when switching accounts
@@ -136,6 +173,8 @@ Potential improvements for future versions:
 4. **Theme Changes**: Verify display in all three theme modes (Blue, Black, White)
 5. **Overflow Content**: Test with many blocked symbols and contract limits
 6. **Service Errors**: Test behavior when settings service fails to initialize
+7. **Disabled State**: Test cards with disabled features show red X and reduced opacity
+8. **State Transitions**: Test enabling/disabling features updates card state correctly
 
 ## Files Modified
 
@@ -148,6 +187,18 @@ Potential improvements for future versions:
    - Implemented `CreateRiskOverviewPanel()` method (line 5318)
    - Implemented `CreateRiskOverviewCard()` helper method (line 5417)
    - Added 10 data retrieval helper methods (lines 5489-5630)
+   - Enhanced `CustomCardHeaderControl` class with disabled state support
+   - Modified `AddDisabledOverlay()` to use non-overlay approach with red X indicator
+   - Added `RemoveDisabledOverlay()` to restore enabled state
+   - Enhanced `UpdateCardOverlay()` to handle state transitions
+   - Added `SetControlOpacity()` and `RestoreControlOpacity()` helper methods
+
+3. **RISK_OVERVIEW_IMPLEMENTATION.md**
+   - Added documentation for disabled card state feature
+   - Updated testing recommendations
+
+4. **RISK_OVERVIEW_UI_MOCKUP.md**
+   - Updated interactive states to document disabled card behavior
 
 ## Conclusion
 
@@ -156,5 +207,6 @@ The Risk Overview tab provides a centralized, easy-to-read view of all risk mana
 - Providing quick visibility into critical risk settings
 - Using visual indicators (emojis) for better comprehension
 - Maintaining consistency with existing UI patterns
+- Clearly indicating disabled features with a red X and reduced opacity (no overlay)
 
 The implementation is clean, maintainable, and follows the established patterns in the codebase while adding significant value to the risk management workflow.
