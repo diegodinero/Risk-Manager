@@ -137,32 +137,39 @@ Cards can now display a disabled state when their associated feature is not enab
 - **Red 'X' Symbol**: A red ✖ symbol (28pt font, #DC3232 color) appears in the top-right corner of the card header
 - **Reduced Opacity**: Card content is displayed at 40% opacity to indicate disabled state
 - **Cursor Change**: Mouse cursor changes to "No" symbol when hovering over disabled cards
+- **Non-Interactive**: Card is set to Enabled = false, preventing all user interaction
 
 ### Implementation Details
 1. **CustomCardHeaderControl** - Enhanced to include a disabled label that can be shown/hidden
    - `SetDisabled(bool)` method controls visibility of the red X
    - Disabled label is positioned on the right side of the header
+   - Disabled label itself is set to Enabled = false to prevent interaction
 
-2. **AddDisabledOverlay()** - Modified to implement non-overlay disabled state
+2. **SetCardDisabled()** - Applies the disabled state to a card
    - Shows red X in card header
+   - Stores original colors of all controls before modification
    - Reduces opacity of card content (40%)
+   - Sets card Enabled property to false, disabling all interaction
    - Sets cursor to "No" to indicate non-interactive state
-   - Stores disabled state in card Tag
+   - Stores disabled state and original colors in card Tag
 
-3. **RemoveDisabledOverlay()** - Added to restore enabled state
+3. **SetCardEnabled()** - Restores the enabled state of a card
    - Hides red X in card header
-   - Restores full opacity of card content (100%)
+   - Restores original colors from stored dictionary
+   - Sets card Enabled property to true, re-enabling interaction
    - Restores default cursor
 
-4. **UpdateCardOverlay()** - Enhanced to handle state transitions
+4. **UpdateCardOverlay()** - Manages state transitions
    - Checks feature enabled status via stored function delegate
    - Transitions between enabled and disabled states as needed
 
 ### Non-Interactive Behavior
 When a card is disabled:
-- Pointer events are disabled (cursor shows "No" symbol)
+- Card Enabled property is set to false, disabling all child controls
+- All click events and user interactions are prevented
 - Card content remains visible but faded (40% opacity)
 - Red X provides clear visual indicator without overlay
+- Original colors are preserved and restored when re-enabled
 - Card maintains its layout and structure
 
 ## Testing Recommendations
@@ -188,10 +195,11 @@ When a card is disabled:
    - Implemented `CreateRiskOverviewCard()` helper method (line 5417)
    - Added 10 data retrieval helper methods (lines 5489-5630)
    - Enhanced `CustomCardHeaderControl` class with disabled state support
-   - Modified `AddDisabledOverlay()` to use non-overlay approach with red X indicator
-   - Added `RemoveDisabledOverlay()` to restore enabled state
+   - Added `SetCardDisabled()` method to apply disabled state with color preservation
+   - Added `SetCardEnabled()` method to restore enabled state with original colors
    - Enhanced `UpdateCardOverlay()` to handle state transitions
-   - Added `SetControlOpacity()` and `RestoreControlOpacity()` helper methods
+   - Added `StoreOriginalColors()` helper method to preserve original colors
+   - Added `SetControlOpacity()` helper method to reduce opacity
 
 3. **RISK_OVERVIEW_IMPLEMENTATION.md**
    - Added documentation for disabled card state feature
