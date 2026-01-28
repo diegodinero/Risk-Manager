@@ -185,7 +185,7 @@ The progress bars dynamically:
 
 ### 2. Type Summary Grid (typeSummaryGrid)
 **Columns with Progress Bars:**
-- **Total P&L**: Uses default threshold for visualization
+- **Gross P&L**: Uses default threshold for visualization
 - **Open P&L**: Uses default threshold for visualization
 
 ### 3. Stats Detail Grid (statsDetailGrid)

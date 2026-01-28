@@ -32,7 +32,7 @@ Successfully implemented a new "General Settings" tab in the Risk-Manager applic
 ### 4. Data Grid Updates
 - ✅ Progress bars implemented for:
   - **statsGrid** (Accounts Summary): Gross P&L and Open P&L columns
-  - **typeSummaryGrid** (Type Summary): Total P&L and Open P&L columns
+  - **typeSummaryGrid** (Type Summary): Gross P&L and Open P&L columns
 - ✅ statsDetailGrid intentionally excluded (displays individual metrics, not P&L columns)
 
 ### 5. User Preference Persistence
