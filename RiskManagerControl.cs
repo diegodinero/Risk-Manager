@@ -4288,7 +4288,7 @@ namespace Risk_Manager
             }
             else if (isTotalPnL)
             {
-                // Total P&L: use Daily Loss Limit and Daily Profit Target (aggregated)
+                // Gross P&L: use Daily Loss Limit and Daily Profit Target (aggregated)
                 if (pnlValue < 0 && dailyLossLimit < 0)
                 {
                     // Negative P&L approaching loss limit
@@ -4486,7 +4486,7 @@ namespace Risk_Manager
             typeSummaryGrid.Columns.Add("Equity", "Equity");
             typeSummaryGrid.Columns.Add("OpenPnL", "Open P&L");
             typeSummaryGrid.Columns.Add("ClosedPnL", "Closed P&L");
-            typeSummaryGrid.Columns.Add("TotalPnL", "Total P&L");
+            typeSummaryGrid.Columns.Add("TotalPnL", "Gross P&L");
             typeSummaryGrid.Columns.Add("Drawdown", "Drawdown");
 
             // Add CellPainting event handler for progress bars
