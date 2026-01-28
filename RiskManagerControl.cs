@@ -4629,7 +4629,7 @@ namespace Risk_Manager
 
                     accountIndex++;
 
-                    // Get Open P&L, Closed P&L and Drawdown from AdditionalInfo
+                    // Get Open P&L, Closed P&L, Gross P&L and Drawdown from AdditionalInfo
                     if (account.AdditionalInfo != null)
                     {
                         foreach (var info in account.AdditionalInfo)
@@ -4649,6 +4649,12 @@ namespace Risk_Manager
                                 if (info.Value is double cv) data.ClosedPnL += cv;
                             }
 
+                            // Gross P&L - from NetPnL field (same as Stats tab)
+                            if (string.Equals(id, "NetPnL", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (info.Value is double gv) data.GrossPnL += gv;
+                            }
+
                             // Trailing Drawdown - from AutoLiquidateThresholdCurrentValue field
                             if (string.Equals(id, "AutoLiquidateThresholdCurrentValue", StringComparison.OrdinalIgnoreCase))
                             {
@@ -4666,6 +4672,7 @@ namespace Risk_Manager
                     totalData.Equity += kvp.Value.Equity;
                     totalData.OpenPnL += kvp.Value.OpenPnL;
                     totalData.ClosedPnL += kvp.Value.ClosedPnL;
+                    totalData.GrossPnL += kvp.Value.GrossPnL;
                     totalData.TrailingDrawdown += kvp.Value.TrailingDrawdown;
                     // Aggregate limits for total row
                     totalData.DailyLossLimit += kvp.Value.DailyLossLimit;
@@ -4683,7 +4690,6 @@ namespace Risk_Manager
                 {
                     var groupName = kvp.Key;
                     var data = kvp.Value;
-                    var totalPnL = data.OpenPnL + data.ClosedPnL;
                     // Calculate Drawdown as Equity - Trailing Drawdown
                     var drawdown = data.Equity - data.TrailingDrawdown;
 
@@ -4693,13 +4699,12 @@ namespace Risk_Manager
                         FormatNumeric(data.Equity),
                         FormatNumeric(data.OpenPnL),
                         FormatNumeric(data.ClosedPnL),
-                        FormatNumeric(totalPnL),
+                        FormatNumeric(data.GrossPnL),
                         FormatNumeric(drawdown)
                     );
                 }
 
                 // Add total row
-                var totalTotalPnL = totalData.OpenPnL + totalData.ClosedPnL;
                 // Calculate total Drawdown as Equity - Trailing Drawdown
                 var totalDrawdown = totalData.Equity - totalData.TrailingDrawdown;
                 typeSummaryGrid.Rows.Add(
@@ -4708,7 +4713,7 @@ namespace Risk_Manager
                     FormatNumeric(totalData.Equity),
                     FormatNumeric(totalData.OpenPnL),
                     FormatNumeric(totalData.ClosedPnL),
-                    FormatNumeric(totalTotalPnL),
+                    FormatNumeric(totalData.GrossPnL),
                     FormatNumeric(totalDrawdown)
                 );
             }
@@ -4758,6 +4763,7 @@ namespace Risk_Manager
             public double Equity { get; set; }
             public double OpenPnL { get; set; }
             public double ClosedPnL { get; set; }
+            public double GrossPnL { get; set; }
             public double TrailingDrawdown { get; set; }
             // Aggregated limits for progress bar calculations
             public double DailyLossLimit { get; set; }
