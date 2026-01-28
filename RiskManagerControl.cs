@@ -10900,7 +10900,7 @@ namespace Risk_Manager
                 BackColor = CardBackground,
                 Padding = new Padding(20),
                 Margin = new Padding(0, 0, 15, 15),
-                Tag = (Func<bool>)(() => IsFeatureEnabled(s => s.TradingTimesEnabled)) // Store feature checker
+                Tag = "TradingTimesCard" // Special tag for refresh handling
             };
 
             var cardLayout = new FlowLayoutPanel
@@ -11002,8 +11002,8 @@ namespace Risk_Manager
 
             cardPanel.Controls.Add(cardLayout);
             
-            // Apply disabled state if feature is disabled
-            UpdateCardOverlay(cardPanel);
+            // Note: Trading Times card uses special refresh logic (recreates entire card)
+            // So we don't call UpdateCardOverlay here - the card is handled by RefreshLabelsInControl
             
             return cardPanel;
         }
