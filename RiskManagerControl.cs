@@ -11117,8 +11117,8 @@ namespace Risk_Manager
         {
             if (cardPanel == null) return;
             
-            // Find the header control and hide the disabled label
-            var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
+            // Find the header control and hide the disabled label (search recursively)
+            var header = FindCustomCardHeader(cardPanel);
             if (header != null)
             {
                 header.SetDisabled(false);
@@ -11188,6 +11188,32 @@ namespace Risk_Manager
                 }
             }
         }
+        
+        /// <summary>
+        /// Recursively finds the CustomCardHeaderControl in a panel
+        /// </summary>
+        private CustomCardHeaderControl FindCustomCardHeader(Control control)
+        {
+            if (control == null) return null;
+            
+            // Check if this control is the header
+            if (control is CustomCardHeaderControl header)
+            {
+                return header;
+            }
+            
+            // Recursively search children
+            foreach (Control child in control.Controls)
+            {
+                var found = FindCustomCardHeader(child);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+            
+            return null;
+        }
 
         /// <summary>
         /// Applies the disabled state to a card panel, showing a red X and reducing opacity
@@ -11206,8 +11232,8 @@ namespace Risk_Manager
                 }
             }
             
-            // Find the header control and show the disabled label
-            var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
+            // Find the header control and show the disabled label (search recursively)
+            var header = FindCustomCardHeader(cardPanel);
             if (header != null)
             {
                 header.SetDisabled(true);
