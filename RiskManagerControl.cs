@@ -11132,8 +11132,19 @@ namespace Risk_Manager
                 {
                     if (kvp.Key is Label label)
                     {
-                        label.ForeColor = kvp.Value;
+                        // Ensure we restore with full alpha (255) to guarantee full opacity
+                        Color restoredColor = Color.FromArgb(255, kvp.Value);
+                        label.ForeColor = restoredColor;
                     }
+                }
+            }
+            
+            // Also recursively restore full opacity for any controls that might have been missed
+            foreach (Control control in cardPanel.Controls)
+            {
+                if (control != header)
+                {
+                    RestoreControlOpacity(control);
                 }
             }
             
@@ -11151,6 +11162,29 @@ namespace Risk_Manager
                     {
                         cardPanel.Tag = featureChecker;
                     }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Recursively restores full opacity (alpha = 255) for all controls
+        /// </summary>
+        private void RestoreControlOpacity(Control control)
+        {
+            if (control == null) return;
+            
+            // Restore full opacity for labels
+            if (control is Label label)
+            {
+                // Ensure alpha is 255 (full opacity)
+                label.ForeColor = Color.FromArgb(255, label.ForeColor);
+            }
+            else if (control is Panel panel)
+            {
+                // Recursively restore opacity for child controls
+                foreach (Control child in panel.Controls)
+                {
+                    RestoreControlOpacity(child);
                 }
             }
         }
