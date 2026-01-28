@@ -11425,10 +11425,30 @@ namespace Risk_Manager
             if (control == null) return;
 
             // Check if this is a card panel with feature overlay support
-            if (control is Panel panel && panel.Tag is Func<bool>)
+            if (control is Panel panel && panel.Tag != null)
             {
-                // Update the overlay state for this card
-                UpdateCardOverlay(panel);
+                // Check if Tag is directly a feature checker OR wrapped in an anonymous object
+                bool hasFeatureChecker = false;
+                
+                if (panel.Tag is Func<bool>)
+                {
+                    hasFeatureChecker = true;
+                }
+                else
+                {
+                    // Check if Tag has FeatureChecker property (wrapped state)
+                    var featureCheckerProp = panel.Tag.GetType().GetProperty("FeatureChecker");
+                    if (featureCheckerProp != null && featureCheckerProp.GetValue(panel.Tag) is Func<bool>)
+                    {
+                        hasFeatureChecker = true;
+                    }
+                }
+                
+                if (hasFeatureChecker)
+                {
+                    // Update the overlay state for this card
+                    UpdateCardOverlay(panel);
+                }
             }
 
             // Check if this is the Trading Times card - needs special refresh
