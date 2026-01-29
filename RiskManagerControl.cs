@@ -11396,11 +11396,16 @@ namespace Risk_Manager
                             var valueGetters = valueGettersProp.GetValue(cardPanel.Tag) as Func<string>[];
                             var featureChecker = featureCheckerProp.GetValue(cardPanel.Tag) as Func<bool>;
                             
-                            // Recreate the card
-                            parent.Controls.Remove(cardPanel);
-                            var newCard = CreateRiskOverviewCard(title, labels, valueGetters, featureChecker, cardIdValue);
-                            parent.Controls.Add(newCard);
-                            parent.Controls.SetChildIndex(newCard, index);
+                            // Validate all required parameters were successfully extracted
+                            if (title != null && labels != null && valueGetters != null && featureChecker != null && cardIdValue != null)
+                            {
+                                // Recreate the card
+                                parent.Controls.Remove(cardPanel);
+                                cardPanel.Dispose(); // Dispose old panel to prevent resource leaks
+                                var newCard = CreateRiskOverviewCard(title, labels, valueGetters, featureChecker, cardIdValue);
+                                parent.Controls.Add(newCard);
+                                parent.Controls.SetChildIndex(newCard, index);
+                            }
                         }
                     }
                     return;
@@ -11422,6 +11427,7 @@ namespace Risk_Manager
                 if (parent != null && index >= 0)
                 {
                     parent.Controls.Remove(tradingPanel);
+                    tradingPanel.Dispose(); // Dispose old panel to prevent resource leaks
                     var newCard = CreateTradingTimesOverviewCard();
                     parent.Controls.Add(newCard);
                     parent.Controls.SetChildIndex(newCard, index);
