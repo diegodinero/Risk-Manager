@@ -10810,21 +10810,24 @@ namespace Risk_Manager
                 "Position Limits",
                 new[] { "Loss Limit:", "Profit Target:" },
                 new[] { GetPositionLossLimit, GetPositionProfitTarget },
-                () => IsFeatureEnabled(s => s.PositionsEnabled)
+                () => IsFeatureEnabled(s => s.PositionsEnabled),
+                "PositionLimitsCard"
             ));
 
             flowLayout.Controls.Add(CreateRiskOverviewCard(
                 "Daily Limits",
                 new[] { "Daily Loss Limit:", "Daily Profit Target:" },
                 new[] { GetDailyLossLimit, GetDailyProfitTarget },
-                () => IsFeatureEnabled(s => s.LimitsEnabled)
+                () => IsFeatureEnabled(s => s.LimitsEnabled),
+                "DailyLimitsCard"
             ));
 
             flowLayout.Controls.Add(CreateRiskOverviewCard(
                 "Symbol Restrictions",
                 new[] { "Blocked Symbols:", "Default Contract Limit:", "Symbol-Specific Limits:" },
                 new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits },
-                () => IsFeatureEnabled(s => s.SymbolsEnabled)
+                () => IsFeatureEnabled(s => s.SymbolsEnabled),
+                "SymbolRestrictionsCard"
             ));
 
             var tradingTimesCard = CreateTradingTimesOverviewCard();
@@ -10849,7 +10852,7 @@ namespace Risk_Manager
         /// <summary>
         /// Creates a card panel for displaying risk overview information.
         /// </summary>
-        private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters, Func<bool> isFeatureEnabled = null)
+        private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters, Func<bool> isFeatureEnabled = null, string cardId = null)
         {
             var cardPanel = new Panel
             {
@@ -10858,7 +10861,7 @@ namespace Risk_Manager
                 BackColor = CardBackground,
                 Padding = new Padding(20),
                 Margin = new Padding(0, 0, 15, 15), // Add right and bottom margin for spacing
-                Tag = isFeatureEnabled // Store the feature checker for later refresh
+                Tag = string.IsNullOrEmpty(cardId) ? (object)isFeatureEnabled : new { CardId = cardId, FeatureChecker = isFeatureEnabled, Title = title, Labels = labels, ValueGetters = valueGetters }
             };
 
             var cardLayout = new FlowLayoutPanel
@@ -11367,7 +11370,44 @@ namespace Risk_Manager
         {
             if (control == null) return;
 
-            // Check if this is a card panel with feature overlay support
+            // Check if this is a recreatable card (has anonymous object Tag with CardId)
+            if (control is Panel cardPanel && cardPanel.Tag != null)
+            {
+                var tagType = cardPanel.Tag.GetType();
+                var cardIdProp = tagType.GetProperty("CardId");
+                if (cardIdProp != null)
+                {
+                    // This is a recreatable card - recreate it like Trading Times card
+                    var parent = cardPanel.Parent;
+                    var index = parent?.Controls.GetChildIndex(cardPanel) ?? -1;
+                    if (parent != null && index >= 0)
+                    {
+                        // Extract card creation parameters
+                        var titleProp = tagType.GetProperty("Title");
+                        var labelsProp = tagType.GetProperty("Labels");
+                        var valueGettersProp = tagType.GetProperty("ValueGetters");
+                        var featureCheckerProp = tagType.GetProperty("FeatureChecker");
+                        var cardIdValue = cardIdProp.GetValue(cardPanel.Tag) as string;
+                        
+                        if (titleProp != null && labelsProp != null && valueGettersProp != null && featureCheckerProp != null)
+                        {
+                            var title = titleProp.GetValue(cardPanel.Tag) as string;
+                            var labels = labelsProp.GetValue(cardPanel.Tag) as string[];
+                            var valueGetters = valueGettersProp.GetValue(cardPanel.Tag) as Func<string>[];
+                            var featureChecker = featureCheckerProp.GetValue(cardPanel.Tag) as Func<bool>;
+                            
+                            // Recreate the card
+                            parent.Controls.Remove(cardPanel);
+                            var newCard = CreateRiskOverviewCard(title, labels, valueGetters, featureChecker, cardIdValue);
+                            parent.Controls.Add(newCard);
+                            parent.Controls.SetChildIndex(newCard, index);
+                        }
+                    }
+                    return;
+                }
+            }
+
+            // Check if this is a card panel with feature overlay support (old approach)
             if (control is Panel panel && panel.Tag is Func<bool>)
             {
                 // Update the overlay state for this card
