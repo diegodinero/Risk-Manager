@@ -253,6 +253,9 @@ namespace Risk_Manager
         private CheckBox symbolsFeatureCheckbox;
         private CheckBox tradingTimesFeatureCheckbox;
         
+        // Flag to prevent cascading events when master toggle updates individual checkboxes
+        private bool isUpdatingFeatureToggles = false;
+        
         // Risk enforcement mode radio buttons
         private RadioButton strictModeRadioButton;
         private RadioButton warningModeRadioButton;
@@ -2078,11 +2081,25 @@ namespace Risk_Manager
         /// <summary>
         /// Updates the enabled/disabled state of a specific navigation tab based on its feature toggle.
         /// This method enables or disables a tab when its corresponding feature checkbox is toggled.
+        /// Respects settings lock state - tabs remain disabled if settings are locked.
         /// </summary>
         private void UpdateFeatureTabState(string tabName, bool enabled)
         {
             try
             {
+                // Check if settings are locked - if so, don't enable the tab
+                var accountNumber = GetSelectedAccountNumber();
+                if (!string.IsNullOrEmpty(accountNumber))
+                {
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (settingsService.IsInitialized && settingsService.AreSettingsLocked(accountNumber))
+                    {
+                        // Settings are locked - keep tabs disabled regardless of feature toggle
+                        System.Diagnostics.Debug.WriteLine($"UpdateFeatureTabState: {tabName} - settings locked, keeping tab disabled");
+                        return;
+                    }
+                }
+                
                 foreach (var btn in navButtons)
                 {
                     var itemName = btn.Tag as string;
@@ -9963,12 +9980,30 @@ namespace Risk_Manager
                     // Add event handler for master toggle
                     checkbox.CheckedChanged += (s, e) =>
                     {
-                        // When master toggle changes, sync individual toggles
-                        var masterChecked = featureToggleEnabledCheckbox.Checked;
-                        if (positionsFeatureCheckbox != null) positionsFeatureCheckbox.Checked = masterChecked;
-                        if (limitsFeatureCheckbox != null) limitsFeatureCheckbox.Checked = masterChecked;
-                        if (symbolsFeatureCheckbox != null) symbolsFeatureCheckbox.Checked = masterChecked;
-                        if (tradingTimesFeatureCheckbox != null) tradingTimesFeatureCheckbox.Checked = masterChecked;
+                        // Set flag to prevent cascading events from individual checkboxes
+                        isUpdatingFeatureToggles = true;
+                        try
+                        {
+                            // When master toggle changes, sync individual toggles
+                            var masterChecked = featureToggleEnabledCheckbox.Checked;
+                            if (positionsFeatureCheckbox != null) positionsFeatureCheckbox.Checked = masterChecked;
+                            if (limitsFeatureCheckbox != null) limitsFeatureCheckbox.Checked = masterChecked;
+                            if (symbolsFeatureCheckbox != null) symbolsFeatureCheckbox.Checked = masterChecked;
+                            if (tradingTimesFeatureCheckbox != null) tradingTimesFeatureCheckbox.Checked = masterChecked;
+                            
+                            // After all checkboxes are updated, perform single refresh
+                            RefreshRiskOverviewCards();
+                            
+                            // Update all tab states at once
+                            UpdateFeatureTabState("📈 Positions", masterChecked);
+                            UpdateFeatureTabState("📊 Limits", masterChecked);
+                            UpdateFeatureTabState("🛡️ Symbols", masterChecked);
+                            UpdateFeatureTabState("🕐 Allowed Trading Times", masterChecked);
+                        }
+                        finally
+                        {
+                            isUpdatingFeatureToggles = false;
+                        }
                     };
                 }
                 else if (feature == "Positions")
@@ -9977,6 +10012,9 @@ namespace Risk_Manager
                     // Add event handler for Positions feature checkbox
                     checkbox.CheckedChanged += (s, e) =>
                     {
+                        // Skip if we're being updated by master toggle
+                        if (isUpdatingFeatureToggles) return;
+                        
                         UpdateFeatureTabState("📈 Positions", positionsFeatureCheckbox.Checked);
                         RefreshRiskOverviewCards();
                     };
@@ -9987,6 +10025,9 @@ namespace Risk_Manager
                     // Add event handler for Limits feature checkbox
                     checkbox.CheckedChanged += (s, e) =>
                     {
+                        // Skip if we're being updated by master toggle
+                        if (isUpdatingFeatureToggles) return;
+                        
                         UpdateFeatureTabState("📊 Limits", limitsFeatureCheckbox.Checked);
                         RefreshRiskOverviewCards();
                     };
@@ -9997,6 +10038,9 @@ namespace Risk_Manager
                     // Add event handler for Symbols feature checkbox
                     checkbox.CheckedChanged += (s, e) =>
                     {
+                        // Skip if we're being updated by master toggle
+                        if (isUpdatingFeatureToggles) return;
+                        
                         UpdateFeatureTabState("🛡️ Symbols", symbolsFeatureCheckbox.Checked);
                         RefreshRiskOverviewCards();
                     };
@@ -10007,6 +10051,9 @@ namespace Risk_Manager
                     // Add event handler for Allowed Trading Times feature checkbox
                     checkbox.CheckedChanged += (s, e) =>
                     {
+                        // Skip if we're being updated by master toggle
+                        if (isUpdatingFeatureToggles) return;
+                        
                         UpdateFeatureTabState("🕐 Allowed Trading Times", tradingTimesFeatureCheckbox.Checked);
                         RefreshRiskOverviewCards();
                     };
