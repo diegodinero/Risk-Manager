@@ -9918,6 +9918,15 @@ namespace Risk_Manager
                         "Success", 
                         MessageBoxButtons.OK, 
                         MessageBoxIcon.Information);
+                    
+                    // Refresh Risk Overview panel if it's currently displayed to update card overlays
+                    if (selectedNavItem != null && selectedNavItem.EndsWith("Risk Overview"))
+                    {
+                        if (pageContents.TryGetValue(selectedNavItem, out var riskOverviewPanel))
+                        {
+                            RefreshRiskOverviewPanel(riskOverviewPanel);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
