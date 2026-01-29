@@ -8153,11 +8153,11 @@ namespace Risk_Manager
                     {
                         core.CancelOrder(order);
                         canceledCount++;
-                        System.Diagnostics.Debug.WriteLine($"Canceled working order: {order.Symbol} for account {order.Account?.Id}");
+                        System.Diagnostics.Debug.WriteLine($"Canceled working order: {order?.Symbol ?? "Unknown"} for account {order.Account?.Id}");
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Error canceling order {order.Symbol}: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"Error canceling order {order?.Symbol ?? "Unknown"}: {ex.Message}");
                     }
                 }
 
@@ -9328,8 +9328,13 @@ namespace Risk_Manager
         /// - Cancels all working orders before flattening to prevent pending orders from executing
         /// - Flattens all open positions across all accounts
         /// - Cancels all working orders after flattening as an additional safety measure
+        ///   (in case automated strategies or other system components place orders during the operation,
+        ///   or if the Flatten() API doesn't handle order cancellation atomically)
         /// - Handles any errors gracefully and reports them to the user
         /// - Logs all actions for audit purposes
+        /// 
+        /// The double cancellation (before and after) provides defense-in-depth protection
+        /// to ensure the trading environment is fully secured after a flatten operation.
         /// </remarks>
         public void FlattenAllTrades()
         {
@@ -9347,6 +9352,10 @@ namespace Risk_Manager
                     core.AdvancedTradingOperations.Flatten();
 
                     // Cancel all working orders AFTER flattening as an additional safety measure
+                    // This provides defense-in-depth protection in case:
+                    // - Automated strategies place orders during the flatten operation
+                    // - The Flatten() API doesn't cancel orders atomically
+                    // - Any race conditions occur between the operations
                     System.Diagnostics.Debug.WriteLine("[FLATTEN] Canceling all working orders after flatten operation");
                     CancelAllWorkingOrders();
                     
