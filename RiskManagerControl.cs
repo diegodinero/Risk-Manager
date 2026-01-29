@@ -8153,11 +8153,11 @@ namespace Risk_Manager
                     {
                         core.CancelOrder(order);
                         canceledCount++;
-                        System.Diagnostics.Debug.WriteLine($"Canceled working order: {order?.Symbol ?? "Unknown"} for account {order.Account?.Id}");
+                        //System.Diagnostics.Debug.WriteLine($"Canceled working order: {order?.Symbol ?? "Unknown"} for account {order.Account?.Id}");
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Error canceling order {order?.Symbol ?? "Unknown"}: {ex.Message}");
+                        //System.Diagnostics.Debug.WriteLine($"Error canceling order {order?.Symbol ?? "Unknown"}: {ex.Message}");
                     }
                 }
 
