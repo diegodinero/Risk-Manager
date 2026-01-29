@@ -11194,7 +11194,7 @@ namespace Risk_Manager
             {
                 Name = "DisabledOverlay", // Identify this as the overlay panel
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(128, 40, 40, 40), // 50% opacity for better greyed-out effect
+                BackColor = Color.FromArgb(128, 40, 40, 40), // 50% opacity (128/255 ≈ 0.5)
                 Cursor = Cursors.No
             };
 
