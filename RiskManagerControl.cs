@@ -8130,6 +8130,49 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Cancels all working orders across all accounts.
+        /// This ensures no pending orders can be executed unintentionally during flattening or locking operations.
+        /// </summary>
+        private void CancelAllWorkingOrders()
+        {
+            try
+            {
+                var core = Core.Instance;
+                if (core?.Orders == null)
+                    return;
+
+                var workingOrders = core.Orders
+                    .Where(order => order != null && 
+                           (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
+                    .ToList();
+
+                int canceledCount = 0;
+                foreach (var order in workingOrders)
+                {
+                    try
+                    {
+                        core.CancelOrder(order);
+                        canceledCount++;
+                        System.Diagnostics.Debug.WriteLine($"Canceled working order: {order.Symbol} for account {order.Account?.Id}");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error canceling order {order.Symbol}: {ex.Message}");
+                    }
+                }
+
+                if (canceledCount > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ORDER CANCELLATION] Total working orders canceled: {canceledCount}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Error canceling all working orders: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Closes a single position.
         /// </summary>
         private void ClosePosition(Position position, Core core)
@@ -9278,14 +9321,15 @@ namespace Risk_Manager
 
         /// <summary>
         /// Flattens all open trades across all accounts.
-        /// This is a placeholder method that should be implemented to close all open positions.
+        /// Cancels all working orders before and after flattening to prevent unintended order execution.
         /// </summary>
         /// <remarks>
-        /// When implemented, this method should:
-        /// - Iterate through all open positions across all accounts
-        /// - Close each position at market price
-        /// - Handle any errors gracefully and report them to the user
-        /// - Log all actions for audit purposes
+        /// This method:
+        /// - Cancels all working orders before flattening to prevent pending orders from executing
+        /// - Flattens all open positions across all accounts
+        /// - Cancels all working orders after flattening as an additional safety measure
+        /// - Handles any errors gracefully and reports them to the user
+        /// - Logs all actions for audit purposes
         /// </remarks>
         public void FlattenAllTrades()
         {
@@ -9294,12 +9338,24 @@ namespace Risk_Manager
                 var core = Core.Instance;
                 if (core != null)
                 {
+                    // Cancel all working orders BEFORE flattening
+                    System.Diagnostics.Debug.WriteLine("[FLATTEN] Canceling all working orders before flatten operation");
+                    CancelAllWorkingOrders();
+
+                    // Flatten all positions
+                    System.Diagnostics.Debug.WriteLine("[FLATTEN] Executing flatten operation");
                     core.AdvancedTradingOperations.Flatten();
+
+                    // Cancel all working orders AFTER flattening as an additional safety measure
+                    System.Diagnostics.Debug.WriteLine("[FLATTEN] Canceling all working orders after flatten operation");
+                    CancelAllWorkingOrders();
+                    
+                    System.Diagnostics.Debug.WriteLine("[FLATTEN] Flatten operation completed successfully");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"FlattenAllTrades error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[ERROR] FlattenAllTrades error: {ex.Message}");
                 MessageBox.Show($"Error flattening trades: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
