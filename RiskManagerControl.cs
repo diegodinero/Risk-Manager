@@ -3903,14 +3903,18 @@ namespace Risk_Manager
                                 // If Limits toggle is disabled and we're rendering Gross P&L, skip progress bar
                                 if (isGrossPnL && !settings.LimitsEnabled)
                                 {
+#if DEBUG
                                     System.Diagnostics.Debug.WriteLine($"Limits feature disabled for account {uniqueAccountId}, skipping Gross P&L progress bar");
+#endif
                                     return;
                                 }
                                 
                                 // If Positions toggle is disabled and we're rendering Open P&L, skip progress bar
                                 if (isOpenPnL && !settings.PositionsEnabled)
                                 {
+#if DEBUG
                                     System.Diagnostics.Debug.WriteLine($"Positions feature disabled for account {uniqueAccountId}, skipping Open P&L progress bar");
+#endif
                                     return;
                                 }
                                 
@@ -3919,13 +3923,11 @@ namespace Risk_Manager
                                 {
                                     dailyLossLimit = (double)(settings.DailyLossLimit ?? 0);
                                     dailyProfitTarget = (double)(settings.DailyProfitTarget ?? 0);
-                                    System.Diagnostics.Debug.WriteLine($"Loaded Gross P&L settings for account {uniqueAccountId}: DailyLossLimit={dailyLossLimit}, DailyProfitTarget={dailyProfitTarget}");
                                 }
                                 else if (isOpenPnL)
                                 {
                                     positionLossLimit = (double)(settings.PositionLossLimit ?? 0);
                                     positionProfitTarget = (double)(settings.PositionProfitTarget ?? 0);
-                                    System.Diagnostics.Debug.WriteLine($"Loaded Open P&L settings for account {uniqueAccountId}: PositionLossLimit={positionLossLimit}, PositionProfitTarget={positionProfitTarget}");
                                 }
                             }
                             else
