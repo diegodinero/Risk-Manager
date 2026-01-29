@@ -2076,6 +2076,67 @@ namespace Risk_Manager
         }
         
         /// <summary>
+        /// Updates the enabled/disabled state of a specific navigation tab based on its feature toggle.
+        /// This method enables or disables a tab when its corresponding feature checkbox is toggled.
+        /// </summary>
+        private void UpdateFeatureTabState(string tabName, bool enabled)
+        {
+            try
+            {
+                foreach (var btn in navButtons)
+                {
+                    var itemName = btn.Tag as string;
+                    if (!string.IsNullOrEmpty(itemName) && itemName == tabName)
+                    {
+                        btn.Enabled = enabled;
+                        
+                        // Update visual state
+                        if (!enabled)
+                        {
+                            btn.ForeColor = Color.FromArgb(100, 100, 100); // Dark grey
+                            btn.Cursor = Cursors.No;
+                        }
+                        else
+                        {
+                            btn.ForeColor = TextWhite;
+                            btn.Cursor = Cursors.Hand;
+                        }
+                        
+                        btn.Invalidate(); // Force repaint
+                        System.Diagnostics.Debug.WriteLine($"UpdateFeatureTabState: {tabName} enabled={enabled}");
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating feature tab state for {tabName}: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Refreshes all Risk Overview cards to update their overlay states based on current feature toggle settings.
+        /// This ensures cards display correctly when feature toggles are changed.
+        /// </summary>
+        private void RefreshRiskOverviewCards()
+        {
+            try
+            {
+                // Check if Risk Overview page exists
+                var riskOverviewKey = NavItems.FirstOrDefault(item => item.EndsWith("Risk Overview"));
+                if (!string.IsNullOrEmpty(riskOverviewKey) && pageContents.TryGetValue(riskOverviewKey, out var panel))
+                {
+                    RefreshRiskOverviewPanel(panel);
+                    System.Diagnostics.Debug.WriteLine("RefreshRiskOverviewCards: Risk Overview panel refreshed");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error refreshing Risk Overview cards: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
         /// Recursively enables or disables all settings input controls.
         /// Trading lock controls are intentionally excluded to remain functional during settings lock.
         /// </summary>
@@ -9913,18 +9974,42 @@ namespace Risk_Manager
                 else if (feature == "Positions")
                 {
                     positionsFeatureCheckbox = checkbox;
+                    // Add event handler for Positions feature checkbox
+                    checkbox.CheckedChanged += (s, e) =>
+                    {
+                        UpdateFeatureTabState("📈 Positions", positionsFeatureCheckbox.Checked);
+                        RefreshRiskOverviewCards();
+                    };
                 }
                 else if (feature == "Limits")
                 {
                     limitsFeatureCheckbox = checkbox;
+                    // Add event handler for Limits feature checkbox
+                    checkbox.CheckedChanged += (s, e) =>
+                    {
+                        UpdateFeatureTabState("📊 Limits", limitsFeatureCheckbox.Checked);
+                        RefreshRiskOverviewCards();
+                    };
                 }
                 else if (feature == "Symbols")
                 {
                     symbolsFeatureCheckbox = checkbox;
+                    // Add event handler for Symbols feature checkbox
+                    checkbox.CheckedChanged += (s, e) =>
+                    {
+                        UpdateFeatureTabState("🛡️ Symbols", symbolsFeatureCheckbox.Checked);
+                        RefreshRiskOverviewCards();
+                    };
                 }
                 else if (feature == "Allowed Trading Times")
                 {
                     tradingTimesFeatureCheckbox = checkbox;
+                    // Add event handler for Allowed Trading Times feature checkbox
+                    checkbox.CheckedChanged += (s, e) =>
+                    {
+                        UpdateFeatureTabState("🕐 Allowed Trading Times", tradingTimesFeatureCheckbox.Checked);
+                        RefreshRiskOverviewCards();
+                    };
                 }
             }
 
