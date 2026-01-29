@@ -3519,8 +3519,14 @@ namespace Risk_Manager
                         var settings = settingsService.GetSettings(uniqueAccountId);
                         if (settings != null)
                         {
-                            lossLimit = settings.DailyLossLimit;
-                            profitTarget = settings.DailyProfitTarget;
+                            // Only show limits if the Limits feature is enabled
+                            if (settings.LimitsEnabled)
+                            {
+                                lossLimit = settings.DailyLossLimit;
+                                profitTarget = settings.DailyProfitTarget;
+                            }
+                            // If LimitsEnabled is false, leave lossLimit and profitTarget as null
+                            // This will display as "-" in the grid
                         }
                     }
 
@@ -3893,12 +3899,36 @@ namespace Risk_Manager
                             var settings = settingsService.GetSettings(uniqueAccountId);
                             if (settings != null)
                             {
-                                dailyLossLimit = (double)(settings.DailyLossLimit ?? 0);
-                                dailyProfitTarget = (double)(settings.DailyProfitTarget ?? 0);
-                                positionLossLimit = (double)(settings.PositionLossLimit ?? 0);
-                                positionProfitTarget = (double)(settings.PositionProfitTarget ?? 0);
+                                // Check feature toggles before loading limits
+                                // If Limits toggle is disabled and we're rendering Gross P&L, skip progress bar
+                                if (isGrossPnL && !settings.LimitsEnabled)
+                                {
+#if DEBUG
+                                    System.Diagnostics.Debug.WriteLine($"Limits feature disabled for account {uniqueAccountId}, skipping Gross P&L progress bar");
+#endif
+                                    return;
+                                }
                                 
-                                System.Diagnostics.Debug.WriteLine($"Loaded settings for account {uniqueAccountId}: DailyLossLimit={dailyLossLimit}, DailyProfitTarget={dailyProfitTarget}, PositionLossLimit={positionLossLimit}, PositionProfitTarget={positionProfitTarget}");
+                                // If Positions toggle is disabled and we're rendering Open P&L, skip progress bar
+                                if (isOpenPnL && !settings.PositionsEnabled)
+                                {
+#if DEBUG
+                                    System.Diagnostics.Debug.WriteLine($"Positions feature disabled for account {uniqueAccountId}, skipping Open P&L progress bar");
+#endif
+                                    return;
+                                }
+                                
+                                // Load only the relevant limits based on which column is being rendered
+                                if (isGrossPnL)
+                                {
+                                    dailyLossLimit = (double)(settings.DailyLossLimit ?? 0);
+                                    dailyProfitTarget = (double)(settings.DailyProfitTarget ?? 0);
+                                }
+                                else if (isOpenPnL)
+                                {
+                                    positionLossLimit = (double)(settings.PositionLossLimit ?? 0);
+                                    positionProfitTarget = (double)(settings.PositionProfitTarget ?? 0);
+                                }
                             }
                             else
                             {
