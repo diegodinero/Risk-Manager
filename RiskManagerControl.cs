@@ -9918,6 +9918,12 @@ namespace Risk_Manager
                         "Success", 
                         MessageBoxButtons.OK, 
                         MessageBoxIcon.Information);
+                    
+                    // Refresh Risk Overview panel to update card overlays (regardless of which tab is displayed)
+                    if (pageContents.TryGetValue("🔍 Risk Overview", out var riskOverviewPanel))
+                    {
+                        RefreshRiskOverviewPanel(riskOverviewPanel);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -10804,21 +10810,24 @@ namespace Risk_Manager
                 "Position Limits",
                 new[] { "Loss Limit:", "Profit Target:" },
                 new[] { GetPositionLossLimit, GetPositionProfitTarget },
-                () => IsFeatureEnabled(s => s.PositionsEnabled)
+                () => IsFeatureEnabled(s => s.PositionsEnabled),
+                "PositionLimitsCard"
             ));
 
             flowLayout.Controls.Add(CreateRiskOverviewCard(
                 "Daily Limits",
                 new[] { "Daily Loss Limit:", "Daily Profit Target:" },
                 new[] { GetDailyLossLimit, GetDailyProfitTarget },
-                () => IsFeatureEnabled(s => s.LimitsEnabled)
+                () => IsFeatureEnabled(s => s.LimitsEnabled),
+                "DailyLimitsCard"
             ));
 
             flowLayout.Controls.Add(CreateRiskOverviewCard(
                 "Symbol Restrictions",
                 new[] { "Blocked Symbols:", "Default Contract Limit:", "Symbol-Specific Limits:" },
                 new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits },
-                () => IsFeatureEnabled(s => s.SymbolsEnabled)
+                () => IsFeatureEnabled(s => s.SymbolsEnabled),
+                "SymbolRestrictionsCard"
             ));
 
             var tradingTimesCard = CreateTradingTimesOverviewCard();
@@ -10843,7 +10852,7 @@ namespace Risk_Manager
         /// <summary>
         /// Creates a card panel for displaying risk overview information.
         /// </summary>
-        private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters, Func<bool> isFeatureEnabled = null)
+        private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters, Func<bool> isFeatureEnabled = null, string cardId = null)
         {
             var cardPanel = new Panel
             {
@@ -10852,7 +10861,7 @@ namespace Risk_Manager
                 BackColor = CardBackground,
                 Padding = new Padding(20),
                 Margin = new Padding(0, 0, 15, 15), // Add right and bottom margin for spacing
-                Tag = isFeatureEnabled // Store the feature checker for later refresh
+                Tag = string.IsNullOrEmpty(cardId) ? (object)isFeatureEnabled : new { CardId = cardId, FeatureChecker = isFeatureEnabled, Title = title, Labels = labels, ValueGetters = valueGetters }
             };
 
             var cardLayout = new FlowLayoutPanel
@@ -11158,8 +11167,14 @@ namespace Risk_Manager
                     // Remove overlay panel
                     cardPanel.Controls.Remove(existingOverlay);
                     existingOverlay?.Dispose();
-                    cardPanel.Tag = featureChecker;
+                    // Note: Don't overwrite Tag here - it may contain card recreation metadata
                     cardPanel.Cursor = Cursors.Default;
+                    // Force UI to repaint immediately
+                    cardPanel.Invalidate(true);
+                    cardPanel.Update();
+                    // Also refresh the parent to ensure proper layout
+                    cardPanel.Parent?.Invalidate(true);
+                    cardPanel.Parent?.Update();
                 }
             }
         }
@@ -11174,28 +11189,15 @@ namespace Risk_Manager
                 return; // Already has overlay
             }
             
-            // Create a semi-transparent overlay panel (20% opacity for better visibility)
+            // Create a semi-transparent overlay panel to grey out the card
             var overlay = new Panel
             {
                 Name = "DisabledOverlay", // Identify this as the overlay panel
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(51, 40, 40, 40), // 20% opacity (51/255 ≈ 0.2)
+                BackColor = Color.FromArgb(128, 40, 40, 40), // 50% opacity (128/255 ≈ 0.5)
                 Cursor = Cursors.No
             };
 
-            // Create the red X label
-            var disabledLabel = new Label
-            {
-                Text = "✖",
-                Font = new Font("Segoe UI", 72, FontStyle.Bold),
-                ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Fill,
-                UseCompatibleTextRendering = false
-            };
-
-            overlay.Controls.Add(disabledLabel);
             cardPanel.Controls.Add(overlay);
             overlay.BringToFront();
         }
@@ -11333,8 +11335,19 @@ namespace Risk_Manager
         {
             if (panel == null) return;
 
-            // Find all labels in the panel that display values
-            RefreshLabelsInControl(panel);
+            // Suspend layout to prevent flickering during updates
+            panel.SuspendLayout();
+            try
+            {
+                // Find all labels in the panel that display values
+                RefreshLabelsInControl(panel);
+            }
+            finally
+            {
+                // Resume layout and force a refresh
+                panel.ResumeLayout(true);
+                panel.Refresh();
+            }
         }
 
         /// <summary>
@@ -11344,7 +11357,49 @@ namespace Risk_Manager
         {
             if (control == null) return;
 
-            // Check if this is a card panel with feature overlay support
+            // Check if this is a recreatable card (has anonymous object Tag with CardId)
+            if (control is Panel cardPanel && cardPanel.Tag != null)
+            {
+                var tagType = cardPanel.Tag.GetType();
+                var cardIdProp = tagType.GetProperty("CardId");
+                if (cardIdProp != null)
+                {
+                    // This is a recreatable card - recreate it like Trading Times card
+                    var parent = cardPanel.Parent;
+                    var index = parent?.Controls.GetChildIndex(cardPanel) ?? -1;
+                    if (parent != null && index >= 0)
+                    {
+                        // Extract card creation parameters
+                        var titleProp = tagType.GetProperty("Title");
+                        var labelsProp = tagType.GetProperty("Labels");
+                        var valueGettersProp = tagType.GetProperty("ValueGetters");
+                        var featureCheckerProp = tagType.GetProperty("FeatureChecker");
+                        var cardIdValue = cardIdProp.GetValue(cardPanel.Tag) as string;
+                        
+                        if (titleProp != null && labelsProp != null && valueGettersProp != null && featureCheckerProp != null)
+                        {
+                            var title = titleProp.GetValue(cardPanel.Tag) as string;
+                            var labels = labelsProp.GetValue(cardPanel.Tag) as string[];
+                            var valueGetters = valueGettersProp.GetValue(cardPanel.Tag) as Func<string>[];
+                            var featureChecker = featureCheckerProp.GetValue(cardPanel.Tag) as Func<bool>;
+                            
+                            // Validate all required parameters were successfully extracted
+                            if (title != null && labels != null && valueGetters != null && featureChecker != null && cardIdValue != null)
+                            {
+                                // Recreate the card
+                                parent.Controls.Remove(cardPanel);
+                                cardPanel.Dispose(); // Dispose old panel to prevent resource leaks
+                                var newCard = CreateRiskOverviewCard(title, labels, valueGetters, featureChecker, cardIdValue);
+                                parent.Controls.Add(newCard);
+                                parent.Controls.SetChildIndex(newCard, index);
+                            }
+                        }
+                    }
+                    return;
+                }
+            }
+
+            // Check if this is a card panel with feature overlay support (old approach)
             if (control is Panel panel && panel.Tag is Func<bool>)
             {
                 // Update the overlay state for this card
@@ -11359,6 +11414,7 @@ namespace Risk_Manager
                 if (parent != null && index >= 0)
                 {
                     parent.Controls.Remove(tradingPanel);
+                    tradingPanel.Dispose(); // Dispose old panel to prevent resource leaks
                     var newCard = CreateTradingTimesOverviewCard();
                     parent.Controls.Add(newCard);
                     parent.Controls.SetChildIndex(newCard, index);
