@@ -9919,13 +9919,10 @@ namespace Risk_Manager
                         MessageBoxButtons.OK, 
                         MessageBoxIcon.Information);
                     
-                    // Refresh Risk Overview panel if it's currently displayed to update card overlays
-                    if (selectedNavItem != null && selectedNavItem.EndsWith("Risk Overview"))
+                    // Refresh Risk Overview panel to update card overlays (regardless of which tab is displayed)
+                    if (pageContents.TryGetValue("🔍 Risk Overview", out var riskOverviewPanel))
                     {
-                        if (pageContents.TryGetValue(selectedNavItem, out var riskOverviewPanel))
-                        {
-                            RefreshRiskOverviewPanel(riskOverviewPanel);
-                        }
+                        RefreshRiskOverviewPanel(riskOverviewPanel);
                     }
                 }
                 catch (Exception ex)
