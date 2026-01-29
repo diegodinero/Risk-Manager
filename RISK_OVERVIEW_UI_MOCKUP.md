@@ -96,6 +96,26 @@
 - Cursor remains default (no action on hover)
 - Tooltip may appear for truncated text
 
+### Disabled State (NEW)
+When a feature is disabled in account settings, the corresponding card displays:
+- **Red X Indicator**: A red ✖ symbol appears in the top-right corner of the card header
+  - **White Theme**: Darker red RGB(200, 30, 30) for better contrast
+  - **Dark Themes**: Bright red RGB(220, 50, 50) for visibility
+- **Reduced Opacity**: Card content is displayed at 40% opacity (semi-transparent)
+- **No Cursor**: Mouse cursor changes to "No" symbol (🚫) when hovering over the card
+- **Non-Interactive**: Card Enabled property is set to false, preventing all user interaction
+- **No Overlay**: Content remains visible without an obscuring overlay panel
+- **All Cards Supported**: Position Limits, Daily Limits, Symbol Restrictions, and Trading Times all show disabled state when their feature is disabled
+
+```
+┌──────────────────────────────────────────────────────┐
+│ 📈 Position Limits                              ✖   │
+│                                                      │
+│ Loss Limit:         💵 $500.00 per position         │  [40% opacity, not clickable]
+│ Profit Target:      💵 $1,000.00 per position       │  [40% opacity, not clickable]
+└──────────────────────────────────────────────────────┘
+```
+
 ### Loading State
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -199,6 +219,10 @@
 3. **Performance**: Cached data prevents unnecessary reloads
 4. **Scalability**: Modular card design allows easy addition of new settings
 5. **Maintainability**: Consistent with existing UI patterns
+6. **Disabled State**: Non-overlay approach with red X and reduced opacity for disabled features
+   - Original colors are preserved and restored when re-enabled
+   - Card interaction is fully disabled (Enabled = false) to prevent unintended actions
+   - **Theme-aware red X color**: Darker red for white theme, bright red for dark themes
 
 ## Testing Checklist
 
@@ -212,3 +236,12 @@
 - [ ] Theme changes apply immediately
 - [ ] Performance is acceptable with many settings
 - [ ] No visual glitches or artifacts
+- [ ] Disabled cards show red X in top-right corner
+- [ ] Disabled cards display content at 40% opacity
+- [ ] Disabled cards show "No" cursor on hover
+- [ ] Disabled cards are fully non-interactive (Enabled = false)
+- [ ] Enabling/disabling features updates card state correctly
+- [ ] Original colors are preserved and restored correctly when re-enabled
+- [ ] Red X is visible in white theme (uses darker red color)
+- [ ] Red X is visible in dark themes (uses bright red color)
+- [ ] All cards (Position Limits, Daily Limits, Symbol Restrictions, Trading Times) support disabled state
