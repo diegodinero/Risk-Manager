@@ -11166,6 +11166,9 @@ namespace Risk_Manager
                     existingOverlay?.Dispose();
                     cardPanel.Tag = featureChecker;
                     cardPanel.Cursor = Cursors.Default;
+                    // Force UI to repaint
+                    cardPanel.Refresh();
+                    cardPanel.Invalidate(true);
                 }
             }
         }
@@ -11339,8 +11342,19 @@ namespace Risk_Manager
         {
             if (panel == null) return;
 
-            // Find all labels in the panel that display values
-            RefreshLabelsInControl(panel);
+            // Suspend layout to prevent flickering during updates
+            panel.SuspendLayout();
+            try
+            {
+                // Find all labels in the panel that display values
+                RefreshLabelsInControl(panel);
+            }
+            finally
+            {
+                // Resume layout and force a refresh
+                panel.ResumeLayout(true);
+                panel.Refresh();
+            }
         }
 
         /// <summary>
