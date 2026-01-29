@@ -11189,28 +11189,15 @@ namespace Risk_Manager
                 return; // Already has overlay
             }
             
-            // Create a semi-transparent overlay panel (20% opacity for better visibility)
+            // Create a semi-transparent overlay panel to grey out the card
             var overlay = new Panel
             {
                 Name = "DisabledOverlay", // Identify this as the overlay panel
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(51, 40, 40, 40), // 20% opacity (51/255 ≈ 0.2)
+                BackColor = Color.FromArgb(128, 40, 40, 40), // 50% opacity for better greyed-out effect
                 Cursor = Cursors.No
             };
 
-            // Create the red X label
-            var disabledLabel = new Label
-            {
-                Text = "✖",
-                Font = new Font("Segoe UI", 72, FontStyle.Bold),
-                ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Fill,
-                UseCompatibleTextRendering = false
-            };
-
-            overlay.Controls.Add(disabledLabel);
             cardPanel.Controls.Add(overlay);
             overlay.BringToFront();
         }
