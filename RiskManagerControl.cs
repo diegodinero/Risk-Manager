@@ -3914,12 +3914,19 @@ namespace Risk_Manager
                                     return;
                                 }
                                 
-                                dailyLossLimit = (double)(settings.DailyLossLimit ?? 0);
-                                dailyProfitTarget = (double)(settings.DailyProfitTarget ?? 0);
-                                positionLossLimit = (double)(settings.PositionLossLimit ?? 0);
-                                positionProfitTarget = (double)(settings.PositionProfitTarget ?? 0);
-                                
-                                System.Diagnostics.Debug.WriteLine($"Loaded settings for account {uniqueAccountId}: DailyLossLimit={dailyLossLimit}, DailyProfitTarget={dailyProfitTarget}, PositionLossLimit={positionLossLimit}, PositionProfitTarget={positionProfitTarget}");
+                                // Load only the relevant limits based on which column is being rendered
+                                if (isGrossPnL)
+                                {
+                                    dailyLossLimit = (double)(settings.DailyLossLimit ?? 0);
+                                    dailyProfitTarget = (double)(settings.DailyProfitTarget ?? 0);
+                                    System.Diagnostics.Debug.WriteLine($"Loaded Gross P&L settings for account {uniqueAccountId}: DailyLossLimit={dailyLossLimit}, DailyProfitTarget={dailyProfitTarget}");
+                                }
+                                else if (isOpenPnL)
+                                {
+                                    positionLossLimit = (double)(settings.PositionLossLimit ?? 0);
+                                    positionProfitTarget = (double)(settings.PositionProfitTarget ?? 0);
+                                    System.Diagnostics.Debug.WriteLine($"Loaded Open P&L settings for account {uniqueAccountId}: PositionLossLimit={positionLossLimit}, PositionProfitTarget={positionProfitTarget}");
+                                }
                             }
                             else
                             {
