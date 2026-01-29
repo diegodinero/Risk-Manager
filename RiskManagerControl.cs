@@ -11166,9 +11166,12 @@ namespace Risk_Manager
                     existingOverlay?.Dispose();
                     cardPanel.Tag = featureChecker;
                     cardPanel.Cursor = Cursors.Default;
-                    // Force UI to repaint
-                    cardPanel.Refresh();
+                    // Force UI to repaint immediately
                     cardPanel.Invalidate(true);
+                    cardPanel.Update();
+                    // Also refresh the parent to ensure proper layout
+                    cardPanel.Parent?.Invalidate(true);
+                    cardPanel.Parent?.Update();
                 }
             }
         }
