@@ -3519,8 +3519,14 @@ namespace Risk_Manager
                         var settings = settingsService.GetSettings(uniqueAccountId);
                         if (settings != null)
                         {
-                            lossLimit = settings.DailyLossLimit;
-                            profitTarget = settings.DailyProfitTarget;
+                            // Only show limits if the Limits feature is enabled
+                            if (settings.LimitsEnabled)
+                            {
+                                lossLimit = settings.DailyLossLimit;
+                                profitTarget = settings.DailyProfitTarget;
+                            }
+                            // If LimitsEnabled is false, leave lossLimit and profitTarget as null
+                            // This will display as "-" in the grid
                         }
                     }
 
@@ -3893,6 +3899,21 @@ namespace Risk_Manager
                             var settings = settingsService.GetSettings(uniqueAccountId);
                             if (settings != null)
                             {
+                                // Check feature toggles before loading limits
+                                // If Limits toggle is disabled and we're rendering Gross P&L, skip progress bar
+                                if (isGrossPnL && !settings.LimitsEnabled)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"Limits feature disabled for account {uniqueAccountId}, skipping Gross P&L progress bar");
+                                    return;
+                                }
+                                
+                                // If Positions toggle is disabled and we're rendering Open P&L, skip progress bar
+                                if (isOpenPnL && !settings.PositionsEnabled)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"Positions feature disabled for account {uniqueAccountId}, skipping Open P&L progress bar");
+                                    return;
+                                }
+                                
                                 dailyLossLimit = (double)(settings.DailyLossLimit ?? 0);
                                 dailyProfitTarget = (double)(settings.DailyProfitTarget ?? 0);
                                 positionLossLimit = (double)(settings.PositionLossLimit ?? 0);
