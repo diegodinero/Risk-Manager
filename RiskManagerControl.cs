@@ -11167,7 +11167,7 @@ namespace Risk_Manager
                     // Remove overlay panel
                     cardPanel.Controls.Remove(existingOverlay);
                     existingOverlay?.Dispose();
-                    cardPanel.Tag = featureChecker;
+                    // Note: Don't overwrite Tag here - it may contain card recreation metadata
                     cardPanel.Cursor = Cursors.Default;
                     // Force UI to repaint immediately
                     cardPanel.Invalidate(true);
