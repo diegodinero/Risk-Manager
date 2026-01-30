@@ -10392,6 +10392,7 @@ namespace Risk_Manager
                     RefreshAccountDropdown(); // Refresh main account selector
                     RefreshAccountsSummary(); // Refresh stats grid (account column)
                     RefreshAccountStats(); // Refresh stats detail grid (account row)
+                    RefreshCopySettingsAccounts(); // Refresh Copy Settings tab
                 }
             };
 
