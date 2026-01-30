@@ -69,6 +69,7 @@ class CustomCardHeaderControl : Panel
 {
     private Label titleLabel;
     private PictureBox iconBox;
+    private Label disabledLabel;
     
     public CustomCardHeaderControl(string title, Image icon)
     {
@@ -104,7 +105,21 @@ class CustomCardHeaderControl : Panel
             this.Controls.Add(iconBox);
         }
 
-        
+        // Disabled label (red X) - initially hidden
+        disabledLabel = new Label
+        {
+            Text = "✖",
+            Font = new Font("Segoe UI", 28, FontStyle.Bold),
+            ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
+            BackColor = Color.Transparent,
+            TextAlign = ContentAlignment.MiddleRight,
+            Dock = DockStyle.Right,
+            Width = 50,
+            UseCompatibleTextRendering = false,
+            Visible = false, // Initially hidden
+            Enabled = false // Non-interactive
+        };
+        this.Controls.Add(disabledLabel);
 
         // Add spacing below the header
         this.Padding = new Padding(0, 0, 0, 10); // Add padding below the header
@@ -112,6 +127,15 @@ class CustomCardHeaderControl : Panel
     
     public Label TitleLabel => titleLabel;
     public PictureBox IconBox => iconBox;
+    public Label DisabledLabel => disabledLabel;
+    
+    /// <summary>
+    /// Shows or hides the disabled label (red X)
+    /// </summary>
+    public void SetDisabled(bool disabled)
+    {
+        disabledLabel.Visible = disabled;
+    }
 }
 class CustomHeaderControl : Panel
 {
@@ -10061,29 +10085,55 @@ namespace Risk_Manager
                     // Add event handler for master toggle
                     checkbox.CheckedChanged += (s, e) =>
                     {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Master feature toggle changed to: {featureToggleEnabledCheckbox.Checked}");
+                        
                         // When master toggle changes, sync individual toggles
                         var masterChecked = featureToggleEnabledCheckbox.Checked;
                         if (positionsFeatureCheckbox != null) positionsFeatureCheckbox.Checked = masterChecked;
                         if (limitsFeatureCheckbox != null) limitsFeatureCheckbox.Checked = masterChecked;
                         if (symbolsFeatureCheckbox != null) symbolsFeatureCheckbox.Checked = masterChecked;
                         if (tradingTimesFeatureCheckbox != null) tradingTimesFeatureCheckbox.Checked = masterChecked;
+                        
+                        // Refresh Risk Overview panel if visible
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Master toggle calling RefreshRiskOverviewIfVisible");
+                        RefreshRiskOverviewIfVisible();
                     };
                 }
                 else if (feature == "Positions")
                 {
                     positionsFeatureCheckbox = checkbox;
+                    // Add event handler to refresh Risk Overview when this toggle changes
+                    checkbox.CheckedChanged += (s, e) => {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Positions feature toggle changed to: {checkbox.Checked}");
+                        RefreshRiskOverviewIfVisible();
+                    };
                 }
                 else if (feature == "Limits")
                 {
                     limitsFeatureCheckbox = checkbox;
+                    // Add event handler to refresh Risk Overview when this toggle changes
+                    checkbox.CheckedChanged += (s, e) => {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Limits feature toggle changed to: {checkbox.Checked}");
+                        RefreshRiskOverviewIfVisible();
+                    };
                 }
                 else if (feature == "Symbols")
                 {
                     symbolsFeatureCheckbox = checkbox;
+                    // Add event handler to refresh Risk Overview when this toggle changes
+                    checkbox.CheckedChanged += (s, e) => {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Symbols feature toggle changed to: {checkbox.Checked}");
+                        RefreshRiskOverviewIfVisible();
+                    };
                 }
                 else if (feature == "Allowed Trading Times")
                 {
                     tradingTimesFeatureCheckbox = checkbox;
+                    // Add event handler to refresh Risk Overview when this toggle changes
+                    checkbox.CheckedChanged += (s, e) => {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Trading Times feature toggle changed to: {checkbox.Checked}");
+                        RefreshRiskOverviewIfVisible();
+                    };
                 }
             }
 
@@ -10865,28 +10915,35 @@ namespace Risk_Manager
                 new[] { GetAccountLockStatus, GetSettingsLockStatus }
             ));
 
-            flowLayout.Controls.Add(CreateRiskOverviewCard(
+            var positionsCard = CreateRiskOverviewCard(
                 "Position Limits",
                 new[] { "Loss Limit:", "Profit Target:" },
                 new[] { GetPositionLossLimit, GetPositionProfitTarget },
                 () => IsFeatureEnabled(s => s.PositionsEnabled)
-            ));
+            );
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewPanel: Created Positions card with feature enabled = {IsFeatureEnabled(s => s.PositionsEnabled)}");
+            flowLayout.Controls.Add(positionsCard);
 
-            flowLayout.Controls.Add(CreateRiskOverviewCard(
+            var limitsCard = CreateRiskOverviewCard(
                 "Daily Limits",
                 new[] { "Daily Loss Limit:", "Daily Profit Target:" },
                 new[] { GetDailyLossLimit, GetDailyProfitTarget },
                 () => IsFeatureEnabled(s => s.LimitsEnabled)
-            ));
+            );
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewPanel: Created Daily Limits card with feature enabled = {IsFeatureEnabled(s => s.LimitsEnabled)}");
+            flowLayout.Controls.Add(limitsCard);
 
-            flowLayout.Controls.Add(CreateRiskOverviewCard(
+            var symbolsCard = CreateRiskOverviewCard(
                 "Symbol Restrictions",
                 new[] { "Blocked Symbols:", "Default Contract Limit:", "Symbol-Specific Limits:" },
                 new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits },
                 () => IsFeatureEnabled(s => s.SymbolsEnabled)
-            ));
+            );
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewPanel: Created Symbols card with feature enabled = {IsFeatureEnabled(s => s.SymbolsEnabled)}");
+            flowLayout.Controls.Add(symbolsCard);
 
             var tradingTimesCard = CreateTradingTimesOverviewCard();
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewPanel: Created Trading Times card");
             flowLayout.Controls.Add(tradingTimesCard);
 
             // Add the flow layout to the content area
@@ -10910,6 +10967,8 @@ namespace Risk_Manager
         /// </summary>
         private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters, Func<bool> isFeatureEnabled = null)
         {
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Creating card '{title}'");
+            
             var cardPanel = new Panel
             {
                 Width = 480, // Adjusted width for 2-column layout
@@ -10919,6 +10978,23 @@ namespace Risk_Manager
                 Margin = new Padding(0, 0, 15, 15), // Add right and bottom margin for spacing
                 Tag = isFeatureEnabled // Store the feature checker for later refresh
             };
+
+            if (isFeatureEnabled != null)
+            {
+                var featureState = isFeatureEnabled();
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Card '{title}' has feature checker, current state = {featureState}");
+                
+                if (!featureState)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Card '{title}' should be disabled, calling SetCardDisabled");
+                    // Apply disabled state immediately during creation if feature is disabled
+                    SetCardDisabled(cardPanel);
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Card '{title}' has no feature checker (always enabled)");
+            }
 
             var cardLayout = new FlowLayoutPanel
             {
@@ -10998,8 +11074,7 @@ namespace Risk_Manager
 
             cardPanel.Controls.Add(cardLayout);
             
-            // Add disabled overlay if feature is disabled
-            UpdateCardOverlay(cardPanel);
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Completed card '{title}'");
             
             return cardPanel;
         }
@@ -11118,10 +11193,10 @@ namespace Risk_Manager
 
             cardPanel.Controls.Add(cardLayout);
             
-            // Add disabled overlay if feature is disabled
+            // Apply disabled state if feature is disabled
             if (!IsFeatureEnabled(s => s.TradingTimesEnabled))
             {
-                AddDisabledOverlay(cardPanel);
+                SetCardDisabled(cardPanel);
             }
             
             return cardPanel;
@@ -11167,102 +11242,288 @@ namespace Risk_Manager
 
         private bool IsFeatureEnabled(Func<AccountSettings, bool> featureGetter)
         {
+            // First, try to get the current UI state of the feature toggles
+            // This ensures we reflect the current checkbox state, not just saved settings
+            if (featureGetter != null)
+            {
+                // Determine which feature we're checking based on the getter method name
+                var getterMethodName = featureGetter.Method.Name;
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Checking {getterMethodName}");
+                
+                // Check the current UI state first
+                if (getterMethodName.Contains("PositionsEnabled") && positionsFeatureCheckbox != null)
+                {
+                    var uiState = positionsFeatureCheckbox.Checked;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Positions UI state = {uiState}");
+                    return uiState;
+                }
+                else if (getterMethodName.Contains("LimitsEnabled") && limitsFeatureCheckbox != null)
+                {
+                    var uiState = limitsFeatureCheckbox.Checked;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Limits UI state = {uiState}");
+                    return uiState;
+                }
+                else if (getterMethodName.Contains("SymbolsEnabled") && symbolsFeatureCheckbox != null)
+                {
+                    var uiState = symbolsFeatureCheckbox.Checked;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Symbols UI state = {uiState}");
+                    return uiState;
+                }
+                else if (getterMethodName.Contains("TradingTimesEnabled") && tradingTimesFeatureCheckbox != null)
+                {
+                    var uiState = tradingTimesFeatureCheckbox.Checked;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: TradingTimes UI state = {uiState}");
+                    return uiState;
+                }
+            }
+            
+            // Fallback to settings service if UI state not available
             var accountNumber = GetSelectedAccountNumber();
             // Default to enabled (no overlay) if no account selected - avoid misleading disabled state
-            if (string.IsNullOrEmpty(accountNumber)) return true;
+            if (string.IsNullOrEmpty(accountNumber)) 
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: No account selected, defaulting to enabled");
+                return true;
+            }
 
             var settingsService = RiskManagerSettingsService.Instance;
             // Default to enabled (no overlay) if service not ready - avoid misleading disabled state
-            if (!settingsService.IsInitialized) return true;
+            if (!settingsService.IsInitialized) 
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Settings service not initialized, defaulting to enabled");
+                return true;
+            }
 
             var settings = settingsService.GetSettings(accountNumber);
             // If settings exist, use the feature flag; otherwise default to enabled
-            return settings != null ? featureGetter(settings) : true;
+            var result = settings != null ? featureGetter(settings) : true;
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Settings service result = {result}");
+            return result;
         }
 
         private void UpdateCardOverlay(Panel cardPanel)
         {
-            if (cardPanel == null) return;
+            if (cardPanel == null) 
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: cardPanel is null");
+                return;
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay called");
             
             // Get the feature checker from Tag (might be wrapped in anonymous object)
             Func<bool> featureChecker = null;
+            bool currentlyDisabled = false;
             
             if (cardPanel.Tag != null)
             {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: cardPanel.Tag type = {cardPanel.Tag.GetType().Name}");
+                
                 // Try to get FeatureChecker from anonymous object
                 var featureCheckerProp = cardPanel.Tag.GetType().GetProperty("FeatureChecker");
                 if (featureCheckerProp != null)
                 {
                     featureChecker = featureCheckerProp.GetValue(cardPanel.Tag) as Func<bool>;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: Found FeatureChecker from anonymous object");
+                    
+                    // Check if currently disabled
+                    var isDisabledProp = cardPanel.Tag.GetType().GetProperty("IsDisabled");
+                    if (isDisabledProp != null && isDisabledProp.GetValue(cardPanel.Tag) is bool isDisabled)
+                    {
+                        currentlyDisabled = isDisabled;
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: currentlyDisabled = {currentlyDisabled}");
+                    }
                 }
                 else
                 {
-                    // Tag is directly the feature checker
+                    // Tag is directly the feature checker (not disabled)
                     featureChecker = cardPanel.Tag as Func<bool>;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: Tag is directly feature checker");
                 }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: cardPanel.Tag is null");
             }
             
             // Check if this card has a feature checker
             if (featureChecker != null)
             {
-                // Determine if overlay should be shown
-                bool shouldShowOverlay = !featureChecker();
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: featureChecker found, executing");
                 
-                // Check if overlay panel exists
-                var existingOverlay = cardPanel.Controls.OfType<Panel>()
-                    .FirstOrDefault(p => p.Name == "DisabledOverlay");
-                bool hasOverlay = existingOverlay != null;
+                // Determine if card should be disabled
+                bool shouldBeDisabled = !featureChecker();
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: shouldBeDisabled = {shouldBeDisabled}, currentlyDisabled = {currentlyDisabled}");
                 
-                if (shouldShowOverlay && !hasOverlay)
+                if (shouldBeDisabled && !currentlyDisabled)
                 {
-                    // Add overlay
-                    AddDisabledOverlay(cardPanel);
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: Calling SetCardDisabled");
+                    // Apply disabled state
+                    SetCardDisabled(cardPanel);
                 }
-                else if (!shouldShowOverlay && hasOverlay)
+                else if (!shouldBeDisabled && currentlyDisabled)
                 {
-                    // Remove overlay panel
-                    cardPanel.Controls.Remove(existingOverlay);
-                    existingOverlay?.Dispose();
-                    cardPanel.Tag = featureChecker;
-                    cardPanel.Cursor = Cursors.Default;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: Calling SetCardEnabled (was disabled, now enabled)");
+                    // Restore enabled state
+                    SetCardEnabled(cardPanel);
                 }
+                else if (!shouldBeDisabled && !currentlyDisabled)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: Card should be enabled and isn't disabled, refreshing colors anyway");
+                    // Card should be enabled and isn't disabled, but refresh colors anyway
+                    // This handles the case where colors may have been affected by previous disable/enable cycles
+                    RefreshLabelsInCardOnly(cardPanel);
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: No action taken (disabled and should be disabled)");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] UpdateCardOverlay: No feature checker found");
             }
         }
-
-        private void AddDisabledOverlay(Panel cardPanel)
+        
+        /// <summary>
+        /// Restores the enabled state of a card panel
+        /// </summary>
+        private void SetCardEnabled(Panel cardPanel)
         {
-            // Check if overlay already exists
-            var existingOverlay = cardPanel.Controls.OfType<Panel>()
-                .FirstOrDefault(p => p.Name == "DisabledOverlay");
-            if (existingOverlay != null)
+            if (cardPanel == null) 
             {
-                return; // Already has overlay
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled: cardPanel is null");
+                return;
             }
             
-            // Create a semi-transparent overlay panel (20% opacity for better visibility)
-            var overlay = new Panel
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled called");
+            
+            // Find the header control and hide the disabled label
+            var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
+            if (header != null)
             {
-                Name = "DisabledOverlay", // Identify this as the overlay panel
-                Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(51, 40, 40, 40), // 20% opacity (51/255 ≈ 0.2)
-                Cursor = Cursors.No
-            };
-
-            // Create the red X label
-            var disabledLabel = new Label
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled: Found header, calling SetDisabled(false)");
+                header.SetDisabled(false);
+            }
+            else
             {
-                Text = "✖",
-                Font = new Font("Segoe UI", 72, FontStyle.Bold),
-                ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Fill,
-                UseCompatibleTextRendering = false
-            };
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled: Header not found");
+            }
+            
+            // Re-enable card interaction
+            cardPanel.Enabled = true;
+            cardPanel.Cursor = Cursors.Default;
+            
+            // Restore Tag to just the feature checker
+            if (cardPanel.Tag != null)
+            {
+                var featureCheckerProp = cardPanel.Tag.GetType().GetProperty("FeatureChecker");
+                if (featureCheckerProp != null)
+                {
+                    var featureChecker = featureCheckerProp.GetValue(cardPanel.Tag) as Func<bool>;
+                    if (featureChecker != null)
+                    {
+                        cardPanel.Tag = featureChecker;
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled: Restored Tag to feature checker");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled: Tag is already feature checker or no FeatureChecker property");
+                }
+            }
+            
+            // Reset opacity for all content controls to full opacity (undo the SetControlOpacity call)
+            foreach (Control control in cardPanel.Controls)
+            {
+                if (control != header)
+                {
+                    SetControlOpacity(control, 1.0); // Reset to full opacity
+                }
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled: About to call RefreshLabelsInCardOnly");
+            // Force refresh of all labels in this card to restore proper colors
+            // This ensures theme-specific colors and data-specific colors are re-applied
+            RefreshLabelsInCardOnly(cardPanel);
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled: Completed");
+        }
 
-            overlay.Controls.Add(disabledLabel);
-            cardPanel.Controls.Add(overlay);
-            overlay.BringToFront();
+        /// <summary>
+        /// Applies the disabled state to a card panel, showing a red X and reducing opacity
+        /// </summary>
+        private void SetCardDisabled(Panel cardPanel)
+        {
+            if (cardPanel == null) return;
+            
+            // Check if already marked as disabled
+            if (cardPanel.Tag != null)
+            {
+                var isDisabledProp = cardPanel.Tag.GetType().GetProperty("IsDisabled");
+                if (isDisabledProp != null && isDisabledProp.GetValue(cardPanel.Tag) is bool isDisabled && isDisabled)
+                {
+                    return; // Already disabled
+                }
+            }
+            
+            // Find the header control and show the disabled label
+            var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
+            if (header != null)
+            {
+                header.SetDisabled(true);
+            }
+            
+            // Reduce opacity of all content controls (except header) to indicate disabled state
+            foreach (Control control in cardPanel.Controls)
+            {
+                if (control != header)
+                {
+                    SetControlOpacity(control, 0.4); // 40% opacity
+                }
+            }
+            
+            // Disable card interaction and change cursor to indicate non-interactive state
+            cardPanel.Enabled = false;
+            cardPanel.Cursor = Cursors.No;
+            
+            // Store disabled state in Tag to prevent re-processing
+            var featureChecker = cardPanel.Tag as Func<bool>;
+            if (featureChecker != null)
+            {
+                // Wrap the feature checker with a disabled flag
+                cardPanel.Tag = new { FeatureChecker = featureChecker, IsDisabled = true };
+            }
+        }
+        
+        /// <summary>
+        /// Sets the opacity of a control and its children by adjusting ForeColor alpha
+        /// </summary>
+        private void SetControlOpacity(Control control, double opacity)
+        {
+            if (control == null) return;
+            
+            // Calculate alpha value (0-255)
+            int alpha = (int)(opacity * 255);
+            
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetControlOpacity: Setting alpha to {alpha} for {control.GetType().Name}");
+            
+            // Update control's foreground color with new alpha
+            if (control is Label label)
+            {
+                // Store the original RGB values and apply new alpha
+                var originalColor = label.ForeColor;
+                var newColor = Color.FromArgb(alpha, originalColor.R, originalColor.G, originalColor.B);
+                label.ForeColor = newColor;
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetControlOpacity: Label color changed from A={originalColor.A} to A={newColor.A}");
+            }
+            else if (control is Panel panel)
+            {
+                // Recursively set opacity for child controls
+                foreach (Control child in panel.Controls)
+                {
+                    SetControlOpacity(child, opacity);
+                }
+            }
         }
 
         private string GetPositionLossLimit()
@@ -11403,22 +11664,182 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Refreshes the Risk Overview panel if it's currently visible.
+        /// Called when feature toggles change to update card overlay states.
+        /// </summary>
+        private void RefreshRiskOverviewIfVisible()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshRiskOverviewIfVisible called - selectedNavItem='{selectedNavItem}'");
+                
+                // Check if Risk Overview tab is currently selected
+                if (selectedNavItem != null && selectedNavItem.EndsWith("Risk Overview"))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Risk Overview tab is active, rebuilding entire panel");
+                    
+                    // Find the Risk Overview panel and rebuild it completely
+                    if (pageContents.TryGetValue(selectedNavItem, out var oldRiskOverviewPanel))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Found old Risk Overview panel, creating new one");
+                        
+                        // Create a completely new Risk Overview panel
+                        var newRiskOverviewPanel = CreateRiskOverviewPanel();
+                        
+                        // Replace the old panel with the new one in pageContents
+                        pageContents[selectedNavItem] = newRiskOverviewPanel;
+                        
+                        // If the Risk Overview tab is currently displayed, update the UI
+                        if (contentPanel.Controls.Count > 0 && contentPanel.Controls[0] == oldRiskOverviewPanel)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Risk Overview panel is currently displayed, updating UI");
+                            contentPanel.SuspendLayout();
+                            contentPanel.Controls.Clear();
+                            
+                            newRiskOverviewPanel.Dock = DockStyle.Fill;
+                            contentPanel.Controls.Add(newRiskOverviewPanel);
+                            
+                            // Refresh the new panel to ensure all data is current
+                            RefreshRiskOverviewPanel(newRiskOverviewPanel);
+                            contentPanel.ResumeLayout();
+                        }
+                        
+                        // Dispose the old panel to free resources
+                        try
+                        {
+                            oldRiskOverviewPanel.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Error disposing old panel: {ex.Message}");
+                        }
+                        
+                        System.Diagnostics.Debug.WriteLine("[REFRESH DEBUG] Risk Overview panel completely rebuilt after feature toggle change");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] ERROR: Risk Overview panel not found in pageContents");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Risk Overview tab not active, skipping refresh");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Error rebuilding Risk Overview after feature toggle change: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Refreshes only the value labels in a specific card without triggering overlay updates
+        /// </summary>
+        private void RefreshLabelsInCardOnly(Panel cardPanel)
+        {
+            if (cardPanel == null) 
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInCardOnly: cardPanel is null");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInCardOnly called for card");
+            RefreshLabelsInControlInternal(cardPanel, false);
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInCardOnly completed");
+        }
+
+        /// <summary>
         /// Recursively refreshes all value labels in a control.
         /// </summary>
         private void RefreshLabelsInControl(Control control)
         {
             if (control == null) return;
 
-            // Check if this is a card panel with feature overlay support
-            if (control is Panel panel && panel.Tag is Func<bool>)
+            RefreshLabelsInControlInternal(control, true);
+        }
+
+        /// <summary>
+        /// Internal method that handles label refreshing with optional overlay update
+        /// </summary>
+        private void RefreshLabelsInControlInternal(Control control, bool updateOverlays)
+        {
+            if (control == null) 
             {
-                // Update the overlay state for this card
-                UpdateCardOverlay(panel);
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInControlInternal: control is null");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInControlInternal: control={control.GetType().Name}, updateOverlays={updateOverlays}");
+
+            // Check if this is a card panel with feature overlay support
+            if (updateOverlays && control is Panel panel)
+            {
+                // Check for both feature checker functions and feature card tags
+                var hasFeatureChecker = panel.Tag is Func<bool> || 
+                    (panel.Tag != null && panel.Tag.GetType().GetProperty("FeatureChecker") != null);
+                
+                if (hasFeatureChecker)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInControlInternal: Found card panel with feature checker, rebuilding like Trading Times card");
+                    
+                    // Rebuild the card completely (like Trading Times card)
+                    var parent = panel.Parent;
+                    var index = parent?.Controls.GetChildIndex(panel) ?? -1;
+                    if (parent != null && index >= 0)
+                    {
+                        // Determine which card this is and recreate it
+                        var cardTitle = GetCardTitle(panel);
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInControlInternal: Rebuilding card '{cardTitle}'");
+                        
+                        Panel newCard = null;
+                        
+                        if (cardTitle.Contains("Position"))
+                        {
+                            newCard = CreateRiskOverviewCard(
+                                "Position Limits",
+                                new[] { "Loss Limit:", "Profit Target:" },
+                                new[] { GetPositionLossLimit, GetPositionProfitTarget },
+                                () => IsFeatureEnabled(s => s.PositionsEnabled)
+                            );
+                        }
+                        else if (cardTitle.Contains("Daily"))
+                        {
+                            newCard = CreateRiskOverviewCard(
+                                "Daily Limits",
+                                new[] { "Daily Loss Limit:", "Daily Profit Target:" },
+                                new[] { GetDailyLossLimit, GetDailyProfitTarget },
+                                () => IsFeatureEnabled(s => s.LimitsEnabled)
+                            );
+                        }
+                        else if (cardTitle.Contains("Symbol"))
+                        {
+                            newCard = CreateRiskOverviewCard(
+                                "Symbol Restrictions",
+                                new[] { "Blocked Symbols:", "Default Contract Limit:", "Symbol-Specific Limits:" },
+                                new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits },
+                                () => IsFeatureEnabled(s => s.SymbolsEnabled)
+                            );
+                        }
+                        
+                        if (newCard != null)
+                        {
+                            parent.Controls.Remove(panel);
+                            parent.Controls.Add(newCard);
+                            parent.Controls.SetChildIndex(newCard, index);
+                            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInControlInternal: Successfully rebuilt card '{cardTitle}'");
+                            
+                            // Dispose old card
+                            try { panel.Dispose(); } catch { }
+                            return;
+                        }
+                    }
+                }
             }
 
             // Check if this is the Trading Times card - needs special refresh
             if (control is Panel tradingPanel && tradingPanel.Tag as string == "TradingTimesCard")
             {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInControlInternal: Found Trading Times card, recreating");
                 var parent = tradingPanel.Parent;
                 var index = parent?.Controls.GetChildIndex(tradingPanel) ?? -1;
                 if (parent != null && index >= 0)
@@ -11434,6 +11855,7 @@ namespace Risk_Manager
             // Check if this is a value label (has a Tag with getter function)
             if (control is Label label && label.Tag is Func<string> getter)
             {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInControlInternal: Found value label, refreshing");
                 try
                 {
                     var rawVal = getter() ?? string.Empty;
@@ -11449,10 +11871,13 @@ namespace Risk_Manager
                     {
                         label.Text = "Not set";
                         label.Image = null;
-                        label.ForeColor = TextGray;
+                        // Ensure full opacity for "Not set" text too
+                        label.ForeColor = Color.FromArgb(255, TextGray.R, TextGray.G, TextGray.B);
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInControlInternal: Label set to 'Not set' with full opacity");
                     }
                     else
                     {
+                        // ... (rest of the label refresh logic remains the same)
                         // Detect special emoji tokens and choose icons accordingly
                         Image overrideIcon = null;
                         bool isDollar = false;
@@ -11501,6 +11926,11 @@ namespace Risk_Manager
                                 labelColor = TextGray;
                             }
                         }
+                        
+                        // CRITICAL FIX: Always ensure full opacity (255) when setting colors
+                        // This fixes the issue where disabled cards had reduced alpha that persisted
+                        labelColor = Color.FromArgb(255, labelColor.R, labelColor.G, labelColor.B);
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInControlInternal: Color set with full opacity - R={labelColor.R}, G={labelColor.G}, B={labelColor.B}, A={labelColor.A}");
 
                         if (overrideIcon != null)
                         {
@@ -11561,19 +11991,79 @@ namespace Risk_Manager
                                 label.ForeColor = labelColor;
                             }
                         }
+                        
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInControlInternal: Label updated - text='{label.Text}', color={labelColor.Name}");
                     }
                 }
                 catch (Exception ex)
                 {
                     label.Text = "⚠️ Error loading data";
-                    System.Diagnostics.Debug.WriteLine($"Error refreshing Risk Overview label: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Error refreshing Risk Overview label: {ex.Message}");
                 }
             }
             // Recursively refresh child controls
             foreach (Control child in control.Controls)
             {
-                RefreshLabelsInControl(child);
+                RefreshLabelsInControlInternal(child, updateOverlays);
             }
+            
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshLabelsInControlInternal: Completed for {control.GetType().Name}");
+        }
+
+        /// <summary>
+        /// Helper method to get the title of a card panel
+        /// </summary>
+        private string GetCardTitle(Panel cardPanel)
+        {
+            try
+            {
+                // Look for CustomCardHeaderControl in the card
+                var header = FindControlOfType<CustomCardHeaderControl>(cardPanel);
+                if (header?.TitleLabel != null)
+                {
+                    return header.TitleLabel.Text ?? "Unknown";
+                }
+                
+                // Fallback: look for any label that might be the title
+                var labels = FindControlsOfType<Label>(cardPanel);
+                return labels.FirstOrDefault()?.Text ?? "Unknown";
+            }
+            catch
+            {
+                return "Unknown";
+            }
+        }
+
+        /// <summary>
+        /// Helper method to find a control of a specific type
+        /// </summary>
+        private T FindControlOfType<T>(Control parent) where T : Control
+        {
+            if (parent is T match) return match;
+            
+            foreach (Control child in parent.Controls)
+            {
+                var result = FindControlOfType<T>(child);
+                if (result != null) return result;
+            }
+            
+            return null;
+        }
+
+        /// <summary>
+        /// Helper method to find all controls of a specific type
+        /// </summary>
+        private List<T> FindControlsOfType<T>(Control parent) where T : Control
+        {
+            var results = new List<T>();
+            if (parent is T match) results.Add(match);
+            
+            foreach (Control child in parent.Controls)
+            {
+                results.AddRange(FindControlsOfType<T>(child));
+            }
+            
+            return results;
         }
 
 
