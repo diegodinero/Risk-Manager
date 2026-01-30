@@ -10061,29 +10061,55 @@ namespace Risk_Manager
                     // Add event handler for master toggle
                     checkbox.CheckedChanged += (s, e) =>
                     {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Master feature toggle changed to: {featureToggleEnabledCheckbox.Checked}");
+                        
                         // When master toggle changes, sync individual toggles
                         var masterChecked = featureToggleEnabledCheckbox.Checked;
                         if (positionsFeatureCheckbox != null) positionsFeatureCheckbox.Checked = masterChecked;
                         if (limitsFeatureCheckbox != null) limitsFeatureCheckbox.Checked = masterChecked;
                         if (symbolsFeatureCheckbox != null) symbolsFeatureCheckbox.Checked = masterChecked;
                         if (tradingTimesFeatureCheckbox != null) tradingTimesFeatureCheckbox.Checked = masterChecked;
+                        
+                        // Refresh Risk Overview panel if visible
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Master toggle calling RefreshRiskOverviewIfVisible");
+                        RefreshRiskOverviewIfVisible();
                     };
                 }
                 else if (feature == "Positions")
                 {
                     positionsFeatureCheckbox = checkbox;
+                    // Add event handler to refresh Risk Overview when this toggle changes
+                    checkbox.CheckedChanged += (s, e) => {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Positions feature toggle changed to: {checkbox.Checked}");
+                        RefreshRiskOverviewIfVisible();
+                    };
                 }
                 else if (feature == "Limits")
                 {
                     limitsFeatureCheckbox = checkbox;
+                    // Add event handler to refresh Risk Overview when this toggle changes
+                    checkbox.CheckedChanged += (s, e) => {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Limits feature toggle changed to: {checkbox.Checked}");
+                        RefreshRiskOverviewIfVisible();
+                    };
                 }
                 else if (feature == "Symbols")
                 {
                     symbolsFeatureCheckbox = checkbox;
+                    // Add event handler to refresh Risk Overview when this toggle changes
+                    checkbox.CheckedChanged += (s, e) => {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Symbols feature toggle changed to: {checkbox.Checked}");
+                        RefreshRiskOverviewIfVisible();
+                    };
                 }
                 else if (feature == "Allowed Trading Times")
                 {
                     tradingTimesFeatureCheckbox = checkbox;
+                    // Add event handler to refresh Risk Overview when this toggle changes
+                    checkbox.CheckedChanged += (s, e) => {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Trading Times feature toggle changed to: {checkbox.Checked}");
+                        RefreshRiskOverviewIfVisible();
+                    };
                 }
             }
 
@@ -10478,6 +10504,81 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(privacyModeInfoLabel);
 
+            // Divider
+            var divider3 = new Panel
+            {
+                Height = 2,
+                Width = 600,
+                BackColor = DarkerBackground,
+                Margin = new Padding(0, 10, 0, 20)
+            };
+            contentArea.Controls.Add(divider3);
+
+            // Card Display Style Section
+            var cardStyleSectionLabel = new Label
+            {
+                Text = "Risk Overview Card Display",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            contentArea.Controls.Add(cardStyleSectionLabel);
+
+            // Card display style checkbox
+            var cardStyleCheckBox = new CheckBox
+            {
+                Text = "Use Greyed Out Style for Disabled Cards",
+                AutoSize = true,
+                Checked = false,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            
+            // Load current card style setting
+            if (accountSelector != null && accountSelector.SelectedItem is Account currentAcc)
+            {
+                var accountNumber = GetAccountIdentifier(currentAcc);
+                var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
+                if (settings != null)
+                {
+                    cardStyleCheckBox.Checked = settings.UseGreyedOutCardStyle;
+                }
+            }
+            
+            cardStyleCheckBox.CheckedChanged += (s, e) =>
+            {
+                if (accountSelector != null && accountSelector.SelectedItem is Account currentAccount)
+                {
+                    var accountNumber = GetAccountIdentifier(currentAccount);
+                    RiskManagerSettingsService.Instance.UpdateCardDisplayStyle(accountNumber, cardStyleCheckBox.Checked);
+                    
+                    // Rebuild Risk Overview panel to apply the new style
+                    RefreshRiskOverviewIfVisible();
+                }
+            };
+
+            contentArea.Controls.Add(cardStyleCheckBox);
+
+            // Info label for card display style
+            var cardStyleInfoLabel = new Label
+            {
+                Text = "Choose how disabled Risk Overview cards are displayed:\n" +
+                       "• Unchecked (default): Shows a Red X overlay on disabled cards - best for White theme\n" +
+                       "• Checked: Greys out disabled cards by reducing opacity\n\n" +
+                       "Note: The Red X style is recommended when using the White theme for better visibility.",
+                AutoSize = true,
+                MaximumSize = new Size(600, 0),
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                Margin = new Padding(20, 0, 0, 10)
+            };
+            contentArea.Controls.Add(cardStyleInfoLabel);
+
             // Add controls in correct order for docking
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
@@ -10865,28 +10966,35 @@ namespace Risk_Manager
                 new[] { GetAccountLockStatus, GetSettingsLockStatus }
             ));
 
-            flowLayout.Controls.Add(CreateRiskOverviewCard(
+            var positionsCard = CreateRiskOverviewCard(
                 "Position Limits",
                 new[] { "Loss Limit:", "Profit Target:" },
                 new[] { GetPositionLossLimit, GetPositionProfitTarget },
                 () => IsFeatureEnabled(s => s.PositionsEnabled)
-            ));
+            );
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewPanel: Created Positions card with feature enabled = {IsFeatureEnabled(s => s.PositionsEnabled)}");
+            flowLayout.Controls.Add(positionsCard);
 
-            flowLayout.Controls.Add(CreateRiskOverviewCard(
+            var limitsCard = CreateRiskOverviewCard(
                 "Daily Limits",
                 new[] { "Daily Loss Limit:", "Daily Profit Target:" },
                 new[] { GetDailyLossLimit, GetDailyProfitTarget },
                 () => IsFeatureEnabled(s => s.LimitsEnabled)
-            ));
+            );
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewPanel: Created Daily Limits card with feature enabled = {IsFeatureEnabled(s => s.LimitsEnabled)}");
+            flowLayout.Controls.Add(limitsCard);
 
-            flowLayout.Controls.Add(CreateRiskOverviewCard(
+            var symbolsCard = CreateRiskOverviewCard(
                 "Symbol Restrictions",
                 new[] { "Blocked Symbols:", "Default Contract Limit:", "Symbol-Specific Limits:" },
                 new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits },
                 () => IsFeatureEnabled(s => s.SymbolsEnabled)
-            ));
+            );
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewPanel: Created Symbols card with feature enabled = {IsFeatureEnabled(s => s.SymbolsEnabled)}");
+            flowLayout.Controls.Add(symbolsCard);
 
             var tradingTimesCard = CreateTradingTimesOverviewCard();
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewPanel: Created Trading Times card");
             flowLayout.Controls.Add(tradingTimesCard);
 
             // Add the flow layout to the content area
@@ -10910,6 +11018,8 @@ namespace Risk_Manager
         /// </summary>
         private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters, Func<bool> isFeatureEnabled = null)
         {
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Creating card '{title}'");
+            
             var cardPanel = new Panel
             {
                 Width = 480, // Adjusted width for 2-column layout
@@ -10919,6 +11029,24 @@ namespace Risk_Manager
                 Margin = new Padding(0, 0, 15, 15), // Add right and bottom margin for spacing
                 Tag = isFeatureEnabled // Store the feature checker for later refresh
             };
+
+            // Check if feature is enabled and apply disabled state immediately if needed
+            if (isFeatureEnabled != null)
+            {
+                var featureState = isFeatureEnabled();
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Card '{title}' has feature checker, current state = {featureState}");
+                
+                if (!featureState)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Card '{title}' should be disabled, calling SetCardDisabled");
+                    // Apply disabled state immediately during creation if feature is disabled
+                    SetCardDisabled(cardPanel);
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Card '{title}' has no feature checker (always enabled)");
+            }
 
             var cardLayout = new FlowLayoutPanel
             {
@@ -10998,8 +11126,7 @@ namespace Risk_Manager
 
             cardPanel.Controls.Add(cardLayout);
             
-            // Add disabled overlay if feature is disabled
-            UpdateCardOverlay(cardPanel);
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Completed card '{title}'");
             
             return cardPanel;
         }
@@ -11118,10 +11245,32 @@ namespace Risk_Manager
 
             cardPanel.Controls.Add(cardLayout);
             
-            // Add disabled overlay if feature is disabled
+            // Apply disabled state if feature is disabled
             if (!IsFeatureEnabled(s => s.TradingTimesEnabled))
             {
-                AddDisabledOverlay(cardPanel);
+                // Check which display style to use
+                bool useGreyedOutStyle = false;
+                if (!string.IsNullOrEmpty(accountNumber))
+                {
+                    if (settingsService.IsInitialized)
+                    {
+                        var settings = settingsService.GetSettings(accountNumber);
+                        if (settings != null)
+                        {
+                            useGreyedOutStyle = settings.UseGreyedOutCardStyle;
+                        }
+                    }
+                }
+                
+                // Apply the appropriate disabled style
+                if (useGreyedOutStyle)
+                {
+                    SetCardDisabled(cardPanel);
+                }
+                else
+                {
+                    AddDisabledOverlay(cardPanel);
+                }
             }
             
             return cardPanel;
@@ -11167,33 +11316,102 @@ namespace Risk_Manager
 
         private bool IsFeatureEnabled(Func<AccountSettings, bool> featureGetter)
         {
+            // First, try to get the current UI state of the feature toggles
+            // This ensures we reflect the current checkbox state, not just saved settings
+            if (featureGetter != null)
+            {
+                // Determine which feature we're checking based on the getter method name
+                var getterMethodName = featureGetter.Method.Name;
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Checking {getterMethodName}");
+                
+                // Check the current UI state first
+                if (getterMethodName.Contains("PositionsEnabled") && positionsFeatureCheckbox != null)
+                {
+                    var uiState = positionsFeatureCheckbox.Checked;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Positions UI state = {uiState}");
+                    return uiState;
+                }
+                else if (getterMethodName.Contains("LimitsEnabled") && limitsFeatureCheckbox != null)
+                {
+                    var uiState = limitsFeatureCheckbox.Checked;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Limits UI state = {uiState}");
+                    return uiState;
+                }
+                else if (getterMethodName.Contains("SymbolsEnabled") && symbolsFeatureCheckbox != null)
+                {
+                    var uiState = symbolsFeatureCheckbox.Checked;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Symbols UI state = {uiState}");
+                    return uiState;
+                }
+                else if (getterMethodName.Contains("TradingTimesEnabled") && tradingTimesFeatureCheckbox != null)
+                {
+                    var uiState = tradingTimesFeatureCheckbox.Checked;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: TradingTimes UI state = {uiState}");
+                    return uiState;
+                }
+            }
+            
+            // Fallback to settings service if UI state not available
             var accountNumber = GetSelectedAccountNumber();
             // Default to enabled (no overlay) if no account selected - avoid misleading disabled state
-            if (string.IsNullOrEmpty(accountNumber)) return true;
+            if (string.IsNullOrEmpty(accountNumber)) 
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: No account selected, defaulting to enabled");
+                return true;
+            }
 
             var settingsService = RiskManagerSettingsService.Instance;
             // Default to enabled (no overlay) if service not ready - avoid misleading disabled state
-            if (!settingsService.IsInitialized) return true;
+            if (!settingsService.IsInitialized) 
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Settings service not initialized, defaulting to enabled");
+                return true;
+            }
 
             var settings = settingsService.GetSettings(accountNumber);
             // If settings exist, use the feature flag; otherwise default to enabled
-            return settings != null ? featureGetter(settings) : true;
+            var settingsState = settings != null ? featureGetter(settings) : true;
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Using settings state = {settingsState}");
+            return settingsState;
         }
 
         private void UpdateCardOverlay(Panel cardPanel)
         {
             if (cardPanel == null) return;
             
+            // Get current card display style preference
+            bool useGreyedOutStyle = false;
+            var accountNumber = GetSelectedAccountNumber();
+            if (!string.IsNullOrEmpty(accountNumber))
+            {
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (settingsService.IsInitialized)
+                {
+                    var settings = settingsService.GetSettings(accountNumber);
+                    if (settings != null)
+                    {
+                        useGreyedOutStyle = settings.UseGreyedOutCardStyle;
+                    }
+                }
+            }
+            
             // Get the feature checker from Tag (might be wrapped in anonymous object)
             Func<bool> featureChecker = null;
             
             if (cardPanel.Tag != null)
             {
-                // Try to get FeatureChecker from anonymous object
-                var featureCheckerProp = cardPanel.Tag.GetType().GetProperty("FeatureChecker");
+                // Try to get FeatureChecker or OriginalTag from anonymous object
+                var tagType = cardPanel.Tag.GetType();
+                var featureCheckerProp = tagType.GetProperty("FeatureChecker");
+                var originalTagProp = tagType.GetProperty("OriginalTag");
+                
                 if (featureCheckerProp != null)
                 {
                     featureChecker = featureCheckerProp.GetValue(cardPanel.Tag) as Func<bool>;
+                }
+                else if (originalTagProp != null)
+                {
+                    featureChecker = originalTagProp.GetValue(cardPanel.Tag) as Func<bool>;
                 }
                 else
                 {
@@ -11205,26 +11423,99 @@ namespace Risk_Manager
             // Check if this card has a feature checker
             if (featureChecker != null)
             {
-                // Determine if overlay should be shown
-                bool shouldShowOverlay = !featureChecker();
+                // Determine if card should be disabled
+                bool shouldBeDisabled = !featureChecker();
                 
-                // Check if overlay panel exists
+                // Check if overlay panel exists (Red X style)
                 var existingOverlay = cardPanel.Controls.OfType<Panel>()
                     .FirstOrDefault(p => p.Name == "DisabledOverlay");
                 bool hasOverlay = existingOverlay != null;
                 
-                if (shouldShowOverlay && !hasOverlay)
+                // Check if card is greyed out using reflection
+                bool isGreyedOut = false;
+                if (cardPanel.Tag != null)
                 {
-                    // Add overlay
-                    AddDisabledOverlay(cardPanel);
+                    var tagType = cardPanel.Tag.GetType();
+                    var isDisabledProp = tagType.GetProperty("IsDisabled");
+                    if (isDisabledProp != null)
+                    {
+                        var isDisabledValue = isDisabledProp.GetValue(cardPanel.Tag);
+                        isGreyedOut = isDisabledValue is bool isDisabledBool && isDisabledBool;
+                    }
                 }
-                else if (!shouldShowOverlay && hasOverlay)
+                
+                if (shouldBeDisabled)
                 {
-                    // Remove overlay panel
-                    cardPanel.Controls.Remove(existingOverlay);
-                    existingOverlay?.Dispose();
-                    cardPanel.Tag = featureChecker;
+                    // Card should be disabled - apply appropriate style
+                    if (useGreyedOutStyle)
+                    {
+                        // Remove Red X overlay if present
+                        if (hasOverlay)
+                        {
+                            cardPanel.Controls.Remove(existingOverlay);
+                            existingOverlay?.Dispose();
+                        }
+                        
+                        // Apply greyed out style if not already applied
+                        if (!isGreyedOut)
+                        {
+                            SetCardDisabled(cardPanel);
+                        }
+                    }
+                    else
+                    {
+                        // Remove greyed out style if present
+                        if (isGreyedOut)
+                        {
+                            RemoveCardDisabled(cardPanel);
+                        }
+                        
+                        // Add Red X overlay if not already present
+                        if (!hasOverlay)
+                        {
+                            AddDisabledOverlay(cardPanel);
+                        }
+                    }
+                }
+                else
+                {
+                    // Card should be enabled - remove any disabled styling
+                    if (hasOverlay)
+                    {
+                        // Remove Red X overlay
+                        cardPanel.Controls.Remove(existingOverlay);
+                        existingOverlay?.Dispose();
+                    }
+                    
+                    if (isGreyedOut)
+                    {
+                        // Remove greyed out style
+                        RemoveCardDisabled(cardPanel);
+                    }
+                    
+                    // Restore normal state
                     cardPanel.Cursor = Cursors.Default;
+                    cardPanel.Enabled = true;
+                    
+                    // Restore original tag
+                    if (cardPanel.Tag != null)
+                    {
+                        var tagType = cardPanel.Tag.GetType();
+                        var originalTagProp = tagType.GetProperty("OriginalTag");
+                        if (originalTagProp != null)
+                        {
+                            var originalTag = originalTagProp.GetValue(cardPanel.Tag);
+                            cardPanel.Tag = originalTag ?? featureChecker;
+                        }
+                        else
+                        {
+                            cardPanel.Tag = featureChecker;
+                        }
+                    }
+                    else
+                    {
+                        cardPanel.Tag = featureChecker;
+                    }
                 }
             }
         }
@@ -11263,6 +11554,156 @@ namespace Risk_Manager
             overlay.Controls.Add(disabledLabel);
             cardPanel.Controls.Add(overlay);
             overlay.BringToFront();
+        }
+
+        /// <summary>
+        /// Applies the greyed out disabled state to a card panel (alternative to Red X overlay)
+        /// </summary>
+        private void SetCardDisabled(Panel cardPanel)
+        {
+            if (cardPanel == null) return;
+            
+            // Check if already marked as disabled using reflection
+            if (cardPanel.Tag != null)
+            {
+                var tagType = cardPanel.Tag.GetType();
+                var isDisabledProp = tagType.GetProperty("IsDisabled");
+                if (isDisabledProp != null)
+                {
+                    var isDisabledValue = isDisabledProp.GetValue(cardPanel.Tag);
+                    if (isDisabledValue is bool isDisabled && isDisabled)
+                    {
+                        return; // Already disabled
+                    }
+                }
+            }
+            
+            // Store original colors before modifying
+            var originalColors = new Dictionary<Control, Color>();
+            StoreOriginalColors(cardPanel, originalColors);
+            
+            // Reduce opacity of all controls to indicate disabled state
+            SetControlOpacity(cardPanel, 0.4); // 40% opacity
+            
+            // Disable card interaction and change cursor to indicate non-interactive state
+            cardPanel.Enabled = false;
+            cardPanel.Cursor = Cursors.No;
+            
+            // Mark as disabled in Tag, storing both original tag and original colors
+            var originalTag = cardPanel.Tag;
+            cardPanel.Tag = new { OriginalTag = originalTag, IsDisabled = true, OriginalColors = originalColors };
+        }
+        
+        /// <summary>
+        /// Stores original colors of all controls recursively
+        /// </summary>
+        private void StoreOriginalColors(Control control, Dictionary<Control, Color> originalColors)
+        {
+            if (control == null) return;
+            
+            // Store the control's foreground color
+            if (control is Label label && label.ForeColor != Color.Transparent)
+            {
+                originalColors[label] = label.ForeColor;
+            }
+            
+            // Recursively store colors for child controls
+            foreach (Control child in control.Controls)
+            {
+                // Skip overlay panels
+                if (child is Panel panel && panel.Name == "DisabledOverlay")
+                    continue;
+                    
+                StoreOriginalColors(child, originalColors);
+            }
+        }
+        
+        /// <summary>
+        /// Removes the greyed out disabled state from a card panel
+        /// </summary>
+        private void RemoveCardDisabled(Panel cardPanel)
+        {
+            if (cardPanel == null) return;
+            
+            // Restore original colors if they were stored
+            Dictionary<Control, Color> originalColors = null;
+            if (cardPanel.Tag != null)
+            {
+                var tagType = cardPanel.Tag.GetType();
+                var originalColorsProp = tagType.GetProperty("OriginalColors");
+                if (originalColorsProp != null)
+                {
+                    originalColors = originalColorsProp.GetValue(cardPanel.Tag) as Dictionary<Control, Color>;
+                }
+            }
+            
+            if (originalColors != null)
+            {
+                // Restore original colors
+                foreach (var kvp in originalColors)
+                {
+                    if (kvp.Key is Label label)
+                    {
+                        label.ForeColor = kvp.Value;
+                    }
+                }
+            }
+            else
+            {
+                // Fallback: restore to full opacity
+                SetControlOpacity(cardPanel, 1.0); // 100% opacity
+            }
+            
+            // Re-enable card interaction
+            cardPanel.Enabled = true;
+            cardPanel.Cursor = Cursors.Default;
+            
+            // Restore original tag
+            if (cardPanel.Tag != null)
+            {
+                var tagType = cardPanel.Tag.GetType();
+                var originalTagProp = tagType.GetProperty("OriginalTag");
+                if (originalTagProp != null)
+                {
+                    cardPanel.Tag = originalTagProp.GetValue(cardPanel.Tag);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Sets the opacity of a control and its children by adjusting ForeColor alpha
+        /// </summary>
+        private void SetControlOpacity(Control control, double opacity)
+        {
+            if (control == null) return;
+            
+            // Calculate alpha value (0-255)
+            int alpha = (int)(opacity * 255);
+            
+            // Update control's foreground color with new alpha
+            if (control is Label label && label.ForeColor != Color.Transparent)
+            {
+                var originalColor = label.ForeColor;
+                var newColor = Color.FromArgb(alpha, originalColor.R, originalColor.G, originalColor.B);
+                label.ForeColor = newColor;
+            }
+            else if (control is Panel panel && panel.BackColor != Color.Transparent)
+            {
+                // Adjust panel background opacity if not transparent
+                var originalColor = panel.BackColor;
+                var newColor = Color.FromArgb(alpha, originalColor.R, originalColor.G, originalColor.B);
+                panel.BackColor = newColor;
+            }
+            
+            // Recursively set opacity for child controls
+            foreach (Control child in control.Controls)
+            {
+                // Skip overlay panels to avoid affecting the Red X
+                if (child is Panel childPanel && childPanel.Name == "DisabledOverlay")
+                    continue;
+                    
+                SetControlOpacity(child, opacity);
+            }
         }
 
         private string GetPositionLossLimit()
@@ -11400,6 +11841,76 @@ namespace Risk_Manager
 
             // Find all labels in the panel that display values
             RefreshLabelsInControl(panel);
+        }
+
+        /// <summary>
+        /// Refreshes the Risk Overview panel if it's currently visible.
+        /// Rebuilds the entire panel to ensure cards reflect current feature states and display style.
+        /// Called when feature toggles change or card display style changes.
+        /// </summary>
+        private void RefreshRiskOverviewIfVisible()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshRiskOverviewIfVisible called - selectedNavItem='{selectedNavItem}'");
+                
+                // Check if Risk Overview tab is currently selected
+                if (selectedNavItem != null && selectedNavItem.EndsWith("Risk Overview"))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Risk Overview tab is active, rebuilding entire panel");
+                    
+                    // Find the Risk Overview panel and rebuild it completely
+                    if (pageContents.TryGetValue(selectedNavItem, out var oldRiskOverviewPanel))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Found old Risk Overview panel, creating new one");
+                        
+                        // Create a completely new Risk Overview panel
+                        var newRiskOverviewPanel = CreateRiskOverviewPanel();
+                        
+                        // Replace the old panel with the new one in pageContents
+                        pageContents[selectedNavItem] = newRiskOverviewPanel;
+                        
+                        // If the Risk Overview tab is currently displayed, update the UI
+                        if (contentPanel.Controls.Count > 0 && contentPanel.Controls[0] == oldRiskOverviewPanel)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Risk Overview panel is currently displayed, updating UI");
+                            contentPanel.SuspendLayout();
+                            contentPanel.Controls.Clear();
+                            
+                            newRiskOverviewPanel.Dock = DockStyle.Fill;
+                            contentPanel.Controls.Add(newRiskOverviewPanel);
+                            
+                            // Refresh the new panel to ensure all data is current
+                            RefreshRiskOverviewPanel(newRiskOverviewPanel);
+                            contentPanel.ResumeLayout();
+                        }
+                        
+                        // Dispose the old panel to free resources
+                        try
+                        {
+                            oldRiskOverviewPanel.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Error disposing old panel: {ex.Message}");
+                        }
+                        
+                        System.Diagnostics.Debug.WriteLine("[REFRESH DEBUG] Risk Overview panel completely rebuilt after feature toggle change");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] ERROR: Risk Overview panel not found in pageContents");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Risk Overview tab not active, skipping refresh");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Error rebuilding Risk Overview after feature toggle change: {ex.Message}");
+            }
         }
 
         /// <summary>
