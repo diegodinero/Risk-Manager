@@ -10528,6 +10528,81 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(privacyModeInfoLabel);
 
+            // Divider
+            var divider3 = new Panel
+            {
+                Height = 2,
+                Width = 600,
+                BackColor = DarkerBackground,
+                Margin = new Padding(0, 10, 0, 20)
+            };
+            contentArea.Controls.Add(divider3);
+
+            // Card Display Style Section
+            var cardStyleSectionLabel = new Label
+            {
+                Text = "Risk Overview Card Display",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            contentArea.Controls.Add(cardStyleSectionLabel);
+
+            // Card display style checkbox
+            var cardStyleCheckBox = new CheckBox
+            {
+                Text = "Use Greyed Out Style for Disabled Cards",
+                AutoSize = true,
+                Checked = true,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+
+            // Load current card style setting
+            if (accountSelector != null && accountSelector.SelectedItem is Account currentAcc)
+            {
+                var accountNumber = GetAccountIdentifier(currentAcc);
+                var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
+                if (settings != null)
+                {
+                    cardStyleCheckBox.Checked = settings.UseGreyedOutCardStyle;
+                }
+            }
+
+            cardStyleCheckBox.CheckedChanged += (s, e) =>
+            {
+                if (accountSelector != null && accountSelector.SelectedItem is Account currentAccount)
+                {
+                    var accountNumber = GetAccountIdentifier(currentAccount);
+                    RiskManagerSettingsService.Instance.UpdateCardDisplayStyle(accountNumber, cardStyleCheckBox.Checked);
+
+                    // Rebuild Risk Overview panel to apply the new style
+                    RefreshRiskOverviewIfVisible();
+                }
+            };
+
+            contentArea.Controls.Add(cardStyleCheckBox);
+
+            // Info label for card display style
+            var cardStyleInfoLabel = new Label
+            {
+                Text = "Choose how disabled Risk Overview cards are displayed:\n" +
+                       "• Unchecked (default): Shows a Red X overlay on disabled cards - best for White theme\n" +
+                       "• Checked: Greys out disabled cards by reducing opacity\n\n" +
+                       "Note: The Red X style is recommended when using the White theme for better visibility.",
+                AutoSize = true,
+                MaximumSize = new Size(600, 0),
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                Margin = new Padding(20, 0, 0, 10)
+            };
+            contentArea.Controls.Add(cardStyleInfoLabel);
+
             // Add controls in correct order for docking
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
