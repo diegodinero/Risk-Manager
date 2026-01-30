@@ -10591,9 +10591,9 @@ namespace Risk_Manager
             var cardStyleInfoLabel = new Label
             {
                 Text = "Choose how disabled Risk Overview cards are displayed:\n" +
-                       "• Unchecked (default): Shows a Red X overlay on disabled cards - best for White theme\n" +
-                       "• Checked: Greys out disabled cards by reducing opacity\n\n" +
-                       "Note: The Red X style is recommended when using the White theme for better visibility.",
+                       "• Checked (default): Greys out disabled cards by reducing opacity\n" +
+                       "• Unchecked: Shows a large Red X overlay on disabled cards - best for White theme\n\n" +
+                       "Note: The Red X overlay style is recommended when using the White theme for better visibility.",
                 AutoSize = true,
                 MaximumSize = new Size(600, 0),
                 Font = new Font("Segoe UI", 9, FontStyle.Italic),
