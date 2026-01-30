@@ -64,7 +64,7 @@ private void ApplyOverlayStyle(Panel cardPanel)
     {
         Name = "DisabledOverlay",
         Dock = DockStyle.Fill,
-        BackColor = Color.FromArgb(102, 45, 62, 80), // 40% opacity
+        BackColor = Color.FromArgb(102, 45, 62, 80), // 40% opacity (alpha=102) with dark background
         Cursor = Cursors.No
     };
     
@@ -86,9 +86,9 @@ private void ApplyOverlayStyle(Panel cardPanel)
 }
 ```
 
-### 2. Switch Statement Implementation
+### 2. If-Else Statement Implementation
 
-The `SetCardDisabled` method now checks the current setting and switches between styles:
+The `SetCardDisabled` method now checks the current setting and chooses the appropriate style:
 
 ```csharp
 private void SetCardDisabled(Panel cardPanel)
@@ -114,16 +114,16 @@ private void SetCardDisabled(Panel cardPanel)
         }
     }
     
-    // Switch between styles based on setting
-    switch (useGreyedOutStyle)
+    // Apply the appropriate style based on setting
+    if (useGreyedOutStyle)
     {
-        case true: // Greyed out style: red X in header + reduced opacity
-            ApplyGreyedOutStyle(cardPanel);
-            break;
-            
-        case false: // Overlay style: semi-transparent overlay with large centered red X
-            ApplyOverlayStyle(cardPanel);
-            break;
+        // Greyed out style: red X in header + reduced opacity
+        ApplyGreyedOutStyle(cardPanel);
+    }
+    else
+    {
+        // Overlay style: semi-transparent overlay with large centered red X
+        ApplyOverlayStyle(cardPanel);
     }
     
     // Disable card interaction

@@ -11567,16 +11567,16 @@ namespace Risk_Manager
                 }
             }
             
-            // Switch between styles based on setting
-            switch (useGreyedOutStyle)
+            // Apply the appropriate style based on setting
+            if (useGreyedOutStyle)
             {
-                case true: // Greyed out style: red X in header + reduced opacity
-                    ApplyGreyedOutStyle(cardPanel);
-                    break;
-                    
-                case false: // Overlay style: semi-transparent overlay with large centered red X
-                    ApplyOverlayStyle(cardPanel);
-                    break;
+                // Greyed out style: red X in header + reduced opacity
+                ApplyGreyedOutStyle(cardPanel);
+            }
+            else
+            {
+                // Overlay style: semi-transparent overlay with large centered red X
+                ApplyOverlayStyle(cardPanel);
             }
             
             // Disable card interaction and change cursor to indicate non-interactive state
@@ -11624,7 +11624,7 @@ namespace Risk_Manager
             {
                 Name = "DisabledOverlay",
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(102, 45, 62, 80), // 40% opacity of dark background
+                BackColor = Color.FromArgb(102, 45, 62, 80), // 40% opacity (alpha=102) with dark background color (45, 62, 80)
                 Cursor = Cursors.No
             };
             
