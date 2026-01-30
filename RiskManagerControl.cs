@@ -10592,7 +10592,7 @@ namespace Risk_Manager
             {
                 Text = "Choose how disabled Risk Overview cards are displayed:\n" +
                        "• Checked (default): Greys out disabled cards by reducing opacity\n" +
-                       "• Unchecked: Shows a large Red X overlay on disabled cards - best for White theme\n\n" +
+                       "• Unchecked: Shows a large Red X overlay on disabled cards\n\n" +
                        "Note: The Red X overlay style is recommended when using the White theme for better visibility.",
                 AutoSize = true,
                 MaximumSize = new Size(600, 0),
@@ -11624,7 +11624,7 @@ namespace Risk_Manager
             {
                 Name = "DisabledOverlay",
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(102, 45, 62, 80), // 40% opacity (alpha=102) with dark background color (45, 62, 80)
+                BackColor = Color.FromArgb(102, 45, 62, 80), // 40% opacity (alpha=102, which is 40% of 255) with dark background color (45, 62, 80)
                 Cursor = Cursors.No
             };
             
