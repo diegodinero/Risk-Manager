@@ -11624,7 +11624,7 @@ namespace Risk_Manager
             {
                 Name = "DisabledOverlay",
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(102, 45, 62, 80), // 40% opacity (alpha=102, which is 40% of 255) with dark background color (45, 62, 80)
+                BackColor = Color.FromArgb(102, 45, 62, 80), // 40% opacity (alpha=102, calculated as 0.4 × 255) with dark background color (45, 62, 80)
                 Cursor = Cursors.No
             };
             
