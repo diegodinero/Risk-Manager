@@ -11400,17 +11400,63 @@ namespace Risk_Manager
 
         private bool IsFeatureEnabled(Func<AccountSettings, bool> featureGetter)
         {
+            // First, try to get the current UI state of the feature toggles
+            // This ensures we reflect the current checkbox state, not just saved settings
+            if (featureGetter != null)
+            {
+                // Determine which feature we're checking based on the getter method name
+                var getterMethodName = featureGetter.Method.Name;
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Checking {getterMethodName}");
+                
+                // Check the current UI state first
+                if (getterMethodName.Contains("PositionsEnabled") && positionsFeatureCheckbox != null)
+                {
+                    var uiState = positionsFeatureCheckbox.Checked;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Positions UI state = {uiState}");
+                    return uiState;
+                }
+                else if (getterMethodName.Contains("LimitsEnabled") && limitsFeatureCheckbox != null)
+                {
+                    var uiState = limitsFeatureCheckbox.Checked;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Limits UI state = {uiState}");
+                    return uiState;
+                }
+                else if (getterMethodName.Contains("SymbolsEnabled") && symbolsFeatureCheckbox != null)
+                {
+                    var uiState = symbolsFeatureCheckbox.Checked;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Symbols UI state = {uiState}");
+                    return uiState;
+                }
+                else if (getterMethodName.Contains("TradingTimesEnabled") && tradingTimesFeatureCheckbox != null)
+                {
+                    var uiState = tradingTimesFeatureCheckbox.Checked;
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: TradingTimes UI state = {uiState}");
+                    return uiState;
+                }
+            }
+            
+            // Fallback to settings service if UI state not available
             var accountNumber = GetSelectedAccountNumber();
             // Default to enabled (no overlay) if no account selected - avoid misleading disabled state
-            if (string.IsNullOrEmpty(accountNumber)) return true;
+            if (string.IsNullOrEmpty(accountNumber)) 
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: No account selected, defaulting to enabled");
+                return true;
+            }
 
             var settingsService = RiskManagerSettingsService.Instance;
             // Default to enabled (no overlay) if service not ready - avoid misleading disabled state
-            if (!settingsService.IsInitialized) return true;
+            if (!settingsService.IsInitialized) 
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Settings service not initialized, defaulting to enabled");
+                return true;
+            }
 
             var settings = settingsService.GetSettings(accountNumber);
             // If settings exist, use the feature flag; otherwise default to enabled
-            return settings != null ? featureGetter(settings) : true;
+            var settingsState = settings != null ? featureGetter(settings) : true;
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] IsFeatureEnabled: Using settings state = {settingsState}");
+            return settingsState;
         }
 
         private void UpdateCardOverlay(Panel cardPanel)
