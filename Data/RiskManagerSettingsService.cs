@@ -1355,7 +1355,7 @@ namespace Risk_Manager.Data
         public bool PrivacyModeEnabled { get; set; } = false;
 
         // Card Display Style - when false (default), uses Red X overlay; when true, uses greyed out style
-        public bool UseGreyedOutCardStyle { get; set; } = false;
+        public bool UseGreyedOutCardStyle { get; set; } = true;
 
         // Daily Limits
         public decimal? DailyLossLimit { get; set; }
