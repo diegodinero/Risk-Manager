@@ -10068,6 +10068,13 @@ namespace Risk_Manager
                         if (symbolsFeatureCheckbox != null) symbolsFeatureCheckbox.Checked = masterChecked;
                         if (tradingTimesFeatureCheckbox != null) tradingTimesFeatureCheckbox.Checked = masterChecked;
                         
+                        // Save the master toggle state
+                        var accountNumber = GetSelectedAccountNumber();
+                        if (!string.IsNullOrEmpty(accountNumber))
+                        {
+                            RiskManagerSettingsService.Instance.UpdateFeatureToggleEnabled(accountNumber, masterChecked);
+                        }
+                        
                         // Refresh Risk Overview panel if visible
                         System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Master toggle calling RefreshRiskOverviewIfVisible");
                         RefreshRiskOverviewIfVisible();
@@ -10079,6 +10086,21 @@ namespace Risk_Manager
                     // Add event handler to refresh Risk Overview when this toggle changes
                     checkbox.CheckedChanged += (s, e) => {
                         System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Positions feature toggle changed to: {checkbox.Checked}");
+                        
+                        // Save the feature toggle state
+                        var accountNumber = GetSelectedAccountNumber();
+                        if (!string.IsNullOrEmpty(accountNumber))
+                        {
+                            var service = RiskManagerSettingsService.Instance;
+                            service.UpdateIndividualFeatureToggles(
+                                accountNumber,
+                                positionsFeatureCheckbox?.Checked ?? true,
+                                limitsFeatureCheckbox?.Checked ?? true,
+                                symbolsFeatureCheckbox?.Checked ?? true,
+                                tradingTimesFeatureCheckbox?.Checked ?? true
+                            );
+                        }
+                        
                         RefreshRiskOverviewIfVisible();
                     };
                 }
@@ -10088,6 +10110,21 @@ namespace Risk_Manager
                     // Add event handler to refresh Risk Overview when this toggle changes
                     checkbox.CheckedChanged += (s, e) => {
                         System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Limits feature toggle changed to: {checkbox.Checked}");
+                        
+                        // Save the feature toggle state
+                        var accountNumber = GetSelectedAccountNumber();
+                        if (!string.IsNullOrEmpty(accountNumber))
+                        {
+                            var service = RiskManagerSettingsService.Instance;
+                            service.UpdateIndividualFeatureToggles(
+                                accountNumber,
+                                positionsFeatureCheckbox?.Checked ?? true,
+                                limitsFeatureCheckbox?.Checked ?? true,
+                                symbolsFeatureCheckbox?.Checked ?? true,
+                                tradingTimesFeatureCheckbox?.Checked ?? true
+                            );
+                        }
+                        
                         RefreshRiskOverviewIfVisible();
                     };
                 }
@@ -10097,6 +10134,21 @@ namespace Risk_Manager
                     // Add event handler to refresh Risk Overview when this toggle changes
                     checkbox.CheckedChanged += (s, e) => {
                         System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Symbols feature toggle changed to: {checkbox.Checked}");
+                        
+                        // Save the feature toggle state
+                        var accountNumber = GetSelectedAccountNumber();
+                        if (!string.IsNullOrEmpty(accountNumber))
+                        {
+                            var service = RiskManagerSettingsService.Instance;
+                            service.UpdateIndividualFeatureToggles(
+                                accountNumber,
+                                positionsFeatureCheckbox?.Checked ?? true,
+                                limitsFeatureCheckbox?.Checked ?? true,
+                                symbolsFeatureCheckbox?.Checked ?? true,
+                                tradingTimesFeatureCheckbox?.Checked ?? true
+                            );
+                        }
+                        
                         RefreshRiskOverviewIfVisible();
                     };
                 }
@@ -10106,6 +10158,21 @@ namespace Risk_Manager
                     // Add event handler to refresh Risk Overview when this toggle changes
                     checkbox.CheckedChanged += (s, e) => {
                         System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Trading Times feature toggle changed to: {checkbox.Checked}");
+                        
+                        // Save the feature toggle state
+                        var accountNumber = GetSelectedAccountNumber();
+                        if (!string.IsNullOrEmpty(accountNumber))
+                        {
+                            var service = RiskManagerSettingsService.Instance;
+                            service.UpdateIndividualFeatureToggles(
+                                accountNumber,
+                                positionsFeatureCheckbox?.Checked ?? true,
+                                limitsFeatureCheckbox?.Checked ?? true,
+                                symbolsFeatureCheckbox?.Checked ?? true,
+                                tradingTimesFeatureCheckbox?.Checked ?? true
+                            );
+                        }
+                        
                         RefreshRiskOverviewIfVisible();
                     };
                 }
