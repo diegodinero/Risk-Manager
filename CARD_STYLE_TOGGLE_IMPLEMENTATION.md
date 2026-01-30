@@ -11,7 +11,7 @@ Previously, the Risk Manager had two separate implementations:
 The user wanted to be able to toggle between these two styles using a checkbox in General Settings, but the cards were generated differently in each approach.
 
 ## Solution
-Added a switch statement in the `SetCardDisabled` method that checks the `UseGreyedOutCardStyle` setting and applies the appropriate style.
+Added conditional logic (if-else) in the `SetCardDisabled` method that checks the `UseGreyedOutCardStyle` setting and applies the appropriate style.
 
 ## Implementation Details
 
@@ -255,7 +255,7 @@ cardStyleCheckBox.CheckedChanged += (s, e) =>
 3. **Card becomes disabled** (feature toggle turned off)
    - `SetCardDisabled()` is called
    - Method checks `UseGreyedOutCardStyle` setting
-   - Switch statement applies appropriate style:
+   - Conditional logic applies appropriate style:
      - If true → `ApplyGreyedOutStyle()` (red X in header + reduced opacity)
      - If false → `ApplyOverlayStyle()` (overlay with large centered red X)
 
@@ -302,7 +302,7 @@ cardStyleCheckBox.CheckedChanged += (s, e) =>
 
 1. **RiskManagerControl.cs**
    - Modified `SetCardEnabled()` to clean up both styles
-   - Modified `SetCardDisabled()` to use switch statement
+   - Modified `SetCardDisabled()` to use if-else conditional logic
    - Added `ApplyGreyedOutStyle()` method
    - Added `ApplyOverlayStyle()` method
    - Updated info label text to correctly describe default
