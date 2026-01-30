@@ -996,10 +996,13 @@ namespace Risk_Manager
                 // If label.Tag is a getter delegate (used by Risk Overview value labels),
                 // skip overriding ForeColor here so specialized coloring (YellowBlueBlack) persists.
                 bool isValueGetterLabel = label.Tag is Func<string>;
+                
+                // Preserve red color for disabled label X indicator
+                bool isDisabledLabel = label.ForeColor == Color.FromArgb(220, 50, 50);
 
-                if (!isValueGetterLabel)
+                if (!isValueGetterLabel && !isDisabledLabel)
                 {
-                    // Update text color for labels (only if not a bound value label)
+                    // Update text color for labels (only if not a bound value label and not disabled label)
                     if (label.ForeColor == Color.White ||
                         label.ForeColor == Color.FromArgb(30, 30, 30))
                     {
