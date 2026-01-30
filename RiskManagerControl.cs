@@ -10513,9 +10513,9 @@ namespace Risk_Manager
             };
             
             // Load current card style setting
-            if (accountSelector != null && accountSelector.SelectedItem is Account selectedAcc)
+            if (accountSelector != null && accountSelector.SelectedItem is Account currentAcc)
             {
-                var accountNumber = GetAccountIdentifier(selectedAcc);
+                var accountNumber = GetAccountIdentifier(currentAcc);
                 var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
                 if (settings != null)
                 {
