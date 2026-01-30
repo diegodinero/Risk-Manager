@@ -10591,9 +10591,9 @@ namespace Risk_Manager
             var cardStyleInfoLabel = new Label
             {
                 Text = "Choose how disabled Risk Overview cards are displayed:\n" +
-                       "• Unchecked (default): Shows a Red X overlay on disabled cards - best for White theme\n" +
-                       "• Checked: Greys out disabled cards by reducing opacity\n\n" +
-                       "Note: The Red X style is recommended when using the White theme for better visibility.",
+                       "• Checked (default): Greys out disabled cards by reducing opacity\n" +
+                       "• Unchecked: Shows a large Red X overlay on disabled cards\n\n" +
+                       "Note: The Red X overlay style is recommended when using the White theme for better visibility.",
                 AutoSize = true,
                 MaximumSize = new Size(600, 0),
                 Font = new Font("Segoe UI", 9, FontStyle.Italic),
@@ -11473,7 +11473,16 @@ namespace Risk_Manager
             
             System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled called");
             
-            // Find the header control and hide the disabled label
+            // Remove any overlay panel if it exists (for overlay style)
+            var overlayPanel = cardPanel.Controls.OfType<Panel>().FirstOrDefault(p => p.Name == "DisabledOverlay");
+            if (overlayPanel != null)
+            {
+                cardPanel.Controls.Remove(overlayPanel);
+                overlayPanel.Dispose();
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled: Removed overlay panel");
+            }
+            
+            // Find the header control and hide the disabled label (for greyed out style)
             var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
             if (header != null)
             {
@@ -11525,7 +11534,7 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Applies the disabled state to a card panel, showing a red X and reducing opacity
+        /// Applies the disabled state to a card panel using either greyed out or overlay style
         /// </summary>
         private void SetCardDisabled(Panel cardPanel)
         {
@@ -11541,6 +11550,53 @@ namespace Risk_Manager
                 }
             }
             
+            // Get the current card style setting
+            var accountNumber = GetSelectedAccountNumber();
+            bool useGreyedOutStyle = true; // Default to greyed out style
+            
+            if (!string.IsNullOrEmpty(accountNumber))
+            {
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (settingsService.IsInitialized)
+                {
+                    var settings = settingsService.GetSettings(accountNumber);
+                    if (settings != null)
+                    {
+                        useGreyedOutStyle = settings.UseGreyedOutCardStyle;
+                    }
+                }
+            }
+            
+            // Apply the appropriate style based on setting
+            if (useGreyedOutStyle)
+            {
+                // Greyed out style: red X in header + reduced opacity
+                ApplyGreyedOutStyle(cardPanel);
+            }
+            else
+            {
+                // Overlay style: semi-transparent overlay with large centered red X
+                ApplyOverlayStyle(cardPanel);
+            }
+            
+            // Disable card interaction and change cursor to indicate non-interactive state
+            cardPanel.Enabled = false;
+            cardPanel.Cursor = Cursors.No;
+            
+            // Store disabled state in Tag to prevent re-processing
+            var featureChecker = cardPanel.Tag as Func<bool>;
+            if (featureChecker != null)
+            {
+                // Wrap the feature checker with a disabled flag
+                cardPanel.Tag = new { FeatureChecker = featureChecker, IsDisabled = true };
+            }
+        }
+        
+        /// <summary>
+        /// Applies greyed out style: red X in header with reduced opacity
+        /// </summary>
+        private void ApplyGreyedOutStyle(Panel cardPanel)
+        {
             // Find the header control and show the disabled label
             var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
             if (header != null)
@@ -11556,18 +11612,40 @@ namespace Risk_Manager
                     SetControlOpacity(control, 0.4); // 40% opacity
                 }
             }
-            
-            // Disable card interaction and change cursor to indicate non-interactive state
-            cardPanel.Enabled = false;
-            cardPanel.Cursor = Cursors.No;
-            
-            // Store disabled state in Tag to prevent re-processing
-            var featureChecker = cardPanel.Tag as Func<bool>;
-            if (featureChecker != null)
+        }
+        
+        /// <summary>
+        /// Applies overlay style: semi-transparent overlay with large centered red X
+        /// </summary>
+        private void ApplyOverlayStyle(Panel cardPanel)
+        {
+            // Create semi-transparent overlay panel
+            var overlayPanel = new Panel
             {
-                // Wrap the feature checker with a disabled flag
-                cardPanel.Tag = new { FeatureChecker = featureChecker, IsDisabled = true };
-            }
+                Name = "DisabledOverlay",
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(102, 45, 62, 80), // 40% opacity (alpha=102, calculated as 0.4 × 255) with dark background color (45, 62, 80)
+                Cursor = Cursors.No
+            };
+            
+            // Create large centered red X label
+            var largeXLabel = new Label
+            {
+                Text = "✖",
+                Font = new Font("Segoe UI", 72, FontStyle.Bold),
+                ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Fill,
+                UseCompatibleTextRendering = false
+            };
+            
+            // Add label to overlay
+            overlayPanel.Controls.Add(largeXLabel);
+            
+            // Add overlay to card (it will be on top due to z-order)
+            cardPanel.Controls.Add(overlayPanel);
+            overlayPanel.BringToFront();
         }
         
         /// <summary>
