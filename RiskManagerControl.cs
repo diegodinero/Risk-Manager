@@ -10531,7 +10531,11 @@ namespace Risk_Manager
                     RiskManagerSettingsService.Instance.UpdateCardDisplayStyle(accountNumber, cardStyleCheckBox.Checked);
                     
                     // Refresh Risk Overview cards to apply the new style
-                    RefreshRiskOverviewPanel();
+                    if (!string.IsNullOrEmpty(selectedNavItem) && selectedNavItem.EndsWith("Risk Overview") && 
+                        pageContents.TryGetValue(selectedNavItem, out var riskOverviewPanel))
+                    {
+                        RefreshRiskOverviewPanel(riskOverviewPanel);
+                    }
                 }
             };
 
@@ -11311,9 +11315,18 @@ namespace Risk_Manager
                     .FirstOrDefault(p => p.Name == "DisabledOverlay");
                 bool hasOverlay = existingOverlay != null;
                 
-                // Check if card is greyed out (by checking if it's disabled and Tag contains IsDisabled)
-                bool isGreyedOut = !cardPanel.Enabled && cardPanel.Tag != null && 
-                                   cardPanel.Tag.ToString().Contains("IsDisabled");
+                // Check if card is greyed out using reflection
+                bool isGreyedOut = false;
+                if (cardPanel.Tag != null)
+                {
+                    var tagType = cardPanel.Tag.GetType();
+                    var isDisabledProp = tagType.GetProperty("IsDisabled");
+                    if (isDisabledProp != null)
+                    {
+                        var isDisabledValue = isDisabledProp.GetValue(cardPanel.Tag);
+                        isGreyedOut = isDisabledValue is bool isDisabledBool && isDisabledBool;
+                    }
+                }
                 
                 if (shouldBeDisabled)
                 {
@@ -11434,11 +11447,24 @@ namespace Risk_Manager
         {
             if (cardPanel == null) return;
             
-            // Check if already marked as disabled
-            if (cardPanel.Tag != null && cardPanel.Tag.ToString().Contains("IsDisabled"))
+            // Check if already marked as disabled using reflection
+            if (cardPanel.Tag != null)
             {
-                return; // Already disabled
+                var tagType = cardPanel.Tag.GetType();
+                var isDisabledProp = tagType.GetProperty("IsDisabled");
+                if (isDisabledProp != null)
+                {
+                    var isDisabledValue = isDisabledProp.GetValue(cardPanel.Tag);
+                    if (isDisabledValue is bool isDisabled && isDisabled)
+                    {
+                        return; // Already disabled
+                    }
+                }
             }
+            
+            // Store original colors before modifying
+            var originalColors = new Dictionary<Control, Color>();
+            StoreOriginalColors(cardPanel, originalColors);
             
             // Reduce opacity of all controls to indicate disabled state
             SetControlOpacity(cardPanel, 0.4); // 40% opacity
@@ -11447,9 +11473,33 @@ namespace Risk_Manager
             cardPanel.Enabled = false;
             cardPanel.Cursor = Cursors.No;
             
-            // Mark as disabled in Tag
+            // Mark as disabled in Tag, storing both original tag and original colors
             var originalTag = cardPanel.Tag;
-            cardPanel.Tag = new { OriginalTag = originalTag, IsDisabled = true };
+            cardPanel.Tag = new { OriginalTag = originalTag, IsDisabled = true, OriginalColors = originalColors };
+        }
+        
+        /// <summary>
+        /// Stores original colors of all controls recursively
+        /// </summary>
+        private void StoreOriginalColors(Control control, Dictionary<Control, Color> originalColors)
+        {
+            if (control == null) return;
+            
+            // Store the control's foreground color
+            if (control is Label label && label.ForeColor != Color.Transparent)
+            {
+                originalColors[label] = label.ForeColor;
+            }
+            
+            // Recursively store colors for child controls
+            foreach (Control child in control.Controls)
+            {
+                // Skip overlay panels
+                if (child is Panel panel && panel.Name == "DisabledOverlay")
+                    continue;
+                    
+                StoreOriginalColors(child, originalColors);
+            }
         }
         
         /// <summary>
@@ -11459,8 +11509,34 @@ namespace Risk_Manager
         {
             if (cardPanel == null) return;
             
-            // Restore opacity of all controls
-            SetControlOpacity(cardPanel, 1.0); // 100% opacity
+            // Restore original colors if they were stored
+            Dictionary<Control, Color> originalColors = null;
+            if (cardPanel.Tag != null)
+            {
+                var tagType = cardPanel.Tag.GetType();
+                var originalColorsProp = tagType.GetProperty("OriginalColors");
+                if (originalColorsProp != null)
+                {
+                    originalColors = originalColorsProp.GetValue(cardPanel.Tag) as Dictionary<Control, Color>;
+                }
+            }
+            
+            if (originalColors != null)
+            {
+                // Restore original colors
+                foreach (var kvp in originalColors)
+                {
+                    if (kvp.Key is Label label)
+                    {
+                        label.ForeColor = kvp.Value;
+                    }
+                }
+            }
+            else
+            {
+                // Fallback: restore to full opacity
+                SetControlOpacity(cardPanel, 1.0); // 100% opacity
+            }
             
             // Re-enable card interaction
             cardPanel.Enabled = true;
@@ -11495,12 +11571,19 @@ namespace Risk_Manager
                 var newColor = Color.FromArgb(alpha, originalColor.R, originalColor.G, originalColor.B);
                 label.ForeColor = newColor;
             }
+            else if (control is Panel panel && panel.BackColor != Color.Transparent)
+            {
+                // Adjust panel background opacity if not transparent
+                var originalColor = panel.BackColor;
+                var newColor = Color.FromArgb(alpha, originalColor.R, originalColor.G, originalColor.B);
+                panel.BackColor = newColor;
+            }
             
             // Recursively set opacity for child controls
             foreach (Control child in control.Controls)
             {
                 // Skip overlay panels to avoid affecting the Red X
-                if (child is Panel panel && panel.Name == "DisabledOverlay")
+                if (child is Panel childPanel && childPanel.Name == "DisabledOverlay")
                     continue;
                     
                 SetControlOpacity(child, opacity);
