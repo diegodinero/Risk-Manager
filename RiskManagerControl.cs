@@ -11009,6 +11009,8 @@ namespace Risk_Manager
         /// </summary>
         private Panel CreateRiskOverviewCard(string title, string[] labels, Func<string>[] valueGetters, Func<bool> isFeatureEnabled = null)
         {
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Creating card '{title}'");
+            
             var cardPanel = new Panel
             {
                 Width = 480, // Adjusted width for 2-column layout
@@ -11018,6 +11020,50 @@ namespace Risk_Manager
                 Margin = new Padding(0, 0, 15, 15), // Add right and bottom margin for spacing
                 Tag = isFeatureEnabled // Store the feature checker for later refresh
             };
+
+            // Check if feature is enabled and apply disabled state immediately if needed
+            if (isFeatureEnabled != null)
+            {
+                var featureState = isFeatureEnabled();
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Card '{title}' has feature checker, current state = {featureState}");
+                
+                if (!featureState)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Card '{title}' should be disabled");
+                    
+                    // Check which display style to use
+                    bool useGreyedOutStyle = false;
+                    var accountNumber = GetSelectedAccountNumber();
+                    if (!string.IsNullOrEmpty(accountNumber))
+                    {
+                        var settingsService = RiskManagerSettingsService.Instance;
+                        if (settingsService.IsInitialized)
+                        {
+                            var settings = settingsService.GetSettings(accountNumber);
+                            if (settings != null)
+                            {
+                                useGreyedOutStyle = settings.UseGreyedOutCardStyle;
+                            }
+                        }
+                    }
+                    
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Using greyed out style = {useGreyedOutStyle}");
+                    
+                    // Apply the appropriate disabled style immediately during creation
+                    if (useGreyedOutStyle)
+                    {
+                        SetCardDisabled(cardPanel);
+                    }
+                    else
+                    {
+                        AddDisabledOverlay(cardPanel);
+                    }
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Card '{title}' has no feature checker (always enabled)");
+            }
 
             var cardLayout = new FlowLayoutPanel
             {
@@ -11097,8 +11143,7 @@ namespace Risk_Manager
 
             cardPanel.Controls.Add(cardLayout);
             
-            // Add disabled overlay if feature is disabled
-            UpdateCardOverlay(cardPanel);
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Completed card '{title}'");
             
             return cardPanel;
         }
@@ -11217,10 +11262,32 @@ namespace Risk_Manager
 
             cardPanel.Controls.Add(cardLayout);
             
-            // Add disabled overlay if feature is disabled
+            // Apply disabled state if feature is disabled
             if (!IsFeatureEnabled(s => s.TradingTimesEnabled))
             {
-                AddDisabledOverlay(cardPanel);
+                // Check which display style to use
+                bool useGreyedOutStyle = false;
+                if (!string.IsNullOrEmpty(accountNumber))
+                {
+                    if (settingsService.IsInitialized)
+                    {
+                        var settings = settingsService.GetSettings(accountNumber);
+                        if (settings != null)
+                        {
+                            useGreyedOutStyle = settings.UseGreyedOutCardStyle;
+                        }
+                    }
+                }
+                
+                // Apply the appropriate disabled style
+                if (useGreyedOutStyle)
+                {
+                    SetCardDisabled(cardPanel);
+                }
+                else
+                {
+                    AddDisabledOverlay(cardPanel);
+                }
             }
             
             return cardPanel;
