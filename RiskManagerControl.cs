@@ -10067,23 +10067,47 @@ namespace Risk_Manager
                         if (limitsFeatureCheckbox != null) limitsFeatureCheckbox.Checked = masterChecked;
                         if (symbolsFeatureCheckbox != null) symbolsFeatureCheckbox.Checked = masterChecked;
                         if (tradingTimesFeatureCheckbox != null) tradingTimesFeatureCheckbox.Checked = masterChecked;
+                        
+                        // Refresh Risk Overview panel if visible
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Master toggle calling RefreshRiskOverviewIfVisible");
+                        RefreshRiskOverviewIfVisible();
                     };
                 }
                 else if (feature == "Positions")
                 {
                     positionsFeatureCheckbox = checkbox;
+                    // Add event handler to refresh Risk Overview when this toggle changes
+                    checkbox.CheckedChanged += (s, e) => {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Positions feature toggle changed to: {checkbox.Checked}");
+                        RefreshRiskOverviewIfVisible();
+                    };
                 }
                 else if (feature == "Limits")
                 {
                     limitsFeatureCheckbox = checkbox;
+                    // Add event handler to refresh Risk Overview when this toggle changes
+                    checkbox.CheckedChanged += (s, e) => {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Limits feature toggle changed to: {checkbox.Checked}");
+                        RefreshRiskOverviewIfVisible();
+                    };
                 }
                 else if (feature == "Symbols")
                 {
                     symbolsFeatureCheckbox = checkbox;
+                    // Add event handler to refresh Risk Overview when this toggle changes
+                    checkbox.CheckedChanged += (s, e) => {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Symbols feature toggle changed to: {checkbox.Checked}");
+                        RefreshRiskOverviewIfVisible();
+                    };
                 }
                 else if (feature == "Allowed Trading Times")
                 {
                     tradingTimesFeatureCheckbox = checkbox;
+                    // Add event handler to refresh Risk Overview when this toggle changes
+                    checkbox.CheckedChanged += (s, e) => {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Trading Times feature toggle changed to: {checkbox.Checked}");
+                        RefreshRiskOverviewIfVisible();
+                    };
                 }
             }
 
@@ -10530,12 +10554,8 @@ namespace Risk_Manager
                     var accountNumber = GetAccountIdentifier(currentAccount);
                     RiskManagerSettingsService.Instance.UpdateCardDisplayStyle(accountNumber, cardStyleCheckBox.Checked);
                     
-                    // Refresh Risk Overview cards to apply the new style
-                    if (!string.IsNullOrEmpty(selectedNavItem) && selectedNavItem.EndsWith("Risk Overview") && 
-                        pageContents.TryGetValue(selectedNavItem, out var riskOverviewPanel))
-                    {
-                        RefreshRiskOverviewPanel(riskOverviewPanel);
-                    }
+                    // Rebuild Risk Overview panel to apply the new style
+                    RefreshRiskOverviewIfVisible();
                 }
             };
 
@@ -11725,6 +11745,76 @@ namespace Risk_Manager
 
             // Find all labels in the panel that display values
             RefreshLabelsInControl(panel);
+        }
+
+        /// <summary>
+        /// Refreshes the Risk Overview panel if it's currently visible.
+        /// Rebuilds the entire panel to ensure cards reflect current feature states and display style.
+        /// Called when feature toggles change or card display style changes.
+        /// </summary>
+        private void RefreshRiskOverviewIfVisible()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] RefreshRiskOverviewIfVisible called - selectedNavItem='{selectedNavItem}'");
+                
+                // Check if Risk Overview tab is currently selected
+                if (selectedNavItem != null && selectedNavItem.EndsWith("Risk Overview"))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Risk Overview tab is active, rebuilding entire panel");
+                    
+                    // Find the Risk Overview panel and rebuild it completely
+                    if (pageContents.TryGetValue(selectedNavItem, out var oldRiskOverviewPanel))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Found old Risk Overview panel, creating new one");
+                        
+                        // Create a completely new Risk Overview panel
+                        var newRiskOverviewPanel = CreateRiskOverviewPanel();
+                        
+                        // Replace the old panel with the new one in pageContents
+                        pageContents[selectedNavItem] = newRiskOverviewPanel;
+                        
+                        // If the Risk Overview tab is currently displayed, update the UI
+                        if (contentPanel.Controls.Count > 0 && contentPanel.Controls[0] == oldRiskOverviewPanel)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Risk Overview panel is currently displayed, updating UI");
+                            contentPanel.SuspendLayout();
+                            contentPanel.Controls.Clear();
+                            
+                            newRiskOverviewPanel.Dock = DockStyle.Fill;
+                            contentPanel.Controls.Add(newRiskOverviewPanel);
+                            
+                            // Refresh the new panel to ensure all data is current
+                            RefreshRiskOverviewPanel(newRiskOverviewPanel);
+                            contentPanel.ResumeLayout();
+                        }
+                        
+                        // Dispose the old panel to free resources
+                        try
+                        {
+                            oldRiskOverviewPanel.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Error disposing old panel: {ex.Message}");
+                        }
+                        
+                        System.Diagnostics.Debug.WriteLine("[REFRESH DEBUG] Risk Overview panel completely rebuilt after feature toggle change");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] ERROR: Risk Overview panel not found in pageContents");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Risk Overview tab not active, skipping refresh");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Error rebuilding Risk Overview after feature toggle change: {ex.Message}");
+            }
         }
 
         /// <summary>
