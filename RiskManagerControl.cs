@@ -10061,19 +10061,14 @@ namespace Risk_Manager
                     // Add event handler for master toggle
                     checkbox.CheckedChanged += (s, e) =>
                     {
+                        System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Master feature toggle changed to: {featureToggleEnabledCheckbox.Checked}");
+                        
                         // When master toggle changes, sync individual toggles
                         var masterChecked = featureToggleEnabledCheckbox.Checked;
                         if (positionsFeatureCheckbox != null) positionsFeatureCheckbox.Checked = masterChecked;
                         if (limitsFeatureCheckbox != null) limitsFeatureCheckbox.Checked = masterChecked;
                         if (symbolsFeatureCheckbox != null) symbolsFeatureCheckbox.Checked = masterChecked;
                         if (tradingTimesFeatureCheckbox != null) tradingTimesFeatureCheckbox.Checked = masterChecked;
-                        
-                        // Save the master toggle state
-                        var accountNumber = GetSelectedAccountNumber();
-                        if (!string.IsNullOrEmpty(accountNumber))
-                        {
-                            RiskManagerSettingsService.Instance.UpdateFeatureToggleEnabled(accountNumber, masterChecked);
-                        }
                         
                         // Refresh Risk Overview panel if visible
                         System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Master toggle calling RefreshRiskOverviewIfVisible");
@@ -10086,21 +10081,6 @@ namespace Risk_Manager
                     // Add event handler to refresh Risk Overview when this toggle changes
                     checkbox.CheckedChanged += (s, e) => {
                         System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Positions feature toggle changed to: {checkbox.Checked}");
-                        
-                        // Save the feature toggle state
-                        var accountNumber = GetSelectedAccountNumber();
-                        if (!string.IsNullOrEmpty(accountNumber))
-                        {
-                            var service = RiskManagerSettingsService.Instance;
-                            service.UpdateIndividualFeatureToggles(
-                                accountNumber,
-                                positionsFeatureCheckbox?.Checked ?? true,
-                                limitsFeatureCheckbox?.Checked ?? true,
-                                symbolsFeatureCheckbox?.Checked ?? true,
-                                tradingTimesFeatureCheckbox?.Checked ?? true
-                            );
-                        }
-                        
                         RefreshRiskOverviewIfVisible();
                     };
                 }
@@ -10110,21 +10090,6 @@ namespace Risk_Manager
                     // Add event handler to refresh Risk Overview when this toggle changes
                     checkbox.CheckedChanged += (s, e) => {
                         System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Limits feature toggle changed to: {checkbox.Checked}");
-                        
-                        // Save the feature toggle state
-                        var accountNumber = GetSelectedAccountNumber();
-                        if (!string.IsNullOrEmpty(accountNumber))
-                        {
-                            var service = RiskManagerSettingsService.Instance;
-                            service.UpdateIndividualFeatureToggles(
-                                accountNumber,
-                                positionsFeatureCheckbox?.Checked ?? true,
-                                limitsFeatureCheckbox?.Checked ?? true,
-                                symbolsFeatureCheckbox?.Checked ?? true,
-                                tradingTimesFeatureCheckbox?.Checked ?? true
-                            );
-                        }
-                        
                         RefreshRiskOverviewIfVisible();
                     };
                 }
@@ -10134,21 +10099,6 @@ namespace Risk_Manager
                     // Add event handler to refresh Risk Overview when this toggle changes
                     checkbox.CheckedChanged += (s, e) => {
                         System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Symbols feature toggle changed to: {checkbox.Checked}");
-                        
-                        // Save the feature toggle state
-                        var accountNumber = GetSelectedAccountNumber();
-                        if (!string.IsNullOrEmpty(accountNumber))
-                        {
-                            var service = RiskManagerSettingsService.Instance;
-                            service.UpdateIndividualFeatureToggles(
-                                accountNumber,
-                                positionsFeatureCheckbox?.Checked ?? true,
-                                limitsFeatureCheckbox?.Checked ?? true,
-                                symbolsFeatureCheckbox?.Checked ?? true,
-                                tradingTimesFeatureCheckbox?.Checked ?? true
-                            );
-                        }
-                        
                         RefreshRiskOverviewIfVisible();
                     };
                 }
@@ -10158,21 +10108,6 @@ namespace Risk_Manager
                     // Add event handler to refresh Risk Overview when this toggle changes
                     checkbox.CheckedChanged += (s, e) => {
                         System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] Trading Times feature toggle changed to: {checkbox.Checked}");
-                        
-                        // Save the feature toggle state
-                        var accountNumber = GetSelectedAccountNumber();
-                        if (!string.IsNullOrEmpty(accountNumber))
-                        {
-                            var service = RiskManagerSettingsService.Instance;
-                            service.UpdateIndividualFeatureToggles(
-                                accountNumber,
-                                positionsFeatureCheckbox?.Checked ?? true,
-                                limitsFeatureCheckbox?.Checked ?? true,
-                                symbolsFeatureCheckbox?.Checked ?? true,
-                                tradingTimesFeatureCheckbox?.Checked ?? true
-                            );
-                        }
-                        
                         RefreshRiskOverviewIfVisible();
                     };
                 }
@@ -11031,28 +10966,35 @@ namespace Risk_Manager
                 new[] { GetAccountLockStatus, GetSettingsLockStatus }
             ));
 
-            flowLayout.Controls.Add(CreateRiskOverviewCard(
+            var positionsCard = CreateRiskOverviewCard(
                 "Position Limits",
                 new[] { "Loss Limit:", "Profit Target:" },
                 new[] { GetPositionLossLimit, GetPositionProfitTarget },
                 () => IsFeatureEnabled(s => s.PositionsEnabled)
-            ));
+            );
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewPanel: Created Positions card with feature enabled = {IsFeatureEnabled(s => s.PositionsEnabled)}");
+            flowLayout.Controls.Add(positionsCard);
 
-            flowLayout.Controls.Add(CreateRiskOverviewCard(
+            var limitsCard = CreateRiskOverviewCard(
                 "Daily Limits",
                 new[] { "Daily Loss Limit:", "Daily Profit Target:" },
                 new[] { GetDailyLossLimit, GetDailyProfitTarget },
                 () => IsFeatureEnabled(s => s.LimitsEnabled)
-            ));
+            );
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewPanel: Created Daily Limits card with feature enabled = {IsFeatureEnabled(s => s.LimitsEnabled)}");
+            flowLayout.Controls.Add(limitsCard);
 
-            flowLayout.Controls.Add(CreateRiskOverviewCard(
+            var symbolsCard = CreateRiskOverviewCard(
                 "Symbol Restrictions",
                 new[] { "Blocked Symbols:", "Default Contract Limit:", "Symbol-Specific Limits:" },
                 new[] { GetBlockedSymbols, GetDefaultContractLimit, GetSymbolContractLimits },
                 () => IsFeatureEnabled(s => s.SymbolsEnabled)
-            ));
+            );
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewPanel: Created Symbols card with feature enabled = {IsFeatureEnabled(s => s.SymbolsEnabled)}");
+            flowLayout.Controls.Add(symbolsCard);
 
             var tradingTimesCard = CreateTradingTimesOverviewCard();
+            System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewPanel: Created Trading Times card");
             flowLayout.Controls.Add(tradingTimesCard);
 
             // Add the flow layout to the content area
@@ -11096,35 +11038,9 @@ namespace Risk_Manager
                 
                 if (!featureState)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Card '{title}' should be disabled");
-                    
-                    // Check which display style to use
-                    bool useGreyedOutStyle = false;
-                    var accountNumber = GetSelectedAccountNumber();
-                    if (!string.IsNullOrEmpty(accountNumber))
-                    {
-                        var settingsService = RiskManagerSettingsService.Instance;
-                        if (settingsService.IsInitialized)
-                        {
-                            var settings = settingsService.GetSettings(accountNumber);
-                            if (settings != null)
-                            {
-                                useGreyedOutStyle = settings.UseGreyedOutCardStyle;
-                            }
-                        }
-                    }
-                    
-                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Using greyed out style = {useGreyedOutStyle}");
-                    
-                    // Apply the appropriate disabled style immediately during creation
-                    if (useGreyedOutStyle)
-                    {
-                        SetCardDisabled(cardPanel);
-                    }
-                    else
-                    {
-                        AddDisabledOverlay(cardPanel);
-                    }
+                    System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] CreateRiskOverviewCard: Card '{title}' should be disabled, calling SetCardDisabled");
+                    // Apply disabled state immediately during creation if feature is disabled
+                    SetCardDisabled(cardPanel);
                 }
             }
             else
