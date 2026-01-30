@@ -16,6 +16,18 @@ using TradingPlatform.PresentationLayer.Renderers.Chart;
 using DockStyle = System.Windows.Forms.DockStyle;
 
 
+/// <summary>
+/// Color constants used throughout the Risk Manager UI
+/// </summary>
+public static class RiskManagerColors
+{
+    /// <summary>
+    /// Bright red color used for disabled label indicators (✖ symbol)
+    /// </summary>
+    public static readonly Color DisabledLabelColor = Color.FromArgb(220, 50, 50);
+}
+
+
 public class CustomValueLabel : Panel
 {
     public Label TextLabel { get; }
@@ -110,7 +122,7 @@ class CustomCardHeaderControl : Panel
         {
             Text = "✖",
             Font = new Font("Segoe UI", 28, FontStyle.Bold),
-            ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
+            ForeColor = RiskManagerColors.DisabledLabelColor,
             BackColor = Color.Transparent,
             TextAlign = ContentAlignment.MiddleRight,
             Dock = DockStyle.Right,
@@ -998,7 +1010,7 @@ namespace Risk_Manager
                 bool isValueGetterLabel = label.Tag is Func<string>;
                 
                 // Preserve red color for disabled label X indicator
-                bool isDisabledLabel = label.ForeColor == Color.FromArgb(220, 50, 50);
+                bool isDisabledLabel = label.ForeColor == RiskManagerColors.DisabledLabelColor;
 
                 if (!isValueGetterLabel && !isDisabledLabel)
                 {
@@ -11636,7 +11648,7 @@ namespace Risk_Manager
             {
                 Text = "✖",
                 Font = new Font("Segoe UI", 72, FontStyle.Bold),
-                ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
+                ForeColor = RiskManagerColors.DisabledLabelColor,
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Fill,
