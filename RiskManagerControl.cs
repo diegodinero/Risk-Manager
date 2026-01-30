@@ -1691,10 +1691,15 @@ namespace Risk_Manager
             {
                 // Don't auto-select, let user choose
                 copySettingsSourceComboBox.SelectedIndex = -1;
+                
+                // Clear target panel since no source is selected
+                copySettingsTargetPanel.Controls.Clear();
             }
-
-            // Clear target panel since source selection may have changed
-            copySettingsTargetPanel.Controls.Clear();
+            else
+            {
+                // No accounts available, clear target panel
+                copySettingsTargetPanel.Controls.Clear();
+            }
         }
 
         /// <summary>
