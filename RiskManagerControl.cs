@@ -10478,6 +10478,81 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(privacyModeInfoLabel);
 
+            // Divider
+            var divider3 = new Panel
+            {
+                Height = 2,
+                Width = 600,
+                BackColor = DarkerBackground,
+                Margin = new Padding(0, 10, 0, 20)
+            };
+            contentArea.Controls.Add(divider3);
+
+            // Card Display Style Section
+            var cardStyleSectionLabel = new Label
+            {
+                Text = "Risk Overview Card Display",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            contentArea.Controls.Add(cardStyleSectionLabel);
+
+            // Card display style checkbox
+            var cardStyleCheckBox = new CheckBox
+            {
+                Text = "Use Greyed Out Style for Disabled Cards",
+                AutoSize = true,
+                Checked = false,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            
+            // Load current card style setting
+            if (accountSelector != null && accountSelector.SelectedItem is Account selectedAcc)
+            {
+                var accountNumber = GetAccountIdentifier(selectedAcc);
+                var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
+                if (settings != null)
+                {
+                    cardStyleCheckBox.Checked = settings.UseGreyedOutCardStyle;
+                }
+            }
+            
+            cardStyleCheckBox.CheckedChanged += (s, e) =>
+            {
+                if (accountSelector != null && accountSelector.SelectedItem is Account currentAccount)
+                {
+                    var accountNumber = GetAccountIdentifier(currentAccount);
+                    RiskManagerSettingsService.Instance.UpdateCardDisplayStyle(accountNumber, cardStyleCheckBox.Checked);
+                    
+                    // Refresh Risk Overview cards to apply the new style
+                    RefreshRiskOverviewPanel();
+                }
+            };
+
+            contentArea.Controls.Add(cardStyleCheckBox);
+
+            // Info label for card display style
+            var cardStyleInfoLabel = new Label
+            {
+                Text = "Choose how disabled Risk Overview cards are displayed:\n" +
+                       "• Unchecked (default): Shows a Red X overlay on disabled cards - best for White theme\n" +
+                       "• Checked: Greys out disabled cards by reducing opacity\n\n" +
+                       "Note: The Red X style is recommended when using the White theme for better visibility.",
+                AutoSize = true,
+                MaximumSize = new Size(600, 0),
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                Margin = new Padding(20, 0, 0, 10)
+            };
+            contentArea.Controls.Add(cardStyleInfoLabel);
+
             // Add controls in correct order for docking
             mainPanel.Controls.Add(contentArea);
             mainPanel.Controls.Add(subtitleLabel);
@@ -11184,16 +11259,39 @@ namespace Risk_Manager
         {
             if (cardPanel == null) return;
             
+            // Get current card display style preference
+            bool useGreyedOutStyle = false;
+            var accountNumber = GetSelectedAccountNumber();
+            if (!string.IsNullOrEmpty(accountNumber))
+            {
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (settingsService.IsInitialized)
+                {
+                    var settings = settingsService.GetSettings(accountNumber);
+                    if (settings != null)
+                    {
+                        useGreyedOutStyle = settings.UseGreyedOutCardStyle;
+                    }
+                }
+            }
+            
             // Get the feature checker from Tag (might be wrapped in anonymous object)
             Func<bool> featureChecker = null;
             
             if (cardPanel.Tag != null)
             {
-                // Try to get FeatureChecker from anonymous object
-                var featureCheckerProp = cardPanel.Tag.GetType().GetProperty("FeatureChecker");
+                // Try to get FeatureChecker or OriginalTag from anonymous object
+                var tagType = cardPanel.Tag.GetType();
+                var featureCheckerProp = tagType.GetProperty("FeatureChecker");
+                var originalTagProp = tagType.GetProperty("OriginalTag");
+                
                 if (featureCheckerProp != null)
                 {
                     featureChecker = featureCheckerProp.GetValue(cardPanel.Tag) as Func<bool>;
+                }
+                else if (originalTagProp != null)
+                {
+                    featureChecker = originalTagProp.GetValue(cardPanel.Tag) as Func<bool>;
                 }
                 else
                 {
@@ -11205,26 +11303,90 @@ namespace Risk_Manager
             // Check if this card has a feature checker
             if (featureChecker != null)
             {
-                // Determine if overlay should be shown
-                bool shouldShowOverlay = !featureChecker();
+                // Determine if card should be disabled
+                bool shouldBeDisabled = !featureChecker();
                 
-                // Check if overlay panel exists
+                // Check if overlay panel exists (Red X style)
                 var existingOverlay = cardPanel.Controls.OfType<Panel>()
                     .FirstOrDefault(p => p.Name == "DisabledOverlay");
                 bool hasOverlay = existingOverlay != null;
                 
-                if (shouldShowOverlay && !hasOverlay)
+                // Check if card is greyed out (by checking if it's disabled and Tag contains IsDisabled)
+                bool isGreyedOut = !cardPanel.Enabled && cardPanel.Tag != null && 
+                                   cardPanel.Tag.ToString().Contains("IsDisabled");
+                
+                if (shouldBeDisabled)
                 {
-                    // Add overlay
-                    AddDisabledOverlay(cardPanel);
+                    // Card should be disabled - apply appropriate style
+                    if (useGreyedOutStyle)
+                    {
+                        // Remove Red X overlay if present
+                        if (hasOverlay)
+                        {
+                            cardPanel.Controls.Remove(existingOverlay);
+                            existingOverlay?.Dispose();
+                        }
+                        
+                        // Apply greyed out style if not already applied
+                        if (!isGreyedOut)
+                        {
+                            SetCardDisabled(cardPanel);
+                        }
+                    }
+                    else
+                    {
+                        // Remove greyed out style if present
+                        if (isGreyedOut)
+                        {
+                            RemoveCardDisabled(cardPanel);
+                        }
+                        
+                        // Add Red X overlay if not already present
+                        if (!hasOverlay)
+                        {
+                            AddDisabledOverlay(cardPanel);
+                        }
+                    }
                 }
-                else if (!shouldShowOverlay && hasOverlay)
+                else
                 {
-                    // Remove overlay panel
-                    cardPanel.Controls.Remove(existingOverlay);
-                    existingOverlay?.Dispose();
-                    cardPanel.Tag = featureChecker;
+                    // Card should be enabled - remove any disabled styling
+                    if (hasOverlay)
+                    {
+                        // Remove Red X overlay
+                        cardPanel.Controls.Remove(existingOverlay);
+                        existingOverlay?.Dispose();
+                    }
+                    
+                    if (isGreyedOut)
+                    {
+                        // Remove greyed out style
+                        RemoveCardDisabled(cardPanel);
+                    }
+                    
+                    // Restore normal state
                     cardPanel.Cursor = Cursors.Default;
+                    cardPanel.Enabled = true;
+                    
+                    // Restore original tag
+                    if (cardPanel.Tag != null)
+                    {
+                        var tagType = cardPanel.Tag.GetType();
+                        var originalTagProp = tagType.GetProperty("OriginalTag");
+                        if (originalTagProp != null)
+                        {
+                            var originalTag = originalTagProp.GetValue(cardPanel.Tag);
+                            cardPanel.Tag = originalTag ?? featureChecker;
+                        }
+                        else
+                        {
+                            cardPanel.Tag = featureChecker;
+                        }
+                    }
+                    else
+                    {
+                        cardPanel.Tag = featureChecker;
+                    }
                 }
             }
         }
@@ -11263,6 +11425,86 @@ namespace Risk_Manager
             overlay.Controls.Add(disabledLabel);
             cardPanel.Controls.Add(overlay);
             overlay.BringToFront();
+        }
+
+        /// <summary>
+        /// Applies the greyed out disabled state to a card panel (alternative to Red X overlay)
+        /// </summary>
+        private void SetCardDisabled(Panel cardPanel)
+        {
+            if (cardPanel == null) return;
+            
+            // Check if already marked as disabled
+            if (cardPanel.Tag != null && cardPanel.Tag.ToString().Contains("IsDisabled"))
+            {
+                return; // Already disabled
+            }
+            
+            // Reduce opacity of all controls to indicate disabled state
+            SetControlOpacity(cardPanel, 0.4); // 40% opacity
+            
+            // Disable card interaction and change cursor to indicate non-interactive state
+            cardPanel.Enabled = false;
+            cardPanel.Cursor = Cursors.No;
+            
+            // Mark as disabled in Tag
+            var originalTag = cardPanel.Tag;
+            cardPanel.Tag = new { OriginalTag = originalTag, IsDisabled = true };
+        }
+        
+        /// <summary>
+        /// Removes the greyed out disabled state from a card panel
+        /// </summary>
+        private void RemoveCardDisabled(Panel cardPanel)
+        {
+            if (cardPanel == null) return;
+            
+            // Restore opacity of all controls
+            SetControlOpacity(cardPanel, 1.0); // 100% opacity
+            
+            // Re-enable card interaction
+            cardPanel.Enabled = true;
+            cardPanel.Cursor = Cursors.Default;
+            
+            // Restore original tag
+            if (cardPanel.Tag != null)
+            {
+                var tagType = cardPanel.Tag.GetType();
+                var originalTagProp = tagType.GetProperty("OriginalTag");
+                if (originalTagProp != null)
+                {
+                    cardPanel.Tag = originalTagProp.GetValue(cardPanel.Tag);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Sets the opacity of a control and its children by adjusting ForeColor alpha
+        /// </summary>
+        private void SetControlOpacity(Control control, double opacity)
+        {
+            if (control == null) return;
+            
+            // Calculate alpha value (0-255)
+            int alpha = (int)(opacity * 255);
+            
+            // Update control's foreground color with new alpha
+            if (control is Label label && label.ForeColor != Color.Transparent)
+            {
+                var originalColor = label.ForeColor;
+                var newColor = Color.FromArgb(alpha, originalColor.R, originalColor.G, originalColor.B);
+                label.ForeColor = newColor;
+            }
+            
+            // Recursively set opacity for child controls
+            foreach (Control child in control.Controls)
+            {
+                // Skip overlay panels to avoid affecting the Red X
+                if (child is Panel panel && panel.Name == "DisabledOverlay")
+                    continue;
+                    
+                SetControlOpacity(child, opacity);
+            }
         }
 
         private string GetPositionLossLimit()
