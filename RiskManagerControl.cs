@@ -15,7 +15,6 @@ using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
 using DockStyle = System.Windows.Forms.DockStyle;
 
-
 /// <summary>
 /// Color constants used throughout the Risk Manager UI
 /// </summary>
