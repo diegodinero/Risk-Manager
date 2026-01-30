@@ -1577,6 +1577,15 @@ namespace Risk_Manager
         /// </summary>
         private void RefreshCopySettingsAccounts()
         {
+            RefreshCopySettingsAccounts(false);
+        }
+        
+        /// <summary>
+        /// Refreshes the Copy Settings panel source dropdown with connected accounts.
+        /// </summary>
+        /// <param name="forceRefresh">If true, forces a refresh even if accounts haven't changed (e.g., for privacy mode updates)</param>
+        private void RefreshCopySettingsAccounts(bool forceRefresh)
+        {
             if (copySettingsSourceComboBox == null || copySettingsTargetPanel == null)
                 return;
 
@@ -1589,30 +1598,80 @@ namespace Risk_Manager
             var currentSelection = copySettingsSourceComboBox.SelectedItem as Account;
 
             // Check if accounts list has changed
-            bool needsUpdate = false;
-            if (copySettingsSourceComboBox.Items.Count != connectedAccounts.Count)
+            bool needsUpdate = forceRefresh;
+            if (!needsUpdate)
             {
-                needsUpdate = true;
-            }
-            else
-            {
-                for (int i = 0; i < connectedAccounts.Count; i++)
+                if (copySettingsSourceComboBox.Items.Count != connectedAccounts.Count)
                 {
-                    if (i >= copySettingsSourceComboBox.Items.Count)
+                    needsUpdate = true;
+                }
+                else
+                {
+                    for (int i = 0; i < connectedAccounts.Count; i++)
                     {
-                        needsUpdate = true;
-                        break;
-                    }
-                    if (copySettingsSourceComboBox.Items[i] != connectedAccounts[i])
-                    {
-                        needsUpdate = true;
-                        break;
+                        if (i >= copySettingsSourceComboBox.Items.Count)
+                        {
+                            needsUpdate = true;
+                            break;
+                        }
+                        if (copySettingsSourceComboBox.Items[i] != connectedAccounts[i])
+                        {
+                            needsUpdate = true;
+                            break;
+                        }
                     }
                 }
             }
 
             if (!needsUpdate)
+            {
+                // Even if accounts haven't changed, invalidate the source combobox to trigger redraw
+                // This ensures privacy mode masking is applied/removed via the DrawItem handler
+                copySettingsSourceComboBox.Invalidate();
+                
+                // Also regenerate target checkboxes if a source is selected
+                // to ensure privacy mode is applied to target account labels
+                if (currentSelection != null)
+                {
+                    copySettingsTargetPanel.Controls.Clear();
+                    
+                    // Add checkboxes for all accounts except the source
+                    foreach (var account in connectedAccounts)
+                    {
+                        if (account == currentSelection) continue;
+
+                        // Get account identifier and apply masking if needed
+                        string accountIdentifier = GetAccountIdentifier(account);
+                        string displayIdentifier = MaskAccountNumber(accountIdentifier);
+                        
+                        var checkbox = new CheckBox
+                        {
+                            Text = $"{account.Name} ({displayIdentifier})",
+                            Tag = account,
+                            AutoSize = true,
+                            Font = new Font("Segoe UI", 9.5f),
+                            ForeColor = TextWhite,
+                            BackColor = DarkerBackground,
+                            Margin = new Padding(0, 5, 0, 5)
+                        };
+                        copySettingsTargetPanel.Controls.Add(checkbox);
+                    }
+
+                    if (copySettingsTargetPanel.Controls.Count == 0)
+                    {
+                        var noAccountsLabel = new Label
+                        {
+                            Text = "No other accounts available",
+                            AutoSize = true,
+                            Font = new Font("Segoe UI", 9.5f, FontStyle.Italic),
+                            ForeColor = TextGray,
+                            BackColor = DarkerBackground
+                        };
+                        copySettingsTargetPanel.Controls.Add(noAccountsLabel);
+                    }
+                }
                 return;
+            }
 
             // Temporarily disable event handling during update
             copySettingsSourceComboBox.SelectedIndexChanged -= null; // Will be re-added automatically by designer
@@ -1632,10 +1691,15 @@ namespace Risk_Manager
             {
                 // Don't auto-select, let user choose
                 copySettingsSourceComboBox.SelectedIndex = -1;
+                
+                // Clear target panel since no source is selected
+                copySettingsTargetPanel.Controls.Clear();
             }
-
-            // Clear target panel since source selection may have changed
-            copySettingsTargetPanel.Controls.Clear();
+            else
+            {
+                // No accounts available, clear target panel
+                copySettingsTargetPanel.Controls.Clear();
+            }
         }
 
         /// <summary>
@@ -10392,6 +10456,7 @@ namespace Risk_Manager
                     RefreshAccountDropdown(); // Refresh main account selector
                     RefreshAccountsSummary(); // Refresh stats grid (account column)
                     RefreshAccountStats(); // Refresh stats detail grid (account row)
+                    RefreshCopySettingsAccounts(); // Refresh Copy Settings tab
                 }
             };
 
