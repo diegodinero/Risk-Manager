@@ -428,7 +428,7 @@ namespace Risk_Manager
         };
 
         private const int LeftPanelWidth = 200;
-        private const int LeftPanelCollapsedWidth = 50; // Width when collapsed (show only icons)
+        private const int LeftPanelCollapsedWidth = 65; // Width when collapsed (show only icons)
         private const int LeftPanelExpandedWidth = 200; // Width when expanded (show icons + text)
 
         public RiskManagerControl()
