@@ -2559,6 +2559,15 @@ namespace Risk_Manager
                 var panel = s as Panel;
                 if (panel == null) return;  // Safety check
                 
+                // Paint parent background to ensure true transparency
+                if (panel.Parent != null)
+                {
+                    using (var backBrush = new SolidBrush(panel.Parent.BackColor))
+                    {
+                        e.Graphics.FillRectangle(backBrush, panel.ClientRectangle);
+                    }
+                }
+                
                 var ledColor = (Color)(panel.Tag ?? Color.Gray);
                 
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
