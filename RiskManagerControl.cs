@@ -15,6 +15,17 @@ using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
 using DockStyle = System.Windows.Forms.DockStyle;
 
+/// <summary>
+/// Color constants used throughout the Risk Manager UI
+/// </summary>
+public static class RiskManagerColors
+{
+    /// <summary>
+    /// Bright red color used for disabled label indicators (✖ symbol)
+    /// </summary>
+    public static readonly Color DisabledLabelColor = Color.FromArgb(220, 50, 50);
+}
+
 
 public class CustomValueLabel : Panel
 {
@@ -110,7 +121,7 @@ class CustomCardHeaderControl : Panel
         {
             Text = "✖",
             Font = new Font("Segoe UI", 28, FontStyle.Bold),
-            ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
+            ForeColor = RiskManagerColors.DisabledLabelColor,
             BackColor = Color.Transparent,
             TextAlign = ContentAlignment.MiddleRight,
             Dock = DockStyle.Right,
@@ -996,10 +1007,15 @@ namespace Risk_Manager
                 // If label.Tag is a getter delegate (used by Risk Overview value labels),
                 // skip overriding ForeColor here so specialized coloring (YellowBlueBlack) persists.
                 bool isValueGetterLabel = label.Tag is Func<string>;
+                
+                // Preserve red color for disabled label X indicator (compare RGB only, ignore alpha)
+                bool isDisabledLabel = label.ForeColor.R == RiskManagerColors.DisabledLabelColor.R &&
+                                      label.ForeColor.G == RiskManagerColors.DisabledLabelColor.G &&
+                                      label.ForeColor.B == RiskManagerColors.DisabledLabelColor.B;
 
-                if (!isValueGetterLabel)
+                if (!isValueGetterLabel && !isDisabledLabel)
                 {
-                    // Update text color for labels (only if not a bound value label)
+                    // Update text color for labels (only if not a bound value label and not disabled label)
                     if (label.ForeColor == Color.White ||
                         label.ForeColor == Color.FromArgb(30, 30, 30))
                     {
@@ -11482,8 +11498,8 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled: Removed overlay panel");
             }
             
-            // Find the header control and hide the disabled label (for greyed out style)
-            var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
+            // Find the header control and hide the disabled label (for greyed out style) - use recursive search
+            CustomCardHeaderControl header = FindCustomCardHeaderControl(cardPanel);
             if (header != null)
             {
                 System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled: Found header, calling SetDisabled(false)");
@@ -11597,8 +11613,8 @@ namespace Risk_Manager
         /// </summary>
         private void ApplyGreyedOutStyle(Panel cardPanel)
         {
-            // Find the header control and show the disabled label
-            var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
+            // Find the header control (may be nested in a layout panel)
+            CustomCardHeaderControl header = FindCustomCardHeaderControl(cardPanel);
             if (header != null)
             {
                 header.SetDisabled(true);
@@ -11612,6 +11628,38 @@ namespace Risk_Manager
                     SetControlOpacity(control, 0.4); // 40% opacity
                 }
             }
+        }
+        
+        /// <summary>
+        /// Recursively finds a CustomCardHeaderControl within a control hierarchy
+        /// </summary>
+        private CustomCardHeaderControl FindCustomCardHeaderControl(Control parent)
+        {
+            if (parent == null) return null;
+            
+            // Check if the parent itself is a CustomCardHeaderControl
+            if (parent is CustomCardHeaderControl header)
+            {
+                return header;
+            }
+            
+            // Search through child controls
+            foreach (Control child in parent.Controls)
+            {
+                if (child is CustomCardHeaderControl childHeader)
+                {
+                    return childHeader;
+                }
+                
+                // Recursively search in nested controls
+                var found = FindCustomCardHeaderControl(child);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+            
+            return null;
         }
         
         /// <summary>
@@ -11633,7 +11681,7 @@ namespace Risk_Manager
             {
                 Text = "✖",
                 Font = new Font("Segoe UI", 72, FontStyle.Bold),
-                ForeColor = Color.FromArgb(220, 50, 50), // Bright red color
+                ForeColor = RiskManagerColors.DisabledLabelColor,
                 BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Fill,
