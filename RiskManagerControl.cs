@@ -8445,15 +8445,23 @@ namespace Risk_Manager
             // FFN prefix -> Eval account (must come after FFNX check)
             if (accountId.StartsWith("ffn", StringComparison.OrdinalIgnoreCase))
                 return ACCOUNT_TYPE_EVAL;
-            
+
             // BX prefix -> PA account
-            if (accountId.StartsWith("bx", StringComparison.OrdinalIgnoreCase))
+            if (accountId.StartsWith("bx-", StringComparison.OrdinalIgnoreCase))
                 return ACCOUNT_TYPE_PA;
+
+            // BX prefix -> Eval account
+            if (accountId.StartsWith("bx", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;          
             
             // APEX prefix -> Eval account
             if (accountId.StartsWith("apex", StringComparison.OrdinalIgnoreCase))
                 return ACCOUNT_TYPE_EVAL;
-            
+
+            // APEX prefix -> PA account
+            if (accountId.StartsWith("pa-apex", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+
             // Convert to lowercase for remaining pattern checks
             accountId = accountId.ToLower();
             
