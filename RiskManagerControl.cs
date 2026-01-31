@@ -4057,15 +4057,13 @@ namespace Risk_Manager
                     // Calculate what percentage of the limit we've used
                     percentage = Math.Abs(pnlValue) / Math.Abs(dailyLossLimit) * 100;
                     
-                    // Modern color scheme based on proximity to limit
-                    if (percentage >= 90)
+                    // Color scheme for negative values: yellow → orange → red
+                    if (percentage >= 70)
                         barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
-                    else if (percentage >= 70)
+                    else if (percentage >= 40)
                         barColor = Color.FromArgb(255, 133, 27);     // Modern orange
-                    else if (percentage >= 50)
-                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                     else
-                        barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
+                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                     
                     System.Diagnostics.Debug.WriteLine($"Gross P&L: Loss scenario - percentage={percentage:F1}%");
                 }
@@ -4113,15 +4111,13 @@ namespace Risk_Manager
                     // Calculate what percentage of the limit we've used
                     percentage = Math.Abs(pnlValue) / Math.Abs(positionLossLimit) * 100;
                     
-                    // Modern color scheme based on proximity to limit
-                    if (percentage >= 90)
+                    // Color scheme for negative values: yellow → orange → red
+                    if (percentage >= 70)
                         barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
-                    else if (percentage >= 70)
+                    else if (percentage >= 40)
                         barColor = Color.FromArgb(255, 133, 27);     // Modern orange
-                    else if (percentage >= 50)
-                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                     else
-                        barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
+                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                     
                     System.Diagnostics.Debug.WriteLine($"Open P&L: Loss scenario - percentage={percentage:F1}%");
                 }
@@ -4412,15 +4408,13 @@ namespace Risk_Manager
                     // Negative P&L approaching loss limit
                     percentage = Math.Min(100, Math.Abs(pnlValue) / Math.Abs(dailyLossLimit) * 100);
                     
-                    // Modern color scheme based on magnitude
-                    if (percentage >= 90)
+                    // Color scheme for negative values: yellow → orange → red
+                    if (percentage >= 70)
                         barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
-                    else if (percentage >= 70)
+                    else if (percentage >= 40)
                         barColor = Color.FromArgb(255, 133, 27);     // Modern orange
-                    else if (percentage >= 50)
-                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                     else
-                        barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
+                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                 }
                 else if (pnlValue > 0 && dailyProfitTarget > 0)
                 {
@@ -4469,15 +4463,13 @@ namespace Risk_Manager
                     // Negative P&L approaching position loss limit
                     percentage = Math.Min(100, Math.Abs(pnlValue) / Math.Abs(positionLossLimit) * 100);
                     
-                    // Modern color scheme based on magnitude
-                    if (percentage >= 90)
+                    // Color scheme for negative values: yellow → orange → red
+                    if (percentage >= 70)
                         barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
-                    else if (percentage >= 70)
+                    else if (percentage >= 40)
                         barColor = Color.FromArgb(255, 133, 27);     // Modern orange
-                    else if (percentage >= 50)
-                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                     else
-                        barColor = Color.FromArgb(40, 167, 69);      // Bootstrap success green
+                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
                 }
                 else if (pnlValue > 0 && positionProfitTarget > 0)
                 {
@@ -4500,10 +4492,10 @@ namespace Risk_Manager
                     
                     if (pnlValue < 0)
                     {
-                        // Negative - red tones
+                        // Color scheme for negative values: yellow → orange → red
                         if (percentage >= 70)
                             barColor = Color.FromArgb(220, 53, 69);
-                        else if (percentage >= 50)
+                        else if (percentage >= 40)
                             barColor = Color.FromArgb(255, 133, 27);
                         else
                             barColor = Color.FromArgb(255, 193, 7);
