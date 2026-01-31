@@ -204,6 +204,7 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer lockExpirationCheckTimer;
         private System.Windows.Forms.Timer pnlMonitorTimer; // Timer to monitor P&L limits
         private System.Windows.Forms.Timer badgeRefreshTimer; // Timer to refresh badge from JSON (like Accounts Summary)
+        private System.Windows.Forms.Timer ledIndicatorTimer; // Timer to monitor orders and positions for LED indicator
         private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
@@ -399,6 +400,7 @@ namespace Risk_Manager
         // Status table row indices
         private const int STATUS_TABLE_SETTINGS_ROW = 0; // Settings Status row index
         private const int STATUS_TABLE_TRADING_ROW = 1;  // Trading Status row index
+        private const int STATUS_TABLE_LED_INDICATOR_ROW = 2;  // LED indicator row index
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -534,6 +536,11 @@ namespace Risk_Manager
             badgeRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             badgeRefreshTimer.Tick += (s, e) => RefreshTradingStatusBadgeFromJSON();
             badgeRefreshTimer.Start();
+
+            // Monitor orders and positions for LED indicator every second
+            ledIndicatorTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            ledIndicatorTimer.Tick += (s, e) => UpdateLedIndicator();
+            ledIndicatorTimer.Start();
 
             // Show Accounts Summary by default
             selectedNavItem = "📊 Accounts Summary";
@@ -2643,7 +2650,7 @@ namespace Risk_Manager
             statusTableView = new DataGridView
             {
                 Width = 350,
-                Height = 70,
+                Height = 105,  // Increased from 70 to accommodate 3 rows (35 per row)
                 BackgroundColor = CardBackground,
                 GridColor = DarkerBackground,
                 BorderStyle = BorderStyle.None,
@@ -2685,14 +2692,17 @@ namespace Risk_Manager
             // Get icons for the status rows
             var settingsIcon = GetIconForTitle("Lock Settings") ?? GetIconForTitle("Locked");
             var tradingIcon = GetIconForTitle("Manual Lock") ?? GetIconForTitle("Locked");
+            var ledIcon = GetIconForTitle("Positions") ?? GetIconForTitle("Locked");
             
             // Add rows for Settings Status and Trading Status with icons
             statusTableView.Rows.Add(settingsIcon, "Settings Status:", "Unlocked");
             statusTableView.Rows.Add(tradingIcon, "Trading Status:", "Unlocked");
+            statusTableView.Rows.Add(ledIcon, "Orders/Positions:", "Inactive");
             
             // Apply green color to initial "Unlocked" values using helper method
             UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, "Unlocked");
             UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, "Unlocked");
+            UpdateStatusTableCellColor(STATUS_TABLE_LED_INDICATOR_ROW, "Inactive");
             
             // Keep reference to old badges for backward compatibility
             // Note: These badges are hidden but maintained to ensure existing code
@@ -2901,6 +2911,87 @@ namespace Risk_Manager
                 cell.Style.SelectionForeColor = isLocked ? Color.Red : AccentGreen;
                 cell.Style.BackColor = CardBackground;
                 cell.Style.SelectionBackColor = CardBackground;
+            }
+        }
+
+        /// <summary>
+        /// Updates the LED indicator based on open/working orders and open positions.
+        /// </summary>
+        private void UpdateLedIndicator()
+        {
+            try
+            {
+                if (statusTableView == null || statusTableView.Rows.Count <= STATUS_TABLE_LED_INDICATOR_ROW)
+                    return;
+
+                var core = Core.Instance;
+                if (core == null)
+                    return;
+
+                bool hasActivity = false;
+                string statusText = "Inactive";
+
+                // Check if there are any open or working orders for the selected account
+                if (selectedAccount != null && core.Orders != null)
+                {
+                    var workingOrders = core.Orders
+                        .Where(order => order != null && order.Account == selectedAccount &&
+                               (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
+                        .ToList();
+
+                    if (workingOrders.Count > 0)
+                    {
+                        hasActivity = true;
+                        statusText = $"● {workingOrders.Count} Order(s)";
+                    }
+                }
+
+                // Check if there are any open positions for the selected account
+                if (selectedAccount != null && core.Positions != null && !hasActivity)
+                {
+                    var accountPositions = core.Positions
+                        .Where(pos => pos != null && pos.Account == selectedAccount && pos.Quantity != 0)
+                        .ToList();
+
+                    if (accountPositions.Count > 0)
+                    {
+                        hasActivity = true;
+                        statusText = $"● {accountPositions.Count} Position(s)";
+                    }
+                }
+
+                // If both orders and positions exist, show combined status
+                if (selectedAccount != null && core.Orders != null && core.Positions != null)
+                {
+                    var workingOrders = core.Orders
+                        .Where(order => order != null && order.Account == selectedAccount &&
+                               (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
+                        .ToList();
+
+                    var accountPositions = core.Positions
+                        .Where(pos => pos != null && pos.Account == selectedAccount && pos.Quantity != 0)
+                        .ToList();
+
+                    if (workingOrders.Count > 0 && accountPositions.Count > 0)
+                    {
+                        hasActivity = true;
+                        statusText = $"● {workingOrders.Count} Order(s), {accountPositions.Count} Position(s)";
+                    }
+                }
+
+                // Update the cell value and color
+                var cell = statusTableView.Rows[STATUS_TABLE_LED_INDICATOR_ROW].Cells[2];
+                cell.Value = statusText;
+                
+                // Set color: Green when active, Gray when inactive
+                cell.Style.ForeColor = hasActivity ? AccentGreen : Color.Gray;
+                cell.Style.SelectionForeColor = hasActivity ? AccentGreen : Color.Gray;
+                cell.Style.BackColor = CardBackground;
+                cell.Style.SelectionBackColor = CardBackground;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating LED indicator: {ex.Message}");
             }
         }
 
