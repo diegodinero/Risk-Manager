@@ -399,6 +399,14 @@ namespace Risk_Manager
         // Risk Overview card title constants
         private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
         
+        // LED Indicator visual constants
+        private const int LED_PADDING = 2;
+        private const int LED_GLOW_LAYERS = 3;
+        private const int LED_GLOW_SIZE_MULTIPLIER = 2;
+        private const int LED_GLOW_ALPHA_MULTIPLIER = 20;
+        private const int LED_EDGE_HIGHLIGHT_ALPHA = 80;
+        private const float LED_EDGE_HIGHLIGHT_WIDTH = 1.5f;
+        
         // Status table row indices
         private const int STATUS_TABLE_SETTINGS_ROW = 0; // Settings Status row index
         private const int STATUS_TABLE_TRADING_ROW = 1;  // Trading Status row index
@@ -2544,23 +2552,25 @@ namespace Risk_Manager
             ledIndicatorPanel.Paint += (s, e) =>
             {
                 var panel = s as Panel;
-                var ledColor = (Color)(panel?.Tag ?? Color.Gray);
+                if (panel == null) return;  // Safety check
+                
+                var ledColor = (Color)(panel.Tag ?? Color.Gray);
                 
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 e.Graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
                 e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                 
                 // Calculate circle dimensions with padding for glow
-                int padding = 2;
-                int circleDiameter = Math.Min(panel.Width, panel.Height) - (padding * 2);
-                int circleX = padding;
-                int circleY = padding;
+                int circleDiameter = Math.Min(panel.Width, panel.Height) - (LED_PADDING * 2);
+                int circleX = LED_PADDING;
+                int circleY = LED_PADDING;
                 
                 // Draw outer glow effect (multiple layers for smooth glow)
-                for (int i = 3; i > 0; i--)
+                for (int i = LED_GLOW_LAYERS; i > 0; i--)
                 {
-                    int glowSize = i * 2;
-                    using (var glowBrush = new SolidBrush(Color.FromArgb(20 * i, ledColor)))
+                    int glowSize = i * LED_GLOW_SIZE_MULTIPLIER;
+                    int glowAlpha = LED_GLOW_ALPHA_MULTIPLIER * i;
+                    using (var glowBrush = new SolidBrush(Color.FromArgb(glowAlpha, ledColor)))
                     {
                         e.Graphics.FillEllipse(glowBrush, 
                             circleX - glowSize, 
@@ -2589,7 +2599,7 @@ namespace Risk_Manager
                 }
                 
                 // Add subtle edge highlight for 3D effect
-                using (var pen = new Pen(Color.FromArgb(80, Color.White), 1.5f))
+                using (var pen = new Pen(Color.FromArgb(LED_EDGE_HIGHLIGHT_ALPHA, Color.White), LED_EDGE_HIGHLIGHT_WIDTH))
                 {
                     e.Graphics.DrawEllipse(pen, circleX, circleY, circleDiameter, circleDiameter);
                 }
