@@ -39,7 +39,7 @@ The feature toggles are not functioning as intended. Each checkbox should enable
 
 **After**: Direct visual overlay on disabled feature cards:
 - **Removed** the separate "Feature Status" card
-- **Added** red X overlay directly on disabled feature cards
+- **Added** x overlay directly on disabled feature cards
 - Semi-transparent dark overlay (40% opacity) covers the card
 - Large red ✖ symbol (72pt, bright red) centered on overlay
 - Cursor changes to 🚫 (prohibited) when hovering disabled cards
@@ -52,7 +52,7 @@ ENABLED Card:                   DISABLED Card:
 ┃ Position Limits┃               ┃ Position Limits┃
 ┠───────────────┨               ╠═══════════════╣
 ┃ Loss: $500    ┃               ║███████████████║ ← Dark overlay
-┃ Profit: $1000 ┃               ║████  ✖  ██████║ ← Red X (72pt)
+┃ Profit: $1000 ┃               ║████  ✖  ██████║ ← x (72pt)
 ┗━━━━━━━━━━━━━━━┛               ╚═══════════════╝
                                   Cursor: 🚫
 ```
@@ -173,8 +173,8 @@ Users can now:
 
 1. **Functionality**: All feature toggles now work as intended
 2. **Persistence**: Settings saved per account in JSON files
-3. **Visibility**: Direct visual indication on feature cards (red X overlay when disabled)
-4. **Usability**: Intuitive disabled state - universally understood red X symbol
+3. **Visibility**: Direct visual indication on feature cards (x overlay when disabled)
+4. **Usability**: Intuitive disabled state - universally understood x symbol
 5. **Integration**: Works seamlessly with existing copy settings feature
 6. **Maintainability**: Clean code following DRY principles
 7. **Security**: No vulnerabilities introduced

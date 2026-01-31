@@ -20,7 +20,7 @@
 └──────────────────────────────────────────────────────────────────────────┘
 
     ┌──────────────────────────────────────────────────────────┐
-    │ 📈 Position Limits                                  ✖   │  ← RED X ADDED
+    │ 📈 Position Limits                                  ✖   │  ← x ADDED
     │                                                          │  
     │ Loss Limit:         💵 $500.00 per position            │  ← 40% opacity
     │ Profit Target:      💵 $1,000.00 per position          │  ← 40% opacity
@@ -35,7 +35,7 @@
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ Feature                 │ Before (Enabled)     │ After (Disabled)          │
 ├────────────────────────────────────────────────────────────────────────────┤
-│ Red X Indicator         │ Not present          │ ✖ in top-right corner    │
+│ x Indicator         │ Not present          │ ✖ in top-right corner    │
 │ Content Opacity         │ 100% (full bright)   │ 40% (faded)               │
 │ Content Visibility      │ Fully visible        │ Fully visible (faded)     │
 │ Overlay Panel           │ N/A                  │ NOT USED ✓                │
@@ -66,7 +66,7 @@ OLD OVERLAY APPROACH (Not Implemented):
 
 NEW NON-OVERLAY APPROACH (Implemented):
     ┌──────────────────────────────────────────────────────────┐
-    │ 📈 Position Limits                                  ✖   │  ← Red X in header
+    │ 📈 Position Limits                                  ✖   │  ← x in header
     │                                                          │  
     │ Loss Limit:         💵 $500.00 per position            │  ← Content visible
     │ Profit Target:      💵 $1,000.00 per position          │  ← Content visible
@@ -79,7 +79,7 @@ NEW NON-OVERLAY APPROACH (Implemented):
 ║                           TECHNICAL DETAILS                                ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 
-Red X Indicator:
+x Indicator:
   - Text: "✖" (Heavy Multiplication X)
   - Font: Segoe UI, 28pt, Bold
   - Color: RGB(220, 50, 50) - Bright Red
@@ -116,7 +116,7 @@ State Management:
   └────────────────────────────────────┘
 
   ┌────────────────────────────────────┐
-  │ 📈 Position Limits             ✖  │  ← DISABLED (red X)
+  │ 📈 Position Limits             ✖  │  ← DISABLED (x)
   │                                    │
   │ Loss Limit:      💵 $500.00       │  ← 40% opacity
   │ Profit Target:   💵 $1,000.00     │  ← 40% opacity
@@ -130,7 +130,7 @@ State Management:
   └────────────────────────────────────┘
 
   ┌────────────────────────────────────┐
-  │ 🛡️ Symbol Restrictions        ✖  │  ← DISABLED (red X)
+  │ 🛡️ Symbol Restrictions        ✖  │  ← DISABLED (x)
   │                                    │
   │ Blocked Symbols:  ⛔ ES, NQ       │  ← 40% opacity
   │ Contract Limit:   📊 10 contracts │  ← 40% opacity
@@ -147,7 +147,7 @@ State Management:
    ✓ Maintains context and awareness
 
 2. Clear Visual Feedback
-   ✓ Red X is immediately recognizable
+   ✓ x is immediately recognizable
    ✓ Consistent position across all cards
    ✓ Color and opacity clearly indicate disabled state
 

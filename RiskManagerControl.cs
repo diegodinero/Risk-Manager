@@ -105,7 +105,7 @@ class CustomCardHeaderControl : Panel
             this.Controls.Add(iconBox);
         }
 
-        // Disabled label (red X) - initially hidden
+        // Disabled label (X) - initially hidden
         disabledLabel = new Label
         {
             Text = "✖",
@@ -130,7 +130,7 @@ class CustomCardHeaderControl : Panel
     public Label DisabledLabel => disabledLabel;
     
     /// <summary>
-    /// Shows or hides the disabled label (red X)
+    /// Shows or hides the disabled label (X)
     /// </summary>
     public void SetDisabled(bool disabled)
     {
@@ -10592,8 +10592,8 @@ namespace Risk_Manager
             {
                 Text = "Choose how disabled Risk Overview cards are displayed:\n" +
                        "• Checked (default): Greys out disabled cards by reducing opacity\n" +
-                       "• Unchecked: Shows a large Red X overlay on disabled cards\n\n" +
-                       "Note: The Red X overlay style is recommended when using the White theme for better visibility.",
+                       "• Unchecked: Shows a large X overlay on disabled cards\n\n" +
+                       "Note: The X overlay style is recommended when using the White theme for better visibility.",
                 AutoSize = true,
                 MaximumSize = new Size(600, 0),
                 Font = new Font("Segoe UI", 9, FontStyle.Italic),
@@ -11570,12 +11570,12 @@ namespace Risk_Manager
             // Apply the appropriate style based on setting
             if (useGreyedOutStyle)
             {
-                // Greyed out style: red X in header + reduced opacity
+                // Greyed out style: X in header + reduced opacity
                 ApplyGreyedOutStyle(cardPanel);
             }
             else
             {
-                // Overlay style: semi-transparent overlay with large centered red X
+                // Overlay style: semi-transparent overlay with large centex
                 ApplyOverlayStyle(cardPanel);
             }
             
@@ -11593,7 +11593,7 @@ namespace Risk_Manager
         }
         
         /// <summary>
-        /// Applies greyed out style: red X in header with reduced opacity
+        /// Applies greyed out style: X in header with reduced opacity
         /// </summary>
         private void ApplyGreyedOutStyle(Panel cardPanel)
         {
@@ -11615,7 +11615,7 @@ namespace Risk_Manager
         }
         
         /// <summary>
-        /// Applies overlay style: semi-transparent overlay with large centered red X
+        /// Applies overlay style: semi-transparent overlay with large centex
         /// </summary>
         private void ApplyOverlayStyle(Panel cardPanel)
         {
@@ -11628,7 +11628,7 @@ namespace Risk_Manager
                 Cursor = Cursors.No
             };
             
-            // Create large centered red X label
+            // Create large centex label
             var largeXLabel = new Label
             {
                 Text = "✖",

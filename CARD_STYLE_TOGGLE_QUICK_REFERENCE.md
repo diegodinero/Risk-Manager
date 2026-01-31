@@ -20,7 +20,7 @@ User Interface:
 
 Disabled Card Appearance:
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ 📈 Position Limits            ✖   ┃  ← Small red X (28pt)
+┃ 📈 Position Limits            ✖   ┃  ← Small X (28pt)
 ┠───────────────────────────────────┨
 ┃ Max Loss per Position: $500       ┃  ← 40% opacity
 ┃ Max Profit per Position: $1000    ┃  ← 40% opacity
@@ -44,7 +44,7 @@ Disabled Card Appearance:
 ┃ 📈 Position Limits                 ┃
 ╠═══════════════════════════════════╣
 ║███████████████████████████████████║  ← Dark overlay (40% opacity)
-║█████████████   ✖   ██████████████║  ← Large red X (72pt)
+║█████████████   ✖   ██████████████║  ← Large X (72pt)
 ║███████████████████████████████████║
 ╚═══════════════════════════════════╝
 
@@ -89,17 +89,17 @@ If false → ApplyOverlayStyle()
 - Disables card interaction
 
 **ApplyGreyedOutStyle()**
-- Shows red X in header
+- Shows X in header
 - Reduces opacity to 40%
 
 **ApplyOverlayStyle()**
 - Creates overlay panel
-- Adds large centered red X
+- Adds large centex
 - Brings overlay to front
 
 **SetCardEnabled()**
 - Removes overlay if present
-- Hides red X in header
+- Hides X in header
 - Restores full opacity
 - Re-enables interaction
 
@@ -133,11 +133,11 @@ Quick test to verify both styles work:
 2. [ ] Checkbox is checked by default (greyed out style)
 3. [ ] Go to Risk Overview
 4. [ ] Turn off a feature (e.g., Position Limits toggle)
-5. [ ] Verify card shows small red X in header at 40% opacity
+5. [ ] Verify card shows small X in header at 40% opacity
 6. [ ] Go back to General Settings
 7. [ ] Uncheck "Use Greyed Out Style"
 8. [ ] Go back to Risk Overview
-9. [ ] Verify card shows overlay with large centered red X
+9. [ ] Verify card shows overlay with large centex
 10. [ ] Check the checkbox again
 11. [ ] Go back to Risk Overview
 12. [ ] Verify card back to greyed out style

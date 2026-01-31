@@ -431,7 +431,7 @@ namespace Risk_Manager.Data
         /// Updates the card display style setting for an account.
         /// </summary>
         /// <param name="accountNumber">The account number to update</param>
-        /// <param name="useGreyedOut">True for greyed out style (default), false for Red X overlay</param>
+        /// <param name="useGreyedOut">True for greyed out style (default), false for x overlay</param>
         public void UpdateCardDisplayStyle(string accountNumber, bool useGreyedOut)
         {
             var settings = GetOrCreateSettings(accountNumber);
@@ -1354,7 +1354,7 @@ namespace Risk_Manager.Data
         // Privacy Mode - masks account numbers in UI for streaming/screenshots
         public bool PrivacyModeEnabled { get; set; } = false;
 
-        // Card Display Style - when true (default), uses greyed out style; when false, uses Red X overlay
+        // Card Display Style - when true (default), uses greyed out style; when false, uses x overlay
         public bool UseGreyedOutCardStyle { get; set; } = true;
 
         // Daily Limits

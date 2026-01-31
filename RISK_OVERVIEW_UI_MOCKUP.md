@@ -98,7 +98,7 @@
 
 ### Disabled State (NEW)
 When a feature is disabled in account settings, the corresponding card displays:
-- **Red X Indicator**: A red ✖ symbol appears in the top-right corner of the card header
+- **x Indicator**: A red ✖ symbol appears in the top-right corner of the card header
 - **Reduced Opacity**: Card content is displayed at 40% opacity (semi-transparent)
 - **No Cursor**: Mouse cursor changes to "No" symbol (🚫) when hovering over the card
 - **Non-Interactive**: Card Enabled property is set to false, preventing all user interaction
@@ -216,7 +216,7 @@ When a feature is disabled in account settings, the corresponding card displays:
 3. **Performance**: Cached data prevents unnecessary reloads
 4. **Scalability**: Modular card design allows easy addition of new settings
 5. **Maintainability**: Consistent with existing UI patterns
-6. **Disabled State**: Non-overlay approach with red X and reduced opacity for disabled features
+6. **Disabled State**: Non-overlay approach with x and reduced opacity for disabled features
    - Original colors are preserved and restored when re-enabled
    - Card interaction is fully disabled (Enabled = false) to prevent unintended actions
 
@@ -232,7 +232,7 @@ When a feature is disabled in account settings, the corresponding card displays:
 - [ ] Theme changes apply immediately
 - [ ] Performance is acceptable with many settings
 - [ ] No visual glitches or artifacts
-- [ ] Disabled cards show red X in top-right corner
+- [ ] Disabled cards show x in top-right corner
 - [ ] Disabled cards display content at 40% opacity
 - [ ] Disabled cards show "No" cursor on hover
 - [ ] Disabled cards are fully non-interactive (Enabled = false)

@@ -5,8 +5,8 @@ This implementation adds the ability to toggle between two different visual styl
 
 ## Problem Statement
 Previously, the Risk Manager had two separate implementations:
-1. **Master branch**: Greyed out text with red X in header (reduced opacity approach)
-2. **copilot/fix-feature-toggle-functionality branch**: Overlay with large centered red X
+1. **Master branch**: Greyed out text with x in header (reduced opacity approach)
+2. **copilot/fix-feature-toggle-functionality branch**: Overlay with large centered x
 
 The user wanted to be able to toggle between these two styles using a checkbox in General Settings, but the cards were generated differently in each approach.
 
@@ -29,7 +29,7 @@ Added conditional logic (if-else) in the `SetCardDisabled` method that checks th
 ```csharp
 private void ApplyGreyedOutStyle(Panel cardPanel)
 {
-    // Show red X in header
+    // Show X in header
     var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
     if (header != null)
     {
@@ -68,7 +68,7 @@ private void ApplyOverlayStyle(Panel cardPanel)
         Cursor = Cursors.No
     };
     
-    // Create large centered red X
+    // Create large centex
     var largeXLabel = new Label
     {
         Text = "✖",
@@ -117,12 +117,12 @@ private void SetCardDisabled(Panel cardPanel)
     // Apply the appropriate style based on setting
     if (useGreyedOutStyle)
     {
-        // Greyed out style: red X in header + reduced opacity
+        // Greyed out style: X in header + reduced opacity
         ApplyGreyedOutStyle(cardPanel);
     }
     else
     {
-        // Overlay style: semi-transparent overlay with large centered red X
+        // Overlay style: semi-transparent overlay with large centered x
         ApplyOverlayStyle(cardPanel);
     }
     
@@ -157,7 +157,7 @@ private void SetCardEnabled(Panel cardPanel)
         overlayPanel.Dispose();
     }
     
-    // Hide red X in header (for greyed out style)
+    // Hide X in header (for greyed out style)
     var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
     if (header != null)
     {
@@ -256,13 +256,13 @@ cardStyleCheckBox.CheckedChanged += (s, e) =>
    - `SetCardDisabled()` is called
    - Method checks `UseGreyedOutCardStyle` setting
    - Conditional logic applies appropriate style:
-     - If true → `ApplyGreyedOutStyle()` (red X in header + reduced opacity)
-     - If false → `ApplyOverlayStyle()` (overlay with large centered red X)
+     - If true → `ApplyGreyedOutStyle()` (X in header + reduced opacity)
+     - If false → `ApplyOverlayStyle()` (overlay with large centered x)
 
 4. **Card becomes enabled** (feature toggle turned on)
    - `SetCardEnabled()` is called
    - Removes overlay panel if present
-   - Hides red X in header if present
+   - Hides X in header if present
    - Restores full opacity
    - Re-enables interaction
 
@@ -271,7 +271,7 @@ cardStyleCheckBox.CheckedChanged += (s, e) =>
 ### Greyed Out Style (Checked - Default)
 ```
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ 📈 Position Limits          ✖  ┃  ← Small red X in header
+┃ 📈 Position Limits          ✖  ┃  ← Small X in header
 ┠─────────────────────────────────┨
 ┃ Max Loss per Position: $500    ┃  ← 40% opacity
 ┃ Max Profit per Position: $1000 ┃  ← 40% opacity
@@ -284,7 +284,7 @@ cardStyleCheckBox.CheckedChanged += (s, e) =>
 ┃ 📈 Position Limits             ┃
 ╠═════════════════════════════════╣
 ║█████████████████████████████████║  ← Semi-transparent overlay
-║████████████   ✖   █████████████║  ← Large centered red X (72pt)
+║████████████   ✖   █████████████║  ← Large centex (72pt)
 ║█████████████████████████████████║
 ╚═════════════════════════════════╝
 ```
@@ -316,16 +316,16 @@ cardStyleCheckBox.CheckedChanged += (s, e) =>
 1. **Test Greyed Out Style (Default)**
    - Verify checkbox is checked by default
    - Disable a feature (e.g., Position Limits)
-   - Confirm red X appears in card header
+   - Confirm X appears in card header
    - Confirm card content is at reduced opacity
    - Enable the feature
-   - Confirm red X disappears and opacity is restored
+   - Confirm X disappears and opacity is restored
 
 2. **Test Overlay Style**
    - Uncheck the "Use Greyed Out Style" checkbox
    - Disable a feature
    - Confirm semi-transparent overlay appears over card
-   - Confirm large red X is centered on overlay
+   - Confirm large X is centered on overlay
    - Enable the feature
    - Confirm overlay is removed
 

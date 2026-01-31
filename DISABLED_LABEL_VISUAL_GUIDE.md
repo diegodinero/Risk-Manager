@@ -42,7 +42,7 @@ When a risk management feature is disabled in the account settings, the correspo
 ### Disabled Card (After)
 ```
 ┌──────────────────────────────────────────────────────────┐
-│ 📈 Position Limits                                  ✖   │  ← Red X added
+│ 📈 Position Limits                                  ✖   │  ← X added
 │                                                          │
 │ Loss Limit:         💵 $500.00 per position            │  ← 40% opacity
 │ Profit Target:      💵 $1,000.00 per position          │  ← 40% opacity
@@ -55,14 +55,14 @@ When a risk management feature is disabled in the account settings, the correspo
 ### No Overlay Approach
 Unlike traditional disabled states that use a semi-transparent overlay panel obscuring the content:
 - ✅ **New Approach**: Content remains fully visible with reduced opacity
-- ✅ **Clear Indicator**: Red X in header provides obvious visual cue
+- ✅ **Clear Indicator**: x in header provides obvious visual cue
 - ✅ **Better UX**: Users can still read all settings even when disabled
 - ❌ **Old Approach**: Would have used an overlay panel blocking content
 
 ### State Management
 The implementation properly manages state transitions:
-1. **Disabling**: Stores original colors, reduces opacity, shows red X, disables interaction
-2. **Enabling**: Restores original colors, hides red X, re-enables interaction
+1. **Disabling**: Stores original colors, reduces opacity, shows x, disables interaction
+2. **Enabling**: Restores original colors, hides x, re-enables interaction
 3. **Persistence**: State is tracked in the card's Tag property with feature checker
 
 ### Color Preservation
@@ -119,13 +119,13 @@ To verify the implementation:
 1. Open Risk Manager and navigate to Risk Overview tab
 2. Disable a feature (e.g., Positions) in the settings
 3. Observe the corresponding card:
-   - ✓ Red X appears in top-right corner
+   - ✓ x appears in top-right corner
    - ✓ Content is visibly faded but still readable
    - ✓ Hovering shows "No" cursor
    - ✓ Clicking has no effect
 4. Re-enable the feature
 5. Observe the card returns to normal:
-   - ✓ Red X disappears
+   - ✓ x disappears
    - ✓ Content returns to full brightness
    - ✓ Normal cursor on hover
    - ✓ Card is interactive again
@@ -138,7 +138,7 @@ The requirement specifically stated "without using an overlay" because:
 - Users should be able to view settings even when features are disabled
 - A lighter, less intrusive approach improves user experience
 
-### Why Red X in Header?
+### Why x in Header?
 Placing the indicator in the header:
 - Doesn't interfere with content readability
 - Provides consistent, predictable location

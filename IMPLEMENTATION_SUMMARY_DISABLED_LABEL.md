@@ -28,16 +28,16 @@ Implement a disabledLabel that displays a red 'X' on the risk overview card to i
 ### File: RiskManagerControl.cs
 
 #### 1. Enhanced CustomCardHeaderControl Class (Lines 68-136)
-- Added `disabledLabel` field for the red X indicator
-- Added `SetDisabled(bool)` method to show/hide the red X
-- Positioned red X on right side of header (DockStyle.Right, Width = 50)
+- Added `disabledLabel` field for the x indicator
+- Added `SetDisabled(bool)` method to show/hide the x
+- Positioned x on right side of header (DockStyle.Right, Width = 50)
 - Set disabledLabel.Enabled = false to prevent interaction
 
 #### 2. Added SetCardDisabled() Method (Lines ~11150-11220)
 ```csharp
 private void SetCardDisabled(Panel cardPanel)
 {
-    // Show red X in header
+    // Show x in header
     // Store original colors
     // Reduce opacity to 40%
     // Disable card interaction (Enabled = false)
@@ -50,7 +50,7 @@ private void SetCardDisabled(Panel cardPanel)
 ```csharp
 private void SetCardEnabled(Panel cardPanel)
 {
-    // Hide red X in header
+    // Hide x in header
     // Restore original colors
     // Enable card interaction (Enabled = true)
     // Restore cursor
@@ -123,7 +123,7 @@ private void SetControlOpacity(Control control, double opacity)
 - Better user experience
 
 ### 2. Clear Visual Indicator ✅
-- Red X prominently displayed in header
+- x prominently displayed in header
 - Consistent position across all cards
 - Immediately recognizable
 
@@ -141,13 +141,13 @@ private void SetControlOpacity(Control control, double opacity)
 
 ### Old Approach (Overlay-Based)
 - ❌ Semi-transparent overlay panel
-- ❌ Large centered red X (72pt)
+- ❌ Large centered x (72pt)
 - ❌ Content obscured by overlay
 - ❌ Only cursor changed (not actually disabled)
 
 ### New Approach (Non-Overlay)
 - ✅ No overlay panel
-- ✅ Header-positioned red X (28pt)
+- ✅ Header-positioned x (28pt)
 - ✅ Content visible at 40% opacity
 - ✅ Card fully disabled (Enabled = false)
 - ✅ Original colors preserved
@@ -155,7 +155,7 @@ private void SetControlOpacity(Control control, double opacity)
 ## Benefits
 
 1. **Better Visibility**: Users can still read settings even when disabled
-2. **Clear Indication**: Red X provides obvious visual cue
+2. **Clear Indication**: x provides obvious visual cue
 3. **Improved UX**: Less intrusive than overlay approach
 4. **Proper Interaction Blocking**: Actually prevents user interaction
 5. **Color Preservation**: No color degradation over time

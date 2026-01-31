@@ -141,12 +141,12 @@ Cards can now display a disabled state when their associated feature is not enab
 
 ### Implementation Details
 1. **CustomCardHeaderControl** - Enhanced to include a disabled label that can be shown/hidden
-   - `SetDisabled(bool)` method controls visibility of the red X
+   - `SetDisabled(bool)` method controls visibility of the x
    - Disabled label is positioned on the right side of the header
    - Disabled label itself is set to Enabled = false to prevent interaction
 
 2. **SetCardDisabled()** - Applies the disabled state to a card
-   - Shows red X in card header
+   - Shows x in card header
    - Stores original colors of all controls before modification
    - Reduces opacity of card content (40%)
    - Sets card Enabled property to false, disabling all interaction
@@ -154,7 +154,7 @@ Cards can now display a disabled state when their associated feature is not enab
    - Stores disabled state and original colors in card Tag
 
 3. **SetCardEnabled()** - Restores the enabled state of a card
-   - Hides red X in card header
+   - Hides x in card header
    - Restores original colors from stored dictionary
    - Sets card Enabled property to true, re-enabling interaction
    - Restores default cursor
@@ -168,7 +168,7 @@ When a card is disabled:
 - Card Enabled property is set to false, disabling all child controls
 - All click events and user interactions are prevented
 - Card content remains visible but faded (40% opacity)
-- Red X provides clear visual indicator without overlay
+- x provides clear visual indicator without overlay
 - Original colors are preserved and restored when re-enabled
 - Card maintains its layout and structure
 
@@ -180,7 +180,7 @@ When a card is disabled:
 4. **Theme Changes**: Verify display in all three theme modes (Blue, Black, White)
 5. **Overflow Content**: Test with many blocked symbols and contract limits
 6. **Service Errors**: Test behavior when settings service fails to initialize
-7. **Disabled State**: Test cards with disabled features show red X and reduced opacity
+7. **Disabled State**: Test cards with disabled features show x and reduced opacity
 8. **State Transitions**: Test enabling/disabling features updates card state correctly
 
 ## Files Modified
@@ -215,6 +215,6 @@ The Risk Overview tab provides a centralized, easy-to-read view of all risk mana
 - Providing quick visibility into critical risk settings
 - Using visual indicators (emojis) for better comprehension
 - Maintaining consistency with existing UI patterns
-- Clearly indicating disabled features with a red X and reduced opacity (no overlay)
+- Clearly indicating disabled features with a x and reduced opacity (no overlay)
 
 The implementation is clean, maintainable, and follows the established patterns in the codebase while adding significant value to the risk management workflow.
