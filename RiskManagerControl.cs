@@ -2543,7 +2543,7 @@ namespace Risk_Manager
             {
                 Width = 12,  // Half size for subtle indicator
                 Height = 12,
-                Location = new Point(175, 10),  // Closer to the title
+                Location = new Point(175, 13),  // Aligned with Risk Manager text vertical center
                 BackColor = Color.Transparent  // Transparent to match theme
             };
             
