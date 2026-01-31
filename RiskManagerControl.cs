@@ -902,6 +902,12 @@ namespace Risk_Manager
                     // Trading Status row
                     var tradingStatusText = statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[2].Value?.ToString() ?? "Unlocked";
                     UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, tradingStatusText);
+                    
+                    // LED Indicator row - refresh to apply new theme colors
+                    if (statusTableView.Rows.Count > STATUS_TABLE_LED_INDICATOR_ROW)
+                    {
+                        UpdateLedIndicator();
+                    }
                 }
             }
             
