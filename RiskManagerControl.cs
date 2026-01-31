@@ -1008,8 +1008,10 @@ namespace Risk_Manager
                 // skip overriding ForeColor here so specialized coloring (YellowBlueBlack) persists.
                 bool isValueGetterLabel = label.Tag is Func<string>;
                 
-                // Preserve red color for disabled label X indicator
-                bool isDisabledLabel = label.ForeColor == RiskManagerColors.DisabledLabelColor;
+                // Preserve red color for disabled label X indicator (compare RGB only, ignore alpha)
+                bool isDisabledLabel = label.ForeColor.R == RiskManagerColors.DisabledLabelColor.R &&
+                                      label.ForeColor.G == RiskManagerColors.DisabledLabelColor.G &&
+                                      label.ForeColor.B == RiskManagerColors.DisabledLabelColor.B;
 
                 if (!isValueGetterLabel && !isDisabledLabel)
                 {
