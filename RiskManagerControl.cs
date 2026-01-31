@@ -205,6 +205,7 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer pnlMonitorTimer; // Timer to monitor P&L limits
         private System.Windows.Forms.Timer badgeRefreshTimer; // Timer to refresh badge from JSON (like Accounts Summary)
         private System.Windows.Forms.Timer ledIndicatorTimer; // Timer to monitor orders and positions for LED indicator
+        private Panel ledIndicatorPanel; // Visual LED indicator panel on the top panel
         private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
@@ -400,7 +401,6 @@ namespace Risk_Manager
         // Status table row indices
         private const int STATUS_TABLE_SETTINGS_ROW = 0; // Settings Status row index
         private const int STATUS_TABLE_TRADING_ROW = 1;  // Trading Status row index
-        private const int STATUS_TABLE_LED_INDICATOR_ROW = 2;  // LED indicator row index
 
         // Regex patterns for account type detection (compiled for performance)
         // Using word boundaries to avoid false positives (e.g., "space" won't match "pa", "evaluate" won't match "eval")
@@ -902,12 +902,12 @@ namespace Risk_Manager
                     // Trading Status row
                     var tradingStatusText = statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[2].Value?.ToString() ?? "Unlocked";
                     UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, tradingStatusText);
-                    
-                    // LED Indicator row - refresh to apply new theme colors
-                    if (statusTableView.Rows.Count > STATUS_TABLE_LED_INDICATOR_ROW)
-                    {
-                        UpdateLedIndicator();
-                    }
+                }
+                
+                // Update LED indicator with current theme colors
+                if (ledIndicatorPanel != null)
+                {
+                    UpdateLedIndicator();
                 }
             }
             
@@ -2529,6 +2529,37 @@ namespace Risk_Manager
             EnableDragging(titleLabel);  // Make title draggable too
             topPanel.Controls.Add(titleLabel);
 
+            // LED Indicator - Visual indicator for orders/positions
+            ledIndicatorPanel = new Panel
+            {
+                Width = 20,
+                Height = 20,
+                Location = new Point(200, 8),  // Next to the title
+                BackColor = Color.Gray  // Default to gray (no activity)
+            };
+            
+            // Make it circular using Paint event
+            ledIndicatorPanel.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                using (var brush = new SolidBrush(ledIndicatorPanel.BackColor))
+                {
+                    e.Graphics.FillEllipse(brush, 0, 0, ledIndicatorPanel.Width - 1, ledIndicatorPanel.Height - 1);
+                }
+                // Add a subtle border
+                using (var pen = new Pen(Color.FromArgb(100, Color.White), 1))
+                {
+                    e.Graphics.DrawEllipse(pen, 0, 0, ledIndicatorPanel.Width - 1, ledIndicatorPanel.Height - 1);
+                }
+            };
+            
+            // Add tooltip to explain the LED indicator and store it in Tag
+            var ledToolTip = new ToolTip();
+            ledToolTip.SetToolTip(ledIndicatorPanel, "No Activity");
+            ledIndicatorPanel.Tag = ledToolTip; // Store tooltip for later updates
+            
+            topPanel.Controls.Add(ledIndicatorPanel);
+
             // Account selector
             var accountLabel = new Label
             {
@@ -2656,7 +2687,7 @@ namespace Risk_Manager
             statusTableView = new DataGridView
             {
                 Width = 350,
-                Height = 105,  // Increased from 70 to accommodate 3 rows (35 per row)
+                Height = 70,
                 BackgroundColor = CardBackground,
                 GridColor = DarkerBackground,
                 BorderStyle = BorderStyle.None,
@@ -2698,17 +2729,14 @@ namespace Risk_Manager
             // Get icons for the status rows
             var settingsIcon = GetIconForTitle("Lock Settings") ?? GetIconForTitle("Locked");
             var tradingIcon = GetIconForTitle("Manual Lock") ?? GetIconForTitle("Locked");
-            var ledIcon = GetIconForTitle("Positions") ?? GetIconForTitle("Locked");
             
             // Add rows for Settings Status and Trading Status with icons
             statusTableView.Rows.Add(settingsIcon, "Settings Status:", "Unlocked");
             statusTableView.Rows.Add(tradingIcon, "Trading Status:", "Unlocked");
-            statusTableView.Rows.Add(ledIcon, "Orders/Positions:", "Inactive");
             
             // Apply green color to initial "Unlocked" values using helper method
             UpdateStatusTableCellColor(STATUS_TABLE_SETTINGS_ROW, "Unlocked");
             UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, "Unlocked");
-            UpdateStatusTableCellColor(STATUS_TABLE_LED_INDICATOR_ROW, "Inactive");
             
             // Keep reference to old badges for backward compatibility
             // Note: These badges are hidden but maintained to ensure existing code
@@ -2922,20 +2950,19 @@ namespace Risk_Manager
 
         /// <summary>
         /// Updates the LED indicator based on open/working orders and open positions.
+        /// Priority: Orange (positions) > Yellow (orders) > Grey (no activity)
         /// </summary>
         private void UpdateLedIndicator()
         {
             try
             {
-                if (statusTableView == null || statusTableView.Rows.Count <= STATUS_TABLE_LED_INDICATOR_ROW)
+                if (ledIndicatorPanel == null)
                     return;
 
                 var core = Core.Instance;
                 if (core == null)
                     return;
 
-                bool hasActivity = false;
-                string statusText = "Inactive";
                 int orderCount = 0;
                 int positionCount = 0;
 
@@ -2954,32 +2981,43 @@ namespace Risk_Manager
                         .Count(pos => pos != null && pos.Account == selectedAccount && pos.Quantity != 0);
                 }
 
-                // Set status text based on what we have
-                if (orderCount > 0 && positionCount > 0)
+                // Apply color priority: Orange (positions) > Yellow (orders) > Grey (no activity)
+                Color ledColor;
+                string tooltipText;
+                
+                if (positionCount > 0)
                 {
-                    hasActivity = true;
-                    statusText = $"● {orderCount} Order(s), {positionCount} Position(s)";
+                    // Orange for open positions (highest priority)
+                    ledColor = Color.Orange;
+                    tooltipText = $"Open Positions: {positionCount}";
+                    if (orderCount > 0)
+                    {
+                        tooltipText += $" | Open Orders: {orderCount}";
+                    }
                 }
                 else if (orderCount > 0)
                 {
-                    hasActivity = true;
-                    statusText = $"● {orderCount} Order(s)";
+                    // Yellow for open orders
+                    ledColor = Color.Yellow;
+                    tooltipText = $"Open Orders: {orderCount}";
                 }
-                else if (positionCount > 0)
+                else
                 {
-                    hasActivity = true;
-                    statusText = $"● {positionCount} Position(s)";
+                    // Grey for no activity
+                    ledColor = Color.Gray;
+                    tooltipText = "No Activity";
                 }
 
-                // Update the cell value and color
-                var cell = statusTableView.Rows[STATUS_TABLE_LED_INDICATOR_ROW].Cells[2];
-                cell.Value = statusText;
+                // Update the LED indicator panel color
+                ledIndicatorPanel.BackColor = ledColor;
+                ledIndicatorPanel.Invalidate(); // Force repaint
                 
-                // Set color: Green when active, Gray when inactive
-                cell.Style.ForeColor = hasActivity ? AccentGreen : Color.Gray;
-                cell.Style.SelectionForeColor = hasActivity ? AccentGreen : Color.Gray;
-                cell.Style.BackColor = CardBackground;
-                cell.Style.SelectionBackColor = CardBackground;
+                // Update tooltip
+                var tooltip = ledIndicatorPanel.Tag as ToolTip;
+                if (tooltip != null)
+                {
+                    tooltip.SetToolTip(ledIndicatorPanel, tooltipText);
+                }
             }
             catch (Exception ex)
             {
