@@ -2936,53 +2936,39 @@ namespace Risk_Manager
 
                 bool hasActivity = false;
                 string statusText = "Inactive";
+                int orderCount = 0;
+                int positionCount = 0;
 
                 // Check if there are any open or working orders for the selected account
                 if (selectedAccount != null && core.Orders != null)
                 {
-                    var workingOrders = core.Orders
-                        .Where(order => order != null && order.Account == selectedAccount &&
-                               (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
-                        .ToList();
-
-                    if (workingOrders.Count > 0)
-                    {
-                        hasActivity = true;
-                        statusText = $"● {workingOrders.Count} Order(s)";
-                    }
+                    orderCount = core.Orders
+                        .Count(order => order != null && order.Account == selectedAccount &&
+                               (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled));
                 }
 
                 // Check if there are any open positions for the selected account
-                if (selectedAccount != null && core.Positions != null && !hasActivity)
+                if (selectedAccount != null && core.Positions != null)
                 {
-                    var accountPositions = core.Positions
-                        .Where(pos => pos != null && pos.Account == selectedAccount && pos.Quantity != 0)
-                        .ToList();
-
-                    if (accountPositions.Count > 0)
-                    {
-                        hasActivity = true;
-                        statusText = $"● {accountPositions.Count} Position(s)";
-                    }
+                    positionCount = core.Positions
+                        .Count(pos => pos != null && pos.Account == selectedAccount && pos.Quantity != 0);
                 }
 
-                // If both orders and positions exist, show combined status
-                if (selectedAccount != null && core.Orders != null && core.Positions != null)
+                // Set status text based on what we have
+                if (orderCount > 0 && positionCount > 0)
                 {
-                    var workingOrders = core.Orders
-                        .Where(order => order != null && order.Account == selectedAccount &&
-                               (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
-                        .ToList();
-
-                    var accountPositions = core.Positions
-                        .Where(pos => pos != null && pos.Account == selectedAccount && pos.Quantity != 0)
-                        .ToList();
-
-                    if (workingOrders.Count > 0 && accountPositions.Count > 0)
-                    {
-                        hasActivity = true;
-                        statusText = $"● {workingOrders.Count} Order(s), {accountPositions.Count} Position(s)";
-                    }
+                    hasActivity = true;
+                    statusText = $"● {orderCount} Order(s), {positionCount} Position(s)";
+                }
+                else if (orderCount > 0)
+                {
+                    hasActivity = true;
+                    statusText = $"● {orderCount} Order(s)";
+                }
+                else if (positionCount > 0)
+                {
+                    hasActivity = true;
+                    statusText = $"● {positionCount} Position(s)";
                 }
 
                 // Update the cell value and color
