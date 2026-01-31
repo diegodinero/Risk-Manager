@@ -2541,12 +2541,17 @@ namespace Risk_Manager
             // LED Indicator - Visual indicator for orders/positions
             ledIndicatorPanel = new Panel
             {
-                Width = 24,  // Slightly larger for better visibility
-                Height = 24,
-                Location = new Point(200, 8),  // Next to the title
-                BackColor = Color.Transparent,  // Transparent to match theme
-                Tag = Color.Gray  // Store LED color in Tag, default to gray (no activity)
+                Width = 12,  // Half size for subtle indicator
+                Height = 12,
+                Location = new Point(175, 10),  // Closer to the title
+                BackColor = Color.Transparent  // Transparent to match theme
             };
+            
+            // Set parent explicitly before adding to ensure proper transparency
+            topPanel.Controls.Add(ledIndicatorPanel);
+            
+            // Store initial LED color in Tag
+            ledIndicatorPanel.Tag = Color.Gray;
             
             // Make it circular with modern glow effect using Paint event
             ledIndicatorPanel.Paint += (s, e) =>
@@ -2560,16 +2565,17 @@ namespace Risk_Manager
                 e.Graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
                 e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                 
-                // Calculate circle dimensions with padding for glow
-                int circleDiameter = Math.Min(panel.Width, panel.Height) - (LED_PADDING * 2);
-                int circleX = LED_PADDING;
-                int circleY = LED_PADDING;
+                // For smaller LED, reduce padding and adjust proportions
+                int padding = 1;  // Reduced padding for smaller size
+                int circleDiameter = Math.Min(panel.Width, panel.Height) - (padding * 2);
+                int circleX = padding;
+                int circleY = padding;
                 
-                // Draw outer glow effect (multiple layers for smooth glow)
-                for (int i = LED_GLOW_LAYERS; i > 0; i--)
+                // Draw outer glow effect (reduced for smaller LED)
+                for (int i = 2; i > 0; i--)  // Only 2 layers for subtle glow on small LED
                 {
-                    int glowSize = i * LED_GLOW_SIZE_MULTIPLIER;
-                    int glowAlpha = LED_GLOW_ALPHA_MULTIPLIER * i;
+                    int glowSize = i;
+                    int glowAlpha = 15 * i;  // Reduced alpha for subtler glow
                     using (var glowBrush = new SolidBrush(Color.FromArgb(glowAlpha, ledColor)))
                     {
                         e.Graphics.FillEllipse(glowBrush, 
@@ -2599,7 +2605,7 @@ namespace Risk_Manager
                 }
                 
                 // Add subtle edge highlight for 3D effect
-                using (var pen = new Pen(Color.FromArgb(LED_EDGE_HIGHLIGHT_ALPHA, Color.White), LED_EDGE_HIGHLIGHT_WIDTH))
+                using (var pen = new Pen(Color.FromArgb(60, Color.White), 1.0f))  // Thinner for small LED
                 {
                     e.Graphics.DrawEllipse(pen, circleX, circleY, circleDiameter, circleDiameter);
                 }
@@ -2608,8 +2614,6 @@ namespace Risk_Manager
             // Add tooltip to explain the LED indicator
             ledIndicatorToolTip = new ToolTip();
             ledIndicatorToolTip.SetToolTip(ledIndicatorPanel, "No Activity");
-            
-            topPanel.Controls.Add(ledIndicatorPanel);
 
             // Account selector
             var accountLabel = new Label
@@ -2738,7 +2742,7 @@ namespace Risk_Manager
             statusTableView = new DataGridView
             {
                 Width = 350,
-                Height = 70,
+                Height = 56,  // Reduced to fit exactly 2 rows (28px per row)
                 BackgroundColor = CardBackground,
                 GridColor = DarkerBackground,
                 BorderStyle = BorderStyle.None,
