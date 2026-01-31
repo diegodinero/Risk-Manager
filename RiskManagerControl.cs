@@ -2533,24 +2533,65 @@ namespace Risk_Manager
             // LED Indicator - Visual indicator for orders/positions
             ledIndicatorPanel = new Panel
             {
-                Width = 20,
-                Height = 20,
+                Width = 24,  // Slightly larger for better visibility
+                Height = 24,
                 Location = new Point(200, 8),  // Next to the title
-                BackColor = Color.Gray  // Default to gray (no activity)
+                BackColor = Color.Transparent,  // Transparent to match theme
+                Tag = Color.Gray  // Store LED color in Tag, default to gray (no activity)
             };
             
-            // Make it circular using Paint event
+            // Make it circular with modern glow effect using Paint event
             ledIndicatorPanel.Paint += (s, e) =>
             {
+                var panel = s as Panel;
+                var ledColor = (Color)(panel?.Tag ?? Color.Gray);
+                
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                using (var brush = new SolidBrush(ledIndicatorPanel.BackColor))
+                e.Graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                
+                // Calculate circle dimensions with padding for glow
+                int padding = 2;
+                int circleDiameter = Math.Min(panel.Width, panel.Height) - (padding * 2);
+                int circleX = padding;
+                int circleY = padding;
+                
+                // Draw outer glow effect (multiple layers for smooth glow)
+                for (int i = 3; i > 0; i--)
                 {
-                    e.Graphics.FillEllipse(brush, 0, 0, ledIndicatorPanel.Width, ledIndicatorPanel.Height);
+                    int glowSize = i * 2;
+                    using (var glowBrush = new SolidBrush(Color.FromArgb(20 * i, ledColor)))
+                    {
+                        e.Graphics.FillEllipse(glowBrush, 
+                            circleX - glowSize, 
+                            circleY - glowSize, 
+                            circleDiameter + (glowSize * 2), 
+                            circleDiameter + (glowSize * 2));
+                    }
                 }
-                // Add a subtle border
-                using (var pen = new Pen(Color.FromArgb(100, Color.White), 1))
+                
+                // Draw main LED circle with radial gradient for depth
+                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
                 {
-                    e.Graphics.DrawEllipse(pen, 0, 0, ledIndicatorPanel.Width, ledIndicatorPanel.Height);
+                    path.AddEllipse(circleX, circleY, circleDiameter, circleDiameter);
+                    
+                    var bounds = path.GetBounds();
+                    using (var gradientBrush = new System.Drawing.Drawing2D.PathGradientBrush(path))
+                    {
+                        // Center is lighter (highlight)
+                        gradientBrush.CenterColor = ControlPaint.Light(ledColor, 0.3f);
+                        // Edge is the LED color
+                        gradientBrush.SurroundColors = new[] { ledColor };
+                        gradientBrush.FocusScales = new PointF(0.3f, 0.3f);
+                        
+                        e.Graphics.FillPath(gradientBrush, path);
+                    }
+                }
+                
+                // Add subtle edge highlight for 3D effect
+                using (var pen = new Pen(Color.FromArgb(80, Color.White), 1.5f))
+                {
+                    e.Graphics.DrawEllipse(pen, circleX, circleY, circleDiameter, circleDiameter);
                 }
             };
             
@@ -3008,8 +3049,8 @@ namespace Risk_Manager
                     tooltipText = "No Activity";
                 }
 
-                // Update the LED indicator panel color
-                ledIndicatorPanel.BackColor = ledColor;
+                // Update the LED indicator panel color (store in Tag)
+                ledIndicatorPanel.Tag = ledColor;
                 ledIndicatorPanel.Invalidate(); // Force repaint
                 
                 // Update tooltip
