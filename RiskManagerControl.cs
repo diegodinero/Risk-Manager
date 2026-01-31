@@ -204,6 +204,9 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer lockExpirationCheckTimer;
         private System.Windows.Forms.Timer pnlMonitorTimer; // Timer to monitor P&L limits
         private System.Windows.Forms.Timer badgeRefreshTimer; // Timer to refresh badge from JSON (like Accounts Summary)
+        private System.Windows.Forms.Timer ledIndicatorTimer; // Timer to monitor orders and positions for LED indicator
+        private Panel ledIndicatorPanel; // Visual LED indicator panel on the top panel
+        private ToolTip ledIndicatorToolTip; // Tooltip for LED indicator
         private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
@@ -396,6 +399,14 @@ namespace Risk_Manager
         // Risk Overview card title constants
         private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
         
+        // LED Indicator visual constants
+        private const int LED_PADDING = 2;
+        private const int LED_GLOW_LAYERS = 3;
+        private const int LED_GLOW_SIZE_MULTIPLIER = 2;
+        private const int LED_GLOW_ALPHA_MULTIPLIER = 20;
+        private const int LED_EDGE_HIGHLIGHT_ALPHA = 80;
+        private const float LED_EDGE_HIGHLIGHT_WIDTH = 1.5f;
+        
         // Status table row indices
         private const int STATUS_TABLE_SETTINGS_ROW = 0; // Settings Status row index
         private const int STATUS_TABLE_TRADING_ROW = 1;  // Trading Status row index
@@ -534,6 +545,11 @@ namespace Risk_Manager
             badgeRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             badgeRefreshTimer.Tick += (s, e) => RefreshTradingStatusBadgeFromJSON();
             badgeRefreshTimer.Start();
+
+            // Monitor orders and positions for LED indicator every second
+            ledIndicatorTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            ledIndicatorTimer.Tick += (s, e) => UpdateLedIndicator();
+            ledIndicatorTimer.Start();
 
             // Show Accounts Summary by default
             selectedNavItem = "📊 Accounts Summary";
@@ -895,6 +911,12 @@ namespace Risk_Manager
                     // Trading Status row
                     var tradingStatusText = statusTableView.Rows[STATUS_TABLE_TRADING_ROW].Cells[2].Value?.ToString() ?? "Unlocked";
                     UpdateStatusTableCellColor(STATUS_TABLE_TRADING_ROW, tradingStatusText);
+                }
+                
+                // Update LED indicator with current theme colors
+                if (ledIndicatorPanel != null)
+                {
+                    UpdateLedIndicator();
                 }
             }
             
@@ -2516,6 +2538,92 @@ namespace Risk_Manager
             EnableDragging(titleLabel);  // Make title draggable too
             topPanel.Controls.Add(titleLabel);
 
+            // LED Indicator - Visual indicator for orders/positions
+            ledIndicatorPanel = new Panel
+            {
+                Width = 12,  // Half size for subtle indicator
+                Height = 12,
+                Location = new Point(175, 13),  // Aligned with Risk Manager text vertical center
+                BackColor = Color.Transparent  // Transparent to match theme
+            };
+            
+            // Set parent explicitly before adding to ensure proper transparency
+            topPanel.Controls.Add(ledIndicatorPanel);
+            
+            // Store initial LED color in Tag
+            ledIndicatorPanel.Tag = Color.Gray;
+            
+            // Make it circular with modern glow effect using Paint event
+            ledIndicatorPanel.Paint += (s, e) =>
+            {
+                var panel = s as Panel;
+                if (panel == null) return;  // Safety check
+                
+                // Paint parent background to ensure true transparency
+                if (panel.Parent != null)
+                {
+                    using (var backBrush = new SolidBrush(panel.Parent.BackColor))
+                    {
+                        e.Graphics.FillRectangle(backBrush, panel.ClientRectangle);
+                    }
+                }
+                
+                var ledColor = (Color)(panel.Tag ?? Color.Gray);
+                
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                e.Graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                
+                // For smaller LED, reduce padding and adjust proportions
+                int padding = 1;  // Reduced padding for smaller size
+                int circleDiameter = Math.Min(panel.Width, panel.Height) - (padding * 2);
+                int circleX = padding;
+                int circleY = padding;
+                
+                // Draw outer glow effect (reduced for smaller LED)
+                for (int i = 2; i > 0; i--)  // Only 2 layers for subtle glow on small LED
+                {
+                    int glowSize = i;
+                    int glowAlpha = 15 * i;  // Reduced alpha for subtler glow
+                    using (var glowBrush = new SolidBrush(Color.FromArgb(glowAlpha, ledColor)))
+                    {
+                        e.Graphics.FillEllipse(glowBrush, 
+                            circleX - glowSize, 
+                            circleY - glowSize, 
+                            circleDiameter + (glowSize * 2), 
+                            circleDiameter + (glowSize * 2));
+                    }
+                }
+                
+                // Draw main LED circle with radial gradient for depth
+                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+                {
+                    path.AddEllipse(circleX, circleY, circleDiameter, circleDiameter);
+                    
+                    var bounds = path.GetBounds();
+                    using (var gradientBrush = new System.Drawing.Drawing2D.PathGradientBrush(path))
+                    {
+                        // Center is lighter (highlight)
+                        gradientBrush.CenterColor = ControlPaint.Light(ledColor, 0.3f);
+                        // Edge is the LED color
+                        gradientBrush.SurroundColors = new[] { ledColor };
+                        gradientBrush.FocusScales = new PointF(0.3f, 0.3f);
+                        
+                        e.Graphics.FillPath(gradientBrush, path);
+                    }
+                }
+                
+                // Add subtle edge highlight for 3D effect
+                using (var pen = new Pen(Color.FromArgb(60, Color.White), 1.0f))  // Thinner for small LED
+                {
+                    e.Graphics.DrawEllipse(pen, circleX, circleY, circleDiameter, circleDiameter);
+                }
+            };
+            
+            // Add tooltip to explain the LED indicator
+            ledIndicatorToolTip = new ToolTip();
+            ledIndicatorToolTip.SetToolTip(ledIndicatorPanel, "No Activity");
+
             // Account selector
             var accountLabel = new Label
             {
@@ -2643,7 +2751,7 @@ namespace Risk_Manager
             statusTableView = new DataGridView
             {
                 Width = 350,
-                Height = 70,
+                Height = 56,  // Reduced to fit exactly 2 rows (28px per row)
                 BackgroundColor = CardBackground,
                 GridColor = DarkerBackground,
                 BorderStyle = BorderStyle.None,
@@ -2901,6 +3009,82 @@ namespace Risk_Manager
                 cell.Style.SelectionForeColor = isLocked ? Color.Red : AccentGreen;
                 cell.Style.BackColor = CardBackground;
                 cell.Style.SelectionBackColor = CardBackground;
+            }
+        }
+
+        /// <summary>
+        /// Updates the LED indicator based on open/working orders and open positions.
+        /// Priority: Orange (positions) > Yellow (orders) > Grey (no activity)
+        /// </summary>
+        private void UpdateLedIndicator()
+        {
+            try
+            {
+                if (ledIndicatorPanel == null)
+                    return;
+
+                var core = Core.Instance;
+                if (core == null)
+                    return;
+
+                int orderCount = 0;
+                int positionCount = 0;
+
+                // Check if there are any open or working orders for the selected account
+                if (selectedAccount != null && core.Orders != null)
+                {
+                    orderCount = core.Orders
+                        .Count(order => order != null && order.Account == selectedAccount &&
+                               (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled));
+                }
+
+                // Check if there are any open positions for the selected account
+                if (selectedAccount != null && core.Positions != null)
+                {
+                    positionCount = core.Positions
+                        .Count(pos => pos != null && pos.Account == selectedAccount && pos.Quantity != 0);
+                }
+
+                // Apply color priority: Orange (positions) > Yellow (orders) > Grey (no activity)
+                Color ledColor;
+                string tooltipText;
+                
+                if (positionCount > 0)
+                {
+                    // Orange for open positions (highest priority)
+                    ledColor = Color.Orange;
+                    tooltipText = $"Open Positions: {positionCount}";
+                    if (orderCount > 0)
+                    {
+                        tooltipText += $" | Open Orders: {orderCount}";
+                    }
+                }
+                else if (orderCount > 0)
+                {
+                    // Yellow for open orders
+                    ledColor = Color.Yellow;
+                    tooltipText = $"Open Orders: {orderCount}";
+                }
+                else
+                {
+                    // Grey for no activity
+                    ledColor = Color.Gray;
+                    tooltipText = "No Activity";
+                }
+
+                // Update the LED indicator panel color (store in Tag)
+                ledIndicatorPanel.Tag = ledColor;
+                ledIndicatorPanel.Invalidate(); // Force repaint
+                
+                // Update tooltip
+                if (ledIndicatorToolTip != null)
+                {
+                    ledIndicatorToolTip.SetToolTip(ledIndicatorPanel, tooltipText);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating LED indicator: {ex.Message}");
             }
         }
 
