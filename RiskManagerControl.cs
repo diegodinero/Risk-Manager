@@ -206,6 +206,7 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer badgeRefreshTimer; // Timer to refresh badge from JSON (like Accounts Summary)
         private System.Windows.Forms.Timer ledIndicatorTimer; // Timer to monitor orders and positions for LED indicator
         private Panel ledIndicatorPanel; // Visual LED indicator panel on the top panel
+        private ToolTip ledIndicatorToolTip; // Tooltip for LED indicator
         private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
@@ -2544,19 +2545,18 @@ namespace Risk_Manager
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 using (var brush = new SolidBrush(ledIndicatorPanel.BackColor))
                 {
-                    e.Graphics.FillEllipse(brush, 0, 0, ledIndicatorPanel.Width - 1, ledIndicatorPanel.Height - 1);
+                    e.Graphics.FillEllipse(brush, 0, 0, ledIndicatorPanel.Width, ledIndicatorPanel.Height);
                 }
                 // Add a subtle border
                 using (var pen = new Pen(Color.FromArgb(100, Color.White), 1))
                 {
-                    e.Graphics.DrawEllipse(pen, 0, 0, ledIndicatorPanel.Width - 1, ledIndicatorPanel.Height - 1);
+                    e.Graphics.DrawEllipse(pen, 0, 0, ledIndicatorPanel.Width, ledIndicatorPanel.Height);
                 }
             };
             
-            // Add tooltip to explain the LED indicator and store it in Tag
-            var ledToolTip = new ToolTip();
-            ledToolTip.SetToolTip(ledIndicatorPanel, "No Activity");
-            ledIndicatorPanel.Tag = ledToolTip; // Store tooltip for later updates
+            // Add tooltip to explain the LED indicator
+            ledIndicatorToolTip = new ToolTip();
+            ledIndicatorToolTip.SetToolTip(ledIndicatorPanel, "No Activity");
             
             topPanel.Controls.Add(ledIndicatorPanel);
 
@@ -3013,10 +3013,9 @@ namespace Risk_Manager
                 ledIndicatorPanel.Invalidate(); // Force repaint
                 
                 // Update tooltip
-                var tooltip = ledIndicatorPanel.Tag as ToolTip;
-                if (tooltip != null)
+                if (ledIndicatorToolTip != null)
                 {
-                    tooltip.SetToolTip(ledIndicatorPanel, tooltipText);
+                    ledIndicatorToolTip.SetToolTip(ledIndicatorPanel, tooltipText);
                 }
             }
             catch (Exception ex)
