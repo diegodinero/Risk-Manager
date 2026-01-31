@@ -7814,7 +7814,10 @@ namespace Risk_Manager
                 if (settingsService.IsTradingAllowedNow(accountId))
                     return;
 
-                // Trading is not allowed - close all positions for this account
+                // Trading is not allowed - cancel working orders and close all positions for this account
+                // Cancel all working orders first to prevent new positions from being opened
+                CancelAllWorkingOrdersForAccount(account, core);
+                
                 if (core.Positions == null)
                     return;
 
