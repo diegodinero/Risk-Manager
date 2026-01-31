@@ -11498,8 +11498,8 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled: Removed overlay panel");
             }
             
-            // Find the header control and hide the disabled label (for greyed out style)
-            var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
+            // Find the header control and hide the disabled label (for greyed out style) - use recursive search
+            CustomCardHeaderControl header = FindCustomCardHeaderControl(cardPanel);
             if (header != null)
             {
                 System.Diagnostics.Debug.WriteLine($"[REFRESH DEBUG] SetCardEnabled: Found header, calling SetDisabled(false)");
@@ -11613,8 +11613,8 @@ namespace Risk_Manager
         /// </summary>
         private void ApplyGreyedOutStyle(Panel cardPanel)
         {
-            // Find the header control and show the disabled label
-            var header = cardPanel.Controls.OfType<CustomCardHeaderControl>().FirstOrDefault();
+            // Find the header control (may be nested in a layout panel)
+            CustomCardHeaderControl header = FindCustomCardHeaderControl(cardPanel);
             if (header != null)
             {
                 header.SetDisabled(true);
@@ -11628,6 +11628,38 @@ namespace Risk_Manager
                     SetControlOpacity(control, 0.4); // 40% opacity
                 }
             }
+        }
+        
+        /// <summary>
+        /// Recursively finds a CustomCardHeaderControl within a control hierarchy
+        /// </summary>
+        private CustomCardHeaderControl FindCustomCardHeaderControl(Control parent)
+        {
+            if (parent == null) return null;
+            
+            // Check if the parent itself is a CustomCardHeaderControl
+            if (parent is CustomCardHeaderControl header)
+            {
+                return header;
+            }
+            
+            // Search through child controls
+            foreach (Control child in parent.Controls)
+            {
+                if (child is CustomCardHeaderControl childHeader)
+                {
+                    return childHeader;
+                }
+                
+                // Recursively search in nested controls
+                var found = FindCustomCardHeaderControl(child);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+            
+            return null;
         }
         
         /// <summary>
