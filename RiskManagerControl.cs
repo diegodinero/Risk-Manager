@@ -3709,8 +3709,8 @@ namespace Risk_Manager
                 {
                     if (account == null) continue;
 
-                    var provider = account.Connection?.VendorName ?? account.Connection?.Name ?? "Unknown";
-                    var connectionName = account.Connection?.Name ?? "Unknown";
+                    var provider = account.Connection != null ? (account.Connection.VendorName ?? account.Connection.Name ?? "Unknown") : "Unknown";
+                    var connectionName = account.Connection != null ? (account.Connection.Name ?? "Unknown") : "Unknown";
                     var accountId = account.Id ?? account.Name ?? "Unknown";
                     var equity = account.Balance;
 
@@ -3963,8 +3963,8 @@ namespace Risk_Manager
                 var core = Core.Instance;
 
                 // Get provider and connection info
-                var provider = accountToDisplay.Connection?.VendorName ?? accountToDisplay.Connection?.Name ?? "Unknown";
-                var connectionName = accountToDisplay.Connection?.Name ?? "Unknown";
+                var provider = accountToDisplay.Connection != null ? (accountToDisplay.Connection.VendorName ?? accountToDisplay.Connection.Name ?? "Unknown") : "Unknown";
+                var connectionName = accountToDisplay.Connection != null ? (accountToDisplay.Connection.Name ?? "Unknown") : "Unknown";
                 var accountId = accountToDisplay.Id ?? accountToDisplay.Name ?? "Unknown";
                 var balance = accountToDisplay.Balance;
 
@@ -8637,7 +8637,7 @@ namespace Risk_Manager
             if (account == null || account.Connection == null)
                 return ACCOUNT_TYPE_UNKNOWN;
 
-            var connName = account.Connection.Name?.ToLower() ?? "";
+            var connName = (account.Connection.Name != null ? account.Connection.Name.ToLower() : "") ?? "";
             var accountId = account.Id ?? account.Name ?? "";
 
             // Check account ID prefixes first (most specific matching)
