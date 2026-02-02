@@ -207,8 +207,6 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer ledIndicatorTimer; // Timer to monitor orders and positions for LED indicator
         private Panel ledIndicatorPanel; // Visual LED indicator panel on the top panel
         private ToolTip ledIndicatorToolTip; // Tooltip for LED indicator
-        private int ledTestColorIndex = 0; // Test mode: cycle through colors
-        private readonly Color[] ledTestColors = new[] { Color.Gray, Color.Yellow, Color.Orange, Color.Red, Color.Lime, Color.Blue }; // Test colors
         private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
@@ -548,8 +546,8 @@ namespace Risk_Manager
             badgeRefreshTimer.Tick += (s, e) => RefreshTradingStatusBadgeFromJSON();
             badgeRefreshTimer.Start();
 
-            // Monitor orders and positions for LED indicator (5 seconds for debugging)
-            ledIndicatorTimer = new System.Windows.Forms.Timer { Interval = 5000 };
+            // Monitor orders and positions for LED indicator every second
+            ledIndicatorTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             ledIndicatorTimer.Tick += (s, e) => UpdateLedIndicator();
             ledIndicatorTimer.Start();
             
@@ -3027,24 +3025,14 @@ namespace Risk_Manager
             try
             {
                 if (ledIndicatorPanel == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("LED: ledIndicatorPanel is null");
                     return;
-                }
 
                 var core = Core.Instance;
                 if (core == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("LED: Core.Instance is null");
                     return;
-                }
 
                 int orderCount = 0;
                 int positionCount = 0;
-
-                System.Diagnostics.Debug.WriteLine($"LED: selectedAccount = {selectedAccount?.Name ?? "NULL"}");
-                System.Diagnostics.Debug.WriteLine($"LED: core.Orders = {core.Orders?.Count ?? 0} total orders");
-                System.Diagnostics.Debug.WriteLine($"LED: core.Positions = {core.Positions?.Count ?? 0} total positions");
 
                 // Check if there are any open or working orders for the selected account
                 if (selectedAccount != null && core.Orders != null)
@@ -3055,18 +3043,6 @@ namespace Risk_Manager
                     // Count open/partially filled orders
                     orderCount = accountOrders.Count(order => 
                         order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled);
-                    
-                    System.Diagnostics.Debug.WriteLine($"LED: Found {orderCount} open/partial orders for selected account (out of {accountOrders.Count} total)");
-                    
-                    // Debug: Show all orders for selected account
-                    foreach (var order in accountOrders)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"LED:   Order: {order.Symbol} Status={order.Status}");
-                    }
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"LED: selectedAccount or core.Orders is null");
                 }
 
                 // Check if there are any open positions for the selected account
@@ -3077,18 +3053,6 @@ namespace Risk_Manager
                     
                     // Count positions with non-zero quantity
                     positionCount = accountPositions.Count(pos => pos.Quantity != 0);
-                    
-                    System.Diagnostics.Debug.WriteLine($"LED: Found {positionCount} positions for selected account (out of {accountPositions.Count} total)");
-                    
-                    // Debug: Show all positions for selected account
-                    foreach (var pos in accountPositions)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"LED:   Position: {pos.Symbol} Qty={pos.Quantity}");
-                    }
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"LED: selectedAccount or core.Positions is null");
                 }
 
                 // Apply color priority: Orange (positions) > Yellow (orders) > Grey (no activity)
@@ -3104,28 +3068,23 @@ namespace Risk_Manager
                     {
                         tooltipText += $" | Open Orders: {orderCount}";
                     }
-                    System.Diagnostics.Debug.WriteLine($"LED: Setting ORANGE (positions={positionCount})");
                 }
                 else if (orderCount > 0)
                 {
                     // Yellow for open orders
                     ledColor = Color.Yellow;
                     tooltipText = $"Open Orders: {orderCount}";
-                    System.Diagnostics.Debug.WriteLine($"LED: Setting YELLOW (orders={orderCount})");
                 }
                 else
                 {
                     // Grey for no activity
                     ledColor = Color.Gray;
                     tooltipText = "No Activity";
-                    System.Diagnostics.Debug.WriteLine($"LED: Setting GRAY (no activity)");
                 }
 
                 // Update the LED indicator panel color (store in Tag)
                 ledIndicatorPanel.Tag = ledColor;
                 ledIndicatorPanel.Refresh(); // Force immediate repaint
-                
-                System.Diagnostics.Debug.WriteLine($"LED: Final color set to {ledColor.Name}");
                 
                 // Update tooltip
                 if (ledIndicatorToolTip != null)
