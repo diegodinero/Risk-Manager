@@ -3034,7 +3034,7 @@ namespace Risk_Manager
                 string selectedAccountId = selectedAccount != null ? selectedAccount.Id : null;
                 
                 // Debug logging
-                System.Diagnostics.Debug.WriteLine($"[LED] UpdateLedIndicator - Selected Account: {selectedAccountId}, Total Orders: {core.Orders?.Count ?? 0}, Total Positions: {core.Positions?.Count ?? 0}");
+                System.Diagnostics.Debug.WriteLine($"[LED] UpdateLedIndicator - Selected Account: {selectedAccountId}, Total Orders: {(core.Orders != null ? core.Orders.Count : 0)}, Total Positions: {(core.Positions != null ? core.Positions.Count : 0)}");
 
                 // Check if there are any open or working orders for the selected account
                 if (selectedAccount != null && core.Orders != null)
@@ -13138,7 +13138,7 @@ namespace Risk_Manager
                             System.Diagnostics.Debug.WriteLine($"ShowPage: settings = {(settings != null ? "Found" : "NULL")}");
                             if (settings != null)
                             {
-                                System.Diagnostics.Debug.WriteLine($"ShowPage: settings.TradingTimeRestrictions count = {settings.TradingTimeRestrictions?.Count ?? 0}");
+                                System.Diagnostics.Debug.WriteLine($"ShowPage: settings.TradingTimeRestrictions count = {(settings.TradingTimeRestrictions != null ? settings.TradingTimeRestrictions.Count : 0)}");
                                 LoadTradingTimeRestrictions(settings);
                             }
                             else
