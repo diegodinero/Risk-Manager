@@ -548,7 +548,7 @@ namespace Risk_Manager
             badgeRefreshTimer.Tick += (s, e) => RefreshTradingStatusBadgeFromJSON();
             badgeRefreshTimer.Start();
 
-            // TEST MODE: Monitor LED indicator every 5 seconds and cycle through test colors
+            // Monitor orders and positions for LED indicator (5 seconds for debugging)
             ledIndicatorTimer = new System.Windows.Forms.Timer { Interval = 5000 };
             ledIndicatorTimer.Tick += (s, e) => UpdateLedIndicator();
             ledIndicatorTimer.Start();
@@ -3016,37 +3016,115 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Updates the LED indicator - TEST MODE: cycles through colors every 5 seconds
+        /// Updates the LED indicator based on open/working orders and open positions.
+        /// Priority: Orange (positions) > Yellow (orders) > Grey (no activity)
         /// </summary>
         private void UpdateLedIndicator()
         {
             try
             {
                 if (ledIndicatorPanel == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("LED: ledIndicatorPanel is null");
                     return;
+                }
 
-                // TEST MODE: Cycle through test colors
-                Color ledColor = ledTestColors[ledTestColorIndex];
-                string colorName = ledColor.Name;
-                int currentIndex = ledTestColorIndex;
+                var core = Core.Instance;
+                if (core == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("LED: Core.Instance is null");
+                    return;
+                }
+
+                int orderCount = 0;
+                int positionCount = 0;
+
+                System.Diagnostics.Debug.WriteLine($"LED: selectedAccount = {selectedAccount?.Name ?? "NULL"}");
+                System.Diagnostics.Debug.WriteLine($"LED: core.Orders = {core.Orders?.Count ?? 0} total orders");
+                System.Diagnostics.Debug.WriteLine($"LED: core.Positions = {core.Positions?.Count ?? 0} total positions");
+
+                // Check if there are any open or working orders for the selected account
+                if (selectedAccount != null && core.Orders != null)
+                {
+                    orderCount = core.Orders
+                        .Count(order => order != null && order.Account == selectedAccount &&
+                               (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled));
+                    
+                    System.Diagnostics.Debug.WriteLine($"LED: Found {orderCount} open/partial orders for selected account");
+                    
+                    // Debug: Show all orders for selected account
+                    var accountOrders = core.Orders.Where(o => o != null && o.Account == selectedAccount).ToList();
+                    foreach (var order in accountOrders)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"LED:   Order: {order.Symbol} Status={order.Status}");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"LED: selectedAccount or core.Orders is null");
+                }
+
+                // Check if there are any open positions for the selected account
+                if (selectedAccount != null && core.Positions != null)
+                {
+                    positionCount = core.Positions
+                        .Count(pos => pos != null && pos.Account == selectedAccount && pos.Quantity != 0);
+                    
+                    System.Diagnostics.Debug.WriteLine($"LED: Found {positionCount} positions for selected account");
+                    
+                    // Debug: Show all positions for selected account
+                    var accountPositions = core.Positions.Where(p => p != null && p.Account == selectedAccount).ToList();
+                    foreach (var pos in accountPositions)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"LED:   Position: {pos.Symbol} Qty={pos.Quantity}");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"LED: selectedAccount or core.Positions is null");
+                }
+
+                // Apply color priority: Orange (positions) > Yellow (orders) > Grey (no activity)
+                Color ledColor;
+                string tooltipText;
                 
-                // Move to next color for next iteration
-                ledTestColorIndex = (ledTestColorIndex + 1) % ledTestColors.Length;
-                
-                string tooltipText = $"TEST MODE: Color {currentIndex} - {colorName}";
+                if (positionCount > 0)
+                {
+                    // Orange for open positions (highest priority)
+                    ledColor = Color.Orange;
+                    tooltipText = $"Open Positions: {positionCount}";
+                    if (orderCount > 0)
+                    {
+                        tooltipText += $" | Open Orders: {orderCount}";
+                    }
+                    System.Diagnostics.Debug.WriteLine($"LED: Setting ORANGE (positions={positionCount})");
+                }
+                else if (orderCount > 0)
+                {
+                    // Yellow for open orders
+                    ledColor = Color.Yellow;
+                    tooltipText = $"Open Orders: {orderCount}";
+                    System.Diagnostics.Debug.WriteLine($"LED: Setting YELLOW (orders={orderCount})");
+                }
+                else
+                {
+                    // Grey for no activity
+                    ledColor = Color.Gray;
+                    tooltipText = "No Activity";
+                    System.Diagnostics.Debug.WriteLine($"LED: Setting GRAY (no activity)");
+                }
 
                 // Update the LED indicator panel color (store in Tag)
                 ledIndicatorPanel.Tag = ledColor;
                 ledIndicatorPanel.Refresh(); // Force immediate repaint
+                
+                System.Diagnostics.Debug.WriteLine($"LED: Final color set to {ledColor.Name}");
                 
                 // Update tooltip
                 if (ledIndicatorToolTip != null)
                 {
                     ledIndicatorToolTip.SetToolTip(ledIndicatorPanel, tooltipText);
                 }
-                
-                // Debug output
-                System.Diagnostics.Debug.WriteLine($"LED TEST: Set color to {colorName} (index {currentIndex})");
             }
             catch (Exception ex)
             {
