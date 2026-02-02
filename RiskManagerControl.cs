@@ -3049,14 +3049,16 @@ namespace Risk_Manager
                 // Check if there are any open or working orders for the selected account
                 if (selectedAccount != null && core.Orders != null)
                 {
-                    orderCount = core.Orders
-                        .Count(order => order != null && order.Account == selectedAccount &&
-                               (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled));
+                    // Get all orders for selected account once
+                    var accountOrders = core.Orders.Where(o => o != null && o.Account == selectedAccount).ToList();
                     
-                    System.Diagnostics.Debug.WriteLine($"LED: Found {orderCount} open/partial orders for selected account");
+                    // Count open/partially filled orders
+                    orderCount = accountOrders.Count(order => 
+                        order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled);
+                    
+                    System.Diagnostics.Debug.WriteLine($"LED: Found {orderCount} open/partial orders for selected account (out of {accountOrders.Count} total)");
                     
                     // Debug: Show all orders for selected account
-                    var accountOrders = core.Orders.Where(o => o != null && o.Account == selectedAccount).ToList();
                     foreach (var order in accountOrders)
                     {
                         System.Diagnostics.Debug.WriteLine($"LED:   Order: {order.Symbol} Status={order.Status}");
@@ -3070,13 +3072,15 @@ namespace Risk_Manager
                 // Check if there are any open positions for the selected account
                 if (selectedAccount != null && core.Positions != null)
                 {
-                    positionCount = core.Positions
-                        .Count(pos => pos != null && pos.Account == selectedAccount && pos.Quantity != 0);
+                    // Get all positions for selected account once
+                    var accountPositions = core.Positions.Where(p => p != null && p.Account == selectedAccount).ToList();
                     
-                    System.Diagnostics.Debug.WriteLine($"LED: Found {positionCount} positions for selected account");
+                    // Count positions with non-zero quantity
+                    positionCount = accountPositions.Count(pos => pos.Quantity != 0);
+                    
+                    System.Diagnostics.Debug.WriteLine($"LED: Found {positionCount} positions for selected account (out of {accountPositions.Count} total)");
                     
                     // Debug: Show all positions for selected account
-                    var accountPositions = core.Positions.Where(p => p != null && p.Account == selectedAccount).ToList();
                     foreach (var pos in accountPositions)
                     {
                         System.Diagnostics.Debug.WriteLine($"LED:   Position: {pos.Symbol} Qty={pos.Quantity}");
