@@ -3035,7 +3035,7 @@ namespace Risk_Manager
                 {
                     orderCount = core.Orders
                         .Count(order => order != null && order.Account == selectedAccount &&
-                               (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled));
+                               (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled || order.Status == OrderStatus.Working));
                 }
 
                 // Check if there are any open positions for the selected account
@@ -8369,7 +8369,7 @@ namespace Risk_Manager
 
                 var workingOrders = core.Orders
                     .Where(order => order != null && order.Account == account && 
-                           (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
+                           (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled || order.Status == OrderStatus.Working))
                     .ToList();
 
                 foreach (var order in workingOrders)
@@ -8410,7 +8410,7 @@ namespace Risk_Manager
 
                 var workingOrders = core.Orders
                     .Where(order => order != null && 
-                           (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
+                           (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled || order.Status == OrderStatus.Working))
                     .ToList();
 
                 int canceledCount = 0;
