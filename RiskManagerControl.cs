@@ -3034,51 +3034,27 @@ namespace Risk_Manager
                 int orderCount = 0;
                 int positionCount = 0;
 
-                // Check if there are any open or working orders for the selected account
-                if (selectedAccount != null && core.Orders != null)
+                // Check all orders for all accounts
+                if (core.Orders != null)
                 {
-                    // Get all orders for selected account once
-                    var accountOrders = core.Orders.Where(o => o != null && o.Account == selectedAccount).ToList();
-                    
                     // Count active orders (Opened, PartiallyFilled, Submitted, Accepted, Pending)
-                    // These represent orders that are active/working in the market
-                    orderCount = accountOrders.Count(order => 
-                        order.Status == OrderStatus.Opened || 
-                        order.Status == OrderStatus.PartiallyFilled ||
-                        order.Status == OrderStatus.Submitted ||
-                        order.Status == OrderStatus.Accepted ||
-                        order.Status == OrderStatus.Pending);
-                    
-                    // Debug: Log when order count changes or when we have orders
-                    if (orderCount > 0 || accountOrders.Count > 0)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"LED DEBUG: selectedAccount={selectedAccount?.Name}, total orders={accountOrders.Count}, active={orderCount}");
-                        foreach (var order in accountOrders)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"  Order: {order.Symbol} Status={order.Status} Account={order.Account?.Name}");
-                        }
-                    }
-                }
-                else
-                {
-                    if (selectedAccount == null)
-                        System.Diagnostics.Debug.WriteLine("LED DEBUG: selectedAccount is NULL");
+                    orderCount = core.Orders.Count(order =>
+                        order != null &&
+                        (order.Status == OrderStatus.Opened ||
+                         order.Status == OrderStatus.PartiallyFilled));
                 }
 
-                // Check if there are any open positions for the selected account
-                if (selectedAccount != null && core.Positions != null)
+                // Check all positions for all accounts
+                if (core.Positions != null)
                 {
-                    // Get all positions for selected account once
-                    var accountPositions = core.Positions.Where(p => p != null && p.Account == selectedAccount).ToList();
-                    
                     // Count positions with non-zero quantity
-                    positionCount = accountPositions.Count(pos => pos.Quantity != 0);
+                    positionCount = core.Positions.Count(pos => pos != null && pos.Quantity != 0);
                 }
 
                 // Apply color priority: Orange (positions) > Yellow (orders) > Grey (no activity)
                 Color ledColor;
                 string tooltipText;
-                
+
                 if (positionCount > 0)
                 {
                     // Orange for open positions (highest priority)
@@ -3088,27 +3064,24 @@ namespace Risk_Manager
                     {
                         tooltipText += $" | Open Orders: {orderCount}";
                     }
-                    System.Diagnostics.Debug.WriteLine($"LED DEBUG: Setting ORANGE (positions={positionCount})");
                 }
                 else if (orderCount > 0)
                 {
                     // Yellow for open orders
                     ledColor = Color.Yellow;
                     tooltipText = $"Open Orders: {orderCount}";
-                    System.Diagnostics.Debug.WriteLine($"LED DEBUG: Setting YELLOW (orders={orderCount})");
                 }
                 else
                 {
                     // Grey for no activity
                     ledColor = Color.Gray;
                     tooltipText = "No Activity";
-                    System.Diagnostics.Debug.WriteLine($"LED DEBUG: Setting GREY (no activity, orders={orderCount}, positions={positionCount})");
                 }
 
                 // Update the LED indicator panel color (store in Tag)
                 ledIndicatorPanel.Tag = ledColor;
                 ledIndicatorPanel.Refresh(); // Force immediate repaint
-                
+
                 // Update tooltip
                 if (ledIndicatorToolTip != null)
                 {
@@ -8403,10 +8376,7 @@ namespace Risk_Manager
                 var workingOrders = core.Orders
                     .Where(order => order != null && order.Account == account && 
                            (order.Status == OrderStatus.Opened || 
-                            order.Status == OrderStatus.PartiallyFilled ||
-                            order.Status == OrderStatus.Submitted ||
-                            order.Status == OrderStatus.Accepted ||
-                            order.Status == OrderStatus.Pending))
+                            order.Status == OrderStatus.PartiallyFilled))
                     .ToList();
 
                 foreach (var order in workingOrders)
@@ -8448,10 +8418,7 @@ namespace Risk_Manager
                 var workingOrders = core.Orders
                     .Where(order => order != null && 
                            (order.Status == OrderStatus.Opened || 
-                            order.Status == OrderStatus.PartiallyFilled ||
-                            order.Status == OrderStatus.Submitted ||
-                            order.Status == OrderStatus.Accepted ||
-                            order.Status == OrderStatus.Pending))
+                            order.Status == OrderStatus.PartiallyFilled))
                     .ToList();
 
                 int canceledCount = 0;
