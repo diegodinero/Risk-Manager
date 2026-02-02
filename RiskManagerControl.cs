@@ -3027,10 +3027,13 @@ namespace Risk_Manager
 
                 // TEST MODE: Cycle through test colors
                 Color ledColor = ledTestColors[ledTestColorIndex];
-                string tooltipText = $"TEST MODE: Color {ledTestColorIndex} - {ledColor.Name}";
+                string colorName = ledColor.Name;
+                int currentIndex = ledTestColorIndex;
                 
-                // Move to next color
+                // Move to next color for next iteration
                 ledTestColorIndex = (ledTestColorIndex + 1) % ledTestColors.Length;
+                
+                string tooltipText = $"TEST MODE: Color {currentIndex} - {colorName}";
 
                 // Update the LED indicator panel color (store in Tag)
                 ledIndicatorPanel.Tag = ledColor;
@@ -3043,7 +3046,7 @@ namespace Risk_Manager
                 }
                 
                 // Debug output
-                System.Diagnostics.Debug.WriteLine($"LED TEST: Set color to {ledColor.Name}");
+                System.Diagnostics.Debug.WriteLine($"LED TEST: Set color to {colorName} (index {currentIndex})");
             }
             catch (Exception ex)
             {
