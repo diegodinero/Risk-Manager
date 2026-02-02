@@ -3721,10 +3721,11 @@ namespace Risk_Manager
                     int positionsCount = 0;
                     if (core.Positions != null)
                     {
+                        string accountId = account.Id;
                         foreach (var pos in core.Positions)
                         {
                             if (pos == null) continue;
-                            if (pos.Account == account && pos.Quantity != 0)
+                            if (pos.Account != null && pos.Account.Id == accountId && pos.Quantity != 0)
                             {
                                 positionsCount++;
                             }
@@ -3971,10 +3972,11 @@ namespace Risk_Manager
                 int positionsCount = 0;
                 if (core?.Positions != null)
                 {
+                    string accountId = accountToDisplay.Id;
                     foreach (var pos in core.Positions)
                     {
                         if (pos == null) continue;
-                        if (pos.Account == accountToDisplay && pos.Quantity != 0)
+                        if (pos.Account != null && pos.Account.Id == accountId && pos.Quantity != 0)
                         {
                             positionsCount++;
                         }
@@ -8387,8 +8389,12 @@ namespace Risk_Manager
                 if (account == null || core?.Orders == null)
                     return;
 
+                string accountId = account.Id;
+                
                 var workingOrders = core.Orders
-                    .Where(order => order != null && order.Account == account && 
+                    .Where(order => order != null && 
+                           order.Account != null &&
+                           order.Account.Id == accountId && 
                            (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
                     .ToList();
 
