@@ -3013,6 +3013,19 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Checks if an order is in an active working state.
+        /// </summary>
+        /// <param name="order">The order to check</param>
+        /// <returns>True if the order is Working, Opened, or PartiallyFilled</returns>
+        private bool IsOrderActive(Order order)
+        {
+            return order != null && 
+                   (order.Status == OrderStatus.Working || 
+                    order.Status == OrderStatus.Opened || 
+                    order.Status == OrderStatus.PartiallyFilled);
+        }
+
+        /// <summary>
         /// Updates the LED indicator based on open/working orders and open positions.
         /// Priority: Orange (positions) > Yellow (orders) > Grey (no activity)
         /// </summary>
@@ -3034,8 +3047,7 @@ namespace Risk_Manager
                 if (selectedAccount != null && core.Orders != null)
                 {
                     orderCount = core.Orders
-                        .Count(order => order != null && order.Account == selectedAccount &&
-                               (order.Status == OrderStatus.Working || order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled));
+                        .Count(order => order.Account == selectedAccount && IsOrderActive(order));
                 }
 
                 // Check if there are any open positions for the selected account
@@ -8368,8 +8380,7 @@ namespace Risk_Manager
                     return;
 
                 var workingOrders = core.Orders
-                    .Where(order => order != null && order.Account == account && 
-                           (order.Status == OrderStatus.Working || order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
+                    .Where(order => order.Account == account && IsOrderActive(order))
                     .ToList();
 
                 foreach (var order in workingOrders)
@@ -8409,8 +8420,7 @@ namespace Risk_Manager
                     return;
 
                 var workingOrders = core.Orders
-                    .Where(order => order != null && 
-                           (order.Status == OrderStatus.Working || order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
+                    .Where(order => IsOrderActive(order))
                     .ToList();
 
                 int canceledCount = 0;
