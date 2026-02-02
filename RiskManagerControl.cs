@@ -1471,8 +1471,8 @@ namespace Risk_Manager
             
             if (accountSelector.SelectedItem is Account account)
             {
-                var oldAccountId = selectedAccount?.Id ?? "NULL";
-                var oldAccountName = selectedAccount?.Name ?? "NULL";
+                var oldAccountId = selectedAccount != null ? selectedAccount.Id ?? "NULL" : "NULL";
+                var oldAccountName = selectedAccount != null ? selectedAccount.Name ?? "NULL" : "NULL";
                 var newAccountId = account.Id ?? "NULL";
                 var newAccountName = account.Name ?? "NULL";
                 
@@ -3031,7 +3031,7 @@ namespace Risk_Manager
                 int positionCount = 0;
 
                 // Get the selected account ID for comparison
-                string selectedAccountId = selectedAccount?.Id;
+                string selectedAccountId = selectedAccount != null ? selectedAccount.Id : null;
                 
                 // Debug logging
                 System.Diagnostics.Debug.WriteLine($"[LED] UpdateLedIndicator - Selected Account: {selectedAccountId}, Total Orders: {core.Orders?.Count ?? 0}, Total Positions: {core.Positions?.Count ?? 0}");
@@ -3721,11 +3721,11 @@ namespace Risk_Manager
                     int positionsCount = 0;
                     if (core.Positions != null)
                     {
-                        string accountId = account.Id;
+                        string accountIdForPositions = account.Id;
                         foreach (var pos in core.Positions)
                         {
                             if (pos == null) continue;
-                            if (pos.Account != null && pos.Account.Id == accountId && pos.Quantity != 0)
+                            if (pos.Account != null && pos.Account.Id == accountIdForPositions && pos.Quantity != 0)
                             {
                                 positionsCount++;
                             }
@@ -3972,11 +3972,11 @@ namespace Risk_Manager
                 int positionsCount = 0;
                 if (core?.Positions != null)
                 {
-                    string accountId = accountToDisplay.Id;
+                    string accountIdForPositions = accountToDisplay.Id;
                     foreach (var pos in core.Positions)
                     {
                         if (pos == null) continue;
-                        if (pos.Account != null && pos.Account.Id == accountId && pos.Quantity != 0)
+                        if (pos.Account != null && pos.Account.Id == accountIdForPositions && pos.Quantity != 0)
                         {
                             positionsCount++;
                         }
