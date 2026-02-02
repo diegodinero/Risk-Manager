@@ -3040,14 +3040,19 @@ namespace Risk_Manager
                     // Get all orders for selected account once
                     var accountOrders = core.Orders.Where(o => o != null && o.Account == selectedAccount).ToList();
                     
-                    // Count open/partially filled orders
+                    // Count active orders (Opened, PartiallyFilled, Submitted, Accepted, Pending)
+                    // These represent orders that are active/working in the market
                     orderCount = accountOrders.Count(order => 
-                        order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled);
+                        order.Status == OrderStatus.Opened || 
+                        order.Status == OrderStatus.PartiallyFilled ||
+                        order.Status == OrderStatus.Submitted ||
+                        order.Status == OrderStatus.Accepted ||
+                        order.Status == OrderStatus.Pending);
                     
                     // Debug: Log when order count changes or when we have orders
                     if (orderCount > 0 || accountOrders.Count > 0)
                     {
-                        System.Diagnostics.Debug.WriteLine($"LED DEBUG: selectedAccount={selectedAccount?.Name}, total orders={accountOrders.Count}, open/partial={orderCount}");
+                        System.Diagnostics.Debug.WriteLine($"LED DEBUG: selectedAccount={selectedAccount?.Name}, total orders={accountOrders.Count}, active={orderCount}");
                         foreach (var order in accountOrders)
                         {
                             System.Diagnostics.Debug.WriteLine($"  Order: {order.Symbol} Status={order.Status} Account={order.Account?.Name}");
@@ -8397,7 +8402,11 @@ namespace Risk_Manager
 
                 var workingOrders = core.Orders
                     .Where(order => order != null && order.Account == account && 
-                           (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
+                           (order.Status == OrderStatus.Opened || 
+                            order.Status == OrderStatus.PartiallyFilled ||
+                            order.Status == OrderStatus.Submitted ||
+                            order.Status == OrderStatus.Accepted ||
+                            order.Status == OrderStatus.Pending))
                     .ToList();
 
                 foreach (var order in workingOrders)
@@ -8438,7 +8447,11 @@ namespace Risk_Manager
 
                 var workingOrders = core.Orders
                     .Where(order => order != null && 
-                           (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
+                           (order.Status == OrderStatus.Opened || 
+                            order.Status == OrderStatus.PartiallyFilled ||
+                            order.Status == OrderStatus.Submitted ||
+                            order.Status == OrderStatus.Accepted ||
+                            order.Status == OrderStatus.Pending))
                     .ToList();
 
                 int canceledCount = 0;
