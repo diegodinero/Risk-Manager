@@ -552,6 +552,9 @@ namespace Risk_Manager
             ledIndicatorTimer = new System.Windows.Forms.Timer { Interval = 5000 };
             ledIndicatorTimer.Tick += (s, e) => UpdateLedIndicator();
             ledIndicatorTimer.Start();
+            
+            // Initial LED update
+            UpdateLedIndicator();
 
             // Show Accounts Summary by default
             selectedNavItem = "📊 Accounts Summary";
