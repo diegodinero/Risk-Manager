@@ -3030,19 +3030,36 @@ namespace Risk_Manager
                 int orderCount = 0;
                 int positionCount = 0;
 
+                // Get the selected account ID for comparison
+                string selectedAccountId = selectedAccount?.Id;
+                
+                // Debug logging
+                System.Diagnostics.Debug.WriteLine($"[LED] UpdateLedIndicator - Selected Account: {selectedAccountId}, Total Orders: {core.Orders?.Count ?? 0}, Total Positions: {core.Positions?.Count ?? 0}");
+
                 // Check if there are any open or working orders for the selected account
                 if (selectedAccount != null && core.Orders != null)
                 {
+                    // Use account ID comparison instead of object equality
                     orderCount = core.Orders
-                        .Count(order => order != null && order.Account == selectedAccount &&
+                        .Count(order => order != null && 
+                               order.Account != null &&
+                               order.Account.Id == selectedAccountId &&
                                (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled));
+                    
+                    System.Diagnostics.Debug.WriteLine($"[LED] Found {orderCount} orders for account {selectedAccountId}");
                 }
 
                 // Check if there are any open positions for the selected account
                 if (selectedAccount != null && core.Positions != null)
                 {
+                    // Use account ID comparison instead of object equality
                     positionCount = core.Positions
-                        .Count(pos => pos != null && pos.Account == selectedAccount && pos.Quantity != 0);
+                        .Count(pos => pos != null && 
+                               pos.Account != null &&
+                               pos.Account.Id == selectedAccountId && 
+                               pos.Quantity != 0);
+                    
+                    System.Diagnostics.Debug.WriteLine($"[LED] Found {positionCount} positions for account {selectedAccountId}");
                 }
 
                 // Apply color priority: Orange (positions) > Yellow (orders) > Grey (no activity)
@@ -3058,18 +3075,21 @@ namespace Risk_Manager
                     {
                         tooltipText += $" | Open Orders: {orderCount}";
                     }
+                    System.Diagnostics.Debug.WriteLine($"[LED] Setting color to ORANGE (positions: {positionCount})");
                 }
                 else if (orderCount > 0)
                 {
                     // Yellow for open orders
                     ledColor = Color.Yellow;
                     tooltipText = $"Open Orders: {orderCount}";
+                    System.Diagnostics.Debug.WriteLine($"[LED] Setting color to YELLOW (orders: {orderCount})");
                 }
                 else
                 {
                     // Grey for no activity
                     ledColor = Color.Gray;
                     tooltipText = "No Activity";
+                    System.Diagnostics.Debug.WriteLine($"[LED] Setting color to GREY (no activity)");
                 }
 
                 // Update the LED indicator panel color (store in Tag)
