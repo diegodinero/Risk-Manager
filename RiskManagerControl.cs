@@ -3043,6 +3043,21 @@ namespace Risk_Manager
                     // Count open/partially filled orders
                     orderCount = accountOrders.Count(order => 
                         order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled);
+                    
+                    // Debug: Log when order count changes or when we have orders
+                    if (orderCount > 0 || accountOrders.Count > 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"LED DEBUG: selectedAccount={selectedAccount?.Name}, total orders={accountOrders.Count}, open/partial={orderCount}");
+                        foreach (var order in accountOrders)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"  Order: {order.Symbol} Status={order.Status} Account={order.Account?.Name}");
+                        }
+                    }
+                }
+                else
+                {
+                    if (selectedAccount == null)
+                        System.Diagnostics.Debug.WriteLine("LED DEBUG: selectedAccount is NULL");
                 }
 
                 // Check if there are any open positions for the selected account
@@ -3068,18 +3083,21 @@ namespace Risk_Manager
                     {
                         tooltipText += $" | Open Orders: {orderCount}";
                     }
+                    System.Diagnostics.Debug.WriteLine($"LED DEBUG: Setting ORANGE (positions={positionCount})");
                 }
                 else if (orderCount > 0)
                 {
                     // Yellow for open orders
                     ledColor = Color.Yellow;
                     tooltipText = $"Open Orders: {orderCount}";
+                    System.Diagnostics.Debug.WriteLine($"LED DEBUG: Setting YELLOW (orders={orderCount})");
                 }
                 else
                 {
                     // Grey for no activity
                     ledColor = Color.Gray;
                     tooltipText = "No Activity";
+                    System.Diagnostics.Debug.WriteLine($"LED DEBUG: Setting GREY (no activity, orders={orderCount}, positions={positionCount})");
                 }
 
                 // Update the LED indicator panel color (store in Tag)
