@@ -3058,7 +3058,7 @@ namespace Risk_Manager
                 if (positionCount > 0)
                 {
                     // Orange for open positions (highest priority)
-                    ledColor = Color.Orange;
+                    ledColor = Color.FromArgb(255, 255, 91, 0); // RGB for Orange
                     tooltipText = $"Open Positions: {positionCount}";
                     if (orderCount > 0)
                     {
@@ -3068,7 +3068,7 @@ namespace Risk_Manager
                 else if (orderCount > 0)
                 {
                     // Yellow for open orders
-                    ledColor = Color.Yellow;
+                    ledColor = Color.FromArgb(255, 255, 1);
                     tooltipText = $"Open Orders: {orderCount}";
                 }
                 else
