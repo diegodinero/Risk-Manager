@@ -3076,9 +3076,6 @@ namespace Risk_Manager
                 ledIndicatorPanel.Tag = ledColor;
                 ledIndicatorPanel.Refresh(); // Force immediate repaint
                 
-                // Debug: Log LED color changes
-                System.Diagnostics.Debug.WriteLine($"LED Indicator: orderCount={orderCount}, positionCount={positionCount}, color={ledColor.Name}");
-                
                 // Update tooltip
                 if (ledIndicatorToolTip != null)
                 {
