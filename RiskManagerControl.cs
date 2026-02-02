@@ -207,6 +207,8 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer ledIndicatorTimer; // Timer to monitor orders and positions for LED indicator
         private Panel ledIndicatorPanel; // Visual LED indicator panel on the top panel
         private ToolTip ledIndicatorToolTip; // Tooltip for LED indicator
+        private int ledTestColorIndex = 0; // Test mode: cycle through colors
+        private readonly Color[] ledTestColors = new[] { Color.Gray, Color.Yellow, Color.Orange, Color.Red, Color.Lime, Color.Blue }; // Test colors
         private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
@@ -546,8 +548,8 @@ namespace Risk_Manager
             badgeRefreshTimer.Tick += (s, e) => RefreshTradingStatusBadgeFromJSON();
             badgeRefreshTimer.Start();
 
-            // Monitor orders and positions for LED indicator every second
-            ledIndicatorTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            // TEST MODE: Monitor LED indicator every 5 seconds and cycle through test colors
+            ledIndicatorTimer = new System.Windows.Forms.Timer { Interval = 5000 };
             ledIndicatorTimer.Tick += (s, e) => UpdateLedIndicator();
             ledIndicatorTimer.Start();
 
@@ -3014,8 +3016,7 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Updates the LED indicator based on open/working orders and open positions.
-        /// Priority: Orange (positions) > Yellow (orders) > Grey (no activity)
+        /// Updates the LED indicator - TEST MODE: cycles through colors every 5 seconds
         /// </summary>
         private void UpdateLedIndicator()
         {
@@ -3024,54 +3025,12 @@ namespace Risk_Manager
                 if (ledIndicatorPanel == null)
                     return;
 
-                var core = Core.Instance;
-                if (core == null)
-                    return;
-
-                int orderCount = 0;
-                int positionCount = 0;
-
-                // Check if there are any open or working orders for the selected account
-                if (selectedAccount != null && core.Orders != null)
-                {
-                    orderCount = core.Orders
-                        .Count(order => order != null && order.Account == selectedAccount &&
-                               (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled));
-                }
-
-                // Check if there are any open positions for the selected account
-                if (selectedAccount != null && core.Positions != null)
-                {
-                    positionCount = core.Positions
-                        .Count(pos => pos != null && pos.Account == selectedAccount && pos.Quantity != 0);
-                }
-
-                // Apply color priority: Orange (positions) > Yellow (orders) > Grey (no activity)
-                Color ledColor;
-                string tooltipText;
+                // TEST MODE: Cycle through test colors
+                Color ledColor = ledTestColors[ledTestColorIndex];
+                string tooltipText = $"TEST MODE: Color {ledTestColorIndex} - {ledColor.Name}";
                 
-                if (positionCount > 0)
-                {
-                    // Orange for open positions (highest priority)
-                    ledColor = Color.Orange;
-                    tooltipText = $"Open Positions: {positionCount}";
-                    if (orderCount > 0)
-                    {
-                        tooltipText += $" | Open Orders: {orderCount}";
-                    }
-                }
-                else if (orderCount > 0)
-                {
-                    // Yellow for open orders
-                    ledColor = Color.Yellow;
-                    tooltipText = $"Open Orders: {orderCount}";
-                }
-                else
-                {
-                    // Grey for no activity
-                    ledColor = Color.Gray;
-                    tooltipText = "No Activity";
-                }
+                // Move to next color
+                ledTestColorIndex = (ledTestColorIndex + 1) % ledTestColors.Length;
 
                 // Update the LED indicator panel color (store in Tag)
                 ledIndicatorPanel.Tag = ledColor;
@@ -3082,6 +3041,9 @@ namespace Risk_Manager
                 {
                     ledIndicatorToolTip.SetToolTip(ledIndicatorPanel, tooltipText);
                 }
+                
+                // Debug output
+                System.Diagnostics.Debug.WriteLine($"LED TEST: Set color to {ledColor.Name}");
             }
             catch (Exception ex)
             {
