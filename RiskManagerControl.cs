@@ -2556,19 +2556,20 @@ namespace Risk_Manager
             // Make it circular with modern glow effect using Paint event
             ledIndicatorPanel.Paint += (s, e) =>
             {
-                var panel = s as Panel;
-                if (panel == null) return;  // Safety check
+                // Use the captured ledIndicatorPanel variable directly instead of sender cast
+                // to ensure we're reading the correct Tag value
+                if (ledIndicatorPanel == null) return;  // Safety check
                 
                 // Paint parent background to ensure true transparency
-                if (panel.Parent != null)
+                if (ledIndicatorPanel.Parent != null)
                 {
-                    using (var backBrush = new SolidBrush(panel.Parent.BackColor))
+                    using (var backBrush = new SolidBrush(ledIndicatorPanel.Parent.BackColor))
                     {
-                        e.Graphics.FillRectangle(backBrush, panel.ClientRectangle);
+                        e.Graphics.FillRectangle(backBrush, ledIndicatorPanel.ClientRectangle);
                     }
                 }
                 
-                var ledColor = (Color)(panel.Tag ?? Color.Gray);
+                var ledColor = (Color)(ledIndicatorPanel.Tag ?? Color.Gray);
                 
                 e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 e.Graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
@@ -2576,7 +2577,7 @@ namespace Risk_Manager
                 
                 // For smaller LED, reduce padding and adjust proportions
                 int padding = 1;  // Reduced padding for smaller size
-                int circleDiameter = Math.Min(panel.Width, panel.Height) - (padding * 2);
+                int circleDiameter = Math.Min(ledIndicatorPanel.Width, ledIndicatorPanel.Height) - (padding * 2);
                 int circleX = padding;
                 int circleY = padding;
                 
