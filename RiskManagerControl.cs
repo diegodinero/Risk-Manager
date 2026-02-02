@@ -1471,8 +1471,8 @@ namespace Risk_Manager
             
             if (accountSelector.SelectedItem is Account account)
             {
-                var oldAccountId = selectedAccount?.Id ?? "NULL";
-                var oldAccountName = selectedAccount?.Name ?? "NULL";
+                var oldAccountId = selectedAccount != null ? selectedAccount.Id ?? "NULL" : "NULL";
+                var oldAccountName = selectedAccount != null ? selectedAccount.Name ?? "NULL" : "NULL";
                 var newAccountId = account.Id ?? "NULL";
                 var newAccountName = account.Name ?? "NULL";
                 
@@ -3030,19 +3030,36 @@ namespace Risk_Manager
                 int orderCount = 0;
                 int positionCount = 0;
 
+                // Get the selected account ID for comparison
+                string selectedAccountId = selectedAccount != null ? selectedAccount.Id : null;
+                
+                // Debug logging
+                System.Diagnostics.Debug.WriteLine($"[LED] UpdateLedIndicator - Selected Account: {selectedAccountId}, Total Orders: {(core.Orders != null ? core.Orders.Count : 0)}, Total Positions: {(core.Positions != null ? core.Positions.Count : 0)}");
+
                 // Check if there are any open or working orders for the selected account
                 if (selectedAccount != null && core.Orders != null)
                 {
+                    // Use account ID comparison instead of object equality
                     orderCount = core.Orders
-                        .Count(order => order != null && order.Account == selectedAccount &&
+                        .Count(order => order != null && 
+                               order.Account != null &&
+                               order.Account.Id == selectedAccountId &&
                                (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled));
+                    
+                    System.Diagnostics.Debug.WriteLine($"[LED] Found {orderCount} orders for account {selectedAccountId}");
                 }
 
                 // Check if there are any open positions for the selected account
                 if (selectedAccount != null && core.Positions != null)
                 {
+                    // Use account ID comparison instead of object equality
                     positionCount = core.Positions
-                        .Count(pos => pos != null && pos.Account == selectedAccount && pos.Quantity != 0);
+                        .Count(pos => pos != null && 
+                               pos.Account != null &&
+                               pos.Account.Id == selectedAccountId && 
+                               pos.Quantity != 0);
+                    
+                    System.Diagnostics.Debug.WriteLine($"[LED] Found {positionCount} positions for account {selectedAccountId}");
                 }
 
                 // Apply color priority: Orange (positions) > Yellow (orders) > Grey (no activity)
@@ -3058,18 +3075,21 @@ namespace Risk_Manager
                     {
                         tooltipText += $" | Open Orders: {orderCount}";
                     }
+                    System.Diagnostics.Debug.WriteLine($"[LED] Setting color to ORANGE (positions: {positionCount})");
                 }
                 else if (orderCount > 0)
                 {
                     // Yellow for open orders
                     ledColor = Color.Yellow;
                     tooltipText = $"Open Orders: {orderCount}";
+                    System.Diagnostics.Debug.WriteLine($"[LED] Setting color to YELLOW (orders: {orderCount})");
                 }
                 else
                 {
                     // Grey for no activity
                     ledColor = Color.Gray;
                     tooltipText = "No Activity";
+                    System.Diagnostics.Debug.WriteLine($"[LED] Setting color to GREY (no activity)");
                 }
 
                 // Update the LED indicator panel color (store in Tag)
@@ -3689,8 +3709,8 @@ namespace Risk_Manager
                 {
                     if (account == null) continue;
 
-                    var provider = account.Connection?.VendorName ?? account.Connection?.Name ?? "Unknown";
-                    var connectionName = account.Connection?.Name ?? "Unknown";
+                    var provider = account.Connection != null ? (account.Connection.VendorName ?? account.Connection.Name ?? "Unknown") : "Unknown";
+                    var connectionName = account.Connection != null ? (account.Connection.Name ?? "Unknown") : "Unknown";
                     var accountId = account.Id ?? account.Name ?? "Unknown";
                     var equity = account.Balance;
 
@@ -3701,10 +3721,11 @@ namespace Risk_Manager
                     int positionsCount = 0;
                     if (core.Positions != null)
                     {
+                        string accountIdForPositions = account.Id;
                         foreach (var pos in core.Positions)
                         {
                             if (pos == null) continue;
-                            if (pos.Account == account && pos.Quantity != 0)
+                            if (pos.Account != null && pos.Account.Id == accountIdForPositions && pos.Quantity != 0)
                             {
                                 positionsCount++;
                             }
@@ -3942,8 +3963,8 @@ namespace Risk_Manager
                 var core = Core.Instance;
 
                 // Get provider and connection info
-                var provider = accountToDisplay.Connection?.VendorName ?? accountToDisplay.Connection?.Name ?? "Unknown";
-                var connectionName = accountToDisplay.Connection?.Name ?? "Unknown";
+                var provider = accountToDisplay.Connection != null ? (accountToDisplay.Connection.VendorName ?? accountToDisplay.Connection.Name ?? "Unknown") : "Unknown";
+                var connectionName = accountToDisplay.Connection != null ? (accountToDisplay.Connection.Name ?? "Unknown") : "Unknown";
                 var accountId = accountToDisplay.Id ?? accountToDisplay.Name ?? "Unknown";
                 var balance = accountToDisplay.Balance;
 
@@ -3951,10 +3972,11 @@ namespace Risk_Manager
                 int positionsCount = 0;
                 if (core?.Positions != null)
                 {
+                    string accountIdForPositions = accountToDisplay.Id;
                     foreach (var pos in core.Positions)
                     {
                         if (pos == null) continue;
-                        if (pos.Account == accountToDisplay && pos.Quantity != 0)
+                        if (pos.Account != null && pos.Account.Id == accountIdForPositions && pos.Quantity != 0)
                         {
                             positionsCount++;
                         }
@@ -8367,8 +8389,12 @@ namespace Risk_Manager
                 if (account == null || core?.Orders == null)
                     return;
 
+                string accountId = account.Id;
+                
                 var workingOrders = core.Orders
-                    .Where(order => order != null && order.Account == account && 
+                    .Where(order => order != null && 
+                           order.Account != null &&
+                           order.Account.Id == accountId && 
                            (order.Status == OrderStatus.Opened || order.Status == OrderStatus.PartiallyFilled))
                     .ToList();
 
@@ -8611,7 +8637,7 @@ namespace Risk_Manager
             if (account == null || account.Connection == null)
                 return ACCOUNT_TYPE_UNKNOWN;
 
-            var connName = account.Connection.Name?.ToLower() ?? "";
+            var connName = (account.Connection.Name != null ? account.Connection.Name.ToLower() : "") ?? "";
             var accountId = account.Id ?? account.Name ?? "";
 
             // Check account ID prefixes first (most specific matching)
@@ -13112,7 +13138,7 @@ namespace Risk_Manager
                             System.Diagnostics.Debug.WriteLine($"ShowPage: settings = {(settings != null ? "Found" : "NULL")}");
                             if (settings != null)
                             {
-                                System.Diagnostics.Debug.WriteLine($"ShowPage: settings.TradingTimeRestrictions count = {settings.TradingTimeRestrictions?.Count ?? 0}");
+                                System.Diagnostics.Debug.WriteLine($"ShowPage: settings.TradingTimeRestrictions count = {(settings.TradingTimeRestrictions != null ? settings.TradingTimeRestrictions.Count : 0)}");
                                 LoadTradingTimeRestrictions(settings);
                             }
                             else
