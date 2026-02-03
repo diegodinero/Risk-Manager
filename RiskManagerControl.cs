@@ -2552,7 +2552,13 @@ namespace Risk_Manager
             
             // Set parent explicitly before adding to ensure proper transparency
             topPanel.Controls.Add(ledIndicatorPanel);
-            
+
+            ledIndicatorPanel.SizeChanged += (s, e) =>
+            {
+                int diameter = Math.Min(ledIndicatorPanel.Width, ledIndicatorPanel.Height);
+                ledIndicatorPanel.Region = new Region(new Rectangle(0, 0, diameter, diameter));
+            };
+
             // Store initial LED color in Tag
             ledIndicatorPanel.Tag = Color.Gray;
             
@@ -2623,7 +2629,8 @@ namespace Risk_Manager
                     e.Graphics.DrawEllipse(pen, circleX, circleY, circleDiameter, circleDiameter);
                 }
             };
-            
+            ledIndicatorPanel.Paint += LedIndicatorPanel_Paint;
+
             // Add tooltip to explain the LED indicator
             ledIndicatorToolTip = new ToolTip();
             ledIndicatorToolTip.SetToolTip(ledIndicatorPanel, "No Activity");
@@ -3013,6 +3020,69 @@ namespace Risk_Manager
                 cell.Style.SelectionForeColor = isLocked ? Color.Red : AccentGreen;
                 cell.Style.BackColor = CardBackground;
                 cell.Style.SelectionBackColor = CardBackground;
+            }
+        }
+
+        private void LedIndicatorPanel_Paint(object sender, PaintEventArgs e)
+        {
+            if (ledIndicatorPanel.Tag is Color ledColor)
+            {
+                var graphics = e.Graphics;
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+                // Get the bounds of the panel
+                var bounds = ledIndicatorPanel.ClientRectangle;
+
+                // Calculate the center and radius
+                int centerX = bounds.Width / 2;
+                int centerY = bounds.Height / 2;
+                int maxRadius = Math.Min(bounds.Width, bounds.Height) / 2;
+
+                // Create a circular clipping region
+                using (var path = new GraphicsPath())
+                {
+                    path.AddEllipse(centerX - maxRadius, centerY - maxRadius, maxRadius * 2, maxRadius * 2);
+                    graphics.SetClip(path);
+                }
+
+                // Draw the inner glow effect (brighter)
+                for (int i = 0; i < 5; i++) // Inner glow layers
+                {
+                    int alpha = 150 - (i * 25); // Higher initial opacity for a brighter inner glow
+                    int radius = maxRadius - (i * 5); // Smaller radius increment for a tighter inner glow
+                    using (var brush = new SolidBrush(Color.FromArgb(alpha, ledColor)))
+                    {
+                        graphics.FillEllipse(brush, centerX - radius, centerY - radius, radius * 2, radius * 2);
+                    }
+                }
+
+                // Draw the outer glow effect (darker)
+                for (int i = 0; i < 3; i++) // Outer glow layers
+                {
+                    int alpha = 50 - (i * 15); // Lower initial opacity for a darker outer glow
+                    int radius = maxRadius + (i * 10); // Larger radius increment for the outer glow
+                    using (var brush = new SolidBrush(Color.FromArgb(alpha, ledColor)))
+                    {
+                        graphics.FillEllipse(brush, centerX - radius, centerY - radius, radius * 2, radius * 2);
+                    }
+                }
+
+                // Add an additional outer layer (even larger and darker)
+                int additionalOuterRadius = maxRadius + 40; // Slightly larger than the last outer glow layer
+                using (var brush = new SolidBrush(Color.FromArgb(20, ledColor))) // Very low opacity
+                {
+                    graphics.FillEllipse(brush, centerX - additionalOuterRadius, centerY - additionalOuterRadius, additionalOuterRadius * 2, additionalOuterRadius * 2);
+                }
+
+                // Draw the LED itself
+                int ledRadius = maxRadius - 10; // Slightly smaller than the panel
+                using (var brush = new SolidBrush(ledColor))
+                {
+                    graphics.FillEllipse(brush, centerX - ledRadius, centerY - ledRadius, ledRadius * 2, ledRadius * 2);
+                }
+
+                // Reset the clipping region
+                graphics.ResetClip();
             }
         }
 
