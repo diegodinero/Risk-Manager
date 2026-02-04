@@ -6388,8 +6388,6 @@ namespace Risk_Manager
                     var displayAccountNumber = MaskAccountNumber(accountNumber);
                     mainTitleLabel.Text = $"Risk Manager - Account: {displayAccountNumber}";
                 }
-                
-                System.Diagnostics.Debug.WriteLine($"UpdateTitleWithAccountNumber: Title updated to '{mainTitleLabel.Text}'");
             }
             catch (Exception ex)
             {
