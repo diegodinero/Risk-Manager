@@ -9845,8 +9845,8 @@ namespace Risk_Manager
             {
                 try
                 {
-                    // Get the currently selected account number
-                    var accountNumber = GetSelectedAccountNumber();
+                    // Use the cached account number to ensure we save to exactly what's displayed
+                    var accountNumber = displayedAccountNumber;
                     
                     // Debug logging
                     System.Diagnostics.Debug.WriteLine($"Save button clicked for account: '{accountNumber}'");
