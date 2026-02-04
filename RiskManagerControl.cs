@@ -10357,7 +10357,7 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 AutoSize = false,
                 BorderStyle = BorderStyle.FixedSingle,
-                Tag = "AccountDisplay"
+                Tag = "LockAccountDisplay"
             };
 
             // Content area with features
@@ -11298,7 +11298,7 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 AutoSize = false,
                 BorderStyle = BorderStyle.FixedSingle,
-                Tag = "AccountDisplay"
+                Tag = "LockAccountDisplay"
             };
 
             // Content area with scroll
@@ -12602,7 +12602,7 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 AutoSize = false,
                 BorderStyle = BorderStyle.FixedSingle,
-                Tag = "AccountDisplay"
+                Tag = "LockAccountDisplay"
             };
 
             // Content area
@@ -12795,7 +12795,7 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 AutoSize = false,
                 BorderStyle = BorderStyle.FixedSingle,
-                Tag = "AccountDisplay"
+                Tag = "LockAccountDisplay"
             };
 
             // Content area
@@ -12995,7 +12995,7 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 AutoSize = false,
                 BorderStyle = BorderStyle.FixedSingle,
-                Tag = "AccountDisplay"
+                Tag = "LockAccountDisplay"
             };
 
             // Content area
