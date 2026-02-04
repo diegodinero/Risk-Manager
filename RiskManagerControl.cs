@@ -10344,6 +10344,22 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display
+            var featureTogglesAccountDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                Tag = "AccountDisplay"
+            };
+
             // Content area with features
             var contentArea = new FlowLayoutPanel
             {
@@ -10511,10 +10527,14 @@ namespace Risk_Manager
 
             var saveButton = CreateDarkSaveButton();
 
+            // Update account display
+            UpdateLockAccountDisplay(featureTogglesAccountDisplay);
+
             // Add controls in correct order: Bottom first, Fill second, Top last
             // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(featureTogglesAccountDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(featureTogglesHeader);
 
@@ -11265,6 +11285,22 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display
+            var riskOverviewAccountDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                Tag = "AccountDisplay"
+            };
+
             // Content area with scroll
             var contentArea = new Panel
             {
@@ -11326,6 +11362,9 @@ namespace Risk_Manager
             // Add the flow layout to the content area
             contentArea.Controls.Add(flowLayout);
 
+            // Update account display
+            UpdateLockAccountDisplay(riskOverviewAccountDisplay);
+
             // Create a container panel to hold the subtitle and content area
             var containerPanel = new Panel
             {
@@ -11334,6 +11373,7 @@ namespace Risk_Manager
             };
 
             containerPanel.Controls.Add(contentArea);
+            containerPanel.Controls.Add(riskOverviewAccountDisplay);
             containerPanel.Controls.Add(subtitleLabel);
 
             return containerPanel;
@@ -12549,6 +12589,22 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display
+            var positionsAccountDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                Tag = "AccountDisplay"
+            };
+
             // Content area
             var contentArea = new Panel
             {
@@ -12570,9 +12626,13 @@ namespace Risk_Manager
 
             var saveButton = CreateDarkSaveButton();
 
+            // Update account display
+            UpdateLockAccountDisplay(positionsAccountDisplay);
+
             // Add controls in correct order: Bottom first, Fill second, Top last
             mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(positionsAccountDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(positionsHeader);
 
@@ -12722,6 +12782,22 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display
+            var limitsAccountDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                Tag = "AccountDisplay"
+            };
+
             // Content area
             var contentArea = new Panel
             {
@@ -12741,9 +12817,13 @@ namespace Risk_Manager
 
             var saveButton = CreateDarkSaveButton();
 
+            // Update account display
+            UpdateLockAccountDisplay(limitsAccountDisplay);
+
             // Add controls in correct order: Bottom first, Fill second, Top last
             mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(limitsAccountDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(limitsHeader);
 
@@ -12902,6 +12982,22 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display
+            var symbolsAccountDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                Tag = "AccountDisplay"
+            };
+
             // Content area
             var contentArea = new Panel
             {
@@ -12921,9 +13017,13 @@ namespace Risk_Manager
 
             var saveButton = CreateDarkSaveButton();
 
+            // Update account display
+            UpdateLockAccountDisplay(symbolsAccountDisplay);
+
             // Add controls in correct order: Bottom first, Fill second, Top last
             mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(symbolsAccountDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(symbolsHeader);
 
