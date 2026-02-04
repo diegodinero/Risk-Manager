@@ -13316,9 +13316,6 @@ namespace Risk_Manager
                 ctrl.Dock = DockStyle.Fill;
                 contentPanel.Controls.Add(ctrl);
                 
-                // Update account displays to show the currently selected account
-                UpdateAllLockAccountDisplays();
-                
                 // Refresh Risk Overview tab when it's shown
                 if (name.EndsWith("Risk Overview"))
                 {
