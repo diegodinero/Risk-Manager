@@ -296,7 +296,7 @@ namespace Risk_Manager
         
         // Tooltip for draggable title
         private ToolTip titleToolTip;
-        private Label mainTitleLabel;  // Reference to title label for updating with account number
+        private Label titleLabel;  // Main application title label in top panel for displaying account information
         
         // Navigation collapse state
         private bool isNavigationCollapsed = false;
@@ -2533,7 +2533,7 @@ namespace Risk_Manager
             topPanel.Controls.Add(shutdownButton);
 
             // Title label (positioned after shutdown button with spacing)
-            mainTitleLabel = new Label
+            titleLabel = new Label
             {
                 Text = "Risk Manager",
                 AutoSize = true,
@@ -2544,9 +2544,9 @@ namespace Risk_Manager
             };
             // Add tooltip to indicate draggability
             titleToolTip = new ToolTip();
-            titleToolTip.SetToolTip(mainTitleLabel, "Click and drag to move window");
-            EnableDragging(mainTitleLabel);  // Make title draggable too
-            topPanel.Controls.Add(mainTitleLabel);
+            titleToolTip.SetToolTip(titleLabel, "Click and drag to move window");
+            EnableDragging(titleLabel);  // Make title draggable too
+            topPanel.Controls.Add(titleLabel);
 
             // LED Indicator - Visual indicator for orders/positions
             ledIndicatorPanel = new Panel
@@ -6373,20 +6373,20 @@ namespace Risk_Manager
         {
             try
             {
-                if (mainTitleLabel == null)
+                if (titleLabel == null)
                     return;
                 
                 var accountNumber = GetSelectedAccountNumber();
                 
                 if (string.IsNullOrEmpty(accountNumber))
                 {
-                    mainTitleLabel.Text = "Risk Manager";
+                    titleLabel.Text = "Risk Manager";
                 }
                 else
                 {
                     // Apply masking if privacy mode is enabled for this account
                     var displayAccountNumber = MaskAccountNumber(accountNumber);
-                    mainTitleLabel.Text = $"Risk Manager - Account: {displayAccountNumber}";
+                    titleLabel.Text = $"Risk Manager - Account: {displayAccountNumber}";
                 }
             }
             catch (Exception ex)
