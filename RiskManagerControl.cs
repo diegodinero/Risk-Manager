@@ -5611,6 +5611,22 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display
+            var tradingTimesAccountDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                Tag = "LockAccountDisplay"
+            };
+
             // Main content area using FlowLayoutPanel for proper vertical layout
             var contentArea = new FlowLayoutPanel
             {
@@ -5697,10 +5713,14 @@ namespace Risk_Manager
 
             var saveButton = CreateDarkSaveButton();
 
+            // Update account display
+            UpdateLockAccountDisplay(tradingTimesAccountDisplay);
+
             // Add controls in correct order: Bottom first, Fill second, Top last
             // In WinForms, docking is processed in reverse Z-order
             mainPanel.Controls.Add(saveButton);
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(tradingTimesAccountDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(tradingTimesHeader);
 
@@ -6367,7 +6387,7 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Updates the main title label to include the currently selected account number.
+        /// Updates the main title label to just show "Risk Manager" without account number.
         /// </summary>
         private void UpdateTitleWithAccountNumber()
         {
@@ -6376,22 +6396,13 @@ namespace Risk_Manager
                 if (titleLabel == null)
                     return;
                 
-                var accountNumber = GetSelectedAccountNumber();
-                
-                if (string.IsNullOrEmpty(accountNumber))
-                {
-                    titleLabel.Text = "Risk Manager";
-                }
-                else
-                {
-                    // Apply masking if privacy mode is enabled for this account
-                    var displayAccountNumber = MaskAccountNumber(accountNumber);
-                    titleLabel.Text = $"Risk Manager - Account: {displayAccountNumber}";
-                }
+                // Just show "Risk Manager" without account number
+                // Account numbers are now shown in individual tabs
+                titleLabel.Text = "Risk Manager";
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating title with account number: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error updating title: {ex.Message}");
             }
         }
 
