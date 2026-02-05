@@ -6077,7 +6077,7 @@ namespace Risk_Manager
             // Lock Settings Button
             lockSettingsButton = new Button
             {
-                Text = "LOCK SETTINGS FOR REST OF DAY (Until 5 PM ET)",
+                Text = "LOCK SETTINGS FOR REST OF DAY (Until 5:00 PM ET)",
                 Width = 400,
                 Height = 40,
                 Left = 0,
@@ -6134,7 +6134,7 @@ namespace Risk_Manager
                     }
                     
                     // Lock settings with calculated duration
-                    settingsService.SetSettingsLock(accountNumber, true, "Locked until 5 PM ET", duration);
+                    settingsService.SetSettingsLock(accountNumber, true, "Locked until 5:00 PM ET", duration);
                     
                     // Update status display for the account we just locked
                     UpdateSettingsLockStatusForAccount(lblSettingsStatus, accountNumber);
@@ -6338,10 +6338,10 @@ namespace Risk_Manager
             // Time Format Help Label
             var lblTimeFormat = new Label
             {
-                Text = "(HH:MM in Eastern Time, e.g., 09:30 for market open)",
+                Text = "(24-hour format: 00-23 for hours, e.g., 09:30 = 9:30 AM, 14:30 = 2:30 PM)",
                 Left = 240,
                 Top = 295,
-                Width = 300,
+                Width = 400,
                 Height = 25,
                 Font = new Font("Segoe UI", 8, FontStyle.Italic),
                 ForeColor = TextGray,
@@ -6404,7 +6404,7 @@ namespace Risk_Manager
                     settingsService.UpdateAutoLockSettings(accountNumber, chkAutoLockEnabled.Checked, lockTime);
                     
                     var statusMsg = chkAutoLockEnabled.Checked 
-                        ? $"Automated lock enabled. Settings will lock daily at {hour:D2}:{minute:D2} ET."
+                        ? $"Automated lock enabled. Settings will lock daily at {FormatTimeSpan(lockTime)} ET."
                         : "Automated lock disabled.";
                     
                     MessageBox.Show(statusMsg, "Auto-Lock Settings Saved", 
@@ -6570,8 +6570,8 @@ namespace Risk_Manager
             lockDurationComboBox.Items.Add("1 Hour");
             lockDurationComboBox.Items.Add("2 Hours");
             lockDurationComboBox.Items.Add("4 Hours");
-            lockDurationComboBox.Items.Add("All Day (Until 5PM ET)");
-            lockDurationComboBox.Items.Add("All Week (Until 5PM ET Friday)");
+            lockDurationComboBox.Items.Add("All Day (Until 5:00 PM ET)");
+            lockDurationComboBox.Items.Add("All Week (Until 5:00 PM ET Friday)");
             lockDurationComboBox.SelectedIndex = 0; // Default to 5 Minutes
 
             contentArea.Controls.Add(lockDurationComboBox);
@@ -7056,7 +7056,7 @@ namespace Risk_Manager
 
         /// <summary>
         /// Handles the Lock All Accounts button click event.
-        /// Locks all connected accounts (both trading and settings) until 5PM EST with a single confirmation.
+        /// Locks all connected accounts (both trading and settings) until 5:00 PM ET with a single confirmation.
         /// </summary>
         private void BtnLockAllAccounts_Click(object sender, EventArgs e)
         {
@@ -7071,12 +7071,12 @@ namespace Risk_Manager
 
                 // Show confirmation dialog
                 var confirmResult = MessageBox.Show(
-                    "Are you sure you want to lock ALL accounts until 5PM ET?\n\n" +
+                    "Are you sure you want to lock ALL accounts until 5:00 PM ET?\n\n" +
                     "This will:\n" +
                     "• Flatten all open trades\n" +
                     "• Disable all Buy/Sell buttons\n" +
                     "• Lock all settings (limits, symbols, toggles, etc.)\n\n" +
-                    "Both locks will remain until 5PM ET today.",
+                    "Both locks will remain until 5:00 PM ET today.",
                     "Confirm Lock All Accounts",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Warning);
@@ -7096,9 +7096,9 @@ namespace Risk_Manager
                     return;
                 }
 
-                // Get lock duration for "All Day (Until 5PM ET)"
+                // Get lock duration for "All Day (Until 5:00 PM ET)"
                 TimeSpan? duration = GetLockDurationForAllDay();
-                string durationText = "All Day (Until 5PM ET)";
+                string durationText = "All Day (Until 5:00 PM ET)";
 
                 // Check if the LockAccount method exists
                 var lockMethod = core.GetType().GetMethod("LockAccount");
@@ -7161,7 +7161,7 @@ namespace Risk_Manager
 
                 // Show success message
                 MessageBox.Show(
-                    $"Successfully locked {lockedCount} account(s) until 5PM ET.\n\n" +
+                    $"Successfully locked {lockedCount} account(s) until 5:00 PM ET.\n\n" +
                     "All Buy/Sell buttons and settings are now locked.",
                     "Accounts Locked",
                     MessageBoxButtons.OK,
@@ -7381,7 +7381,7 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Calculates the lock duration for "All Day (Until 5PM ET)".
+        /// Calculates the lock duration for "All Day (Until 5:00 PM ET)".
         /// </summary>
         private TimeSpan? GetLockDurationForAllDay()
         {
@@ -7533,7 +7533,7 @@ namespace Risk_Manager
                 case "2 Hours":
                     return TimeSpan.FromHours(2);
                     
-                case "All Day (Until 5PM ET)":
+                case "All Day (Until 5:00 PM ET)":
                     // Calculate time until 5 PM ET today (or tomorrow if past 5 PM ET)
                     var targetTime = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0); // 5 PM ET today
                     if (nowEt >= targetTime)
@@ -7543,7 +7543,7 @@ namespace Risk_Manager
                     }
                     return targetTime - nowEt;
                     
-                case "All Week (Until 5PM ET Friday)":
+                case "All Week (Until 5:00 PM ET Friday)":
                     // Lock until 5 PM ET Friday
                     int daysUntilFriday = ((int)DayOfWeek.Friday - (int)nowEt.DayOfWeek + 7) % 7;
                     DateTime fridayAt5PM;
