@@ -443,6 +443,23 @@ namespace Risk_Manager.Data
         }
 
         /// <summary>
+        /// Updates the automated settings lock configuration for an account.
+        /// </summary>
+        /// <param name="accountNumber">The account number to update</param>
+        /// <param name="enabled">True to enable automated lock, false to disable</param>
+        /// <param name="lockTime">The time of day in Eastern Time when settings should auto-lock</param>
+        public void UpdateAutoLockSettings(string accountNumber, bool enabled, TimeSpan? lockTime)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.AutoLockSettingsEnabled = enabled;
+                settings.AutoLockSettingsTime = lockTime;
+                SaveSettings(settings);
+            }
+        }
+
+        /// <summary>
         /// Updates a specific column visibility setting for an account.
         /// </summary>
         /// <param name="accountNumber">The account number to update</param>

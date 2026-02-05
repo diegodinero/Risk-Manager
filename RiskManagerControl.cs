@@ -426,6 +426,7 @@ namespace Risk_Manager
         private Color CardBackground;
         private Color AccentGreen;
         private Color AccentAmber;
+        private Color AccentBlue;
         private Color TextWhite;
         private Color TextGray;
         private Color HoverColor;
@@ -580,6 +581,7 @@ namespace Risk_Manager
                     CardBackground = Color.FromArgb(55, 72, 90);
                     AccentGreen = Color.FromArgb(39, 174, 96);
                     AccentAmber = Color.FromArgb(243, 156, 18);
+                    AccentBlue = Color.FromArgb(52, 152, 219);
                     TextWhite = Color.White;
                     TextGray = Color.FromArgb(189, 195, 199);
                     HoverColor = Color.FromArgb(65, 82, 100);
@@ -594,6 +596,7 @@ namespace Risk_Manager
                     CardBackground = Color.FromArgb(30, 30, 30);
                     AccentGreen = Color.FromArgb(0, 200, 83);
                     AccentAmber = Color.FromArgb(255, 185, 0);
+                    AccentBlue = Color.FromArgb(0, 149, 255);
                     TextWhite = Color.White;
                     TextGray = Color.FromArgb(160, 160, 160);
                     HoverColor = Color.FromArgb(50, 50, 50);
@@ -608,6 +611,7 @@ namespace Risk_Manager
                     CardBackground = Color.White;
                     AccentGreen = Color.FromArgb(39, 174, 96);
                     AccentAmber = Color.FromArgb(243, 156, 18);
+                    AccentBlue = Color.FromArgb(52, 152, 219);
                     TextWhite = Color.FromArgb(30, 30, 30);
                     TextGray = Color.FromArgb(90, 90, 90);
                     HoverColor = Color.FromArgb(230, 230, 230);
@@ -622,6 +626,7 @@ namespace Risk_Manager
                     CardBackground = Color.FromArgb(30, 30, 30);
                     AccentGreen = Color.FromArgb(0, 200, 83);
                     AccentAmber = Color.FromArgb(255, 185, 0);
+                    AccentBlue = Color.FromArgb(49, 121, 245);
                     TextWhite = Color.White;
                     TextGray = Color.FromArgb(160, 160, 160);
                     HoverColor = Color.FromArgb(50, 50, 50);
@@ -6394,19 +6399,9 @@ namespace Risk_Manager
                         return;
                     }
                     
-                    // Get or create settings
-                    var settings = settingsService.GetSettings(accountNumber);
-                    if (settings == null)
-                    {
-                        settings = new AccountSettings { AccountNumber = accountNumber };
-                    }
-                    
-                    // Update auto-lock settings
-                    settings.AutoLockSettingsEnabled = chkAutoLockEnabled.Checked;
-                    settings.AutoLockSettingsTime = new TimeSpan(hour, minute, 0);
-                    
-                    // Save settings
-                    settingsService.SaveSettings(settings);
+                    // Update auto-lock settings using public method
+                    var lockTime = new TimeSpan(hour, minute, 0);
+                    settingsService.UpdateAutoLockSettings(accountNumber, chkAutoLockEnabled.Checked, lockTime);
                     
                     var statusMsg = chkAutoLockEnabled.Checked 
                         ? $"Automated lock enabled. Settings will lock daily at {hour:D2}:{minute:D2} ET."
