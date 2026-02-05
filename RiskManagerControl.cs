@@ -3773,45 +3773,36 @@ namespace Risk_Manager
             // If no settings, show all columns
             if (settings == null) return;
 
-            // Update column visibility
-            if (statsGrid.Columns["Provider"] != null)
-                statsGrid.Columns["Provider"].Visible = settings.ShowProviderColumn;
-            
-            if (statsGrid.Columns["Connection"] != null)
-                statsGrid.Columns["Connection"].Visible = settings.ShowConnectionColumn;
-            
-            if (statsGrid.Columns["Type"] != null)
-                statsGrid.Columns["Type"].Visible = settings.ShowTypeColumn;
-            
-            if (statsGrid.Columns["Equity"] != null)
-                statsGrid.Columns["Equity"].Visible = settings.ShowEquityColumn;
-            
-            if (statsGrid.Columns["OpenPnL"] != null)
-                statsGrid.Columns["OpenPnL"].Visible = settings.ShowOpenPnLColumn;
-            
-            if (statsGrid.Columns["ClosedPnL"] != null)
-                statsGrid.Columns["ClosedPnL"].Visible = settings.ShowClosedPnLColumn;
-            
-            if (statsGrid.Columns["DailyPnL"] != null)
-                statsGrid.Columns["DailyPnL"].Visible = settings.ShowDailyPnLColumn;
-            
-            if (statsGrid.Columns["GrossPnL"] != null)
-                statsGrid.Columns["GrossPnL"].Visible = settings.ShowGrossPnLColumn;
-            
-            if (statsGrid.Columns["TrailingDrawdown"] != null)
-                statsGrid.Columns["TrailingDrawdown"].Visible = settings.ShowTrailingDrawdownColumn;
-            
-            if (statsGrid.Columns["Positions"] != null)
-                statsGrid.Columns["Positions"].Visible = settings.ShowPositionsColumn;
-            
-            if (statsGrid.Columns["Contracts"] != null)
-                statsGrid.Columns["Contracts"].Visible = settings.ShowContractsColumn;
-            
-            if (statsGrid.Columns["Status"] != null)
-                statsGrid.Columns["Status"].Visible = settings.ShowStatusColumn;
-            
-            if (statsGrid.Columns["Drawdown"] != null)
-                statsGrid.Columns["Drawdown"].Visible = settings.ShowDrawdownColumn;
+            // Define column mapping
+            var columnMappings = new[]
+            {
+                new { ColumnName = "Provider", PropertyName = "ShowProviderColumn" },
+                new { ColumnName = "Connection", PropertyName = "ShowConnectionColumn" },
+                new { ColumnName = "Type", PropertyName = "ShowTypeColumn" },
+                new { ColumnName = "Equity", PropertyName = "ShowEquityColumn" },
+                new { ColumnName = "OpenPnL", PropertyName = "ShowOpenPnLColumn" },
+                new { ColumnName = "ClosedPnL", PropertyName = "ShowClosedPnLColumn" },
+                new { ColumnName = "DailyPnL", PropertyName = "ShowDailyPnLColumn" },
+                new { ColumnName = "GrossPnL", PropertyName = "ShowGrossPnLColumn" },
+                new { ColumnName = "TrailingDrawdown", PropertyName = "ShowTrailingDrawdownColumn" },
+                new { ColumnName = "Positions", PropertyName = "ShowPositionsColumn" },
+                new { ColumnName = "Contracts", PropertyName = "ShowContractsColumn" },
+                new { ColumnName = "Status", PropertyName = "ShowStatusColumn" },
+                new { ColumnName = "Drawdown", PropertyName = "ShowDrawdownColumn" }
+            };
+
+            // Update column visibility using reflection
+            foreach (var mapping in columnMappings)
+            {
+                if (statsGrid.Columns[mapping.ColumnName] != null)
+                {
+                    var prop = typeof(AccountSettings).GetProperty(mapping.PropertyName);
+                    if (prop != null)
+                    {
+                        statsGrid.Columns[mapping.ColumnName].Visible = (bool)prop.GetValue(settings);
+                    }
+                }
+            }
         }
 
         private void RefreshAccountsSummary()
@@ -11018,7 +11009,6 @@ namespace Risk_Manager
                 {
                     Text = colSetting.DisplayText,
                     AutoSize = true,
-                    Checked = true, // Default to checked
                     Font = new Font("Segoe UI", 10, FontStyle.Regular),
                     ForeColor = TextWhite,
                     BackColor = CardBackground,
@@ -11034,6 +11024,11 @@ namespace Risk_Manager
                     {
                         checkbox.Checked = (bool)prop.GetValue(currentSettings);
                     }
+                }
+                else
+                {
+                    // Default to checked when no settings exist
+                    checkbox.Checked = true;
                 }
 
                 checkbox.CheckedChanged += (s, e) =>
