@@ -12697,6 +12697,11 @@ namespace Risk_Manager
             // Hide form and refresh list
             ToggleModelForm();
             RefreshModelsForCurrentAccount();
+            
+            // Debug: Verify models were saved
+            var savedModels = TradingJournalService.Instance.GetModels(accountNumber);
+            MessageBox.Show($"Saved model '{model.Name}'. Total models for account: {savedModels.Count}", 
+                "Debug Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
@@ -12704,12 +12709,21 @@ namespace Risk_Manager
         /// </summary>
         private void RefreshModelsForCurrentAccount()
         {
-            if (journalContentPanel == null) return;
+            if (journalContentPanel == null)
+            {
+                MessageBox.Show("journalContentPanel is null!", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             var modelsList = FindControlByTag(journalContentPanel, "ModelsList") as FlowLayoutPanel;
             if (modelsList != null)
             {
+                MessageBox.Show("Found ModelsList panel, refreshing...", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 RefreshModelsList(modelsList);
+            }
+            else
+            {
+                MessageBox.Show("ModelsList panel not found!", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
