@@ -3663,6 +3663,7 @@ namespace Risk_Manager
             statsGrid.Columns.Add("GrossPnL", "Gross P&L");
             statsGrid.Columns.Add("TrailingDrawdown", "Trailing Drawdown");
             statsGrid.Columns.Add("Positions", "Positions");
+            statsGrid.Columns.Add("Contracts", "Contracts");
             statsGrid.Columns.Add("Status", "Status");
             statsGrid.Columns.Add("LockStatus", "Lock Status");
             statsGrid.Columns.Add("LossLimit", "Loss Limit");
@@ -3761,8 +3762,8 @@ namespace Risk_Manager
                 if (core == null || core.Accounts == null || !core.Accounts.Any())
                 {
                     // Demo data - last column is Drawdown (Equity - Trailing Drawdown)
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn", MaskAccountNumber("ACC123"), "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", MaskAccountNumber("ACC456"), "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn", MaskAccountNumber("ACC123"), "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "5", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", MaskAccountNumber("ACC456"), "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "10", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
                     return;
                 }
 
@@ -3780,8 +3781,9 @@ namespace Risk_Manager
                     // Get account type using centralized method
                     var accountType = DetermineAccountType(account);
 
-                    // Count positions
+                    // Count positions and contracts
                     int positionsCount = 0;
+                    int contractsCount = 0;
                     if (core.Positions != null)
                     {
                         foreach (var pos in core.Positions)
@@ -3790,6 +3792,7 @@ namespace Risk_Manager
                             if (pos.Account == account && pos.Quantity != 0)
                             {
                                 positionsCount++;
+                                contractsCount += (int)Math.Abs(pos.Quantity);
                             }
                         }
                     }
@@ -3901,7 +3904,8 @@ namespace Risk_Manager
                         FormatNumeric(dailyPnL), 
                         FormatNumeric(grossPnL), 
                         FormatNumeric(trailingDrawdown),
-                        positionsCount.ToString(), 
+                        positionsCount.ToString(),
+                        contractsCount.ToString(),
                         status,
                         lockStatus,
                         FormatLossLimit(lossLimit),
