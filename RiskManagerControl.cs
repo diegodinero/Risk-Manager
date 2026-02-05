@@ -6204,6 +6204,262 @@ namespace Risk_Manager
                 }
             };
             contentArea.Controls.Add(unlockSettingsButton);
+            
+            // Separator line
+            var separatorLabel = new Label
+            {
+                Text = "",
+                Width = 400,
+                Height = 2,
+                Left = 0,
+                Top = 170,
+                BackColor = Color.FromArgb(60, 60, 60),
+                BorderStyle = BorderStyle.None
+            };
+            contentArea.Controls.Add(separatorLabel);
+            
+            // Automated Lock Section Title
+            var autoLockSectionLabel = new Label
+            {
+                Text = "Automated Daily Lock",
+                Left = 0,
+                Top = 190,
+                Width = 400,
+                Height = 30,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            contentArea.Controls.Add(autoLockSectionLabel);
+            
+            // Automated Lock Description
+            var autoLockDescLabel = new Label
+            {
+                Text = "Automatically lock settings at a specific time each day.",
+                Left = 0,
+                Top = 225,
+                Width = 400,
+                Height = 25,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.TopLeft
+            };
+            contentArea.Controls.Add(autoLockDescLabel);
+            
+            // Enable Automated Lock Checkbox
+            var chkAutoLockEnabled = new CheckBox
+            {
+                Text = "Enable Automated Lock",
+                Left = 0,
+                Top = 260,
+                Width = 200,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                FlatStyle = FlatStyle.Flat,
+                Tag = "AutoLockEnabled"
+            };
+            contentArea.Controls.Add(chkAutoLockEnabled);
+            
+            // Time Label
+            var lblAutoLockTime = new Label
+            {
+                Text = "Lock Time (ET):",
+                Left = 0,
+                Top = 295,
+                Width = 120,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            contentArea.Controls.Add(lblAutoLockTime);
+            
+            // Hour TextBox
+            var txtAutoLockHour = new TextBox
+            {
+                Text = "09",
+                Left = 130,
+                Top = 295,
+                Width = 40,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                MaxLength = 2,
+                TextAlign = HorizontalAlignment.Center,
+                Tag = "AutoLockHour"
+            };
+            contentArea.Controls.Add(txtAutoLockHour);
+            
+            // Colon Label
+            var lblColon = new Label
+            {
+                Text = ":",
+                Left = 175,
+                Top = 295,
+                Width = 10,
+                Height = 25,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            contentArea.Controls.Add(lblColon);
+            
+            // Minute TextBox
+            var txtAutoLockMinute = new TextBox
+            {
+                Text = "30",
+                Left = 190,
+                Top = 295,
+                Width = 40,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = DarkBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                MaxLength = 2,
+                TextAlign = HorizontalAlignment.Center,
+                Tag = "AutoLockMinute"
+            };
+            contentArea.Controls.Add(txtAutoLockMinute);
+            
+            // Time Format Help Label
+            var lblTimeFormat = new Label
+            {
+                Text = "(HH:MM in Eastern Time, e.g., 09:30 for market open)",
+                Left = 240,
+                Top = 295,
+                Width = 300,
+                Height = 25,
+                Font = new Font("Segoe UI", 8, FontStyle.Italic),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            contentArea.Controls.Add(lblTimeFormat);
+            
+            // Save Auto-Lock Settings Button
+            var btnSaveAutoLock = new Button
+            {
+                Text = "SAVE AUTO-LOCK SETTINGS",
+                Width = 250,
+                Height = 40,
+                Left = 0,
+                Top = 335,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = AccentBlue,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnSaveAutoLock.FlatAppearance.BorderSize = 0;
+            btnSaveAutoLock.Click += (s, e) => {
+                try
+                {
+                    var accountNumber = displayedAccountNumber;
+                    if (string.IsNullOrEmpty(accountNumber))
+                    {
+                        MessageBox.Show("Please select an account first.", "No Account Selected", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (!settingsService.IsInitialized)
+                    {
+                        MessageBox.Show("Settings service is not initialized.", "Service Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                    
+                    // Validate hour and minute
+                    if (!int.TryParse(txtAutoLockHour.Text, out int hour) || hour < 0 || hour > 23)
+                    {
+                        MessageBox.Show("Please enter a valid hour (00-23).", "Invalid Hour", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    
+                    if (!int.TryParse(txtAutoLockMinute.Text, out int minute) || minute < 0 || minute > 59)
+                    {
+                        MessageBox.Show("Please enter a valid minute (00-59).", "Invalid Minute", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    
+                    // Get or create settings
+                    var settings = settingsService.GetSettings(accountNumber);
+                    if (settings == null)
+                    {
+                        settings = new AccountSettings { AccountNumber = accountNumber };
+                    }
+                    
+                    // Update auto-lock settings
+                    settings.AutoLockSettingsEnabled = chkAutoLockEnabled.Checked;
+                    settings.AutoLockSettingsTime = new TimeSpan(hour, minute, 0);
+                    
+                    // Save settings
+                    settingsService.SaveSettings(settings);
+                    
+                    var statusMsg = chkAutoLockEnabled.Checked 
+                        ? $"Automated lock enabled. Settings will lock daily at {hour:D2}:{minute:D2} ET."
+                        : "Automated lock disabled.";
+                    
+                    MessageBox.Show(statusMsg, "Auto-Lock Settings Saved", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error saving auto-lock settings: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    System.Diagnostics.Debug.WriteLine($"Error in Save Auto-Lock Settings button: {ex}");
+                }
+            };
+            contentArea.Controls.Add(btnSaveAutoLock);
+            
+            // Load existing auto-lock settings when account changes
+            void LoadAutoLockSettings()
+            {
+                try
+                {
+                    var accountNumber = displayedAccountNumber;
+                    if (string.IsNullOrEmpty(accountNumber)) return;
+                    
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (!settingsService.IsInitialized) return;
+                    
+                    var settings = settingsService.GetSettings(accountNumber);
+                    if (settings != null)
+                    {
+                        chkAutoLockEnabled.Checked = settings.AutoLockSettingsEnabled;
+                        
+                        if (settings.AutoLockSettingsTime.HasValue)
+                        {
+                            var time = settings.AutoLockSettingsTime.Value;
+                            txtAutoLockHour.Text = time.Hours.ToString("D2");
+                            txtAutoLockMinute.Text = time.Minutes.ToString("D2");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error loading auto-lock settings: {ex.Message}");
+                }
+            }
+            
+            // Store reference to LoadAutoLockSettings so it can be called when account changes
+            // Tag the checkbox with the reload action
+            chkAutoLockEnabled.Tag = new { ReloadAction = (Action)LoadAutoLockSettings };
+            
+            // Call LoadAutoLockSettings initially
+            LoadAutoLockSettings();
 
             // Initialize status from settings service
             UpdateSettingsLockStatus(lblSettingsStatus);
@@ -6440,10 +6696,93 @@ namespace Risk_Manager
                 
                 // Update button states after account display changes
                 UpdateLockButtonStates();
+                
+                // Reload auto-lock settings for the new account
+                UpdateAutoLockControlsRecursive(this);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error updating lock account display: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Recursively finds and updates auto-lock controls in the control tree.
+        /// </summary>
+        private void UpdateAutoLockControlsRecursive(Control parent)
+        {
+            if (parent == null) return;
+            
+            try
+            {
+                CheckBox autoLockCheckbox = null;
+                TextBox hourTextBox = null;
+                TextBox minuteTextBox = null;
+                
+                // Find the controls
+                FindAutoLockControls(parent, ref autoLockCheckbox, ref hourTextBox, ref minuteTextBox);
+                
+                // If we found the controls, update them
+                if (autoLockCheckbox != null && hourTextBox != null && minuteTextBox != null)
+                {
+                    var accountNumber = displayedAccountNumber;
+                    if (string.IsNullOrEmpty(accountNumber)) return;
+                    
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (!settingsService.IsInitialized) return;
+                    
+                    var settings = settingsService.GetSettings(accountNumber);
+                    if (settings != null)
+                    {
+                        autoLockCheckbox.Checked = settings.AutoLockSettingsEnabled;
+                        
+                        if (settings.AutoLockSettingsTime.HasValue)
+                        {
+                            var time = settings.AutoLockSettingsTime.Value;
+                            hourTextBox.Text = time.Hours.ToString("D2");
+                            minuteTextBox.Text = time.Minutes.ToString("D2");
+                        }
+                        else
+                        {
+                            // Default values if not set
+                            hourTextBox.Text = "09";
+                            minuteTextBox.Text = "30";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in UpdateAutoLockControlsRecursive: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Helper method to find auto-lock controls by their tags.
+        /// </summary>
+        private void FindAutoLockControls(Control parent, ref CheckBox checkbox, ref TextBox hourBox, ref TextBox minuteBox)
+        {
+            if (parent == null) return;
+            
+            foreach (Control control in parent.Controls)
+            {
+                if (control is CheckBox chk && chk.Tag?.ToString() == "AutoLockEnabled")
+                {
+                    checkbox = chk;
+                }
+                else if (control is TextBox txt)
+                {
+                    if (txt.Tag?.ToString() == "AutoLockHour")
+                        hourBox = txt;
+                    else if (txt.Tag?.ToString() == "AutoLockMinute")
+                        minuteBox = txt;
+                }
+                
+                // Recursively check child controls
+                if (control.Controls.Count > 0)
+                {
+                    FindAutoLockControls(control, ref checkbox, ref hourBox, ref minuteBox);
+                }
             }
         }
 
@@ -7345,6 +7684,25 @@ namespace Risk_Manager
                                 System.Diagnostics.Debug.WriteLine($"Settings lock expired for selected account: {uniqueAccountId}");
                             }
                         }
+                        
+                        // Check if automated lock should trigger (only if not already locked)
+                        if (!isSettingsLocked && settings?.AutoLockSettingsEnabled == true && settings?.AutoLockSettingsTime.HasValue == true)
+                        {
+                            // Check if we've reached the auto-lock time
+                            if (ShouldTriggerAutoLock(settings.AutoLockSettingsTime.Value))
+                            {
+                                // Trigger auto-lock until 5 PM ET
+                                var duration = RiskManagerSettingsService.CalculateDurationUntil5PMET();
+                                settingsService.SetSettingsLock(uniqueAccountId, true, "Auto-locked at scheduled time", duration);
+                                
+                                // Check if this is the selected account
+                                if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == uniqueAccountId)
+                                {
+                                    selectedAccountChanged = true;
+                                    System.Diagnostics.Debug.WriteLine($"Auto-locked settings for selected account: {uniqueAccountId}");
+                                }
+                            }
+                        }
                     }
 
                     accountIndex++;
@@ -7404,6 +7762,44 @@ namespace Risk_Manager
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error checking expired locks: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Checks if the automated lock should trigger based on the configured time.
+        /// Returns true if current Eastern Time is at or after the configured lock time,
+        /// but only once per day (won't trigger again if already triggered today).
+        /// </summary>
+        private bool ShouldTriggerAutoLock(TimeSpan autoLockTime)
+        {
+            try
+            {
+                // Get current Eastern Time
+                var now = DateTime.UtcNow;
+                TimeZoneInfo easternZone;
+                try
+                {
+                    easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                }
+                catch
+                {
+                    // Fallback: approximate Eastern Time (EST/EDT)
+                    var isDst = now.Month >= 3 && now.Month <= 11;
+                    var offset = isDst ? -4 : -5;
+                    easternZone = TimeZoneInfo.CreateCustomTimeZone("ET", TimeSpan.FromHours(offset), "Eastern Time", "ET");
+                }
+                
+                var etNow = TimeZoneInfo.ConvertTimeFromUtc(now, easternZone);
+                var currentTime = etNow.TimeOfDay;
+                
+                // Check if we're at or past the auto-lock time
+                // Use a 1-minute window to avoid missing the exact second
+                return currentTime >= autoLockTime && currentTime < autoLockTime.Add(TimeSpan.FromMinutes(1));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in ShouldTriggerAutoLock: {ex.Message}");
+                return false;
             }
         }
         

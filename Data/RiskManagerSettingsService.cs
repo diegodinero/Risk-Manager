@@ -1436,6 +1436,10 @@ namespace Risk_Manager.Data
         public LockInfo? TradingLock { get; set; }
         public LockInfo? SettingsLock { get; set; }
         
+        // Automated Settings Lock
+        public bool AutoLockSettingsEnabled { get; set; } = false;
+        public TimeSpan? AutoLockSettingsTime { get; set; }
+        
         // Daily Loss Limit Warning Tracking
         public DailyLossWarningInfo? DailyLossWarning { get; set; }
         
