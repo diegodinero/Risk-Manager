@@ -7837,10 +7837,20 @@ namespace Risk_Manager
                     {
                         var symbol = symbolGroup.Key;
                         var positions = symbolGroup.ToList();
+                        
+                        // Debug: Log individual position quantities
+                        System.Diagnostics.Debug.WriteLine($"[FLATTEN CHECK] Symbol {symbol}: {positions.Count} position entries");
+                        foreach (var p in positions)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[FLATTEN CHECK]   - Position Quantity: {p.Quantity}");
+                        }
+                        
                         var totalContracts = positions.Sum(p => Math.Abs(p.Quantity));
+                        System.Diagnostics.Debug.WriteLine($"[FLATTEN CHECK] Symbol {symbol}: Total contracts = {totalContracts}");
 
                         // Get the contract limit for this symbol
                         var contractLimit = settingsService.GetContractLimit(accountId, symbol);
+                        System.Diagnostics.Debug.WriteLine($"[FLATTEN CHECK] Symbol {symbol}: Contract limit = {contractLimit?.ToString() ?? "None"}");
                         
                         if (contractLimit.HasValue && totalContracts > contractLimit.Value)
                         {
@@ -8033,10 +8043,20 @@ namespace Risk_Manager
                 {
                     var symbol = symbolGroup.Key;
                     var positions = symbolGroup.ToList();
+                    
+                    // Debug: Log individual position quantities
+                    System.Diagnostics.Debug.WriteLine($"Symbol {symbol}: {positions.Count} position entries");
+                    foreach (var p in positions)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  - Position Quantity: {p.Quantity}");
+                    }
+                    
                     var totalContracts = positions.Sum(p => Math.Abs(p.Quantity));
+                    System.Diagnostics.Debug.WriteLine($"Symbol {symbol}: Total contracts = {totalContracts}");
 
                     // Get the contract limit for this symbol
                     var contractLimit = settingsService.GetContractLimit(accountId, symbol);
+                    System.Diagnostics.Debug.WriteLine($"Symbol {symbol}: Contract limit = {contractLimit?.ToString() ?? "None"}");
                     
                     if (contractLimit.HasValue && totalContracts > contractLimit.Value)
                     {
