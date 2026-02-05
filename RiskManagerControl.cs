@@ -437,7 +437,7 @@ namespace Risk_Manager
         private static readonly string[] NavItems = new[]
         {
             "📊 Accounts Summary", "📈 Stats", "📋 Type", "🔍 Risk Overview", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
-            "🔒 Lock Settings", "🔒 Manual Lock", "⚙️ General Settings"
+            "🔒 Lock Settings", "🔒 Trading Lock", "⚙️ General Settings"
         };
 
         private const int LeftPanelWidth = 200;
@@ -507,7 +507,7 @@ namespace Risk_Manager
                     placeholder = CreateAllowedTradingTimesDarkPanel();
                 else if (name.EndsWith("Lock Settings"))
                     placeholder = CreateLockSettingsDarkPanel();
-                else if (name.EndsWith("Manual Lock"))
+                else if (name.EndsWith("Trading Lock"))
                     placeholder = CreateManualLockDarkPanel();
                 else if (name.EndsWith("General Settings"))
                     placeholder = CreateGeneralSettingsPanel();
@@ -2333,7 +2333,7 @@ namespace Risk_Manager
 
                 // Use specific PNGs for Lock tabs per request
                 // "Lock Settings" header/tab uses locksettins.png resource (identifier: locksettins)
-                // "Manual Lock" header/tab uses locktrading.png resource (identifier: locktrading)
+                // "Trading Lock" header/tab uses locktrading.png resource (identifier: locktrading)
                 // Make sure these resources exist in Properties.Resources with these exact identifiers.
                 try
                 {
@@ -2347,12 +2347,12 @@ namespace Risk_Manager
 
                 try
                 {
-                    IconMap["Manual Lock"] = Properties.Resources.locktrading;
+                    IconMap["Trading Lock"] = Properties.Resources.locktrading;
                 }
                 catch
                 {
                     // fallback to generic lock if specific resource missing
-                    IconMap["Manual Lock"] = Properties.Resources._lock;
+                    IconMap["Trading Lock"] = Properties.Resources._lock;
                 }
 
                 // General Settings icon
@@ -2818,7 +2818,7 @@ namespace Risk_Manager
             
             // Get icons for the status rows
             var settingsIcon = GetIconForTitle("Lock Settings") ?? GetIconForTitle("Locked");
-            var tradingIcon = GetIconForTitle("Manual Lock") ?? GetIconForTitle("Locked");
+            var tradingIcon = GetIconForTitle("Trading Lock") ?? GetIconForTitle("Locked");
             
             // Add rows for Settings Status and Trading Status with icons
             statusTableView.Rows.Add(settingsIcon, "Settings Status:", "Unlocked");
@@ -5468,7 +5468,7 @@ namespace Risk_Manager
             }
 
             // Handle Manual Lock specially
-            if (string.Equals(title, "Manual Lock", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(title, "Trading Lock", StringComparison.OrdinalIgnoreCase))
             {
                 return CreateManualLockDarkPanel();
             }
@@ -6284,29 +6284,30 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(lblAutoLockTime);
             
-            // Hour TextBox
-            var txtAutoLockHour = new TextBox
+            // Hour ComboBox
+            var cmbAutoLockHour = new ComboBox
             {
-                Text = "09",
+                DropDownStyle = ComboBoxStyle.DropDownList,
                 Left = 130,
                 Top = 295,
-                Width = 40,
+                Width = 60,
                 Height = 25,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                BackColor = DarkBackground,
+                BackColor = DarkerBackground,
                 ForeColor = TextWhite,
-                BorderStyle = BorderStyle.FixedSingle,
-                MaxLength = 2,
-                TextAlign = HorizontalAlignment.Center,
+                FlatStyle = FlatStyle.Flat,
                 Tag = "AutoLockHour"
             };
-            contentArea.Controls.Add(txtAutoLockHour);
+            for (int i = 1; i <= 12; i++)
+                cmbAutoLockHour.Items.Add(i.ToString("D2"));
+            cmbAutoLockHour.SelectedIndex = 8; // Default to 09
+            contentArea.Controls.Add(cmbAutoLockHour);
             
             // Colon Label
             var lblColon = new Label
             {
                 Text = ":",
-                Left = 175,
+                Left = 195,
                 Top = 295,
                 Width = 10,
                 Height = 25,
@@ -6317,31 +6318,49 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(lblColon);
             
-            // Minute TextBox
-            var txtAutoLockMinute = new TextBox
+            // Minute ComboBox
+            var cmbAutoLockMinute = new ComboBox
             {
-                Text = "30",
-                Left = 190,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Left = 210,
                 Top = 295,
-                Width = 40,
+                Width = 60,
                 Height = 25,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                BackColor = DarkBackground,
+                BackColor = DarkerBackground,
                 ForeColor = TextWhite,
-                BorderStyle = BorderStyle.FixedSingle,
-                MaxLength = 2,
-                TextAlign = HorizontalAlignment.Center,
+                FlatStyle = FlatStyle.Flat,
                 Tag = "AutoLockMinute"
             };
-            contentArea.Controls.Add(txtAutoLockMinute);
+            cmbAutoLockMinute.Items.AddRange(new object[] { "00", "15", "30", "45" });
+            cmbAutoLockMinute.SelectedIndex = 2; // Default to 30
+            contentArea.Controls.Add(cmbAutoLockMinute);
+            
+            // AM/PM ComboBox
+            var cmbAutoLockAmPm = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Left = 275,
+                Top = 295,
+                Width = 60,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Tag = "AutoLockAmPm"
+            };
+            cmbAutoLockAmPm.Items.AddRange(new object[] { "AM", "PM" });
+            cmbAutoLockAmPm.SelectedIndex = 0; // Default to AM
+            contentArea.Controls.Add(cmbAutoLockAmPm);
             
             // Time Format Help Label
             var lblTimeFormat = new Label
             {
-                Text = "(24-hour format: 00-23 for hours, e.g., 09:30 = 9:30 AM, 14:30 = 2:30 PM)",
-                Left = 240,
+                Text = "(e.g., 09:30 AM for market open)",
+                Left = 340,
                 Top = 295,
-                Width = 400,
+                Width = 200,
                 Height = 25,
                 Font = new Font("Segoe UI", 8, FontStyle.Italic),
                 ForeColor = TextGray,
@@ -6384,20 +6403,25 @@ namespace Risk_Manager
                         return;
                     }
                     
-                    // Validate hour and minute
-                    if (!int.TryParse(txtAutoLockHour.Text, out int hour) || hour < 0 || hour > 23)
+                    // Get hour, minute, and AM/PM values
+                    if (cmbAutoLockHour.SelectedItem == null || 
+                        cmbAutoLockMinute.SelectedItem == null ||
+                        cmbAutoLockAmPm.SelectedItem == null)
                     {
-                        MessageBox.Show("Please enter a valid hour (00-23).", "Invalid Hour", 
+                        MessageBox.Show("Please select hour, minute, and AM/PM.", "Invalid Time", 
                             MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
                     
-                    if (!int.TryParse(txtAutoLockMinute.Text, out int minute) || minute < 0 || minute > 59)
-                    {
-                        MessageBox.Show("Please enter a valid minute (00-59).", "Invalid Minute", 
-                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
+                    int hour = int.Parse(cmbAutoLockHour.SelectedItem.ToString());
+                    int minute = int.Parse(cmbAutoLockMinute.SelectedItem.ToString());
+                    string ampm = cmbAutoLockAmPm.SelectedItem.ToString();
+                    
+                    // Convert to 24-hour format
+                    if (ampm == "PM" && hour != 12)
+                        hour += 12;
+                    else if (ampm == "AM" && hour == 12)
+                        hour = 0;
                     
                     // Update auto-lock settings using public method
                     var lockTime = new TimeSpan(hour, minute, 0);
@@ -6438,8 +6462,19 @@ namespace Risk_Manager
                         if (settings.AutoLockSettingsTime.HasValue)
                         {
                             var time = settings.AutoLockSettingsTime.Value;
-                            txtAutoLockHour.Text = time.Hours.ToString("D2");
-                            txtAutoLockMinute.Text = time.Minutes.ToString("D2");
+                            int hour = time.Hours;
+                            int minute = time.Minutes;
+                            bool isPM = hour >= 12;
+                            
+                            // Convert to 12-hour format
+                            if (hour > 12) hour -= 12;
+                            if (hour == 0) hour = 12;
+                            
+                            cmbAutoLockHour.SelectedItem = hour.ToString("D2");
+                            // Round to nearest 15-minute interval
+                            int roundedMinute = (minute / 15) * 15;
+                            cmbAutoLockMinute.SelectedItem = roundedMinute.ToString("D2");
+                            cmbAutoLockAmPm.SelectedItem = isPM ? "PM" : "AM";
                         }
                     }
                 }
@@ -6477,7 +6512,7 @@ namespace Risk_Manager
             var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             // Title
-            var manualLockHeader = new CustomHeaderControl("Manual Lock", GetIconForTitle("Manual Lock"));
+            var manualLockHeader = new CustomHeaderControl("Trading Lock", GetIconForTitle("Trading Lock"));
             manualLockHeader.Dock = DockStyle.Top;
             manualLockHeader.Margin = new Padding(10, 0, 0, 0);
             contentPanel.Controls.Add(manualLockHeader);
@@ -6775,7 +6810,7 @@ namespace Risk_Manager
             // Save Auto-Lock Trading Settings Button
             var btnSaveAutoLockTrading = new Button
             {
-                Text = "SAVE AUTO-LOCK SETTINGS",
+                Text = "SAVE AUTO-LOCK TRADING SETTINGS",
                 Width = 250,
                 Height = 40,
                 Left = 0,
@@ -6989,14 +7024,15 @@ namespace Risk_Manager
             try
             {
                 CheckBox autoLockCheckbox = null;
-                TextBox hourTextBox = null;
-                TextBox minuteTextBox = null;
+                ComboBox hourComboBox = null;
+                ComboBox minuteComboBox = null;
+                ComboBox ampmComboBox = null;
                 
                 // Find the controls
-                FindAutoLockControls(parent, ref autoLockCheckbox, ref hourTextBox, ref minuteTextBox);
+                FindAutoLockControls(parent, ref autoLockCheckbox, ref hourComboBox, ref minuteComboBox, ref ampmComboBox);
                 
                 // If we found the controls, update them
-                if (autoLockCheckbox != null && hourTextBox != null && minuteTextBox != null)
+                if (autoLockCheckbox != null && hourComboBox != null && minuteComboBox != null && ampmComboBox != null)
                 {
                     var accountNumber = displayedAccountNumber;
                     if (string.IsNullOrEmpty(accountNumber)) return;
@@ -7012,14 +7048,26 @@ namespace Risk_Manager
                         if (settings.AutoLockSettingsTime.HasValue)
                         {
                             var time = settings.AutoLockSettingsTime.Value;
-                            hourTextBox.Text = time.Hours.ToString("D2");
-                            minuteTextBox.Text = time.Minutes.ToString("D2");
+                            int hour = time.Hours;
+                            int minute = time.Minutes;
+                            bool isPM = hour >= 12;
+                            
+                            // Convert to 12-hour format
+                            if (hour > 12) hour -= 12;
+                            if (hour == 0) hour = 12;
+                            
+                            hourComboBox.SelectedItem = hour.ToString("D2");
+                            // Round to nearest 15-minute interval
+                            int roundedMinute = (minute / 15) * 15;
+                            minuteComboBox.SelectedItem = roundedMinute.ToString("D2");
+                            ampmComboBox.SelectedItem = isPM ? "PM" : "AM";
                         }
                         else
                         {
                             // Default values if not set
-                            hourTextBox.Text = "09";
-                            minuteTextBox.Text = "30";
+                            hourComboBox.SelectedItem = "09";
+                            minuteComboBox.SelectedItem = "30";
+                            ampmComboBox.SelectedItem = "AM";
                         }
                     }
                 }
@@ -7033,7 +7081,7 @@ namespace Risk_Manager
         /// <summary>
         /// Helper method to find auto-lock controls by their tags.
         /// </summary>
-        private void FindAutoLockControls(Control parent, ref CheckBox checkbox, ref TextBox hourBox, ref TextBox minuteBox)
+        private void FindAutoLockControls(Control parent, ref CheckBox checkbox, ref ComboBox hourBox, ref ComboBox minuteBox, ref ComboBox ampmBox)
         {
             if (parent == null) return;
             
@@ -7043,18 +7091,20 @@ namespace Risk_Manager
                 {
                     checkbox = chk;
                 }
-                else if (control is TextBox txt)
+                else if (control is ComboBox cmb)
                 {
-                    if (txt.Tag?.ToString() == "AutoLockHour")
-                        hourBox = txt;
-                    else if (txt.Tag?.ToString() == "AutoLockMinute")
-                        minuteBox = txt;
+                    if (cmb.Tag?.ToString() == "AutoLockHour")
+                        hourBox = cmb;
+                    else if (cmb.Tag?.ToString() == "AutoLockMinute")
+                        minuteBox = cmb;
+                    else if (cmb.Tag?.ToString() == "AutoLockAmPm")
+                        ampmBox = cmb;
                 }
                 
                 // Recursively check child controls
                 if (control.Controls.Count > 0)
                 {
-                    FindAutoLockControls(control, ref checkbox, ref hourBox, ref minuteBox);
+                    FindAutoLockControls(control, ref checkbox, ref hourBox, ref minuteBox, ref ampmBox);
                 }
             }
         }
