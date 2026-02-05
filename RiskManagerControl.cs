@@ -1939,6 +1939,9 @@ namespace Risk_Manager
                 
                 // Update the main title with the account number
                 UpdateTitleWithAccountNumber();
+                
+                // Update column visibility in Account Summary grid
+                UpdateAccountSummaryColumnVisibility();
             }
             catch (Exception ex)
             {
@@ -3737,6 +3740,10 @@ namespace Risk_Manager
             statsGrid.CellPainting += StatsGrid_CellPainting;
 
             RefreshAccountsSummary();
+            
+            // Apply initial column visibility settings
+            UpdateAccountSummaryColumnVisibility();
+            
             statsRefreshTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             statsRefreshTimer.Tick += (s, e) => RefreshAccountsSummary();
             statsRefreshTimer.Start();
@@ -3746,6 +3753,56 @@ namespace Risk_Manager
             mainPanel.Controls.Add(statsGrid);
             mainPanel.Controls.Add(header);
             return mainPanel;
+        }
+
+        /// <summary>
+        /// Updates the visibility of columns in the Account Summary grid based on saved settings.
+        /// </summary>
+        private void UpdateAccountSummaryColumnVisibility()
+        {
+            if (statsGrid == null) return;
+
+            // Get current account settings
+            AccountSettings settings = null;
+            if (accountSelector != null && accountSelector.SelectedItem is Account selectedAcc)
+            {
+                var accountNumber = GetAccountIdentifier(selectedAcc);
+                settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
+            }
+
+            // If no settings, show all columns
+            if (settings == null) return;
+
+            // Define column mapping
+            var columnMappings = new[]
+            {
+                new { ColumnName = "Provider", PropertyName = "ShowProviderColumn" },
+                new { ColumnName = "Connection", PropertyName = "ShowConnectionColumn" },
+                new { ColumnName = "Type", PropertyName = "ShowTypeColumn" },
+                new { ColumnName = "Equity", PropertyName = "ShowEquityColumn" },
+                new { ColumnName = "OpenPnL", PropertyName = "ShowOpenPnLColumn" },
+                new { ColumnName = "ClosedPnL", PropertyName = "ShowClosedPnLColumn" },
+                new { ColumnName = "DailyPnL", PropertyName = "ShowDailyPnLColumn" },
+                new { ColumnName = "GrossPnL", PropertyName = "ShowGrossPnLColumn" },
+                new { ColumnName = "TrailingDrawdown", PropertyName = "ShowTrailingDrawdownColumn" },
+                new { ColumnName = "Positions", PropertyName = "ShowPositionsColumn" },
+                new { ColumnName = "Contracts", PropertyName = "ShowContractsColumn" },
+                new { ColumnName = "Status", PropertyName = "ShowStatusColumn" },
+                new { ColumnName = "Drawdown", PropertyName = "ShowDrawdownColumn" }
+            };
+
+            // Update column visibility using reflection
+            foreach (var mapping in columnMappings)
+            {
+                if (statsGrid.Columns[mapping.ColumnName] != null)
+                {
+                    var prop = typeof(AccountSettings).GetProperty(mapping.PropertyName);
+                    if (prop != null)
+                    {
+                        statsGrid.Columns[mapping.ColumnName].Visible = (bool)prop.GetValue(settings);
+                    }
+                }
+            }
         }
 
         private void RefreshAccountsSummary()
@@ -10959,6 +11016,143 @@ namespace Risk_Manager
                 Margin = new Padding(20, 0, 0, 10)
             };
             contentArea.Controls.Add(cardStyleInfoLabel);
+
+            // Divider
+            var divider4 = new Panel
+            {
+                Height = 2,
+                Width = 600,
+                BackColor = DarkerBackground,
+                Margin = new Padding(0, 10, 0, 20)
+            };
+            contentArea.Controls.Add(divider4);
+
+            // Account Summary Column Visibility Section
+            var columnVisibilitySectionLabel = new Label
+            {
+                Text = "Account Summary Columns",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            contentArea.Controls.Add(columnVisibilitySectionLabel);
+
+            // Info label for column visibility
+            var columnVisibilityInfoLabel = new Label
+            {
+                Text = "Show or hide columns in the Account Summary grid:",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            contentArea.Controls.Add(columnVisibilityInfoLabel);
+
+            // Create column visibility checkboxes in a grid layout
+            var columnCheckboxes = new Dictionary<string, CheckBox>();
+            var columnSettings = new[]
+            {
+                new { Name = "Provider", Property = "ShowProviderColumn", DisplayText = "Provider" },
+                new { Name = "Connection", Property = "ShowConnectionColumn", DisplayText = "Connection" },
+                new { Name = "Type", Property = "ShowTypeColumn", DisplayText = "Type" },
+                new { Name = "Equity", Property = "ShowEquityColumn", DisplayText = "Equity" },
+                new { Name = "OpenPnL", Property = "ShowOpenPnLColumn", DisplayText = "Open P&L" },
+                new { Name = "ClosedPnL", Property = "ShowClosedPnLColumn", DisplayText = "Closed P&L" },
+                new { Name = "DailyPnL", Property = "ShowDailyPnLColumn", DisplayText = "Daily P&L" },
+                new { Name = "GrossPnL", Property = "ShowGrossPnLColumn", DisplayText = "Gross P&L" },
+                new { Name = "TrailingDrawdown", Property = "ShowTrailingDrawdownColumn", DisplayText = "Trailing Drawdown" },
+                new { Name = "Positions", Property = "ShowPositionsColumn", DisplayText = "Positions" },
+                new { Name = "Contracts", Property = "ShowContractsColumn", DisplayText = "Contracts" },
+                new { Name = "Status", Property = "ShowStatusColumn", DisplayText = "Status" },
+                new { Name = "Drawdown", Property = "ShowDrawdownColumn", DisplayText = "Drawdown" }
+            };
+
+            // Load current settings
+            AccountSettings currentSettings = null;
+            if (accountSelector != null && accountSelector.SelectedItem is Account currentSelectedAcc)
+            {
+                var accountNumber = GetAccountIdentifier(currentSelectedAcc);
+                currentSettings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
+            }
+
+            // Create a TableLayoutPanel for grid layout (3 columns)
+            var checkboxGridPanel = new TableLayoutPanel
+            {
+                AutoSize = true,
+                ColumnCount = 3,
+                RowCount = 5, // 13 checkboxes distributed across 5 rows (5-4-4)
+                BackColor = CardBackground,
+                Margin = new Padding(20, 0, 0, 10),
+                Padding = new Padding(0)
+            };
+
+            // Set column styles for equal width
+            checkboxGridPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            checkboxGridPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            checkboxGridPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
+
+            int columnIndex = 0;
+            int rowIndex = 0;
+            foreach (var colSetting in columnSettings)
+            {
+                var checkbox = new CheckBox
+                {
+                    Text = colSetting.DisplayText,
+                    AutoSize = true,
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    BackColor = CardBackground,
+                    Margin = new Padding(0, 0, 10, 5),
+                    Tag = colSetting.Property
+                };
+
+                // Load saved setting using reflection
+                if (currentSettings != null)
+                {
+                    var prop = typeof(AccountSettings).GetProperty(colSetting.Property);
+                    if (prop != null)
+                    {
+                        checkbox.Checked = (bool)prop.GetValue(currentSettings);
+                    }
+                }
+                else
+                {
+                    // Default to checked when no settings exist
+                    checkbox.Checked = true;
+                }
+
+                checkbox.CheckedChanged += (s, e) =>
+                {
+                    if (accountSelector != null && accountSelector.SelectedItem is Account currentAccount)
+                    {
+                        var accountNumber = GetAccountIdentifier(currentAccount);
+                        var property = checkbox.Tag as string;
+                        if (!string.IsNullOrEmpty(property))
+                        {
+                            RiskManagerSettingsService.Instance.UpdateColumnVisibility(accountNumber, property, checkbox.Checked);
+                            
+                            // Apply column visibility changes
+                            UpdateAccountSummaryColumnVisibility();
+                        }
+                    }
+                };
+
+                columnCheckboxes[colSetting.Name] = checkbox;
+                checkboxGridPanel.Controls.Add(checkbox, columnIndex, rowIndex);
+
+                // Move to next cell (left to right, top to bottom)
+                columnIndex++;
+                if (columnIndex >= 3)
+                {
+                    columnIndex = 0;
+                    rowIndex++;
+                }
+            }
+
+            contentArea.Controls.Add(checkboxGridPanel);
 
             // Add controls in correct order for docking
             mainPanel.Controls.Add(contentArea);

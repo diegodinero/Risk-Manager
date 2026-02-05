@@ -443,6 +443,42 @@ namespace Risk_Manager.Data
         }
 
         /// <summary>
+        /// Updates a specific column visibility setting for an account.
+        /// </summary>
+        /// <param name="accountNumber">The account number to update</param>
+        /// <param name="propertyName">The name of the property to update (e.g., "ShowProviderColumn")</param>
+        /// <param name="visible">True to show the column, false to hide it</param>
+        public void UpdateColumnVisibility(string accountNumber, string propertyName, bool visible)
+        {
+            // Validate that the property is a column visibility property
+            var validColumnProperties = new HashSet<string>
+            {
+                "ShowProviderColumn", "ShowConnectionColumn", "ShowTypeColumn",
+                "ShowEquityColumn", "ShowOpenPnLColumn", "ShowClosedPnLColumn",
+                "ShowDailyPnLColumn", "ShowGrossPnLColumn", "ShowTrailingDrawdownColumn",
+                "ShowPositionsColumn", "ShowContractsColumn", "ShowStatusColumn",
+                "ShowDrawdownColumn"
+            };
+
+            if (!validColumnProperties.Contains(propertyName))
+            {
+                System.Diagnostics.Debug.WriteLine($"UpdateColumnVisibility: Invalid property name '{propertyName}'");
+                return;
+            }
+
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                var prop = typeof(AccountSettings).GetProperty(propertyName);
+                if (prop != null && prop.PropertyType == typeof(bool))
+                {
+                    prop.SetValue(settings, visible);
+                    SaveSettings(settings);
+                }
+            }
+        }
+
+        /// <summary>
         /// Copies all settings from one account to multiple target accounts.
         /// </summary>
         /// <param name="sourceAccountNumber">The account to copy settings from</param>
@@ -1356,6 +1392,21 @@ namespace Risk_Manager.Data
 
         // Card Display Style - when true (default), uses greyed out style; when false, uses x overlay
         public bool UseGreyedOutCardStyle { get; set; } = true;
+
+        // Account Summary Column Visibility
+        public bool ShowProviderColumn { get; set; } = true;
+        public bool ShowConnectionColumn { get; set; } = true;
+        public bool ShowTypeColumn { get; set; } = true;
+        public bool ShowEquityColumn { get; set; } = true;
+        public bool ShowOpenPnLColumn { get; set; } = true;
+        public bool ShowClosedPnLColumn { get; set; } = true;
+        public bool ShowDailyPnLColumn { get; set; } = true;
+        public bool ShowGrossPnLColumn { get; set; } = true;
+        public bool ShowTrailingDrawdownColumn { get; set; } = true;
+        public bool ShowPositionsColumn { get; set; } = true;
+        public bool ShowContractsColumn { get; set; } = true;
+        public bool ShowStatusColumn { get; set; } = true;
+        public bool ShowDrawdownColumn { get; set; } = true;
 
         // Daily Limits
         public decimal? DailyLossLimit { get; set; }
