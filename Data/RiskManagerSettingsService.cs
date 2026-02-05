@@ -1357,6 +1357,21 @@ namespace Risk_Manager.Data
         // Card Display Style - when true (default), uses greyed out style; when false, uses x overlay
         public bool UseGreyedOutCardStyle { get; set; } = true;
 
+        // Account Summary Column Visibility
+        public bool ShowProviderColumn { get; set; } = true;
+        public bool ShowConnectionColumn { get; set; } = true;
+        public bool ShowTypeColumn { get; set; } = true;
+        public bool ShowEquityColumn { get; set; } = true;
+        public bool ShowOpenPnLColumn { get; set; } = true;
+        public bool ShowClosedPnLColumn { get; set; } = true;
+        public bool ShowDailyPnLColumn { get; set; } = true;
+        public bool ShowGrossPnLColumn { get; set; } = true;
+        public bool ShowTrailingDrawdownColumn { get; set; } = true;
+        public bool ShowPositionsColumn { get; set; } = true;
+        public bool ShowContractsColumn { get; set; } = true;
+        public bool ShowStatusColumn { get; set; } = true;
+        public bool ShowDrawdownColumn { get; set; } = true;
+
         // Daily Limits
         public decimal? DailyLossLimit { get; set; }
         public decimal? DailyProfitTarget { get; set; }
