@@ -142,11 +142,11 @@ if (parentForm != null)
 4. User is directed to use the shutdown button
 
 ### Proper Shutdown Process
-1. User clicks the 🚪 shutdown button
+1. User clicks the 🚪 Shutdown button
 2. Confirmation dialog appears: "Are you sure you want to lock all accounts, settings, and FORCEFULLY close the application?"
 3. User confirms
 4. All accounts are locked
-5. "leave-get-out.wav" sound plays
+5. Notification sound plays (leave-get-out.wav), indicating shutdown initiation
 6. 5-second countdown dialog appears with cancel option
 7. After countdown completes, `AllowClose` is set to `true`
 8. Application closes gracefully

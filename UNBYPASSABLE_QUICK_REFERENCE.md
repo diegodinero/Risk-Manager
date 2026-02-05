@@ -103,5 +103,5 @@ This feature ensures:
 ## Technical Details
 - **Thread-safe**: Volatile keyword ensures proper memory visibility across threads
 - **Exception-safe**: All operations wrapped in try-catch
-- **UI-thread safe**: Form.Close() uses BeginInvoke
+- **UI thread safe**: Form.Close() uses BeginInvoke
 - **Minimal changes**: Only 2 files modified, ~45 lines added
