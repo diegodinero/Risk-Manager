@@ -7729,7 +7729,7 @@ namespace Risk_Manager
 
                 // Get all positions for this account
                 var accountPositions = core.Positions
-                    .Where(p => p != null && p.Account == account)
+                    .Where(p => p != null && p.Account == account && p.Quantity != 0)
                     .ToList();
 
                 foreach (var position in accountPositions)
@@ -8455,7 +8455,7 @@ namespace Risk_Manager
                 CancelAllWorkingOrdersForAccount(account, core);
 
                 var accountPositions = core.Positions
-                    .Where(p => p != null && p.Account == account)
+                    .Where(p => p != null && p.Account == account && p.Quantity != 0)
                     .ToList();
 
                 foreach (var position in accountPositions)
