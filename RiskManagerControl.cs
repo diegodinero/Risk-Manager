@@ -2306,6 +2306,32 @@ namespace Risk_Manager
             UpdateTitleWithAccountNumber();
         }
 
+        /// <summary>
+        /// Loads the journal icon from resources, with fallback to copy icon if not available
+        /// </summary>
+        private Image LoadJournalIcon()
+        {
+            try
+            {
+                // Try to load journal icon from file if Resources.Designer.cs hasn't been regenerated
+                var journalPath = System.IO.Path.Combine(
+                    System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location),
+                    "Resources", "journal.png");
+                
+                if (System.IO.File.Exists(journalPath))
+                {
+                    return Image.FromFile(journalPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Could not load journal.png: {ex.Message}");
+            }
+            
+            // Fallback to copy icon
+            return Properties.Resources.copy;
+        }
+
         // Add this helper method in the RiskManagerControl class (anywhere above CreateTopPanel)
         // LoadIcons and helper
         // LoadIcons and helper
@@ -2321,7 +2347,7 @@ namespace Risk_Manager
                 IconMap["Stats"] = Properties.Resources.stats;
                 IconMap["Type"] = Properties.Resources.type;
                 IconMap["Risk Overview"] = Properties.Resources.riskoverview;
-                IconMap["Trading Journal"] = Properties.Resources.copy; // Using copy icon as fallback
+                IconMap["Trading Journal"] = LoadJournalIcon(); // Load journal icon with fallback
                 IconMap["Positions"] = Properties.Resources.positions;
                 IconMap["Feature Toggles"] = Properties.Resources.featuretoggles;
                 IconMap["Copy Settings"] = Properties.Resources.copy;
@@ -2386,7 +2412,7 @@ namespace Risk_Manager
                 IconMap["📈"] = Properties.Resources.stats;
                 IconMap["📋"] = Properties.Resources.type;
                 IconMap["🔍"] = Properties.Resources.riskoverview;
-                IconMap["📓"] = Properties.Resources.copy; // Using copy icon as fallback for journal
+                IconMap["📓"] = LoadJournalIcon(); // Load journal icon with fallback
                 IconMap["⚙️"] = Properties.Resources.featuretoggles;
                 IconMap["🛡️"] = Properties.Resources.blocked;
                 IconMap["🔒"] = Properties.Resources._lock;
