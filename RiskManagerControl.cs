@@ -435,7 +435,7 @@ namespace Risk_Manager
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
         private static readonly string[] NavItems = new[]
         {
-            "📊 Accounts Summary", "📈 Stats", "📋 Type", "🔍 Risk Overview", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
+            "📊 Accounts Summary", "📈 Stats", "📋 Type", "🔍 Risk Overview", "📓 Trading Journal", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
             "🔒 Lock Settings", "🔒 Manual Lock", "⚙️ General Settings"
         };
 
@@ -492,6 +492,8 @@ namespace Risk_Manager
                     placeholder = CreateTypeSummaryPanel();
                 else if (name.EndsWith("Risk Overview"))
                     placeholder = CreateRiskOverviewPanel();
+                else if (name.EndsWith("Trading Journal"))
+                    placeholder = CreateTradingJournalPanel();
                 else if (name.EndsWith("Feature Toggles"))
                     placeholder = CreateFeatureTogglesPanel();
                 else if (name.EndsWith("Copy Settings"))
@@ -2313,6 +2315,7 @@ namespace Risk_Manager
                 IconMap["Stats"] = Properties.Resources.stats;
                 IconMap["Type"] = Properties.Resources.type;
                 IconMap["Risk Overview"] = Properties.Resources.riskoverview;
+                IconMap["Trading Journal"] = Properties.Resources.journal;
                 IconMap["Positions"] = Properties.Resources.positions;
                 IconMap["Feature Toggles"] = Properties.Resources.featuretoggles;
                 IconMap["Copy Settings"] = Properties.Resources.copy;
@@ -2377,6 +2380,7 @@ namespace Risk_Manager
                 IconMap["📈"] = Properties.Resources.stats;
                 IconMap["📋"] = Properties.Resources.type;
                 IconMap["🔍"] = Properties.Resources.riskoverview;
+                IconMap["📓"] = Properties.Resources.journal;
                 IconMap["⚙️"] = Properties.Resources.featuretoggles;
                 IconMap["🛡️"] = Properties.Resources.blocked;
                 IconMap["🔒"] = Properties.Resources._lock;
@@ -11861,6 +11865,355 @@ namespace Risk_Manager
             return $"{hour}:{minute:D2} {ampm}";
         }
 
+        /// <summary>
+        /// Creates the Trading Journal panel for logging and reviewing trades
+        /// </summary>
+        private Control CreateTradingJournalPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill, AutoScroll = true };
+
+            var header = new CustomHeaderControl("Trading Journal", GetIconForTitle("Trading Journal"));
+            header.Dock = DockStyle.Top;
+            header.Margin = new Padding(10, 0, 0, 0);
+            mainPanel.Controls.Add(header);
+
+            // Content area for the journal
+            var contentArea = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground,
+                Padding = new Padding(20),
+                AutoScroll = true
+            };
+
+            // Stats summary card
+            var statsCard = CreateStyledCard("Journal Statistics");
+            statsCard.Dock = DockStyle.Top;
+            statsCard.Height = 180;
+            
+            var statsLabelsPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                Padding = new Padding(10),
+                BackColor = CardBackground
+            };
+            
+            // Create stat labels
+            var totalTradesLabel = new Label { Text = "Total Trades: 0", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
+            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
+            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
+            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
+            
+            totalTradesLabel.Tag = "TotalTrades";
+            winRateLabel.Tag = "WinRate";
+            totalPLLabel.Tag = "TotalPL";
+            avgPLLabel.Tag = "AvgPL";
+            
+            statsLabelsPanel.Controls.Add(totalTradesLabel);
+            statsLabelsPanel.Controls.Add(winRateLabel);
+            statsLabelsPanel.Controls.Add(totalPLLabel);
+            statsLabelsPanel.Controls.Add(avgPLLabel);
+            
+            statsCard.Controls.Add(statsLabelsPanel);
+            contentArea.Controls.Add(statsCard);
+
+            // Spacer
+            contentArea.Controls.Add(new Panel { Height = 20, Dock = DockStyle.Top, BackColor = DarkBackground });
+
+            // Journal entries grid card
+            var journalCard = CreateStyledCard("Trade Log");
+            journalCard.Dock = DockStyle.Fill;
+            journalCard.Padding = new Padding(15);
+
+            // Buttons panel (Add, Edit, Delete)
+            var buttonsPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = CardBackground,
+                Padding = new Padding(5)
+            };
+
+            var addButton = new Button
+            {
+                Text = "➕ Add Trade",
+                Width = 120,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 150, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+            };
+            addButton.FlatAppearance.BorderSize = 0;
+            addButton.Click += AddTrade_Click;
+
+            var editButton = new Button
+            {
+                Text = "✏️ Edit",
+                Width = 100,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 100, 200),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+            };
+            editButton.FlatAppearance.BorderSize = 0;
+            editButton.Click += EditTrade_Click;
+
+            var deleteButton = new Button
+            {
+                Text = "🗑️ Delete",
+                Width = 100,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(200, 50, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+            };
+            deleteButton.FlatAppearance.BorderSize = 0;
+            deleteButton.Click += DeleteTrade_Click;
+
+            buttonsPanel.Controls.Add(addButton);
+            buttonsPanel.Controls.Add(editButton);
+            buttonsPanel.Controls.Add(deleteButton);
+
+            journalCard.Controls.Add(buttonsPanel);
+
+            // DataGridView for trades
+            var tradesGrid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                BackgroundColor = CardBackground,
+                GridColor = DarkerBackground,
+                BorderStyle = BorderStyle.None,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AllowUserToResizeRows = false,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+                RowHeadersVisible = false,
+                Tag = "JournalGrid"
+            };
+
+            tradesGrid.DefaultCellStyle.BackColor = CardBackground;
+            tradesGrid.DefaultCellStyle.ForeColor = TextWhite;
+            tradesGrid.DefaultCellStyle.SelectionBackColor = SelectedColor;
+            tradesGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
+            tradesGrid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
+            tradesGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
+            tradesGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+            // Add columns
+            tradesGrid.Columns.Add("Date", "Date");
+            tradesGrid.Columns.Add("Symbol", "Symbol");
+            tradesGrid.Columns.Add("Type", "Type");
+            tradesGrid.Columns.Add("Outcome", "Outcome");
+            tradesGrid.Columns.Add("PL", "P/L");
+            tradesGrid.Columns.Add("NetPL", "Net P/L");
+            tradesGrid.Columns.Add("RR", "R:R");
+            tradesGrid.Columns.Add("Model", "Model");
+            tradesGrid.Columns.Add("Notes", "Notes");
+
+            // Set column widths
+            tradesGrid.Columns["Date"].Width = 100;
+            tradesGrid.Columns["Symbol"].Width = 80;
+            tradesGrid.Columns["Type"].Width = 80;
+            tradesGrid.Columns["Outcome"].Width = 90;
+            tradesGrid.Columns["PL"].Width = 90;
+            tradesGrid.Columns["NetPL"].Width = 90;
+            tradesGrid.Columns["RR"].Width = 60;
+            tradesGrid.Columns["Model"].Width = 120;
+
+            journalCard.Controls.Add(tradesGrid);
+            contentArea.Controls.Add(journalCard);
+            mainPanel.Controls.Add(contentArea);
+
+            // Store reference to grid for later access
+            tradesGrid.Name = "TradesGrid";
+            
+            // Load initial data
+            RefreshJournalData(tradesGrid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel);
+
+            return mainPanel;
+        }
+
+        // Event handlers for Trading Journal
+        private void AddTrade_Click(object sender, EventArgs e)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var dialog = new TradeEntryDialog(null, accountNumber))
+            {
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    RefreshJournalDataForCurrentAccount();
+                }
+            }
+        }
+
+        private void EditTrade_Click(object sender, EventArgs e)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var grid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
+            if (grid == null || grid.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select a trade to edit.", "No Trade Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var tradeId = (Guid)grid.SelectedRows[0].Tag;
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+            var trade = trades.FirstOrDefault(t => t.Id == tradeId);
+
+            if (trade != null)
+            {
+                using (var dialog = new TradeEntryDialog(trade, accountNumber))
+                {
+                    if (dialog.ShowDialog() == DialogResult.OK)
+                    {
+                        RefreshJournalDataForCurrentAccount();
+                    }
+                }
+            }
+        }
+
+        private void DeleteTrade_Click(object sender, EventArgs e)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var grid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
+            if (grid == null || grid.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select a trade to delete.", "No Trade Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var result = MessageBox.Show("Are you sure you want to delete this trade?", "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result == DialogResult.Yes)
+            {
+                var tradeId = (Guid)grid.SelectedRows[0].Tag;
+                TradingJournalService.Instance.DeleteTrade(accountNumber, tradeId);
+                RefreshJournalDataForCurrentAccount();
+            }
+        }
+
+        private void RefreshJournalDataForCurrentAccount()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return;
+
+            var grid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
+            var totalTradesLabel = FindControlByTag(contentPanel, "TotalTrades") as Label;
+            var winRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
+            var totalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
+            var avgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
+
+            if (grid != null)
+            {
+                RefreshJournalData(grid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel);
+            }
+        }
+
+        private void RefreshJournalData(DataGridView grid, Label totalTradesLabel, Label winRateLabel, Label totalPLLabel, Label avgPLLabel)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return;
+
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+            var stats = TradingJournalService.Instance.GetStats(accountNumber);
+
+            // Update grid
+            grid.Rows.Clear();
+            foreach (var trade in trades)
+            {
+                var rowIndex = grid.Rows.Add(
+                    trade.Date.ToShortDateString(),
+                    trade.Symbol,
+                    trade.TradeType,
+                    trade.Outcome,
+                    FormatNumeric(trade.PL),
+                    FormatNumeric(trade.NetPL),
+                    trade.RR.ToString("F2"),
+                    trade.Model,
+                    trade.Notes?.Length > 30 ? trade.Notes.Substring(0, 30) + "..." : trade.Notes
+                );
+                grid.Rows[rowIndex].Tag = trade.Id;
+
+                // Color code the outcome
+                if (trade.Outcome?.ToLower() == "win")
+                {
+                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.LimeGreen;
+                }
+                else if (trade.Outcome?.ToLower() == "loss")
+                {
+                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.Red;
+                }
+            }
+
+            // Update stats labels
+            if (totalTradesLabel != null)
+                totalTradesLabel.Text = $"Total Trades: {stats.TotalTrades} (W:{stats.Wins} L:{stats.Losses} BE:{stats.Breakevens})";
+            if (winRateLabel != null)
+                winRateLabel.Text = $"Win Rate: {stats.WinRate:F1}%";
+            if (totalPLLabel != null)
+            {
+                totalPLLabel.Text = $"Total P/L: {FormatNumeric(stats.TotalPL)}";
+                totalPLLabel.ForeColor = stats.TotalPL >= 0 ? Color.LimeGreen : Color.Red;
+            }
+            if (avgPLLabel != null)
+            {
+                avgPLLabel.Text = $"Avg P/L: {FormatNumeric(stats.AveragePL)}";
+                avgPLLabel.ForeColor = stats.AveragePL >= 0 ? Color.LimeGreen : Color.Red;
+            }
+        }
+
+        private Control FindControlByName(Control parent, string name)
+        {
+            if (parent.Name == name) return parent;
+            foreach (Control child in parent.Controls)
+            {
+                var found = FindControlByName(child, name);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        private Control FindControlByTag(Control parent, string tag)
+        {
+            if (parent.Tag != null && parent.Tag.ToString() == tag) return parent;
+            foreach (Control child in parent.Controls)
+            {
+                var found = FindControlByTag(child, tag);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
         // Helper methods to get risk setting values for Risk Overview
         private string GetAccountLockStatus()
         {
@@ -13977,27 +14330,6 @@ namespace Risk_Manager
             {
                 lastPoint = Point.Empty;
             };
-        }
-
-        // Helper method to find a control by its Tag property (recursive search)
-        private Control FindControlByTag(Control parent, string tagValue)
-        {
-            if (parent == null || string.IsNullOrEmpty(tagValue))
-                return null;
-
-            // Check if this control has the matching tag
-            if (parent.Tag is string tag && tag == tagValue)
-                return parent;
-
-            // Recursively search children
-            foreach (Control child in parent.Controls)
-            {
-                var found = FindControlByTag(child, tagValue);
-                if (found != null)
-                    return found;
-            }
-
-            return null;
         }
 
         private void ApplyValueLabelColoring(Control root)
