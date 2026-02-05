@@ -6596,6 +6596,25 @@ namespace Risk_Manager
                     return;
                 }
 
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    MessageBox.Show("Settings service not initialized.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Check if this lock can be bypassed
+                if (!settingsService.CanBypassTradingLock(accountNumber))
+                {
+                    var blockReason = settingsService.GetTradingLockBypassBlockReason(accountNumber);
+                    MessageBox.Show(
+                        blockReason ?? "This trading lock cannot be manually bypassed.",
+                        "Cannot Unlock Trading",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
                 // Find the account by the cached identifier
                 var core = Core.Instance;
                 if (core == null)
@@ -6618,7 +6637,6 @@ namespace Risk_Manager
                     unlockMethod.Invoke(core, new object[] { targetAccount });
                     
                     // Update the settings service to track the unlock status
-                    var settingsService = RiskManagerSettingsService.Instance;
                     if (settingsService.IsInitialized)
                     {
                         settingsService.SetTradingLock(accountNumber, false, "Manual unlock via Unlock Trading button");
@@ -8213,7 +8231,8 @@ namespace Risk_Manager
                 TimeSpan lockDuration = CalculateTimeUntil5PMET();
                 
                 var settingsService = RiskManagerSettingsService.Instance;
-                settingsService.SetTradingLock(accountId, true, reason, lockDuration);
+                // Mark this as an automated rule violation lock - cannot be manually bypassed
+                settingsService.SetTradingLock(accountId, true, reason, lockDuration, Risk_Manager.Data.LockSource.AutomatedRuleViolation);
 
                 // Lock the account in Core API
                 try
@@ -8222,7 +8241,7 @@ namespace Risk_Manager
                     if (lockMethod != null)
                     {
                         lockMethod.Invoke(core, new object[] { account });
-                        System.Diagnostics.Debug.WriteLine($"Locked account {accountId} in Core API");
+                        System.Diagnostics.Debug.WriteLine($"Locked account {accountId} in Core API due to rule violation");
                     }
                 }
                 catch (Exception ex)
@@ -8341,7 +8360,8 @@ namespace Risk_Manager
                 TimeSpan lockDuration = CalculateTimeUntil5PMETFriday();
                 
                 var settingsService = RiskManagerSettingsService.Instance;
-                settingsService.SetTradingLock(accountId, true, reason, lockDuration);
+                // Mark this as an automated rule violation lock - cannot be manually bypassed
+                settingsService.SetTradingLock(accountId, true, reason, lockDuration, Risk_Manager.Data.LockSource.AutomatedRuleViolation);
 
                 // Lock the account in Core API
                 try
@@ -8350,7 +8370,7 @@ namespace Risk_Manager
                     if (lockMethod != null)
                     {
                         lockMethod.Invoke(core, new object[] { account });
-                        System.Diagnostics.Debug.WriteLine($"Locked account {accountId} in Core API until Friday 5 PM ET");
+                        System.Diagnostics.Debug.WriteLine($"Locked account {accountId} in Core API until Friday 5 PM ET due to rule violation");
                     }
                 }
                 catch (Exception ex)
