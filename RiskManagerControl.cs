@@ -12658,7 +12658,8 @@ namespace Risk_Manager
             {
                 Name = name,
                 Description = descBox?.Text ?? "",
-                ImageName = imageNameLabel?.Text ?? ""
+                ImageName = imageNameLabel?.Text ?? "",
+                CreatedAt = DateTime.Now
             };
 
             // Get image data if present
@@ -12680,11 +12681,14 @@ namespace Risk_Manager
                 if (Guid.TryParse(modelIdLabel.Text, out Guid modelId))
                 {
                     model.Id = modelId;
-                    // Preserve trade count when editing
+                    // Preserve trade count and created date when editing
                     var existing = TradingJournalService.Instance.GetModels(accountNumber)
                         .FirstOrDefault(m => m.Id == modelId);
                     if (existing != null)
+                    {
                         model.TradeCount = existing.TradeCount;
+                        model.CreatedAt = existing.CreatedAt;
+                    }
                 }
             }
 
