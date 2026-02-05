@@ -86,6 +86,7 @@ Full-featured form for adding/editing trades with fields for:
 - **Theme Support**: All colors adapt to Dark/Yellow/White/Blue themes
 - **Consistent Styling**: Matches existing Risk Manager card and button styles
 - **Account Switching**: Journal updates when switching between accounts
+- **Icon**: Currently uses copy.png as fallback (journal.png resource not yet in auto-generated Resources.Designer.cs)
 
 ## File Structure
 ```
