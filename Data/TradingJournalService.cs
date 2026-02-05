@@ -342,6 +342,19 @@ namespace Risk_Manager.Data
                 SaveNotes();
             }
         }
+
+        /// <summary>
+        /// Represents a trading journal note
+        /// </summary>
+        public class JournalNote
+        {
+            public Guid Id { get; set; } = Guid.NewGuid();
+            public DateTime CreatedAt { get; set; } = DateTime.Now;
+            public string Title { get; set; } = "";
+            public string Content { get; set; } = "";
+            public string ImagePath { get; set; } = "";
+            public string Account { get; set; } = "";
+        }
     }
 
     /// <summary>
@@ -360,18 +373,5 @@ namespace Risk_Manager.Data
         public decimal LargestLoss { get; set; }
         public decimal AverageWin { get; set; }
         public decimal AverageLoss { get; set; }
-    }
-
-    /// <summary>
-    /// Represents a trading journal note
-    /// </summary>
-    public class JournalNote
-    {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public string Title { get; set; } = "";
-        public string Content { get; set; } = "";
-        public string ImagePath { get; set; } = "";
-        public string Account { get; set; } = "";
     }
 }
