@@ -443,6 +443,26 @@ namespace Risk_Manager.Data
         }
 
         /// <summary>
+        /// Updates a specific column visibility setting for an account.
+        /// </summary>
+        /// <param name="accountNumber">The account number to update</param>
+        /// <param name="propertyName">The name of the property to update (e.g., "ShowProviderColumn")</param>
+        /// <param name="visible">True to show the column, false to hide it</param>
+        public void UpdateColumnVisibility(string accountNumber, string propertyName, bool visible)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                var prop = typeof(AccountSettings).GetProperty(propertyName);
+                if (prop != null && prop.PropertyType == typeof(bool))
+                {
+                    prop.SetValue(settings, visible);
+                    SaveSettings(settings);
+                }
+            }
+        }
+
+        /// <summary>
         /// Copies all settings from one account to multiple target accounts.
         /// </summary>
         /// <param name="sourceAccountNumber">The account to copy settings from</param>

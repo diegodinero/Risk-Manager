@@ -10997,9 +10997,9 @@ namespace Risk_Manager
 
             // Load current settings
             AccountSettings currentSettings = null;
-            if (accountSelector != null && accountSelector.SelectedItem is Account selectedAcc)
+            if (accountSelector != null && accountSelector.SelectedItem is Account currentSelectedAcc)
             {
-                var accountNumber = GetAccountIdentifier(selectedAcc);
+                var accountNumber = GetAccountIdentifier(currentSelectedAcc);
                 currentSettings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
             }
 
@@ -11036,19 +11036,13 @@ namespace Risk_Manager
                     if (accountSelector != null && accountSelector.SelectedItem is Account currentAccount)
                     {
                         var accountNumber = GetAccountIdentifier(currentAccount);
-                        var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
-                        if (settings != null)
+                        var property = checkbox.Tag as string;
+                        if (!string.IsNullOrEmpty(property))
                         {
-                            var property = checkbox.Tag as string;
-                            var prop = typeof(AccountSettings).GetProperty(property);
-                            if (prop != null)
-                            {
-                                prop.SetValue(settings, checkbox.Checked);
-                                RiskManagerSettingsService.Instance.SaveSettings(accountNumber, settings);
-                                
-                                // Apply column visibility changes
-                                UpdateAccountSummaryColumnVisibility();
-                            }
+                            RiskManagerSettingsService.Instance.UpdateColumnVisibility(accountNumber, property, checkbox.Checked);
+                            
+                            // Apply column visibility changes
+                            UpdateAccountSummaryColumnVisibility();
                         }
                     }
                 };
