@@ -450,6 +450,22 @@ namespace Risk_Manager.Data
         /// <param name="visible">True to show the column, false to hide it</param>
         public void UpdateColumnVisibility(string accountNumber, string propertyName, bool visible)
         {
+            // Validate that the property is a column visibility property
+            var validColumnProperties = new HashSet<string>
+            {
+                "ShowProviderColumn", "ShowConnectionColumn", "ShowTypeColumn",
+                "ShowEquityColumn", "ShowOpenPnLColumn", "ShowClosedPnLColumn",
+                "ShowDailyPnLColumn", "ShowGrossPnLColumn", "ShowTrailingDrawdownColumn",
+                "ShowPositionsColumn", "ShowContractsColumn", "ShowStatusColumn",
+                "ShowDrawdownColumn"
+            };
+
+            if (!validColumnProperties.Contains(propertyName))
+            {
+                System.Diagnostics.Debug.WriteLine($"UpdateColumnVisibility: Invalid property name '{propertyName}'");
+                return;
+            }
+
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
             {
