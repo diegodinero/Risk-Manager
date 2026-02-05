@@ -6,13 +6,22 @@ The Settings Lock feature provides time-based protection for application setting
 
 ## Key Features
 
-### 1. Time-Based Settings Lock (Until 5 PM ET)
+### 1. Manual Time-Based Settings Lock (Until 5 PM ET)
 
 - **Automatic Duration Calculation**: When activated, the lock automatically calculates the time remaining until 5:00 PM ET
 - **Timezone Handling**: Uses TimeZoneInfo for accurate Eastern Time conversion, handling Daylight Saving Time (DST) automatically
 - **Auto-Unlock**: Lock automatically expires at 5:00 PM ET without manual intervention
 
-### 2. Complete Settings Protection
+### 2. Automated Daily Settings Lock (NEW)
+
+- **Scheduled Lock Time**: Configure a specific time in Eastern Time when settings should automatically lock each day
+- **Common Use Case**: Set to 9:30 AM ET for market open to prevent changes during trading hours
+- **Per-Account Configuration**: Each account can have its own automated lock time
+- **Enable/Disable Toggle**: Easy on/off control without losing the configured time
+- **Persistent Settings**: Configuration saved with account settings and survives application restarts
+- **Same Unlock Time**: Automated locks also unlock at 5:00 PM ET like manual locks
+
+### 3. Complete Settings Protection
 
 When settings are locked, the following controls are disabled:
 - Daily Loss Limit settings
@@ -46,6 +55,8 @@ Even when settings are locked, users can still:
 Located in: **⚙️ Settings Lock** tab
 
 **Components:**
+
+#### Manual Lock Section
 1. **Status Display**: Shows current lock status with remaining time
 2. **Lock Button**: "LOCK SETTINGS FOR REST OF DAY (Until 5 PM ET)" - Amber colored
 3. **Unlock Button**: "UNLOCK SETTINGS" - Green colored
@@ -55,6 +66,19 @@ Located in: **⚙️ Settings Lock** tab
 2. Click "LOCK SETTINGS FOR REST OF DAY" to activate the lock
 3. Confirmation shows the exact duration (e.g., "Settings locked until 5:00 PM ET. Duration: 3h 45m")
 4. To unlock early, click "UNLOCK SETTINGS"
+
+#### Automated Daily Lock Section
+5. **Enable Checkbox**: "Enable Automated Lock" - Toggle automated locking on/off
+6. **Time Input**: Hour and minute fields for Eastern Time (e.g., 09:30)
+7. **Save Button**: "SAVE AUTO-LOCK SETTINGS" - Blue colored
+
+**Usage:**
+1. Select an account from the dropdown
+2. Check "Enable Automated Lock" to activate the feature
+3. Set the desired lock time in Eastern Time (e.g., 09:30 for market open)
+4. Click "SAVE AUTO-LOCK SETTINGS"
+5. Settings will automatically lock every day at the configured time
+6. Auto-lock uses the same 5 PM ET unlock time as manual locks
 
 ## Technical Implementation
 
@@ -130,7 +154,93 @@ if (service.AreSettingsLocked(accountNumber))
 }
 ```
 
-## Timezone Handling
+## Automated Daily Lock Implementation
+
+### Overview
+
+The automated daily lock feature allows users to configure settings to automatically lock at a specific time each day, eliminating the need to manually lock settings before trading hours.
+
+### Data Model
+
+**AccountSettings Properties:**
+```csharp
+public bool AutoLockSettingsEnabled { get; set; } = false;
+public TimeSpan? AutoLockSettingsTime { get; set; }
+```
+
+These properties are persisted in the account's JSON settings file.
+
+### Trigger Logic
+
+**ShouldTriggerAutoLock Method:**
+- Runs every second as part of the `CheckExpiredLocks()` timer
+- Converts current UTC time to Eastern Time
+- Checks if current time matches the configured auto-lock time (within 1-minute window)
+- Returns true only once when the time window is reached
+- Returns false if settings are already locked (prevents redundant locking)
+
+**CheckExpiredLocks Enhancement:**
+```csharp
+// Check if automated lock should trigger (only if not already locked)
+if (!isSettingsLocked && settings?.AutoLockSettingsEnabled == true 
+    && settings?.AutoLockSettingsTime.HasValue == true)
+{
+    if (ShouldTriggerAutoLock(settings.AutoLockSettingsTime.Value))
+    {
+        // Trigger auto-lock until 5 PM ET
+        var duration = RiskManagerSettingsService.CalculateDurationUntil5PMET();
+        settingsService.SetSettingsLock(accountNumber, true, 
+            "Auto-locked at scheduled time", duration);
+    }
+}
+```
+
+### User Interface Controls
+
+**Automated Lock Section Components:**
+1. **Section Title**: "Automated Daily Lock"
+2. **Description**: Explains the feature purpose
+3. **Enable Checkbox**: Toggle for enabling/disabling automated lock
+4. **Time Input Fields**:
+   - Hour text box (00-23)
+   - Minute text box (00-59)
+   - Format hint label showing HH:MM in Eastern Time
+5. **Save Button**: Persists configuration to account settings
+
+**Dynamic Updates:**
+- When account selection changes, `UpdateAutoLockControlsRecursive()` is called
+- Finds auto-lock controls by their tags ("AutoLockEnabled", "AutoLockHour", "AutoLockMinute")
+- Loads and displays the saved configuration for the selected account
+
+### Configuration Workflow
+
+1. User selects an account
+2. User checks "Enable Automated Lock"
+3. User enters desired time (e.g., 09:30 for market open)
+4. User clicks "SAVE AUTO-LOCK SETTINGS"
+5. Settings are validated and saved to account JSON
+6. Every second thereafter, timer checks if it's time to trigger the lock
+7. When time matches, settings automatically lock until 5 PM ET
+8. Next day, the process repeats
+
+### Example Scenarios
+
+**Scenario 1: Market Open Lock**
+- Configure: Enabled, 09:30 ET
+- Behavior: Every trading day at 9:30 AM ET, settings automatically lock
+- Unlock: Automatic at 5:00 PM ET
+
+**Scenario 2: Pre-Market Lock**
+- Configure: Enabled, 08:00 ET
+- Behavior: Settings lock before market open for extra protection
+- Unlock: Automatic at 5:00 PM ET
+
+**Scenario 3: Disable After Hours Trading Changes**
+- Configure: Enabled, 16:00 ET (4:00 PM)
+- Behavior: Prevents end-of-day settings changes
+- Unlock: Automatic at 5:00 PM ET (1 hour later)
+
+### Timezone Handling
 
 ### Eastern Time (ET) Conversion
 
@@ -204,10 +314,23 @@ This allows emergency trading locks even when settings are locked for the day.
 
 ## User Experience Flow
 
-### Normal Day Flow
+### Normal Day Flow (Manual Lock)
 
 1. **Morning (before trading)**: User configures risk settings
-2. **9:30 AM**: User locks settings for rest of day
+2. **9:30 AM**: User manually locks settings for rest of day
+3. **During Trading Hours**: User can only lock/unlock trading, cannot modify settings
+4. **5:00 PM ET**: Lock automatically expires
+5. **After 5 PM**: User can modify settings for next trading day
+
+### Normal Day Flow (Automated Lock)
+
+1. **Previous Day or Setup**: User configures auto-lock for 9:30 AM ET and saves
+2. **Next Day - Before 9:30 AM**: User can configure risk settings
+3. **9:30 AM ET**: Settings automatically lock (no user action needed)
+4. **During Trading Hours**: User can only lock/unlock trading, cannot modify settings
+5. **5:00 PM ET**: Lock automatically expires
+6. **After 5 PM**: User can modify settings for next trading day
+7. **Following Days**: Process repeats daily at 9:30 AM automatically
 3. **During Trading Hours**: User can only lock/unlock trading, cannot modify settings
 4. **5:00 PM ET**: Lock automatically expires
 5. **After 5 PM**: User can modify settings for next trading day
@@ -219,14 +342,16 @@ This allows emergency trading locks even when settings are locked for the day.
 3. **Solution**: Use "Lock Trading" button (still available)
 4. **Result**: Trading stopped, but settings remain locked for protection
 
-## Future Enhancements (Not Implemented)
+## Future Enhancements
 
 Potential improvements could include:
-- Custom lock times (not just 5 PM)
-- Multiple lock schedules
+- Multiple lock schedules per day
+- Different unlock times (not just 5 PM)
+- Weekend lock schedules
 - Role-based lock override permissions
 - Lock templates for different account types
-- Email notifications when locks expire
+- Email notifications when locks expire or trigger
+- Holiday schedule support (skip auto-lock on market holidays)
 
 ## Testing Recommendations
 
@@ -242,17 +367,27 @@ Potential improvements could include:
    - [ ] Wait for lock to expire (or test with shorter duration)
    - [ ] Verify auto-unlock at expiration time
 
-3. **Timezone Handling**
+3. **Automated Daily Lock**
+   - [ ] Configure auto-lock time (e.g., current time + 2 minutes)
+   - [ ] Enable automated lock and save settings
+   - [ ] Wait for configured time and verify automatic locking
+   - [ ] Verify lock reason shows "Auto-locked at scheduled time"
+   - [ ] Switch accounts and verify each has independent configuration
+   - [ ] Disable auto-lock, save, and verify no automatic locking occurs
+   - [ ] Close and reopen application, verify auto-lock settings persist
+
+4. **Timezone Handling**
    - [ ] Test on systems in different timezones
-   - [ ] Verify ET conversion is correct
+   - [ ] Verify ET conversion is correct for both manual and auto-lock
    - [ ] Test during DST transition periods
 
-4. **UI Updates**
+5. **UI Updates**
    - [ ] Verify badge shows "Settings Locked" in red
    - [ ] Verify status label shows remaining time
    - [ ] Verify status updates every second
+   - [ ] Verify auto-lock controls load correctly on account change
 
-5. **Account Switching**
+6. **Account Switching**
    - [ ] Lock settings on Account A
    - [ ] Switch to Account B (should be unlocked)
    - [ ] Switch back to Account A (should still be locked)
