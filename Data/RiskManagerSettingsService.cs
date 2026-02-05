@@ -1077,14 +1077,14 @@ namespace Risk_Manager.Data
         /// Automated locks from rule violations cannot be bypassed.
         /// </summary>
         /// <param name="accountNumber">The account number to check</param>
-        /// <returns>True if the lock can be manually unlocked, False if it's an automated lock that must expire</returns>
+        /// <returns>True if the lock can be manually unlocked or no lock exists, False if it's an automated lock that must expire</returns>
         public bool CanBypassTradingLock(string accountNumber)
         {
             var settings = GetSettings(accountNumber);
             if (settings?.TradingLock == null || !settings.TradingLock.IsLocked)
-                return true; // Not locked, so can "bypass" (no lock to bypass)
+                return true; // Not locked, so manual unlock operation is allowed (no-op)
             
-            // Check if this is an automated lock
+            // Check if this is an automated lock that cannot be bypassed
             return !settings.TradingLock.IsAutoLocked;
         }
         
@@ -1110,8 +1110,12 @@ namespace Risk_Manager.Data
             if (remainingTime.HasValue && remainingTime.Value > TimeSpan.Zero)
             {
                 var ts = remainingTime.Value;
+                // Use complete days and remaining hours/minutes for accurate display
                 if (ts.TotalDays >= 1)
-                    timeMessage = $" Lock expires in {ts.Days}d {ts.Hours}h {ts.Minutes}m.";
+                {
+                    int days = (int)Math.Floor(ts.TotalDays);
+                    timeMessage = $" Lock expires in {days}d {ts.Hours}h {ts.Minutes}m.";
+                }
                 else if (ts.TotalHours >= 1)
                     timeMessage = $" Lock expires in {ts.Hours}h {ts.Minutes}m.";
                 else if (ts.TotalMinutes >= 1)
