@@ -13713,15 +13713,49 @@ namespace Risk_Manager
             var accountNumber = GetSelectedAccountNumber();
             if (string.IsNullOrEmpty(accountNumber)) return;
 
-            var grid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
-            var totalTradesLabel = FindControlByTag(contentPanel, "TotalTrades") as Label;
-            var winRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
-            var totalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
-            var avgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
-
-            if (grid != null)
+            // Refresh based on current journal section
+            switch (currentJournalSection)
             {
-                RefreshJournalData(grid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel);
+                case "Trade Log":
+                    // Refresh trade log grid and stats
+                    var grid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
+                    var totalTradesLabel = FindControlByTag(contentPanel, "TotalTrades") as Label;
+                    var winRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
+                    var totalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
+                    var avgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
+                    if (grid != null)
+                    {
+                        RefreshJournalData(grid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel);
+                    }
+                    break;
+                    
+                case "Trading Models":
+                    // Refresh trading models list
+                    RefreshModelsForCurrentAccount();
+                    break;
+                    
+                case "Notes":
+                    // Refresh notes list
+                    RefreshNotesForCurrentAccount();
+                    break;
+                    
+                case "Calendar":
+                case "Dashboard":
+                    // These sections don't need refresh (placeholders)
+                    break;
+                    
+                default:
+                    // Default to Trade Log if currentJournalSection is not set
+                    var defaultGrid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
+                    var defaultTotalTradesLabel = FindControlByTag(contentPanel, "TotalTrades") as Label;
+                    var defaultWinRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
+                    var defaultTotalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
+                    var defaultAvgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
+                    if (defaultGrid != null)
+                    {
+                        RefreshJournalData(defaultGrid, defaultTotalTradesLabel, defaultWinRateLabel, defaultTotalPLLabel, defaultAvgPLLabel);
+                    }
+                    break;
             }
         }
 
