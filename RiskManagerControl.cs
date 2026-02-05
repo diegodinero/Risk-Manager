@@ -12697,11 +12697,6 @@ namespace Risk_Manager
             // Hide form and refresh list
             ToggleModelForm();
             RefreshModelsForCurrentAccount();
-            
-            // Debug: Verify models were saved
-            var savedModels = TradingJournalService.Instance.GetModels(accountNumber);
-            MessageBox.Show($"Saved model '{model.Name}'. Total models for account: {savedModels.Count}", 
-                "Debug Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
@@ -12711,19 +12706,13 @@ namespace Risk_Manager
         {
             if (journalContentPanel == null)
             {
-                MessageBox.Show("journalContentPanel is null!", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             var modelsList = FindControlByTag(journalContentPanel, "ModelsList") as FlowLayoutPanel;
             if (modelsList != null)
             {
-                MessageBox.Show("Found ModelsList panel, refreshing...", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 RefreshModelsList(modelsList);
-            }
-            else
-            {
-                MessageBox.Show("ModelsList panel not found!", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -12740,30 +12729,27 @@ namespace Risk_Manager
             }
 
             var models = TradingJournalService.Instance.GetModels(accountNumber);
-            MessageBox.Show($"RefreshModelsList: Found {models.Count} models\njournalContentPanel.Width = {journalContentPanel?.Width ?? 0}\nlistPanel.Width = {listPanel.Width}", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
             
             listPanel.SuspendLayout();
             listPanel.Controls.Clear();
 
             foreach (var model in models)
             {
-                var modelCard = CreateModelCard(model);
-                MessageBox.Show($"Created card for '{model.Name}'\nCard Width: {modelCard.Width}\nCard Height: {modelCard.Height}\nCard Controls: {modelCard.Controls.Count}", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                var modelCard = CreateModelCard(model, listPanel);
                 listPanel.Controls.Add(modelCard);
             }
 
             listPanel.ResumeLayout();
-            MessageBox.Show($"After adding all cards, listPanel.Controls.Count = {listPanel.Controls.Count}", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
         /// Creates a trading model card
         /// </summary>
-        private Panel CreateModelCard(TradingJournalService.TradingModel model)
+        private Panel CreateModelCard(TradingJournalService.TradingModel model, FlowLayoutPanel listPanel)
         {
             var card = new Panel
             {
-                Width = journalContentPanel.Width - 60,
+                Width = listPanel.ClientWidth - 30,
                 Height = 120,
                 BackColor = CardBackground,
                 Padding = new Padding(15),
