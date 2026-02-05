@@ -12740,16 +12740,20 @@ namespace Risk_Manager
             }
 
             var models = TradingJournalService.Instance.GetModels(accountNumber);
+            MessageBox.Show($"RefreshModelsList: Found {models.Count} models\njournalContentPanel.Width = {journalContentPanel?.Width ?? 0}\nlistPanel.Width = {listPanel.Width}", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            
             listPanel.SuspendLayout();
             listPanel.Controls.Clear();
 
             foreach (var model in models)
             {
                 var modelCard = CreateModelCard(model);
+                MessageBox.Show($"Created card for '{model.Name}'\nCard Width: {modelCard.Width}\nCard Height: {modelCard.Height}\nCard Controls: {modelCard.Controls.Count}", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 listPanel.Controls.Add(modelCard);
             }
 
             listPanel.ResumeLayout();
+            MessageBox.Show($"After adding all cards, listPanel.Controls.Count = {listPanel.Controls.Count}", "Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
