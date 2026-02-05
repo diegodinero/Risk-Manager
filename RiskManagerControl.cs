@@ -1520,6 +1520,12 @@ namespace Risk_Manager
                     }
                 }
                 
+                // Refresh Trading Journal tab if it's currently displayed
+                if (selectedNavItem != null && selectedNavItem.EndsWith("Trading Journal"))
+                {
+                    RefreshJournalDataForCurrentAccount();
+                }
+                
                 // Load settings for the selected account
                 LogToFileAndDebug($"[AccountSelectorOnSelectedIndexChanged] Calling LoadAccountSettings...");
                 LoadAccountSettings();
@@ -13910,6 +13916,12 @@ namespace Risk_Manager
                 if (name.EndsWith("Risk Overview"))
                 {
                     RefreshRiskOverviewPanel(ctrl);
+                }
+                
+                // Refresh Trading Journal when shown
+                if (name.EndsWith("Trading Journal"))
+                {
+                    RefreshJournalDataForCurrentAccount();
                 }
                 
                 // Reload Trading Time Restrictions when Allowed Trading Times tab is shown
