@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Risk_Manager.Data
 {
@@ -94,7 +94,7 @@ namespace Risk_Manager.Data
                 if (File.Exists(_journalFilePath))
                 {
                     var json = File.ReadAllText(_journalFilePath);
-                    _accountTrades = JsonConvert.DeserializeObject<Dictionary<string, List<JournalTrade>>>(json)
+                    _accountTrades = JsonSerializer.Deserialize<Dictionary<string, List<JournalTrade>>>(json)
                                     ?? new Dictionary<string, List<JournalTrade>>();
                 }
             }
@@ -117,7 +117,8 @@ namespace Risk_Manager.Data
                     Directory.CreateDirectory(_dataDirectory);
                 }
 
-                var json = JsonConvert.SerializeObject(_accountTrades, Formatting.Indented);
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                var json = JsonSerializer.Serialize(_accountTrades, options);
                 File.WriteAllText(_journalFilePath, json);
             }
             catch (Exception ex)
