@@ -11897,26 +11897,209 @@ namespace Risk_Manager
             return $"{hour}:{minute:D2} {ampm}";
         }
 
+        // Store current journal section and content panel
+        private Panel journalContentPanel;
+        private string currentJournalSection = "Trade Log";
+        private Dictionary<string, Button> journalNavButtons = new Dictionary<string, Button>();
+
         /// <summary>
-        /// Creates the Trading Journal panel for logging and reviewing trades
+        /// Creates the Trading Journal panel with sidebar navigation
         /// </summary>
         private Control CreateTradingJournalPanel()
         {
-            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill, AutoScroll = true };
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
 
             var header = new CustomHeaderControl("Trading Journal", GetIconForTitle("Trading Journal"));
             header.Dock = DockStyle.Top;
             header.Margin = new Padding(10, 0, 0, 0);
             mainPanel.Controls.Add(header);
 
-            // Content area for the journal
-            var contentArea = new Panel
+            // Container for sidebar and content
+            var containerPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground
+            };
+
+            // SIDEBAR (Left panel - 240px width)
+            var sidebar = new Panel
+            {
+                Width = 240,
+                Dock = DockStyle.Left,
+                BackColor = Color.FromArgb(35, 35, 35), // Slightly different from main background
+                Padding = new Padding(16)
+            };
+
+            // Sidebar title
+            var sidebarTitle = new Label
+            {
+                Text = "Trading Journal",
+                Dock = DockStyle.Top,
+                Height = 40,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            sidebar.Controls.Add(sidebarTitle);
+
+            // Separator
+            var separator = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 1,
+                BackColor = Color.FromArgb(60, 60, 60),
+                Margin = new Padding(0, 0, 0, 12)
+            };
+            sidebar.Controls.Add(separator);
+
+            // Navigation buttons
+            var navButtons = new[]
+            {
+                ("🗓  Calendar", "Calendar"),
+                ("📈  Trading Models", "Trading Models"),
+                ("📓  Trade Log", "Trade Log"),
+                ("🗒  Notes", "Notes"),
+                ("📊  Dashboard", "Dashboard")
+            };
+
+            foreach (var (text, section) in navButtons)
+            {
+                var btn = CreateJournalNavButton(text, section);
+                sidebar.Controls.Add(btn);
+                journalNavButtons[section] = btn;
+            }
+
+            // Theme toggle at bottom
+            var themeToggle = new Button
+            {
+                Text = "❖  Light / Dark Mode",
+                Dock = DockStyle.Bottom,
+                Height = 40,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+                Margin = new Padding(0, 8, 0, 0)
+            };
+            themeToggle.FlatAppearance.BorderSize = 0;
+            themeToggle.Click += (s, e) => {
+                // Toggle between themes (this is a placeholder - would need actual theme switching logic)
+                MessageBox.Show("Theme toggle would switch between Light/Dark modes", "Theme Toggle", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+            sidebar.Controls.Add(themeToggle);
+
+            // CONTENT AREA (Right panel - fills remaining space)
+            journalContentPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
                 Padding = new Padding(20),
                 AutoScroll = true
             };
+
+            // Add panels to container
+            containerPanel.Controls.Add(journalContentPanel);
+            containerPanel.Controls.Add(sidebar);
+            mainPanel.Controls.Add(containerPanel);
+
+            // Load initial page (Trade Log)
+            ShowJournalSection("Trade Log");
+
+            return mainPanel;
+        }
+
+        /// <summary>
+        /// Creates a navigation button for the journal sidebar
+        /// </summary>
+        private Button CreateJournalNavButton(string text, string section)
+        {
+            var btn = new Button
+            {
+                Text = text,
+                Dock = DockStyle.Top,
+                Height = 40,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+                Margin = new Padding(0, 0, 0, 8),
+                Tag = section
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.Click += (s, e) => ShowJournalSection(section);
+            
+            return btn;
+        }
+
+        /// <summary>
+        /// Shows the selected journal section in the content area
+        /// </summary>
+        private void ShowJournalSection(string section)
+        {
+            if (journalContentPanel == null) return;
+
+            currentJournalSection = section;
+            journalContentPanel.SuspendLayout();
+            journalContentPanel.Controls.Clear();
+
+            // Update button states
+            foreach (var kvp in journalNavButtons)
+            {
+                if (kvp.Key == section)
+                {
+                    kvp.Value.BackColor = Color.FromArgb(50, 50, 50);
+                    kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Bold);
+                }
+                else
+                {
+                    kvp.Value.BackColor = Color.Transparent;
+                    kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular);
+                }
+            }
+
+            // Load the appropriate content
+            Control content = null;
+            switch (section)
+            {
+                case "Calendar":
+                    content = CreateCalendarPage();
+                    break;
+                case "Trading Models":
+                    content = CreateTradingModelsPage();
+                    break;
+                case "Trade Log":
+                    content = CreateTradeLogPage();
+                    break;
+                case "Notes":
+                    content = CreateNotesPage();
+                    break;
+                case "Dashboard":
+                    content = CreateDashboardPage();
+                    break;
+                default:
+                    content = CreatePlaceholderPage(section);
+                    break;
+            }
+
+            if (content != null)
+            {
+                content.Dock = DockStyle.Fill;
+                journalContentPanel.Controls.Add(content);
+            }
+
+            journalContentPanel.ResumeLayout();
+        }
+
+        /// <summary>
+        /// Creates the Trade Log page (existing implementation)
+        /// </summary>
+        private Control CreateTradeLogPage()
+        {
+            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
 
             // Stats summary card
             var statsCard = new Panel
@@ -11928,7 +12111,6 @@ namespace Risk_Manager
                 Margin = new Padding(0, 0, 0, 10)
             };
             
-            // Card header
             var statsHeader = new CustomCardHeaderControl("Journal Statistics", GetIconForTitle("Limits"));
             statsHeader.Dock = DockStyle.Top;
             statsCard.Controls.Add(statsHeader);
@@ -11959,10 +12141,10 @@ namespace Risk_Manager
             statsLabelsPanel.Controls.Add(avgPLLabel);
             
             statsCard.Controls.Add(statsLabelsPanel);
-            contentArea.Controls.Add(statsCard);
+            pagePanel.Controls.Add(statsCard);
 
             // Spacer
-            contentArea.Controls.Add(new Panel { Height = 20, Dock = DockStyle.Top, BackColor = DarkBackground });
+            pagePanel.Controls.Add(new Panel { Height = 20, Dock = DockStyle.Top, BackColor = DarkBackground });
 
             // Journal entries grid card
             var journalCard = new Panel
@@ -11973,12 +12155,11 @@ namespace Risk_Manager
                 Margin = new Padding(0)
             };
             
-            // Card header
             var journalHeader = new CustomCardHeaderControl("Trade Log", GetIconForTitle("Limits"));
             journalHeader.Dock = DockStyle.Top;
             journalCard.Controls.Add(journalHeader);
 
-            // Buttons panel (Add, Edit, Delete)
+            // Buttons panel
             var buttonsPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -12033,7 +12214,6 @@ namespace Risk_Manager
             buttonsPanel.Controls.Add(addButton);
             buttonsPanel.Controls.Add(editButton);
             buttonsPanel.Controls.Add(deleteButton);
-
             journalCard.Controls.Add(buttonsPanel);
 
             // DataGridView for trades
@@ -12052,7 +12232,8 @@ namespace Risk_Manager
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
                 RowHeadersVisible = false,
-                Tag = "JournalGrid"
+                Tag = "JournalGrid",
+                Name = "TradesGrid"
             };
 
             tradesGrid.DefaultCellStyle.BackColor = CardBackground;
@@ -12085,16 +12266,102 @@ namespace Risk_Manager
             tradesGrid.Columns["Model"].Width = 120;
 
             journalCard.Controls.Add(tradesGrid);
-            contentArea.Controls.Add(journalCard);
-            mainPanel.Controls.Add(contentArea);
-
-            // Store reference to grid for later access
-            tradesGrid.Name = "TradesGrid";
+            pagePanel.Controls.Add(journalCard);
             
             // Load initial data
             RefreshJournalData(tradesGrid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel);
 
-            return mainPanel;
+            return pagePanel;
+        }
+
+        /// <summary>
+        /// Creates the Calendar page placeholder
+        /// </summary>
+        private Control CreateCalendarPage()
+        {
+            return CreatePlaceholderPage("Calendar", "View your trading activity by date");
+        }
+
+        /// <summary>
+        /// Creates the Trading Models page placeholder
+        /// </summary>
+        private Control CreateTradingModelsPage()
+        {
+            return CreatePlaceholderPage("Trading Models", "Define and track your trading strategies");
+        }
+
+        /// <summary>
+        /// Creates the Notes page placeholder
+        /// </summary>
+        private Control CreateNotesPage()
+        {
+            return CreatePlaceholderPage("Notes", "Keep trading notes and observations");
+        }
+
+        /// <summary>
+        /// Creates the Dashboard page placeholder
+        /// </summary>
+        private Control CreateDashboardPage()
+        {
+            return CreatePlaceholderPage("Dashboard", "View performance analytics and charts");
+        }
+
+        /// <summary>
+        /// Creates a placeholder page for sections not yet implemented
+        /// </summary>
+        private Control CreatePlaceholderPage(string title, string description = null)
+        {
+            var panel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+
+            var card = new Panel
+            {
+                BackColor = CardBackground,
+                Padding = new Padding(40),
+                Location = new Point(50, 50),
+                Width = 600,
+                Height = 300
+            };
+
+            var titleLabel = new Label
+            {
+                Text = title,
+                Dock = DockStyle.Top,
+                Height = 50,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            card.Controls.Add(titleLabel);
+
+            if (description != null)
+            {
+                var descLabel = new Label
+                {
+                    Text = description,
+                    Dock = DockStyle.Top,
+                    Height = 40,
+                    ForeColor = TextGray,
+                    Font = new Font("Segoe UI", 11, FontStyle.Regular),
+                    TextAlign = ContentAlignment.TopCenter,
+                    Margin = new Padding(0, 10, 0, 0)
+                };
+                card.Controls.Add(descLabel);
+            }
+
+            var comingSoonLabel = new Label
+            {
+                Text = "Coming Soon",
+                Dock = DockStyle.Top,
+                Height = 60,
+                ForeColor = Color.FromArgb(150, 150, 150),
+                Font = new Font("Segoe UI", 14, FontStyle.Italic),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Margin = new Padding(0, 20, 0, 0)
+            };
+            card.Controls.Add(comingSoonLabel);
+
+            panel.Controls.Add(card);
+            return panel;
         }
 
         // Event handlers for Trading Journal
