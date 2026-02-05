@@ -12735,7 +12735,7 @@ namespace Risk_Manager
 
             foreach (var model in models)
             {
-                var modelCard = CreateModelCard(model, listPanel);
+                var modelCard = CreateModelCard(model);
                 listPanel.Controls.Add(modelCard);
             }
 
@@ -12745,11 +12745,11 @@ namespace Risk_Manager
         /// <summary>
         /// Creates a trading model card
         /// </summary>
-        private Panel CreateModelCard(TradingJournalService.TradingModel model, FlowLayoutPanel listPanel)
+        private Panel CreateModelCard(TradingJournalService.TradingModel model)
         {
             var card = new Panel
             {
-                Width = listPanel.ClientSize.Width - 30,
+                Width = journalContentPanel.Width - 60,
                 Height = 120,
                 BackColor = CardBackground,
                 Padding = new Padding(15),
