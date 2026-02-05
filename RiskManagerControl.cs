@@ -2375,7 +2375,6 @@ namespace Risk_Manager
 
                 // Additional lock-related title variants (keep fallback)
                 IconMap["Settings Lock"] = Properties.Resources._lock;
-                IconMap["Trading Lock"] = Properties.Resources._lock;
 
                 // Emoji fallbacks (if any code passes raw emoji tokens)
                 IconMap["📊"] = Properties.Resources.summary;
@@ -6226,7 +6225,7 @@ namespace Risk_Manager
             // Automated Lock Section Title
             var autoLockSectionLabel = new Label
             {
-                Text = "Automated Daily Lock",
+                Text = "Automated Daily Settings Lock",
                 Left = 0,
                 Top = 190,
                 Width = 400,
