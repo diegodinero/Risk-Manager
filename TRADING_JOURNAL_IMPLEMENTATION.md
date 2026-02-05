@@ -134,7 +134,7 @@ Risk-Manager/
 - **Framework**: Windows Forms (consistent with Risk Manager)
 - **Language**: C# .NET
 - **Design Pattern**: Singleton for service, Dialog pattern for entry form
-- **Data Format**: JSON serialization via Newtonsoft.Json
+- **Data Format**: JSON serialization via System.Text.Json (built-in .NET)
 - **Thread Safety**: Lock-based synchronization in singleton
 - **Color Coding**: Dynamic based on P/L (green/red) and theme
 
