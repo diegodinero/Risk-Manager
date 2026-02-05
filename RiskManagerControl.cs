@@ -2315,7 +2315,7 @@ namespace Risk_Manager
                 IconMap["Stats"] = Properties.Resources.stats;
                 IconMap["Type"] = Properties.Resources.type;
                 IconMap["Risk Overview"] = Properties.Resources.riskoverview;
-                IconMap["Trading Journal"] = Properties.Resources.journal;
+                IconMap["Trading Journal"] = Properties.Resources.copy; // Using copy icon as fallback
                 IconMap["Positions"] = Properties.Resources.positions;
                 IconMap["Feature Toggles"] = Properties.Resources.featuretoggles;
                 IconMap["Copy Settings"] = Properties.Resources.copy;
@@ -2380,7 +2380,7 @@ namespace Risk_Manager
                 IconMap["📈"] = Properties.Resources.stats;
                 IconMap["📋"] = Properties.Resources.type;
                 IconMap["🔍"] = Properties.Resources.riskoverview;
-                IconMap["📓"] = Properties.Resources.journal;
+                IconMap["📓"] = Properties.Resources.copy; // Using copy icon as fallback for journal
                 IconMap["⚙️"] = Properties.Resources.featuretoggles;
                 IconMap["🛡️"] = Properties.Resources.blocked;
                 IconMap["🔒"] = Properties.Resources._lock;
@@ -11887,9 +11887,19 @@ namespace Risk_Manager
             };
 
             // Stats summary card
-            var statsCard = CreateStyledCard("Journal Statistics");
-            statsCard.Dock = DockStyle.Top;
-            statsCard.Height = 180;
+            var statsCard = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 180,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            
+            // Card header
+            var statsHeader = new CustomCardHeaderControl("Journal Statistics", GetIconForTitle("Limits"));
+            statsHeader.Dock = DockStyle.Top;
+            statsCard.Controls.Add(statsHeader);
             
             var statsLabelsPanel = new FlowLayoutPanel
             {
@@ -11923,9 +11933,18 @@ namespace Risk_Manager
             contentArea.Controls.Add(new Panel { Height = 20, Dock = DockStyle.Top, BackColor = DarkBackground });
 
             // Journal entries grid card
-            var journalCard = CreateStyledCard("Trade Log");
-            journalCard.Dock = DockStyle.Fill;
-            journalCard.Padding = new Padding(15);
+            var journalCard = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0)
+            };
+            
+            // Card header
+            var journalHeader = new CustomCardHeaderControl("Trade Log", GetIconForTitle("Limits"));
+            journalHeader.Dock = DockStyle.Top;
+            journalCard.Controls.Add(journalHeader);
 
             // Buttons panel (Add, Edit, Delete)
             var buttonsPanel = new FlowLayoutPanel
