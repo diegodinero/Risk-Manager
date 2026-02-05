@@ -45,7 +45,9 @@ namespace Risk_Manager.Data
         
         private readonly string _dataDirectory;
         private readonly string _journalFilePath;
+        private readonly string _notesFilePath;
         private Dictionary<string, List<JournalTrade>> _accountTrades; // Account number -> list of trades
+        private Dictionary<string, List<JournalNote>> _accountNotes; // Account number -> list of notes
 
         private TradingJournalService()
         {
@@ -56,9 +58,12 @@ namespace Risk_Manager.Data
             );
             
             _journalFilePath = Path.Combine(_dataDirectory, "trading_journal.json");
+            _notesFilePath = Path.Combine(_dataDirectory, "journal_notes.json");
             _accountTrades = new Dictionary<string, List<JournalTrade>>();
+            _accountNotes = new Dictionary<string, List<JournalNote>>();
             
             LoadJournal();
+            LoadNotes();
         }
 
         public static TradingJournalService Instance
@@ -239,6 +244,104 @@ namespace Risk_Manager.Data
                 AverageLoss = losses.Count > 0 ? losses.Average(t => t.NetPL) : 0
             };
         }
+
+        // ============= NOTES MANAGEMENT =============
+
+        /// <summary>
+        /// Load notes from JSON file
+        /// </summary>
+        private void LoadNotes()
+        {
+            try
+            {
+                if (File.Exists(_notesFilePath))
+                {
+                    var json = File.ReadAllText(_notesFilePath);
+                    _accountNotes = JsonSerializer.Deserialize<Dictionary<string, List<JournalNote>>>(json)
+                                   ?? new Dictionary<string, List<JournalNote>>();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading notes: {ex.Message}");
+                _accountNotes = new Dictionary<string, List<JournalNote>>();
+            }
+        }
+
+        /// <summary>
+        /// Save notes to JSON file
+        /// </summary>
+        private void SaveNotes()
+        {
+            try
+            {
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                var json = JsonSerializer.Serialize(_accountNotes, options);
+                File.WriteAllText(_notesFilePath, json);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving notes: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Get all notes for a specific account
+        /// </summary>
+        public List<JournalNote> GetNotes(string accountNumber)
+        {
+            if (string.IsNullOrEmpty(accountNumber))
+                return new List<JournalNote>();
+
+            if (!_accountNotes.ContainsKey(accountNumber))
+                _accountNotes[accountNumber] = new List<JournalNote>();
+
+            return _accountNotes[accountNumber].OrderByDescending(n => n.CreatedAt).ToList();
+        }
+
+        /// <summary>
+        /// Add or update a note
+        /// </summary>
+        public void SaveNote(string accountNumber, JournalNote note)
+        {
+            if (string.IsNullOrEmpty(accountNumber) || note == null)
+                return;
+
+            if (!_accountNotes.ContainsKey(accountNumber))
+                _accountNotes[accountNumber] = new List<JournalNote>();
+
+            var existingNote = _accountNotes[accountNumber].FirstOrDefault(n => n.Id == note.Id);
+            if (existingNote != null)
+            {
+                // Update existing
+                existingNote.Title = note.Title;
+                existingNote.Content = note.Content;
+                existingNote.ImagePath = note.ImagePath;
+            }
+            else
+            {
+                // Add new
+                note.Account = accountNumber;
+                _accountNotes[accountNumber].Add(note);
+            }
+
+            SaveNotes();
+        }
+
+        /// <summary>
+        /// Delete a note
+        /// </summary>
+        public void DeleteNote(string accountNumber, Guid noteId)
+        {
+            if (string.IsNullOrEmpty(accountNumber))
+                return;
+
+            if (_accountNotes.ContainsKey(accountNumber))
+            {
+                _accountNotes[accountNumber].RemoveAll(n => n.Id == noteId);
+                SaveNotes();
+            }
+        }
     }
 
     /// <summary>
@@ -257,5 +360,18 @@ namespace Risk_Manager.Data
         public decimal LargestLoss { get; set; }
         public decimal AverageWin { get; set; }
         public decimal AverageLoss { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a trading journal note
+    /// </summary>
+    public class JournalNote
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public string Title { get; set; } = "";
+        public string Content { get; set; } = "";
+        public string ImagePath { get; set; } = "";
+        public string Account { get; set; } = "";
     }
 }

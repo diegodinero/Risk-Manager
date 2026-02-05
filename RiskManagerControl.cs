@@ -12291,11 +12291,603 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Creates the Notes page placeholder
+        /// Creates the Notes page with add/edit functionality
         /// </summary>
         private Control CreateNotesPage()
         {
-            return CreatePlaceholderPage("Notes", "Keep trading notes and observations");
+            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
+            
+            // Main content panel
+            var contentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground,
+                Padding = new Padding(20),
+                AutoScroll = true
+            };
+
+            // Header with Add Note button
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = DarkBackground
+            };
+
+            var titleLabel = new Label
+            {
+                Text = "Notes",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 10)
+            };
+            headerPanel.Controls.Add(titleLabel);
+
+            var addNoteButton = new Button
+            {
+                Text = "+ Add Note",
+                Width = 120,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 150, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Location = new Point(contentPanel.Width - 140, 7),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            addNoteButton.FlatAppearance.BorderSize = 0;
+            addNoteButton.Click += (s, e) => ToggleNoteForm();
+            headerPanel.Controls.Add(addNoteButton);
+
+            contentPanel.Controls.Add(headerPanel);
+
+            // Add/Edit Note Form (initially hidden)
+            var noteFormPanel = CreateNoteFormPanel();
+            noteFormPanel.Visible = false;
+            noteFormPanel.Tag = "NoteForm";
+            contentPanel.Controls.Add(noteFormPanel);
+
+            // Notes list panel
+            var notesListPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 20, 0, 0),
+                Tag = "NotesList"
+            };
+            contentPanel.Controls.Add(notesListPanel);
+
+            pagePanel.Controls.Add(contentPanel);
+
+            // Load notes
+            RefreshNotesList(notesListPanel);
+
+            return pagePanel;
+        }
+
+        /// <summary>
+        /// Creates the add/edit note form panel
+        /// </summary>
+        private Panel CreateNoteFormPanel()
+        {
+            var formPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 400,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 10, 0, 20)
+            };
+
+            // Form heading
+            var formTitle = new Label
+            {
+                Text = "Add Note",
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 0)
+            };
+            formPanel.Controls.Add(formTitle);
+
+            // Title label
+            var titleLabel = new Label
+            {
+                Text = "Title",
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(0, 40),
+                AutoSize = true
+            };
+            formPanel.Controls.Add(titleLabel);
+
+            // Title textbox
+            var titleTextBox = new TextBox
+            {
+                Location = new Point(0, 60),
+                Width = formPanel.Width - 30,
+                Height = 25,
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 10),
+                Tag = "NoteTitle",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            formPanel.Controls.Add(titleTextBox);
+
+            // Content label
+            var contentLabel = new Label
+            {
+                Text = "Content",
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(0, 95),
+                AutoSize = true
+            };
+            formPanel.Controls.Add(contentLabel);
+
+            // Content textbox (multiline)
+            var contentTextBox = new TextBox
+            {
+                Location = new Point(0, 115),
+                Width = formPanel.Width - 30,
+                Height = 100,
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 10),
+                Tag = "NoteContent",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            formPanel.Controls.Add(contentTextBox);
+
+            // Image label
+            var imageLabel = new Label
+            {
+                Text = "Image (optional)",
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(0, 225),
+                AutoSize = true
+            };
+            formPanel.Controls.Add(imageLabel);
+
+            // Image path label
+            var imagePathLabel = new Label
+            {
+                Text = "No image selected",
+                ForeColor = TextGray,
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                Location = new Point(0, 270),
+                Width = formPanel.Width - 130,
+                AutoSize = false,
+                Tag = "ImagePath",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            formPanel.Controls.Add(imagePathLabel);
+
+            // Choose File button
+            var chooseFileButton = new Button
+            {
+                Text = "Choose File",
+                Width = 110,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(60, 60, 60),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 9),
+                Location = new Point(0, 245),
+                Tag = "ChooseFile"
+            };
+            chooseFileButton.FlatAppearance.BorderSize = 1;
+            chooseFileButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            chooseFileButton.Click += ChooseNoteImage_Click;
+            formPanel.Controls.Add(chooseFileButton);
+
+            // Buttons panel
+            var buttonsPanel = new FlowLayoutPanel
+            {
+                Location = new Point(0, 310),
+                Width = formPanel.Width - 30,
+                Height = 40,
+                FlowDirection = FlowDirection.RightToLeft,
+                BackColor = CardBackground,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+
+            // Save button
+            var saveButton = new Button
+            {
+                Text = "Save Note",
+                Width = 100,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 150, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+            saveButton.FlatAppearance.BorderSize = 0;
+            saveButton.Click += SaveNote_Click;
+            buttonsPanel.Controls.Add(saveButton);
+
+            // Cancel button
+            var cancelButton = new Button
+            {
+                Text = "Cancel",
+                Width = 80,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10),
+                Margin = new Padding(0, 0, 10, 0)
+            };
+            cancelButton.FlatAppearance.BorderSize = 1;
+            cancelButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            cancelButton.Click += (s, e) => ToggleNoteForm();
+            buttonsPanel.Controls.Add(cancelButton);
+
+            formPanel.Controls.Add(buttonsPanel);
+
+            // Store a hidden field for note ID (for editing)
+            var noteIdField = new Label { Visible = false, Tag = "NoteId" };
+            formPanel.Controls.Add(noteIdField);
+
+            return formPanel;
+        }
+
+        /// <summary>
+        /// Toggles the note form visibility
+        /// </summary>
+        private void ToggleNoteForm()
+        {
+            if (journalContentPanel == null) return;
+
+            var form = FindControlByTag(journalContentPanel, "NoteForm") as Panel;
+            if (form != null)
+            {
+                form.Visible = !form.Visible;
+                
+                if (!form.Visible)
+                {
+                    // Clear form when hiding
+                    ClearNoteForm(form);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Clears the note form
+        /// </summary>
+        private void ClearNoteForm(Panel form)
+        {
+            var titleBox = FindControlByTag(form, "NoteTitle") as TextBox;
+            var contentBox = FindControlByTag(form, "NoteContent") as TextBox;
+            var imagePathLabel = FindControlByTag(form, "ImagePath") as Label;
+            var noteIdLabel = FindControlByTag(form, "NoteId") as Label;
+
+            if (titleBox != null) titleBox.Text = "";
+            if (contentBox != null) contentBox.Text = "";
+            if (imagePathLabel != null) imagePathLabel.Text = "No image selected";
+            if (noteIdLabel != null) noteIdLabel.Text = "";
+        }
+
+        /// <summary>
+        /// Choose image for note
+        /// </summary>
+        private void ChooseNoteImage_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new OpenFileDialog())
+            {
+                dialog.Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif";
+                dialog.Title = "Select Image for Note";
+
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    var imagePathLabel = FindControlByTag(journalContentPanel, "ImagePath") as Label;
+                    if (imagePathLabel != null)
+                    {
+                        imagePathLabel.Text = dialog.FileName;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Save note handler
+        /// </summary>
+        private void SaveNote_Click(object sender, EventArgs e)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var form = FindControlByTag(journalContentPanel, "NoteForm") as Panel;
+            if (form == null) return;
+
+            var titleBox = FindControlByTag(form, "NoteTitle") as TextBox;
+            var contentBox = FindControlByTag(form, "NoteContent") as TextBox;
+            var imagePathLabel = FindControlByTag(form, "ImagePath") as Label;
+            var noteIdLabel = FindControlByTag(form, "NoteId") as Label;
+
+            var content = contentBox?.Text ?? "";
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                MessageBox.Show("Please enter note content.", "Content Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var note = new TradingJournalService.JournalNote
+            {
+                Title = titleBox?.Text ?? "",
+                Content = content,
+                ImagePath = imagePathLabel?.Text == "No image selected" ? "" : imagePathLabel?.Text ?? "",
+                CreatedAt = DateTime.Now
+            };
+
+            // Check if editing existing note
+            if (noteIdLabel != null && !string.IsNullOrEmpty(noteIdLabel.Text))
+            {
+                if (Guid.TryParse(noteIdLabel.Text, out Guid noteId))
+                {
+                    note.Id = noteId;
+                }
+            }
+
+            TradingJournalService.Instance.SaveNote(accountNumber, note);
+            
+            // Hide form and refresh list
+            ToggleNoteForm();
+            RefreshNotesForCurrentAccount();
+        }
+
+        /// <summary>
+        /// Refresh notes list for current account
+        /// </summary>
+        private void RefreshNotesForCurrentAccount()
+        {
+            if (journalContentPanel == null) return;
+
+            var notesList = FindControlByTag(journalContentPanel, "NotesList") as FlowLayoutPanel;
+            if (notesList != null)
+            {
+                RefreshNotesList(notesList);
+            }
+        }
+
+        /// <summary>
+        /// Refresh the notes list
+        /// </summary>
+        private void RefreshNotesList(FlowLayoutPanel listPanel)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                listPanel.Controls.Clear();
+                return;
+            }
+
+            var notes = TradingJournalService.Instance.GetNotes(accountNumber);
+            listPanel.SuspendLayout();
+            listPanel.Controls.Clear();
+
+            foreach (var note in notes)
+            {
+                var noteCard = CreateNoteCard(note);
+                listPanel.Controls.Add(noteCard);
+            }
+
+            listPanel.ResumeLayout();
+        }
+
+        /// <summary>
+        /// Creates a note card
+        /// </summary>
+        private Panel CreateNoteCard(TradingJournalService.JournalNote note)
+        {
+            var card = new Panel
+            {
+                Width = journalContentPanel.Width - 60,
+                AutoSize = true,
+                MinimumSize = new Size(journalContentPanel.Width - 60, 100),
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 0, 0, 15),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            int yPos = 0;
+
+            // Image (if present)
+            if (!string.IsNullOrEmpty(note.ImagePath) && File.Exists(note.ImagePath))
+            {
+                try
+                {
+                    var pictureBox = new PictureBox
+                    {
+                        Location = new Point(0, yPos),
+                        Width = card.Width - 30,
+                        Height = 120,
+                        SizeMode = PictureBoxSizeMode.Zoom,
+                        Image = Image.FromFile(note.ImagePath),
+                        Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                    };
+                    card.Controls.Add(pictureBox);
+                    yPos += 130;
+                }
+                catch
+                {
+                    // Image failed to load, skip it
+                }
+            }
+
+            // Date and action buttons
+            var datePanel = new Panel
+            {
+                Location = new Point(0, yPos),
+                Width = card.Width - 30,
+                Height = 30,
+                BackColor = CardBackground,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            var dateLabel = new Label
+            {
+                Text = note.CreatedAt.ToString("MMM d, yyyy h:mm tt"),
+                ForeColor = TextGray,
+                Font = new Font("Segoe UI", 9),
+                AutoSize = true,
+                Location = new Point(0, 5)
+            };
+            datePanel.Controls.Add(dateLabel);
+
+            // Delete button
+            var deleteButton = new Button
+            {
+                Text = "🗑",
+                Width = 28,
+                Height = 28,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 12),
+                Location = new Point(datePanel.Width - 28, 0),
+                Tag = note.Id,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            deleteButton.FlatAppearance.BorderSize = 1;
+            deleteButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            deleteButton.Click += DeleteNote_Click;
+            datePanel.Controls.Add(deleteButton);
+
+            // Edit button
+            var editButton = new Button
+            {
+                Text = "✏️",
+                Width = 28,
+                Height = 28,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 12),
+                Location = new Point(datePanel.Width - 63, 0),
+                Tag = note.Id,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            editButton.FlatAppearance.BorderSize = 1;
+            editButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            editButton.Click += EditNote_Click;
+            datePanel.Controls.Add(editButton);
+
+            card.Controls.Add(datePanel);
+            yPos += 35;
+
+            // Title (if present)
+            if (!string.IsNullOrWhiteSpace(note.Title))
+            {
+                var titleLabel = new Label
+                {
+                    Text = note.Title,
+                    Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    MaximumSize = new Size(card.Width - 30, 0),
+                    Location = new Point(0, yPos)
+                };
+                card.Controls.Add(titleLabel);
+                yPos += titleLabel.PreferredHeight + 8;
+            }
+
+            // Content
+            var contentLabel = new Label
+            {
+                Text = note.Content,
+                Font = new Font("Segoe UI", 10),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                MaximumSize = new Size(card.Width - 30, 0),
+                Location = new Point(0, yPos)
+            };
+            card.Controls.Add(contentLabel);
+            yPos += contentLabel.PreferredHeight + 10;
+
+            card.Height = yPos;
+
+            return card;
+        }
+
+        /// <summary>
+        /// Edit note handler
+        /// </summary>
+        private void EditNote_Click(object sender, EventArgs e)
+        {
+            if (!(sender is Button btn) || !(btn.Tag is Guid noteId)) return;
+
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return;
+
+            var notes = TradingJournalService.Instance.GetNotes(accountNumber);
+            var note = notes.FirstOrDefault(n => n.Id == noteId);
+            if (note == null) return;
+
+            // Show form and populate with note data
+            var form = FindControlByTag(journalContentPanel, "NoteForm") as Panel;
+            if (form != null)
+            {
+                form.Visible = true;
+
+                var titleBox = FindControlByTag(form, "NoteTitle") as TextBox;
+                var contentBox = FindControlByTag(form, "NoteContent") as TextBox;
+                var imagePathLabel = FindControlByTag(form, "ImagePath") as Label;
+                var noteIdLabel = FindControlByTag(form, "NoteId") as Label;
+
+                if (titleBox != null) titleBox.Text = note.Title;
+                if (contentBox != null) contentBox.Text = note.Content;
+                if (imagePathLabel != null) 
+                    imagePathLabel.Text = string.IsNullOrEmpty(note.ImagePath) ? "No image selected" : note.ImagePath;
+                if (noteIdLabel != null) noteIdLabel.Text = note.Id.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Delete note handler
+        /// </summary>
+        private void DeleteNote_Click(object sender, EventArgs e)
+        {
+            if (!(sender is Button btn) || !(btn.Tag is Guid noteId)) return;
+
+            var result = MessageBox.Show(
+                "Are you sure you want to delete this note?",
+                "Confirm Delete",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (result == DialogResult.Yes)
+            {
+                var accountNumber = GetSelectedAccountNumber();
+                if (!string.IsNullOrEmpty(accountNumber))
+                {
+                    TradingJournalService.Instance.DeleteNote(accountNumber, noteId);
+                    RefreshNotesForCurrentAccount();
+                }
+            }
         }
 
         /// <summary>
