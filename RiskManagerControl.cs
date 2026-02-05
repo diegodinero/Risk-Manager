@@ -3663,6 +3663,7 @@ namespace Risk_Manager
             statsGrid.Columns.Add("GrossPnL", "Gross P&L");
             statsGrid.Columns.Add("TrailingDrawdown", "Trailing Drawdown");
             statsGrid.Columns.Add("Positions", "Positions");
+            statsGrid.Columns.Add("Contracts", "Contracts");
             statsGrid.Columns.Add("Status", "Status");
             statsGrid.Columns.Add("LockStatus", "Lock Status");
             statsGrid.Columns.Add("LossLimit", "Loss Limit");
@@ -3761,8 +3762,8 @@ namespace Risk_Manager
                 if (core == null || core.Accounts == null || !core.Accounts.Any())
                 {
                     // Demo data - last column is Drawdown (Equity - Trailing Drawdown)
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn", MaskAccountNumber("ACC123"), "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
-                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", MaskAccountNumber("ACC456"), "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn", MaskAccountNumber("ACC123"), "Live", "1000.00", "12.34", "50.00", "5.67", "18.01", "0.00", "1", "5", "Connected", "Unlocked", "500.00", "1000.00", "1000.00");
+                    statsGrid.Rows.Add("DemoProvider", "DemoConn2", MaskAccountNumber("ACC456"), "Demo", "2500.50", "(8.20)", "25.00", "(2.00)", "(10.20)", "0.00", "2", "10", "Connected", "Unlocked", "500.00", "1000.00", "2500.50");
                     return;
                 }
 
@@ -3780,8 +3781,9 @@ namespace Risk_Manager
                     // Get account type using centralized method
                     var accountType = DetermineAccountType(account);
 
-                    // Count positions
+                    // Count positions and contracts
                     int positionsCount = 0;
+                    int contractsCount = 0;
                     if (core.Positions != null)
                     {
                         foreach (var pos in core.Positions)
@@ -3790,6 +3792,7 @@ namespace Risk_Manager
                             if (pos.Account == account && pos.Quantity != 0)
                             {
                                 positionsCount++;
+                                contractsCount += (int)Math.Abs(pos.Quantity);
                             }
                         }
                     }
@@ -3901,7 +3904,8 @@ namespace Risk_Manager
                         FormatNumeric(dailyPnL), 
                         FormatNumeric(grossPnL), 
                         FormatNumeric(trailingDrawdown),
-                        positionsCount.ToString(), 
+                        positionsCount.ToString(),
+                        contractsCount.ToString(),
                         status,
                         lockStatus,
                         FormatLossLimit(lossLimit),
@@ -7729,7 +7733,7 @@ namespace Risk_Manager
 
                 // Get all positions for this account
                 var accountPositions = core.Positions
-                    .Where(p => p != null && p.Account == account)
+                    .Where(p => p != null && p.Account == account && p.Quantity != 0)
                     .ToList();
 
                 foreach (var position in accountPositions)
@@ -7837,15 +7841,25 @@ namespace Risk_Manager
                     {
                         var symbol = symbolGroup.Key;
                         var positions = symbolGroup.ToList();
-                        var positionCount = positions.Count;
+                        
+                        // Debug: Log individual position quantities
+                        System.Diagnostics.Debug.WriteLine($"[FLATTEN CHECK] Symbol {symbol}: {positions.Count} position entries");
+                        foreach (var p in positions)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[FLATTEN CHECK]   - Position Quantity: {p.Quantity}");
+                        }
+                        
+                        var totalContracts = positions.Sum(p => Math.Abs(p.Quantity));
+                        System.Diagnostics.Debug.WriteLine($"[FLATTEN CHECK] Symbol {symbol}: Total contracts = {totalContracts}");
 
                         // Get the contract limit for this symbol
                         var contractLimit = settingsService.GetContractLimit(accountId, symbol);
+                        System.Diagnostics.Debug.WriteLine($"[FLATTEN CHECK] Symbol {symbol}: Contract limit = {contractLimit?.ToString() ?? "None"}");
                         
-                        if (contractLimit.HasValue && positionCount > contractLimit.Value)
+                        if (contractLimit.HasValue && totalContracts > contractLimit.Value)
                         {
                             // Exceeded contract limit - close all positions for this symbol
-                            string reason = $"Contract Limit Exceeded: {positionCount} positions > {contractLimit.Value} limit";
+                            string reason = $"Contract Limit Exceeded: {totalContracts} contracts > {contractLimit.Value} limit";
                             
                             foreach (var position in positions)
                             {
@@ -8033,15 +8047,25 @@ namespace Risk_Manager
                 {
                     var symbol = symbolGroup.Key;
                     var positions = symbolGroup.ToList();
-                    var positionCount = positions.Count;
+                    
+                    // Debug: Log individual position quantities
+                    System.Diagnostics.Debug.WriteLine($"Symbol {symbol}: {positions.Count} position entries");
+                    foreach (var p in positions)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  - Position Quantity: {p.Quantity}");
+                    }
+                    
+                    var totalContracts = positions.Sum(p => Math.Abs(p.Quantity));
+                    System.Diagnostics.Debug.WriteLine($"Symbol {symbol}: Total contracts = {totalContracts}");
 
                     // Get the contract limit for this symbol
                     var contractLimit = settingsService.GetContractLimit(accountId, symbol);
+                    System.Diagnostics.Debug.WriteLine($"Symbol {symbol}: Contract limit = {contractLimit?.ToString() ?? "None"}");
                     
-                    if (contractLimit.HasValue && positionCount > contractLimit.Value)
+                    if (contractLimit.HasValue && totalContracts > contractLimit.Value)
                     {
                         // Exceeded contract limit - close all positions for this symbol
-                        System.Diagnostics.Debug.WriteLine($"Contract limit exceeded for symbol {symbol}: {positionCount} positions > {contractLimit.Value} limit");
+                        System.Diagnostics.Debug.WriteLine($"Contract limit exceeded for symbol {symbol}: {totalContracts} contracts > {contractLimit.Value} limit");
                         
                         foreach (var position in positions)
                         {
@@ -8455,7 +8479,7 @@ namespace Risk_Manager
                 CancelAllWorkingOrdersForAccount(account, core);
 
                 var accountPositions = core.Positions
-                    .Where(p => p != null && p.Account == account)
+                    .Where(p => p != null && p.Account == account && p.Quantity != 0)
                     .ToList();
 
                 foreach (var position in accountPositions)
