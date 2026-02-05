@@ -101,7 +101,7 @@ This feature ensures:
 - Clear shutdown process for all users
 
 ## Technical Details
-- **Thread-safe**: Boolean flag is atomic in C#
+- **Thread-safe**: Volatile keyword ensures proper memory visibility across threads
 - **Exception-safe**: All operations wrapped in try-catch
 - **UI-thread safe**: Form.Close() uses BeginInvoke
-- **Minimal changes**: Only 2 files modified, ~40 lines added
+- **Minimal changes**: Only 2 files modified, ~45 lines added

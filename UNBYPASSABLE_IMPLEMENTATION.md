@@ -174,8 +174,10 @@ if (parentForm != null)
 ## Technical Implementation Details
 
 ### Thread Safety
-- `AllowClose` flag is accessed from multiple threads (UI thread, timer thread)
-- C# property access is atomic for boolean values, so no additional synchronization needed
+- `AllowClose` flag is declared with `volatile` keyword to ensure proper memory visibility across threads
+- The volatile keyword prevents compiler optimizations that could cache the value
+- Ensures that when the timer thread sets `AllowClose = true`, the UI thread sees the update immediately
+- For boolean flags accessed from multiple threads, volatile provides sufficient synchronization
 - Form.Close() is invoked on the UI thread via BeginInvoke for thread safety
 
 ### Exception Handling

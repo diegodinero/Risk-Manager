@@ -6,7 +6,14 @@ namespace Risk_Manager
     internal static class Program
     {
         // Flag to allow controlled shutdown via the shutdown button
-        public static bool AllowClose { get; set; } = false;
+        // Volatile ensures proper memory visibility across threads
+        private static volatile bool _allowClose = false;
+        
+        public static bool AllowClose
+        {
+            get => _allowClose;
+            set => _allowClose = value;
+        }
 
         [STAThread]
         static void Main()
