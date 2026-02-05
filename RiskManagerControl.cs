@@ -6613,6 +6613,283 @@ namespace Risk_Manager
             unlockTradingButton = unlockButton; // Store reference
             contentArea.Controls.Add(unlockButton);
 
+            // Separator line
+            var separatorLabel = new Label
+            {
+                Text = "",
+                Width = 450,
+                Height = 2,
+                Left = 0,
+                Top = 160,
+                BackColor = Color.FromArgb(60, 60, 60),
+                BorderStyle = BorderStyle.None
+            };
+            contentArea.Controls.Add(separatorLabel);
+            
+            // Automated Lock Section Title
+            var autoLockSectionLabel = new Label
+            {
+                Text = "Automated Daily Trading Lock",
+                Left = 0,
+                Top = 180,
+                Width = 450,
+                Height = 30,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            contentArea.Controls.Add(autoLockSectionLabel);
+            
+            // Automated Lock Description
+            var autoLockDescLabel = new Label
+            {
+                Text = "Automatically lock trading at a specific time each day.",
+                Left = 0,
+                Top = 215,
+                Width = 450,
+                Height = 25,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.TopLeft
+            };
+            contentArea.Controls.Add(autoLockDescLabel);
+            
+            // Enable Automated Trading Lock Checkbox
+            var chkAutoLockTradingEnabled = new CheckBox
+            {
+                Text = "Enable Automated Trading Lock",
+                Left = 0,
+                Top = 250,
+                Width = 250,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                FlatStyle = FlatStyle.Flat,
+                Tag = "AutoLockTradingEnabled"
+            };
+            contentArea.Controls.Add(chkAutoLockTradingEnabled);
+            
+            // Time Label
+            var lblAutoLockTradingTime = new Label
+            {
+                Text = "Lock Time (ET):",
+                Left = 0,
+                Top = 285,
+                Width = 120,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            contentArea.Controls.Add(lblAutoLockTradingTime);
+            
+            // Hour ComboBox
+            var cmbAutoLockTradingHour = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Left = 130,
+                Top = 285,
+                Width = 60,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Tag = "AutoLockTradingHour"
+            };
+            for (int i = 1; i <= 12; i++)
+                cmbAutoLockTradingHour.Items.Add(i.ToString("D2"));
+            cmbAutoLockTradingHour.SelectedIndex = 8; // Default to 09
+            contentArea.Controls.Add(cmbAutoLockTradingHour);
+            
+            // Colon Label
+            var lblColon = new Label
+            {
+                Text = ":",
+                Left = 195,
+                Top = 285,
+                Width = 10,
+                Height = 25,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            contentArea.Controls.Add(lblColon);
+            
+            // Minute ComboBox
+            var cmbAutoLockTradingMinute = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Left = 210,
+                Top = 285,
+                Width = 60,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Tag = "AutoLockTradingMinute"
+            };
+            cmbAutoLockTradingMinute.Items.AddRange(new object[] { "00", "15", "30", "45" });
+            cmbAutoLockTradingMinute.SelectedIndex = 2; // Default to 30
+            contentArea.Controls.Add(cmbAutoLockTradingMinute);
+            
+            // AM/PM ComboBox
+            var cmbAutoLockTradingAmPm = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Left = 275,
+                Top = 285,
+                Width = 60,
+                Height = 25,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Tag = "AutoLockTradingAmPm"
+            };
+            cmbAutoLockTradingAmPm.Items.AddRange(new object[] { "AM", "PM" });
+            cmbAutoLockTradingAmPm.SelectedIndex = 0; // Default to AM
+            contentArea.Controls.Add(cmbAutoLockTradingAmPm);
+            
+            // Time Format Help Label
+            var lblTimeFormatTrading = new Label
+            {
+                Text = "(e.g., 09:30 AM for market open)",
+                Left = 340,
+                Top = 285,
+                Width = 200,
+                Height = 25,
+                Font = new Font("Segoe UI", 8, FontStyle.Italic),
+                ForeColor = TextGray,
+                BackColor = CardBackground,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            contentArea.Controls.Add(lblTimeFormatTrading);
+            
+            // Save Auto-Lock Trading Settings Button
+            var btnSaveAutoLockTrading = new Button
+            {
+                Text = "SAVE AUTO-LOCK SETTINGS",
+                Width = 250,
+                Height = 40,
+                Left = 0,
+                Top = 325,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = AccentBlue,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            btnSaveAutoLockTrading.FlatAppearance.BorderSize = 0;
+            btnSaveAutoLockTrading.Click += (s, e) => {
+                try
+                {
+                    var accountNumber = displayedAccountNumber;
+                    if (string.IsNullOrEmpty(accountNumber))
+                    {
+                        MessageBox.Show("Please select an account first.", "No Account Selected", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (!settingsService.IsInitialized)
+                    {
+                        MessageBox.Show("Settings service is not initialized.", "Service Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                    
+                    // Get hour, minute, and AM/PM values
+                    if (cmbAutoLockTradingHour.SelectedItem == null || 
+                        cmbAutoLockTradingMinute.SelectedItem == null ||
+                        cmbAutoLockTradingAmPm.SelectedItem == null)
+                    {
+                        MessageBox.Show("Please select hour, minute, and AM/PM.", "Invalid Time", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    
+                    int hour = int.Parse(cmbAutoLockTradingHour.SelectedItem.ToString());
+                    int minute = int.Parse(cmbAutoLockTradingMinute.SelectedItem.ToString());
+                    string ampm = cmbAutoLockTradingAmPm.SelectedItem.ToString();
+                    
+                    // Convert to 24-hour format
+                    if (ampm == "PM" && hour != 12)
+                        hour += 12;
+                    else if (ampm == "AM" && hour == 12)
+                        hour = 0;
+                    
+                    // Update auto-lock trading settings using public method
+                    var lockTime = new TimeSpan(hour, minute, 0);
+                    settingsService.UpdateAutoLockTrading(accountNumber, chkAutoLockTradingEnabled.Checked, lockTime);
+                    
+                    var statusMsg = chkAutoLockTradingEnabled.Checked 
+                        ? $"Automated trading lock enabled. Trading will lock daily at {FormatTimeSpan(lockTime)} ET."
+                        : "Automated trading lock disabled.";
+                    
+                    MessageBox.Show(statusMsg, "Auto-Lock Trading Settings Saved", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error saving auto-lock trading settings: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    System.Diagnostics.Debug.WriteLine($"Error in Save Auto-Lock Trading Settings button: {ex}");
+                }
+            };
+            contentArea.Controls.Add(btnSaveAutoLockTrading);
+            
+            // Load existing auto-lock trading settings when account changes
+            void LoadAutoLockTradingSettings()
+            {
+                try
+                {
+                    var accountNumber = displayedAccountNumber;
+                    if (string.IsNullOrEmpty(accountNumber)) return;
+                    
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (!settingsService.IsInitialized) return;
+                    
+                    var settings = settingsService.GetSettings(accountNumber);
+                    if (settings != null)
+                    {
+                        chkAutoLockTradingEnabled.Checked = settings.AutoLockTradingEnabled;
+                        
+                        if (settings.AutoLockTradingTime.HasValue)
+                        {
+                            var time = settings.AutoLockTradingTime.Value;
+                            int hour = time.Hours;
+                            int minute = time.Minutes;
+                            bool isPM = hour >= 12;
+                            
+                            // Convert to 12-hour format
+                            if (hour > 12) hour -= 12;
+                            if (hour == 0) hour = 12;
+                            
+                            cmbAutoLockTradingHour.SelectedItem = hour.ToString("D2");
+                            // Round to nearest 15-minute interval
+                            int roundedMinute = (minute / 15) * 15;
+                            cmbAutoLockTradingMinute.SelectedItem = roundedMinute.ToString("D2");
+                            cmbAutoLockTradingAmPm.SelectedItem = isPM ? "PM" : "AM";
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error loading auto-lock trading settings: {ex.Message}");
+                }
+            }
+            
+            // Call LoadAutoLockTradingSettings initially
+            LoadAutoLockTradingSettings();
+
             // Update account display on panel creation
             UpdateLockAccountDisplay(lockAccountDisplay);
             
@@ -6694,6 +6971,7 @@ namespace Risk_Manager
                 
                 // Reload auto-lock settings for the new account
                 UpdateAutoLockControlsRecursive(this);
+                UpdateAutoLockTradingControlsRecursive(this);
             }
             catch (Exception ex)
             {
@@ -6777,6 +7055,101 @@ namespace Risk_Manager
                 if (control.Controls.Count > 0)
                 {
                     FindAutoLockControls(control, ref checkbox, ref hourBox, ref minuteBox);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Recursively finds and updates auto-lock trading controls in the control tree.
+        /// </summary>
+        private void UpdateAutoLockTradingControlsRecursive(Control parent)
+        {
+            if (parent == null) return;
+            
+            try
+            {
+                CheckBox autoLockCheckbox = null;
+                ComboBox hourComboBox = null;
+                ComboBox minuteComboBox = null;
+                ComboBox ampmComboBox = null;
+                
+                // Find the controls
+                FindAutoLockTradingControls(parent, ref autoLockCheckbox, ref hourComboBox, ref minuteComboBox, ref ampmComboBox);
+                
+                // If we found the controls, update them
+                if (autoLockCheckbox != null && hourComboBox != null && minuteComboBox != null && ampmComboBox != null)
+                {
+                    var accountNumber = displayedAccountNumber;
+                    if (string.IsNullOrEmpty(accountNumber)) return;
+                    
+                    var settingsService = RiskManagerSettingsService.Instance;
+                    if (!settingsService.IsInitialized) return;
+                    
+                    var settings = settingsService.GetSettings(accountNumber);
+                    if (settings != null)
+                    {
+                        autoLockCheckbox.Checked = settings.AutoLockTradingEnabled;
+                        
+                        if (settings.AutoLockTradingTime.HasValue)
+                        {
+                            var time = settings.AutoLockTradingTime.Value;
+                            int hour = time.Hours;
+                            int minute = time.Minutes;
+                            bool isPM = hour >= 12;
+                            
+                            // Convert to 12-hour format
+                            if (hour > 12) hour -= 12;
+                            if (hour == 0) hour = 12;
+                            
+                            hourComboBox.SelectedItem = hour.ToString("D2");
+                            // Round to nearest 15-minute interval
+                            int roundedMinute = (minute / 15) * 15;
+                            minuteComboBox.SelectedItem = roundedMinute.ToString("D2");
+                            ampmComboBox.SelectedItem = isPM ? "PM" : "AM";
+                        }
+                        else
+                        {
+                            // Default values if not set
+                            hourComboBox.SelectedItem = "09";
+                            minuteComboBox.SelectedItem = "30";
+                            ampmComboBox.SelectedItem = "AM";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in UpdateAutoLockTradingControlsRecursive: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Helper method to find auto-lock trading controls by their tags.
+        /// </summary>
+        private void FindAutoLockTradingControls(Control parent, ref CheckBox checkbox, ref ComboBox hourBox, ref ComboBox minuteBox, ref ComboBox ampmBox)
+        {
+            if (parent == null) return;
+            
+            foreach (Control control in parent.Controls)
+            {
+                if (control is CheckBox chk && chk.Tag?.ToString() == "AutoLockTradingEnabled")
+                {
+                    checkbox = chk;
+                }
+                else if (control is ComboBox cmb)
+                {
+                    if (cmb.Tag?.ToString() == "AutoLockTradingHour")
+                        hourBox = cmb;
+                    else if (cmb.Tag?.ToString() == "AutoLockTradingMinute")
+                        minuteBox = cmb;
+                    else if (cmb.Tag?.ToString() == "AutoLockTradingAmPm")
+                        ampmBox = cmb;
+                }
+                
+                // Recursively check child controls
+                if (control.Controls.Count > 0)
+                {
+                    FindAutoLockTradingControls(control, ref checkbox, ref hourBox, ref minuteBox, ref ampmBox);
                 }
             }
         }
@@ -7695,6 +8068,41 @@ namespace Risk_Manager
                                 {
                                     selectedAccountChanged = true;
                                     System.Diagnostics.Debug.WriteLine($"Auto-locked settings for selected account: {uniqueAccountId}");
+                                }
+                            }
+                        }
+                        
+                        // Check if automated trading lock should trigger (only if not already locked)
+                        if (!isLocked && settings?.AutoLockTradingEnabled == true && settings?.AutoLockTradingTime.HasValue == true)
+                        {
+                            // Check if we've reached the auto-lock time
+                            if (ShouldTriggerAutoLock(settings.AutoLockTradingTime.Value))
+                            {
+                                // Trigger auto-lock until 5 PM ET
+                                var duration = RiskManagerSettingsService.CalculateDurationUntil5PMET();
+                                settingsService.SetTradingLock(uniqueAccountId, true, "Auto-locked trading at scheduled time", duration);
+                                
+                                // Lock the account in Core API
+                                try
+                                {
+                                    var lockMethod = core.GetType().GetMethod("LockAccount");
+                                    if (lockMethod != null)
+                                    {
+                                        lockMethod.Invoke(core, new object[] { account });
+                                        System.Diagnostics.Debug.WriteLine($"Auto-locked trading for account: {uniqueAccountId}");
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"Error auto-locking trading for account {uniqueAccountId}: {ex.Message}");
+                                }
+                                
+                                // Check if this is the selected account
+                                if (!string.IsNullOrEmpty(selectedAccountNumber) && selectedAccountNumber == uniqueAccountId)
+                                {
+                                    selectedAccountChanged = true;
+                                    anyLocked = true;
+                                    System.Diagnostics.Debug.WriteLine($"Auto-locked trading for selected account: {uniqueAccountId}");
                                 }
                             }
                         }

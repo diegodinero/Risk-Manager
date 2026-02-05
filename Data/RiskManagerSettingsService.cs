@@ -460,6 +460,23 @@ namespace Risk_Manager.Data
         }
 
         /// <summary>
+        /// Updates the automated trading lock configuration for an account.
+        /// </summary>
+        /// <param name="accountNumber">The account number to update</param>
+        /// <param name="enabled">True to enable automated lock, false to disable</param>
+        /// <param name="lockTime">The time of day in Eastern Time when trading should auto-lock</param>
+        public void UpdateAutoLockTrading(string accountNumber, bool enabled, TimeSpan? lockTime)
+        {
+            var settings = GetOrCreateSettings(accountNumber);
+            if (settings != null)
+            {
+                settings.AutoLockTradingEnabled = enabled;
+                settings.AutoLockTradingTime = lockTime;
+                SaveSettings(settings);
+            }
+        }
+
+        /// <summary>
         /// Updates a specific column visibility setting for an account.
         /// </summary>
         /// <param name="accountNumber">The account number to update</param>
@@ -1456,6 +1473,10 @@ namespace Risk_Manager.Data
         // Automated Settings Lock
         public bool AutoLockSettingsEnabled { get; set; } = false;
         public TimeSpan? AutoLockSettingsTime { get; set; }
+        
+        // Automated Trading Lock
+        public bool AutoLockTradingEnabled { get; set; } = false;
+        public TimeSpan? AutoLockTradingTime { get; set; }
         
         // Daily Loss Limit Warning Tracking
         public DailyLossWarningInfo? DailyLossWarning { get; set; }
