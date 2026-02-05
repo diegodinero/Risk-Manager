@@ -591,6 +591,12 @@ namespace Risk_Manager.Data
                     targetSettings.TradingLock = CopyLockInfo(sourceSettings.TradingLock);
                     targetSettings.SettingsLock = CopyLockInfo(sourceSettings.SettingsLock);
                     
+                    // Copy automated lock settings
+                    targetSettings.AutoLockSettingsEnabled = sourceSettings.AutoLockSettingsEnabled;
+                    targetSettings.AutoLockSettingsTime = sourceSettings.AutoLockSettingsTime;
+                    targetSettings.AutoLockTradingEnabled = sourceSettings.AutoLockTradingEnabled;
+                    targetSettings.AutoLockTradingTime = sourceSettings.AutoLockTradingTime;
+                    
                     // Save the target settings
                     SaveSettings(targetSettings);
                     
