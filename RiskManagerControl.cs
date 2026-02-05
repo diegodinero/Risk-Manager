@@ -8127,6 +8127,10 @@ namespace Risk_Manager
                             // Check if we've reached the auto-lock time
                             if (ShouldTriggerAutoLock(settings.AutoLockTradingTime.Value))
                             {
+                                // Close all positions and cancel orders before locking
+                                // This matches the behavior of manual lock
+                                CloseAllPositionsForAccount(account, core);
+                                
                                 // Trigger auto-lock until 5 PM ET
                                 var duration = RiskManagerSettingsService.CalculateDurationUntil5PMET();
                                 settingsService.SetTradingLock(uniqueAccountId, true, "Auto-locked trading at scheduled time", duration);
