@@ -7837,15 +7837,15 @@ namespace Risk_Manager
                     {
                         var symbol = symbolGroup.Key;
                         var positions = symbolGroup.ToList();
-                        var positionCount = positions.Count;
+                        var totalContracts = positions.Sum(p => Math.Abs(p.Quantity));
 
                         // Get the contract limit for this symbol
                         var contractLimit = settingsService.GetContractLimit(accountId, symbol);
                         
-                        if (contractLimit.HasValue && positionCount > contractLimit.Value)
+                        if (contractLimit.HasValue && totalContracts > contractLimit.Value)
                         {
                             // Exceeded contract limit - close all positions for this symbol
-                            string reason = $"Contract Limit Exceeded: {positionCount} positions > {contractLimit.Value} limit";
+                            string reason = $"Contract Limit Exceeded: {totalContracts} contracts > {contractLimit.Value} limit";
                             
                             foreach (var position in positions)
                             {
@@ -8033,15 +8033,15 @@ namespace Risk_Manager
                 {
                     var symbol = symbolGroup.Key;
                     var positions = symbolGroup.ToList();
-                    var positionCount = positions.Count;
+                    var totalContracts = positions.Sum(p => Math.Abs(p.Quantity));
 
                     // Get the contract limit for this symbol
                     var contractLimit = settingsService.GetContractLimit(accountId, symbol);
                     
-                    if (contractLimit.HasValue && positionCount > contractLimit.Value)
+                    if (contractLimit.HasValue && totalContracts > contractLimit.Value)
                     {
                         // Exceeded contract limit - close all positions for this symbol
-                        System.Diagnostics.Debug.WriteLine($"Contract limit exceeded for symbol {symbol}: {positionCount} positions > {contractLimit.Value} limit");
+                        System.Diagnostics.Debug.WriteLine($"Contract limit exceeded for symbol {symbol}: {totalContracts} contracts > {contractLimit.Value} limit");
                         
                         foreach (var position in positions)
                         {
