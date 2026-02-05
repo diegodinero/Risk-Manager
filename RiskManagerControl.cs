@@ -6935,6 +6935,9 @@ namespace Risk_Manager
                         shutdownCountdownForm?.Dispose();
                         shutdownCountdownForm = null;
 
+                        // Allow the application to close by setting the flag
+                        Risk_Manager.Program.AllowClose = true;
+
                         // Close the application gracefully
                         var parentForm = this.FindForm();
                         if (parentForm != null)
@@ -13839,6 +13842,27 @@ namespace Risk_Manager
                 // recurse
                 ApplyValueLabelColoring(child);
             }
+        }
+
+        /// <summary>
+        /// Override to block Alt+F4 key combination and other bypass attempts.
+        /// Only the shutdown button can close the application.
+        /// </summary>
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // Block Alt+F4 combination
+            if (keyData == (Keys.Alt | Keys.F4))
+            {
+                MessageBox.Show(
+                    "Alt+F4 is disabled.\n\n" +
+                    "Use the 🚪 Shutdown button in the top-right corner to lock accounts and close the application safely.",
+                    "Cannot Close Application",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return true; // Mark as handled
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
         }
     }
 }
