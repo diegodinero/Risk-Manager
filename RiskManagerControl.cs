@@ -12283,11 +12283,687 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Creates the Trading Models page placeholder
+        /// Creates the Trading Models page with add/edit functionality
         /// </summary>
         private Control CreateTradingModelsPage()
         {
-            return CreatePlaceholderPage("Trading Models", "Define and track your trading strategies");
+            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
+            
+            // Main content panel
+            var contentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground,
+                Padding = new Padding(20),
+                AutoScroll = true
+            };
+
+            // Header with Add Model button
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = DarkBackground
+            };
+
+            var titleLabel = new Label
+            {
+                Text = "Trading Models",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 10)
+            };
+            headerPanel.Controls.Add(titleLabel);
+
+            var addModelButton = new Button
+            {
+                Text = "+ Add Model",
+                Width = 120,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 150, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Location = new Point(contentPanel.Width - 140, 7),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            addModelButton.FlatAppearance.BorderSize = 0;
+            addModelButton.Click += (s, e) => ToggleModelForm();
+            headerPanel.Controls.Add(addModelButton);
+
+            contentPanel.Controls.Add(headerPanel);
+
+            // Add/Edit Model Form (initially hidden)
+            var modelFormPanel = CreateModelFormPanel();
+            modelFormPanel.Visible = false;
+            modelFormPanel.Tag = "ModelForm";
+            contentPanel.Controls.Add(modelFormPanel);
+
+            // Models list panel
+            var modelsListPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 20, 0, 0),
+                Tag = "ModelsList"
+            };
+            contentPanel.Controls.Add(modelsListPanel);
+
+            pagePanel.Controls.Add(contentPanel);
+
+            // Load models
+            RefreshModelsList(modelsListPanel);
+
+            return pagePanel;
+        }
+
+        /// <summary>
+        /// Creates the add/edit model form panel
+        /// </summary>
+        private Panel CreateModelFormPanel()
+        {
+            var formPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 350,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 10, 0, 20)
+            };
+
+            // Form heading
+            var formTitle = new Label
+            {
+                Text = "Add Trading Model",
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 0)
+            };
+            formPanel.Controls.Add(formTitle);
+
+            // Name label
+            var nameLabel = new Label
+            {
+                Text = "Name *",
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(0, 40),
+                AutoSize = true
+            };
+            formPanel.Controls.Add(nameLabel);
+
+            // Name textbox
+            var nameTextBox = new TextBox
+            {
+                Location = new Point(0, 60),
+                Width = formPanel.Width - 30,
+                Height = 25,
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 10),
+                Tag = "ModelName",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            formPanel.Controls.Add(nameTextBox);
+
+            // Description label
+            var descLabel = new Label
+            {
+                Text = "Description",
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(0, 95),
+                AutoSize = true
+            };
+            formPanel.Controls.Add(descLabel);
+
+            // Description textbox
+            var descTextBox = new TextBox
+            {
+                Location = new Point(0, 115),
+                Width = formPanel.Width - 30,
+                Height = 80,
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 10),
+                Tag = "ModelDescription",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            formPanel.Controls.Add(descTextBox);
+
+            // Image label
+            var imageLabel = new Label
+            {
+                Text = "Image (optional)",
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(0, 205),
+                AutoSize = true
+            };
+            formPanel.Controls.Add(imageLabel);
+
+            // Image status label
+            var imageStatusLabel = new Label
+            {
+                Text = "No image selected",
+                ForeColor = TextGray,
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                Location = new Point(0, 250),
+                Width = formPanel.Width - 130,
+                AutoSize = false,
+                Tag = "ImageStatus",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            formPanel.Controls.Add(imageStatusLabel);
+
+            // Choose File button
+            var chooseFileButton = new Button
+            {
+                Text = "Choose File",
+                Width = 110,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(60, 60, 60),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 9),
+                Location = new Point(0, 225),
+                Tag = "ChooseFile"
+            };
+            chooseFileButton.FlatAppearance.BorderSize = 1;
+            chooseFileButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            chooseFileButton.Click += ChooseModelImage_Click;
+            formPanel.Controls.Add(chooseFileButton);
+
+            // Buttons panel
+            var buttonsPanel = new FlowLayoutPanel
+            {
+                Location = new Point(0, 290),
+                Width = formPanel.Width - 30,
+                Height = 40,
+                FlowDirection = FlowDirection.RightToLeft,
+                BackColor = CardBackground,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+
+            // Save button
+            var saveButton = new Button
+            {
+                Text = "Save Model",
+                Width = 110,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 150, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+            saveButton.FlatAppearance.BorderSize = 0;
+            saveButton.Click += SaveModel_Click;
+            buttonsPanel.Controls.Add(saveButton);
+
+            // Cancel button
+            var cancelButton = new Button
+            {
+                Text = "Cancel",
+                Width = 80,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10),
+                Margin = new Padding(0, 0, 10, 0)
+            };
+            cancelButton.FlatAppearance.BorderSize = 1;
+            cancelButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            cancelButton.Click += (s, e) => ToggleModelForm();
+            buttonsPanel.Controls.Add(cancelButton);
+
+            formPanel.Controls.Add(buttonsPanel);
+
+            // Store hidden fields for model ID and image data
+            var modelIdField = new Label { Visible = false, Tag = "ModelId" };
+            var imageDataField = new Label { Visible = false, Tag = "ImageData" };
+            var imageNameField = new Label { Visible = false, Tag = "ImageName" };
+            formPanel.Controls.Add(modelIdField);
+            formPanel.Controls.Add(imageDataField);
+            formPanel.Controls.Add(imageNameField);
+
+            return formPanel;
+        }
+
+        /// <summary>
+        /// Toggles the model form visibility
+        /// </summary>
+        private void ToggleModelForm()
+        {
+            if (journalContentPanel == null) return;
+
+            var form = FindControlByTag(journalContentPanel, "ModelForm") as Panel;
+            if (form != null)
+            {
+                form.Visible = !form.Visible;
+                
+                if (!form.Visible)
+                {
+                    // Clear form when hiding
+                    ClearModelForm(form);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Clears the model form
+        /// </summary>
+        private void ClearModelForm(Panel form)
+        {
+            var nameBox = FindControlByTag(form, "ModelName") as TextBox;
+            var descBox = FindControlByTag(form, "ModelDescription") as TextBox;
+            var imageStatusLabel = FindControlByTag(form, "ImageStatus") as Label;
+            var modelIdLabel = FindControlByTag(form, "ModelId") as Label;
+            var imageDataLabel = FindControlByTag(form, "ImageData") as Label;
+            var imageNameLabel = FindControlByTag(form, "ImageName") as Label;
+
+            if (nameBox != null) nameBox.Text = "";
+            if (descBox != null) descBox.Text = "";
+            if (imageStatusLabel != null) imageStatusLabel.Text = "No image selected";
+            if (modelIdLabel != null) modelIdLabel.Text = "";
+            if (imageDataLabel != null) imageDataLabel.Text = "";
+            if (imageNameLabel != null) imageNameLabel.Text = "";
+        }
+
+        /// <summary>
+        /// Choose image for trading model
+        /// </summary>
+        private void ChooseModelImage_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new OpenFileDialog())
+            {
+                dialog.Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif";
+                dialog.Title = "Select Image for Trading Model";
+
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        // Read image file as bytes
+                        byte[] imageBytes = System.IO.File.ReadAllBytes(dialog.FileName);
+                        string imageName = Path.GetFileName(dialog.FileName);
+
+                        // Store in hidden labels
+                        var imageStatusLabel = FindControlByTag(journalContentPanel, "ImageStatus") as Label;
+                        var imageDataLabel = FindControlByTag(journalContentPanel, "ImageData") as Label;
+                        var imageNameLabel = FindControlByTag(journalContentPanel, "ImageName") as Label;
+
+                        if (imageStatusLabel != null)
+                            imageStatusLabel.Text = imageName;
+                        
+                        if (imageDataLabel != null)
+                            imageDataLabel.Text = Convert.ToBase64String(imageBytes);
+                        
+                        if (imageNameLabel != null)
+                            imageNameLabel.Text = imageName;
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error loading image: {ex.Message}", "Image Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Save model handler
+        /// </summary>
+        private void SaveModel_Click(object sender, EventArgs e)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("Please select an account first.", "No Account Selected", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var form = FindControlByTag(journalContentPanel, "ModelForm") as Panel;
+            if (form == null) return;
+
+            var nameBox = FindControlByTag(form, "ModelName") as TextBox;
+            var descBox = FindControlByTag(form, "ModelDescription") as TextBox;
+            var modelIdLabel = FindControlByTag(form, "ModelId") as Label;
+            var imageDataLabel = FindControlByTag(form, "ImageData") as Label;
+            var imageNameLabel = FindControlByTag(form, "ImageName") as Label;
+
+            var name = nameBox?.Text ?? "";
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                MessageBox.Show("Please enter a model name.", "Name Required", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var model = new TradingJournalService.TradingModel
+            {
+                Name = name,
+                Description = descBox?.Text ?? "",
+                ImageName = imageNameLabel?.Text ?? ""
+            };
+
+            // Get image data if present
+            if (imageDataLabel != null && !string.IsNullOrEmpty(imageDataLabel.Text))
+            {
+                try
+                {
+                    model.ImageData = Convert.FromBase64String(imageDataLabel.Text);
+                }
+                catch
+                {
+                    model.ImageData = null;
+                }
+            }
+
+            // Check if editing existing model
+            if (modelIdLabel != null && !string.IsNullOrEmpty(modelIdLabel.Text))
+            {
+                if (Guid.TryParse(modelIdLabel.Text, out Guid modelId))
+                {
+                    model.Id = modelId;
+                    // Preserve trade count when editing
+                    var existing = TradingJournalService.Instance.GetModels(accountNumber)
+                        .FirstOrDefault(m => m.Id == modelId);
+                    if (existing != null)
+                        model.TradeCount = existing.TradeCount;
+                }
+            }
+
+            TradingJournalService.Instance.SaveModel(accountNumber, model);
+            
+            // Hide form and refresh list
+            ToggleModelForm();
+            RefreshModelsForCurrentAccount();
+        }
+
+        /// <summary>
+        /// Refresh models list for current account
+        /// </summary>
+        private void RefreshModelsForCurrentAccount()
+        {
+            if (journalContentPanel == null) return;
+
+            var modelsList = FindControlByTag(journalContentPanel, "ModelsList") as FlowLayoutPanel;
+            if (modelsList != null)
+            {
+                RefreshModelsList(modelsList);
+            }
+        }
+
+        /// <summary>
+        /// Refresh the models list
+        /// </summary>
+        private void RefreshModelsList(FlowLayoutPanel listPanel)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                listPanel.Controls.Clear();
+                return;
+            }
+
+            var models = TradingJournalService.Instance.GetModels(accountNumber);
+            listPanel.SuspendLayout();
+            listPanel.Controls.Clear();
+
+            foreach (var model in models)
+            {
+                var modelCard = CreateModelCard(model);
+                listPanel.Controls.Add(modelCard);
+            }
+
+            listPanel.ResumeLayout();
+        }
+
+        /// <summary>
+        /// Creates a trading model card
+        /// </summary>
+        private Panel CreateModelCard(TradingJournalService.TradingModel model)
+        {
+            var card = new Panel
+            {
+                Width = journalContentPanel.Width - 60,
+                Height = 120,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 0, 0, 15),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            // Image on the left (or placeholder)
+            PictureBox imageBox;
+            if (model.ImageData != null && model.ImageData.Length > 0)
+            {
+                try
+                {
+                    using (var ms = new MemoryStream(model.ImageData))
+                    {
+                        imageBox = new PictureBox
+                        {
+                            Location = new Point(0, 0),
+                            Width = 90,
+                            Height = 90,
+                            SizeMode = PictureBoxSizeMode.Zoom,
+                            Image = Image.FromStream(ms),
+                            BackColor = DarkerBackground
+                        };
+                    }
+                }
+                catch
+                {
+                    imageBox = CreateModelPlaceholder();
+                }
+            }
+            else
+            {
+                imageBox = CreateModelPlaceholder();
+            }
+            card.Controls.Add(imageBox);
+
+            // Content panel (right of image)
+            var contentPanel = new Panel
+            {
+                Location = new Point(100, 0),
+                Width = card.Width - 130,
+                Height = 90,
+                BackColor = CardBackground,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            // Model name
+            var nameLabel = new Label
+            {
+                Text = model.Name,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                MaximumSize = new Size(contentPanel.Width - 80, 0),
+                Location = new Point(0, 0)
+            };
+            contentPanel.Controls.Add(nameLabel);
+
+            // Edit button (top right)
+            var editButton = new Button
+            {
+                Text = "✏️",
+                Width = 32,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 12),
+                Location = new Point(contentPanel.Width - 70, 0),
+                Tag = model.Id,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            editButton.FlatAppearance.BorderSize = 1;
+            editButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            editButton.Click += EditModel_Click;
+            contentPanel.Controls.Add(editButton);
+
+            // Delete button
+            var deleteButton = new Button
+            {
+                Text = "🗑",
+                Width = 32,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 12),
+                Location = new Point(contentPanel.Width - 32, 0),
+                Tag = model.Id,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            deleteButton.FlatAppearance.BorderSize = 1;
+            deleteButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            deleteButton.Click += DeleteModel_Click;
+            contentPanel.Controls.Add(deleteButton);
+
+            // Description
+            if (!string.IsNullOrWhiteSpace(model.Description))
+            {
+                var descLabel = new Label
+                {
+                    Text = model.Description,
+                    Font = new Font("Segoe UI", 9),
+                    ForeColor = TextGray,
+                    AutoSize = true,
+                    MaximumSize = new Size(contentPanel.Width - 5, 40),
+                    Location = new Point(0, 28)
+                };
+                contentPanel.Controls.Add(descLabel);
+            }
+
+            // Trade count badge
+            var tradeCountLabel = new Label
+            {
+                Text = $"📊 Used in {model.TradeCount} trade{(model.TradeCount != 1 ? "s" : "")}",
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(100, 200, 255),
+                AutoSize = true,
+                Location = new Point(0, 70)
+            };
+            contentPanel.Controls.Add(tradeCountLabel);
+
+            card.Controls.Add(contentPanel);
+
+            return card;
+        }
+
+        /// <summary>
+        /// Creates a placeholder image for models without images
+        /// </summary>
+        private PictureBox CreateModelPlaceholder()
+        {
+            var placeholder = new PictureBox
+            {
+                Location = new Point(0, 0),
+                Width = 90,
+                Height = 90,
+                BackColor = DarkerBackground,
+                SizeMode = PictureBoxSizeMode.CenterImage
+            };
+
+            // Create a simple placeholder with text
+            var bmp = new Bitmap(90, 90);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.FromArgb(50, 50, 50));
+                g.DrawString("📈", new Font("Segoe UI Emoji", 24), Brushes.Gray, new PointF(25, 25));
+            }
+            placeholder.Image = bmp;
+
+            return placeholder;
+        }
+
+        /// <summary>
+        /// Edit model handler
+        /// </summary>
+        private void EditModel_Click(object sender, EventArgs e)
+        {
+            if (!(sender is Button btn) || !(btn.Tag is Guid modelId)) return;
+
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return;
+
+            var models = TradingJournalService.Instance.GetModels(accountNumber);
+            var model = models.FirstOrDefault(m => m.Id == modelId);
+            if (model == null) return;
+
+            // Show form and populate with model data
+            var form = FindControlByTag(journalContentPanel, "ModelForm") as Panel;
+            if (form != null)
+            {
+                form.Visible = true;
+
+                var nameBox = FindControlByTag(form, "ModelName") as TextBox;
+                var descBox = FindControlByTag(form, "ModelDescription") as TextBox;
+                var imageStatusLabel = FindControlByTag(form, "ImageStatus") as Label;
+                var modelIdLabel = FindControlByTag(form, "ModelId") as Label;
+                var imageDataLabel = FindControlByTag(form, "ImageData") as Label;
+                var imageNameLabel = FindControlByTag(form, "ImageName") as Label;
+
+                if (nameBox != null) nameBox.Text = model.Name;
+                if (descBox != null) descBox.Text = model.Description;
+                if (modelIdLabel != null) modelIdLabel.Text = model.Id.ToString();
+                
+                if (imageStatusLabel != null)
+                    imageStatusLabel.Text = string.IsNullOrEmpty(model.ImageName) ? 
+                        "No image selected" : model.ImageName;
+                
+                if (imageDataLabel != null && model.ImageData != null)
+                    imageDataLabel.Text = Convert.ToBase64String(model.ImageData);
+                
+                if (imageNameLabel != null)
+                    imageNameLabel.Text = model.ImageName ?? "";
+            }
+        }
+
+        /// <summary>
+        /// Delete model handler
+        /// </summary>
+        private void DeleteModel_Click(object sender, EventArgs e)
+        {
+            if (!(sender is Button btn) || !(btn.Tag is Guid modelId)) return;
+
+            var result = MessageBox.Show(
+                "Are you sure you want to delete this trading model?",
+                "Confirm Delete",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (result == DialogResult.Yes)
+            {
+                var accountNumber = GetSelectedAccountNumber();
+                if (!string.IsNullOrEmpty(accountNumber))
+                {
+                    TradingJournalService.Instance.DeleteModel(accountNumber, modelId);
+                    RefreshModelsForCurrentAccount();
+                }
+            }
         }
 
         /// <summary>

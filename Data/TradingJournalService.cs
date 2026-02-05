@@ -46,8 +46,10 @@ namespace Risk_Manager.Data
         private readonly string _dataDirectory;
         private readonly string _journalFilePath;
         private readonly string _notesFilePath;
+        private readonly string _modelsFilePath;
         private Dictionary<string, List<JournalTrade>> _accountTrades; // Account number -> list of trades
         private Dictionary<string, List<JournalNote>> _accountNotes; // Account number -> list of notes
+        private Dictionary<string, List<TradingModel>> _accountModels; // Account number -> list of trading models
 
         private TradingJournalService()
         {
@@ -59,11 +61,14 @@ namespace Risk_Manager.Data
             
             _journalFilePath = Path.Combine(_dataDirectory, "trading_journal.json");
             _notesFilePath = Path.Combine(_dataDirectory, "journal_notes.json");
+            _modelsFilePath = Path.Combine(_dataDirectory, "trading_models.json");
             _accountTrades = new Dictionary<string, List<JournalTrade>>();
             _accountNotes = new Dictionary<string, List<JournalNote>>();
+            _accountModels = new Dictionary<string, List<TradingModel>>();
             
             LoadJournal();
             LoadNotes();
+            LoadModels();
         }
 
         public static TradingJournalService Instance
@@ -354,6 +359,141 @@ namespace Risk_Manager.Data
             public string Content { get; set; } = "";
             public string ImagePath { get; set; } = "";
             public string Account { get; set; } = "";
+        }
+
+        /// <summary>
+        /// Represents a trading model/strategy
+        /// </summary>
+        public class TradingModel
+        {
+            public Guid Id { get; set; } = Guid.NewGuid();
+            public string Name { get; set; } = "";
+            public string Description { get; set; } = "";
+            public byte[] ImageData { get; set; }
+            public string ImageName { get; set; } = "";
+            public DateTime CreatedAt { get; set; } = DateTime.Now;
+            public int TradeCount { get; set; } = 0;
+            public string Account { get; set; } = "";
+        }
+
+        // ============= TRADING MODELS MANAGEMENT =============
+
+        /// <summary>
+        /// Load trading models from JSON file
+        /// </summary>
+        private void LoadModels()
+        {
+            try
+            {
+                if (File.Exists(_modelsFilePath))
+                {
+                    var json = File.ReadAllText(_modelsFilePath);
+                    _accountModels = JsonSerializer.Deserialize<Dictionary<string, List<TradingModel>>>(json)
+                                   ?? new Dictionary<string, List<TradingModel>>();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading models: {ex.Message}");
+                _accountModels = new Dictionary<string, List<TradingModel>>();
+            }
+        }
+
+        /// <summary>
+        /// Save trading models to JSON file
+        /// </summary>
+        private void SaveModels()
+        {
+            try
+            {
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                var json = JsonSerializer.Serialize(_accountModels, options);
+                File.WriteAllText(_modelsFilePath, json);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving models: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Get all trading models for a specific account
+        /// </summary>
+        public List<TradingModel> GetModels(string accountNumber)
+        {
+            if (string.IsNullOrEmpty(accountNumber))
+                return new List<TradingModel>();
+
+            if (!_accountModels.ContainsKey(accountNumber))
+                _accountModels[accountNumber] = new List<TradingModel>();
+
+            return _accountModels[accountNumber].OrderByDescending(m => m.CreatedAt).ToList();
+        }
+
+        /// <summary>
+        /// Add or update a trading model
+        /// </summary>
+        public void SaveModel(string accountNumber, TradingModel model)
+        {
+            if (string.IsNullOrEmpty(accountNumber) || model == null)
+                return;
+
+            if (!_accountModels.ContainsKey(accountNumber))
+                _accountModels[accountNumber] = new List<TradingModel>();
+
+            var existingModel = _accountModels[accountNumber].FirstOrDefault(m => m.Id == model.Id);
+            if (existingModel != null)
+            {
+                // Update existing
+                existingModel.Name = model.Name;
+                existingModel.Description = model.Description;
+                existingModel.ImageData = model.ImageData;
+                existingModel.ImageName = model.ImageName;
+            }
+            else
+            {
+                // Add new
+                model.Account = accountNumber;
+                _accountModels[accountNumber].Add(model);
+            }
+
+            SaveModels();
+        }
+
+        /// <summary>
+        /// Delete a trading model
+        /// </summary>
+        public void DeleteModel(string accountNumber, Guid modelId)
+        {
+            if (string.IsNullOrEmpty(accountNumber))
+                return;
+
+            if (_accountModels.ContainsKey(accountNumber))
+            {
+                _accountModels[accountNumber].RemoveAll(m => m.Id == modelId);
+                SaveModels();
+            }
+        }
+
+        /// <summary>
+        /// Increment trade count for a model
+        /// </summary>
+        public void IncrementModelUsage(string accountNumber, string modelName)
+        {
+            if (string.IsNullOrEmpty(accountNumber) || string.IsNullOrEmpty(modelName))
+                return;
+
+            if (_accountModels.ContainsKey(accountNumber))
+            {
+                var model = _accountModels[accountNumber].FirstOrDefault(m => 
+                    m.Name.Equals(modelName, StringComparison.OrdinalIgnoreCase));
+                
+                if (model != null)
+                {
+                    model.TradeCount++;
+                    SaveModels();
+                }
+            }
         }
     }
 
