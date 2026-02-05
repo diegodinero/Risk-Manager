@@ -77,12 +77,12 @@ private Panel CreateModelCard(TradingJournalService.TradingModel model, FlowLayo
 Width = journalContentPanel.Width - 60,  // 1836 - 60 = 1776
 
 // After - CORRECT
-Width = listPanel.ClientWidth - 30,  // Uses actual container width
+Width = listPanel.ClientSize.Width - 30,  // Uses actual container width
 ```
 
-### Why ClientWidth?
-- `ClientWidth` gives the interior width of the container (excluding scrollbars)
-- At the time cards are created, even if the FlowLayoutPanel hasn't been fully laid out, `ClientWidth` gives us the best available width
+### Why ClientSize.Width?
+- `ClientSize.Width` gives the interior width of the container (excluding scrollbars and borders)
+- At the time cards are created, even if the FlowLayoutPanel hasn't been fully laid out, `ClientSize.Width` gives us the best available width
 - Subtracting 30 (instead of 60) accounts for padding and margins
 
 ## Implementation Changes
@@ -93,7 +93,7 @@ private Panel CreateModelCard(TradingJournalService.TradingModel model, FlowLayo
 {
     var card = new Panel
     {
-        Width = listPanel.ClientWidth - 30,  // ✅ Fixed
+        Width = listPanel.ClientSize.Width - 30,  // ✅ Fixed
         Height = 120,
         BackColor = CardBackground,
         Padding = new Padding(15),
@@ -144,7 +144,7 @@ After applying the fix:
 ### 1. Layout Timing Matters
 Windows Forms controls may not have their final dimensions immediately after creation. Always use the container's actual dimensions when possible.
 
-### 2. Use ClientWidth/ClientHeight
+### 2. Use ClientSize.Width/ClientSize.Height
 These properties give you the usable interior space of a container, which is what you need for child controls.
 
 ### 3. Debug with Dimensions
@@ -161,7 +161,7 @@ Don't rely on global state (like `journalContentPanel`) when you have the immedi
 
 | Aspect | Before Fix | After Fix |
 |--------|------------|-----------|
-| Card Width Source | `journalContentPanel.Width - 60` | `listPanel.ClientWidth - 30` |
+| Card Width Source | `journalContentPanel.Width - 60` | `listPanel.ClientSize.Width - 30` |
 | Card Width Value | 1776 px | Matches container (~130-1800 px) |
 | Container Width | 160 px | Dynamically fills available space |
 | Width Mismatch | Yes (1776 vs 160) | No (matches container) |
@@ -177,6 +177,6 @@ Don't rely on global state (like `journalContentPanel`) when you have the immedi
 
 ## Conclusion
 
-The Trading Models display issue was caused by a width mismatch between the cards (1776px) and their container (160px). By changing the card width calculation to use `listPanel.ClientWidth` instead of `journalContentPanel.Width`, the cards now properly fit within their container and are visible to users.
+The Trading Models display issue was caused by a width mismatch between the cards (1776px) and their container (160px). By changing the card width calculation to use `listPanel.ClientSize.Width` instead of `journalContentPanel.Width`, the cards now properly fit within their container and are visible to users.
 
 **Status:** ✅ Fixed and Production Ready

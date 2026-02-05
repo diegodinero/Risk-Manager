@@ -12749,7 +12749,7 @@ namespace Risk_Manager
         {
             var card = new Panel
             {
-                Width = listPanel.ClientWidth - 30,
+                Width = listPanel.ClientSize.Width - 30,
                 Height = 120,
                 BackColor = CardBackground,
                 Padding = new Padding(15),
