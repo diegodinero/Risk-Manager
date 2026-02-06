@@ -12965,7 +12965,6 @@ namespace Risk_Manager
                 
                 System.Diagnostics.Debug.WriteLine($"After PerformLayout - Content size: {content.Size}");
                 System.Diagnostics.Debug.WriteLine($"Set Width={targetWidth}, MinimumSize.Width={targetWidth}");
-                MessageBox.Show($"Content Layout Update:\nJournalContentPanel: {journalContentPanel.ClientSize.Width}x{journalContentPanel.ClientSize.Height}\nContent set to: {content.Width}x{content.Height}\nMinimumSize: {content.MinimumSize}\n\nThis should fix the width issue!", "Width Fix Applied", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
@@ -15131,37 +15130,6 @@ namespace Risk_Manager
                          string.Join("\n", refreshCallLog.Skip(Math.Max(0, refreshCallLog.Count - 10)));
             
             System.Diagnostics.Debug.WriteLine($"\n=== CALL SUMMARY ===\n{summary}\n==================\n");
-            
-            // DEBUG: Show grid status after refresh
-            var firstRowData = "";
-            if (grid.Rows.Count > 0)
-            {
-                var row = grid.Rows[0];
-                firstRowData = $"\n\nFirst row data:\n" +
-                              $"Symbol: {row.Cells["Symbol"].Value}\n" +
-                              $"Type: {row.Cells["Type"].Value}\n" +
-                              $"Outcome: {row.Cells["Outcome"].Value}\n" +
-                              $"P/L: {row.Cells["PL"].Value}\n" +
-                              $"ForeColor: {row.DefaultCellStyle.ForeColor}\n" +
-                              $"BackColor: {row.DefaultCellStyle.BackColor}";
-            }
-            
-            MessageBox.Show(
-                $"Grid Refresh Status (Call #{refreshCallCounter}):\n" +
-                $"Visible: {grid.Visible}\n" +
-                $"Size: {grid.Width}x{grid.Height}\n" +
-                $"Row count: {grid.Rows.Count}\n" +
-                $"Bounds: {grid.Bounds}\n" +
-                $"Parent: {grid.Parent?.Name ?? "NULL"}\n" +
-                $"Parent visible: {grid.Parent?.Visible ?? false}\n" +
-                $"ClientSize: {grid.ClientSize}\n" +
-                $"DefaultCellStyle ForeColor: {grid.DefaultCellStyle.ForeColor}\n" +
-                $"AlternatingRows ForeColor: {grid.AlternatingRowsDefaultCellStyle.ForeColor}" +
-                firstRowData + "\n\n" +
-                $"Recent calls:\n{string.Join("\n", refreshCallLog.Skip(Math.Max(0, refreshCallLog.Count - 5)))}",
-                "Grid Refresh Debug",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
 
             // Update basic stats labels
             if (totalTradesLabel != null)
