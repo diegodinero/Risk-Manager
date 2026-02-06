@@ -12985,6 +12985,21 @@ namespace Risk_Manager
             var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
             System.Diagnostics.Debug.WriteLine($"PagePanel created: AutoScroll={pagePanel.AutoScroll}");
 
+            // ADD BRIGHT TEST LABEL TO CONFIRM TEXT RENDERING
+            var testLabel = new Label
+            {
+                Text = "TRADE LOG - Text Test: If you can read this, text rendering works!",
+                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                ForeColor = Color.Yellow,  // Bright yellow for visibility
+                BackColor = Color.Navy,  // Dark blue background for contrast
+                AutoSize = false,
+                Size = new Size(800, 40),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Dock = DockStyle.Top,
+                Padding = new Padding(10, 5, 10, 5)
+            };
+            pagePanel.Controls.Add(testLabel);
+
             // ===== IMPORTANT: ADD JOURNAL CARD WITH BUTTONS FIRST =====
             // This ensures buttons are ALWAYS visible at the top, even if viewport is small
             
@@ -13017,56 +13032,56 @@ namespace Risk_Manager
 
             var addButton = new Button
             {
-                Text = "➕ Add Trade",
+                Text = "ADD TRADE",  // Changed to plain text for better visibility
                 Width = 120,
                 Height = 35,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(50, 150, 50),
-                ForeColor = TextWhite,
+                ForeColor = Color.White,  // Explicit bright white
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)  // Larger, bold font
             };
             addButton.FlatAppearance.BorderSize = 0;
             addButton.Click += AddTrade_Click;
 
             var editButton = new Button
             {
-                Text = "✏️ Edit",
+                Text = "EDIT",  // Changed to plain text for better visibility
                 Width = 100,
                 Height = 35,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(50, 100, 200),
-                ForeColor = TextWhite,
+                ForeColor = Color.White,  // Explicit bright white
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)  // Larger, bold font
             };
             editButton.FlatAppearance.BorderSize = 0;
             editButton.Click += EditTrade_Click;
 
             var deleteButton = new Button
             {
-                Text = "🗑️ Delete",
+                Text = "DELETE",  // Changed to plain text for better visibility
                 Width = 100,
                 Height = 35,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(200, 50, 50),
-                ForeColor = TextWhite,
+                ForeColor = Color.White,  // Explicit bright white
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)  // Larger, bold font
             };
             deleteButton.FlatAppearance.BorderSize = 0;
             deleteButton.Click += DeleteTrade_Click;
 
             var exportButton = new Button
             {
-                Text = "📤 Export CSV",
+                Text = "EXPORT CSV",  // Changed to plain text for better visibility
                 Width = 120,
                 Height = 35,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(100, 100, 100),
-                ForeColor = TextWhite,
+                ForeColor = Color.White,  // Explicit bright white
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)  // Larger, bold font
             };
             exportButton.FlatAppearance.BorderSize = 0;
             exportButton.Click += ExportTrades_Click;
@@ -13194,16 +13209,16 @@ namespace Risk_Manager
             };
             
             // Row 1: Basic stats
-            var totalTradesLabel = new Label { Text = "Total: 0", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(3), Font = new Font("Segoe UI", 8, FontStyle.Bold) };
-            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(3), Font = new Font("Segoe UI", 8, FontStyle.Regular) };
-            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(3), Font = new Font("Segoe UI", 8, FontStyle.Bold) };
+            var totalTradesLabel = new Label { Text = "Total: 0", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 10, FontStyle.Regular) };
+            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
             
             // Row 2: Detailed stats
-            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(3), Font = new Font("Segoe UI", 7, FontStyle.Regular) };
-            var largestWinLabel = new Label { Text = "Best: $0.00", AutoSize = true, ForeColor = Color.LimeGreen, Margin = new Padding(3), Font = new Font("Segoe UI", 7, FontStyle.Regular) };
-            var largestLossLabel = new Label { Text = "Worst: $0.00", AutoSize = true, ForeColor = Color.OrangeRed, Margin = new Padding(3), Font = new Font("Segoe UI", 7, FontStyle.Regular) };
-            var avgWinLabel = new Label { Text = "Avg Win: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(3), Font = new Font("Segoe UI", 7, FontStyle.Regular) };
-            var avgLossLabel = new Label { Text = "Avg Loss: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(3), Font = new Font("Segoe UI", 7, FontStyle.Regular) };
+            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var largestWinLabel = new Label { Text = "Best: $0.00", AutoSize = true, ForeColor = Color.LimeGreen, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var largestLossLabel = new Label { Text = "Worst: $0.00", AutoSize = true, ForeColor = Color.OrangeRed, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var avgWinLabel = new Label { Text = "Avg Win: $0.00", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var avgLossLabel = new Label { Text = "Avg Loss: $0.00", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
             
             totalTradesLabel.Tag = "TotalTrades";
             winRateLabel.Tag = "WinRate";
@@ -13253,7 +13268,7 @@ namespace Risk_Manager
             };
 
             // Search box
-            var searchLabel = new Label { Text = "Search:", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5, 8, 5, 5) };
+            var searchLabel = new Label { Text = "Search:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
             var searchBox = new TextBox
             {
                 Width = 150,
@@ -13265,7 +13280,7 @@ namespace Risk_Manager
             searchBox.TextChanged += (s, e) => FilterTrades();
 
             // Outcome filter
-            var outcomeLabel = new Label { Text = "Outcome:", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5, 8, 5, 5) };
+            var outcomeLabel = new Label { Text = "Outcome:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
             var outcomeFilter = new ComboBox
             {
                 Width = 100,
@@ -13279,7 +13294,7 @@ namespace Risk_Manager
             outcomeFilter.SelectedIndexChanged += (s, e) => FilterTrades();
 
             // Symbol filter
-            var symbolLabel = new Label { Text = "Symbol:", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5, 8, 5, 5) };
+            var symbolLabel = new Label { Text = "Symbol:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
             var symbolFilter = new TextBox
             {
                 Width = 80,
@@ -13293,15 +13308,15 @@ namespace Risk_Manager
             // Clear filters button
             var clearFiltersBtn = new Button
             {
-                Text = "🔄 Clear",
+                Text = "CLEAR",  // Changed to plain text
                 Width = 80,
                 Height = 28,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(100, 100, 100),
-                ForeColor = TextWhite,
+                ForeColor = Color.White,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(10, 5, 5, 5),
-                Font = new Font("Segoe UI Emoji", 8, FontStyle.Regular)
+                Font = new Font("Segoe UI", 9, FontStyle.Bold)
             };
             clearFiltersBtn.FlatAppearance.BorderSize = 0;
             clearFiltersBtn.Click += (s, e) =>
