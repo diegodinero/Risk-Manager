@@ -12981,58 +12981,6 @@ namespace Risk_Manager
         /// </summary>
         private Control CreateTradeLogPage()
         {
-            try
-            {
-                MessageBox.Show("CreateTradeLogPage() CALLED - Method is executing!", "DIAGNOSTIC", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                
-                System.Diagnostics.Debug.WriteLine("=== CreateTradeLogPage CALLED ===");
-                
-                // SIMPLIFIED TEST VERSION - Just display a visible label to confirm rendering
-                var testPanel = new Panel 
-                { 
-                    Dock = DockStyle.Fill, 
-                    BackColor = Color.Red,  // Bright red - impossible to miss
-                    Padding = new Padding(50)
-                };
-                
-                var testLabel = new Label
-                {
-                    Text = "TRADE LOG IS WORKING!\n\nIf you see this bright green text on red background,\nthe Trade Log page is loading successfully.\n\nThis confirms the code is executing and rendering.",
-                    Font = new Font("Segoe UI", 24F, FontStyle.Bold),
-                    ForeColor = Color.Lime,  // Bright green
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    Dock = DockStyle.Fill,
-                    AutoSize = false
-                };
-                
-                testPanel.Controls.Add(testLabel);
-                
-                MessageBox.Show("Returning test panel with bright green text on red background", "DIAGNOSTIC", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                
-                return testPanel;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"EXCEPTION in CreateTradeLogPage:\n\n{ex.Message}\n\nStack Trace:\n{ex.StackTrace}", "ERROR", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                
-                // Return a simple error panel
-                var errorPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.DarkRed };
-                var errorLabel = new Label
-                {
-                    Text = $"ERROR:\n{ex.Message}",
-                    ForeColor = Color.White,
-                    Font = new Font("Segoe UI", 14F, FontStyle.Bold),
-                    Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleCenter
-                };
-                errorPanel.Controls.Add(errorLabel);
-                return errorPanel;
-            }
-        }
-        
-        /* ORIGINAL CreateTradeLogPage CODE - Commented out for diagnostic testing
-        private Control CreateTradeLogPage_Original()
-        {
             System.Diagnostics.Debug.WriteLine("=== CreateTradeLogPage CALLED ===");
             var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
             System.Diagnostics.Debug.WriteLine($"PagePanel created: AutoScroll={pagePanel.AutoScroll}");
@@ -13395,7 +13343,6 @@ namespace Risk_Manager
 
             return pagePanel;
         }
-        END OF COMMENTED CODE */
 
         /// <summary>
         /// Creates the Calendar page placeholder
