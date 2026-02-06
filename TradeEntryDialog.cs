@@ -19,7 +19,7 @@ namespace Risk_Manager
         private TextBox symbolInput;
         private ComboBox outcomeCombo;
         private ComboBox typeCombo;
-        private TextBox modelInput;
+        private ComboBox modelInput;  // Changed from TextBox to ComboBox
         private TextBox sessionInput;
         private TextBox plInput;
         private TextBox rrInput;
@@ -108,9 +108,29 @@ namespace Risk_Manager
             mainPanel.Controls.Add(typeCombo);
             yPos += spacing;
 
-            // Model
+            // Model - Changed to ComboBox with models from TradingJournalService
             AddLabel(mainPanel, "Model/Strategy:", 10, yPos, labelWidth);
-            modelInput = AddTextBox(mainPanel, labelWidth + 20, yPos, inputWidth);
+            modelInput = new ComboBox
+            {
+                Location = new Point(labelWidth + 20, yPos),
+                Width = inputWidth,
+                DropDownStyle = ComboBoxStyle.DropDown
+            };
+            
+            // Load existing models for this account
+            if (!string.IsNullOrEmpty(_accountNumber))
+            {
+                var models = TradingJournalService.Instance.GetModels(_accountNumber);
+                foreach (var model in models)
+                {
+                    if (!string.IsNullOrEmpty(model.Name))
+                    {
+                        modelInput.Items.Add(model.Name);
+                    }
+                }
+            }
+            
+            mainPanel.Controls.Add(modelInput);
             yPos += spacing;
 
             // Session
@@ -334,6 +354,12 @@ namespace Risk_Manager
             else
             {
                 TradingJournalService.Instance.AddTrade(_accountNumber, _trade);
+                
+                // Increment model usage count if a model was selected
+                if (!string.IsNullOrWhiteSpace(_trade.Model))
+                {
+                    TradingJournalService.Instance.IncrementModelUsage(_accountNumber, _trade.Model);
+                }
             }
 
             this.DialogResult = DialogResult.OK;

@@ -397,6 +397,9 @@ namespace Risk_Manager
         private const string LOCK_EMOJI = "🔒";
         private const string UNLOCK_EMOJI = "🔓";
         
+        // Trading Journal constants
+        private const int NOTES_DISPLAY_MAX_LENGTH = 30; // Maximum characters to display in notes column before truncation
+        
         // Risk Overview card title constants
         private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
         
@@ -12790,7 +12793,8 @@ namespace Risk_Manager
                 Height = 40,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 0, 0, 10)  // Add bottom margin for spacing
             };
             sidebar.Controls.Add(sidebarTitle);
 
@@ -12800,7 +12804,7 @@ namespace Risk_Manager
                 Dock = DockStyle.Top,
                 Height = 1,
                 BackColor = Color.FromArgb(60, 60, 60),
-                Margin = new Padding(0, 0, 0, 12)
+                Margin = new Padding(0, 0, 0, 20)  // Increased from 12 to 20 for more space
             };
             sidebar.Controls.Add(separator);
 
@@ -12847,7 +12851,7 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
-                Padding = new Padding(20),
+                Padding = new Padding(20, 10, 20, 20), // Reduced top padding to prevent content being cut off
                 AutoScroll = true
             };
 
@@ -12871,14 +12875,14 @@ namespace Risk_Manager
             {
                 Text = text,
                 Dock = DockStyle.Top,
-                Height = 40,
+                Height = 44,  // Increased from 40 to 44 for better visibility
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.Transparent,
                 ForeColor = TextWhite,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Cursor = Cursors.Hand,
                 Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
-                Margin = new Padding(0, 0, 0, 8),
+                Margin = new Padding(0, 4, 0, 4),  // Increased vertical margins for better spacing
                 Tag = section
             };
             btn.FlatAppearance.BorderSize = 0;
@@ -12892,7 +12896,12 @@ namespace Risk_Manager
         /// </summary>
         private void ShowJournalSection(string section)
         {
-            if (journalContentPanel == null) return;
+            System.Diagnostics.Debug.WriteLine($"=== ShowJournalSection: {section} ===");
+            if (journalContentPanel == null)
+            {
+                System.Diagnostics.Debug.WriteLine("ERROR: journalContentPanel is NULL!");
+                return;
+            }
 
             currentJournalSection = section;
             journalContentPanel.SuspendLayout();
@@ -12941,9 +12950,29 @@ namespace Risk_Manager
             {
                 content.Dock = DockStyle.Fill;
                 journalContentPanel.Controls.Add(content);
+                System.Diagnostics.Debug.WriteLine($"Content added to journalContentPanel. Content type: {content.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"JournalContentPanel size: {journalContentPanel.Size}, ControlCount: {journalContentPanel.Controls.Count}");
+                
+                // CRITICAL FIX: Explicitly set width AND MinimumSize to match parent's ClientSize
+                // This ensures content expands to full width instead of staying at default 200px or collapsing to 0
+                int targetWidth = journalContentPanel.ClientSize.Width;
+                content.Width = targetWidth;
+                content.MinimumSize = new Size(targetWidth, 0);  // Prevent width from collapsing to 0
+                
+                // Force layout recalculation to ensure content fills the panel
+                journalContentPanel.PerformLayout();
+                content.PerformLayout();
+                
+                System.Diagnostics.Debug.WriteLine($"After PerformLayout - Content size: {content.Size}");
+                System.Diagnostics.Debug.WriteLine($"Set Width={targetWidth}, MinimumSize.Width={targetWidth}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("WARNING: content is NULL!");
             }
 
             journalContentPanel.ResumeLayout();
+            System.Diagnostics.Debug.WriteLine($"=== DisplayJournalSection COMPLETE: {section} ===");
         }
 
         /// <summary>
@@ -12951,67 +12980,36 @@ namespace Risk_Manager
         /// </summary>
         private Control CreateTradeLogPage()
         {
+            System.Diagnostics.Debug.WriteLine("=== CreateTradeLogPage CALLED ===");
             var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
+            System.Diagnostics.Debug.WriteLine($"PagePanel created: AutoScroll={pagePanel.AutoScroll}");
 
-            // Stats summary card
-            var statsCard = new Panel
+            // ADD BRIGHT TEST LABEL TO CONFIRM TEXT RENDERING
+            // Test label removed - Trade Log is now working!
+
+            // ===== IMPORTANT: ADD JOURNAL CARD WITH BUTTONS FIRST =====
+            // This ensures buttons are ALWAYS visible at the top, even if viewport is small
+            
+            // Journal entries card with buttons (ADD FIRST!)
+            var journalCard = new Panel
             {
-                Dock = DockStyle.Top,
-                Height = 180,
-                BackColor = CardBackground,
+                Dock = DockStyle.Top,  // Changed from Fill to Top so it appears first
+                Height = 450,  // Reduced from 600 to 450 so stats/filters are visible without scrolling
+                Width = journalContentPanel?.ClientSize.Width ?? 1836,  // Explicit width to prevent 0-width
+                MinimumSize = new Size(1200, 450),  // Guarantee minimum size
+                BackColor = CardBackground,  // Professional dark theme
                 Padding = new Padding(15),
                 Margin = new Padding(0, 0, 0, 10)
             };
+            System.Diagnostics.Debug.WriteLine($"JournalCard created with Width={journalCard.Width}, MinimumSize={journalCard.MinimumSize}");
             
-            var statsHeader = new CustomCardHeaderControl("Journal Statistics", GetIconForTitle("Limits"));
-            statsHeader.Dock = DockStyle.Top;
-            statsCard.Controls.Add(statsHeader);
+            // Diagnostic label removed - Trade Log now working!
             
-            var statsLabelsPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
-                Padding = new Padding(10),
-                BackColor = CardBackground
-            };
-            
-            // Create stat labels
-            var totalTradesLabel = new Label { Text = "Total Trades: 0", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
-            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
-            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
-            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
-            
-            totalTradesLabel.Tag = "TotalTrades";
-            winRateLabel.Tag = "WinRate";
-            totalPLLabel.Tag = "TotalPL";
-            avgPLLabel.Tag = "AvgPL";
-            
-            statsLabelsPanel.Controls.Add(totalTradesLabel);
-            statsLabelsPanel.Controls.Add(winRateLabel);
-            statsLabelsPanel.Controls.Add(totalPLLabel);
-            statsLabelsPanel.Controls.Add(avgPLLabel);
-            
-            statsCard.Controls.Add(statsLabelsPanel);
-            pagePanel.Controls.Add(statsCard);
-
-            // Spacer
-            pagePanel.Controls.Add(new Panel { Height = 20, Dock = DockStyle.Top, BackColor = DarkBackground });
-
-            // Journal entries grid card
-            var journalCard = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = CardBackground,
-                Padding = new Padding(15),
-                Margin = new Padding(0)
-            };
-            
-            var journalHeader = new CustomCardHeaderControl("Trade Log", GetIconForTitle("Limits"));
+            var journalHeader = new CustomCardHeaderControl("📋 Trade Log", GetIconForTitle("Limits"));
             journalHeader.Dock = DockStyle.Top;
             journalCard.Controls.Add(journalHeader);
 
-            // Buttons panel
+            // Buttons panel with export
             var buttonsPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -13023,58 +13021,83 @@ namespace Risk_Manager
 
             var addButton = new Button
             {
-                Text = "➕ Add Trade",
+                Text = "ADD TRADE",  // Changed to plain text for better visibility
                 Width = 120,
                 Height = 35,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(50, 150, 50),
-                ForeColor = TextWhite,
+                ForeColor = Color.White,  // Explicit bright white
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)  // Larger, bold font
             };
             addButton.FlatAppearance.BorderSize = 0;
             addButton.Click += AddTrade_Click;
 
             var editButton = new Button
             {
-                Text = "✏️ Edit",
+                Text = "EDIT",  // Changed to plain text for better visibility
                 Width = 100,
                 Height = 35,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(50, 100, 200),
-                ForeColor = TextWhite,
+                ForeColor = Color.White,  // Explicit bright white
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)  // Larger, bold font
             };
             editButton.FlatAppearance.BorderSize = 0;
             editButton.Click += EditTrade_Click;
 
             var deleteButton = new Button
             {
-                Text = "🗑️ Delete",
+                Text = "DELETE",  // Changed to plain text for better visibility
                 Width = 100,
                 Height = 35,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(200, 50, 50),
-                ForeColor = TextWhite,
+                ForeColor = Color.White,  // Explicit bright white
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)  // Larger, bold font
             };
             deleteButton.FlatAppearance.BorderSize = 0;
             deleteButton.Click += DeleteTrade_Click;
 
+            var exportButton = new Button
+            {
+                Text = "EXPORT CSV",  // Changed to plain text for better visibility
+                Width = 120,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(100, 100, 100),
+                ForeColor = Color.White,  // Explicit bright white
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)  // Larger, bold font
+            };
+            exportButton.FlatAppearance.BorderSize = 0;
+            exportButton.Click += ExportTrades_Click;
+
             buttonsPanel.Controls.Add(addButton);
             buttonsPanel.Controls.Add(editButton);
             buttonsPanel.Controls.Add(deleteButton);
+            buttonsPanel.Controls.Add(exportButton);
+            
+            // DEBUG: Log button panel details
+            System.Diagnostics.Debug.WriteLine("=== BUTTONS PANEL DEBUG ===");
+            System.Diagnostics.Debug.WriteLine($"AddButton: Size={addButton.Size}, Visible={addButton.Visible}, Enabled={addButton.Enabled}, Text='{addButton.Text}'");
+            System.Diagnostics.Debug.WriteLine($"ButtonsPanel: Size={buttonsPanel.Size}, Visible={buttonsPanel.Visible}, ControlCount={buttonsPanel.Controls.Count}");
+            System.Diagnostics.Debug.WriteLine($"ButtonsPanel: Dock={buttonsPanel.Dock}, Height={buttonsPanel.Height}");
+            
             journalCard.Controls.Add(buttonsPanel);
 
-            // DataGridView for trades
+            // DataGridView for trades with sorting enabled
             var tradesGrid = new DataGridView
             {
                 Dock = DockStyle.Fill,
-                BackgroundColor = CardBackground,
-                GridColor = DarkerBackground,
+                Width = 1800,  // Explicit width to prevent 0-width issue
+                MinimumSize = new Size(1200, 200),  // Ensure grid has minimum width and height
+                BackgroundColor = Color.FromArgb(35, 35, 35),  // Slightly lighter than parent (30,30,30) for visibility
+                GridColor = Color.FromArgb(60, 60, 60),  // Visible gray gridlines
                 BorderStyle = BorderStyle.None,
+                CellBorderStyle = DataGridViewCellBorderStyle.Single,  // Visible cell borders
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 AllowUserToResizeRows = false,
@@ -13084,19 +13107,32 @@ namespace Risk_Manager
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
                 RowHeadersVisible = false,
+                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells,  // Ensure rows are sized properly
+                EnableHeadersVisualStyles = false,  // CRITICAL: Use custom colors instead of system styles
                 Tag = "JournalGrid",
                 Name = "TradesGrid"
             };
 
-            tradesGrid.DefaultCellStyle.BackColor = CardBackground;
+            tradesGrid.DefaultCellStyle.BackColor = Color.FromArgb(35, 35, 35);
             tradesGrid.DefaultCellStyle.ForeColor = TextWhite;
             tradesGrid.DefaultCellStyle.SelectionBackColor = SelectedColor;
             tradesGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
-            tradesGrid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
+            tradesGrid.DefaultCellStyle.Padding = new Padding(5);  // Add padding for better visibility
+            
+            // Column header styling with custom colors
+            tradesGrid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(45, 45, 45);  // Darker than cells
             tradesGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
+            tradesGrid.ColumnHeadersDefaultCellStyle.SelectionBackColor = AccentBlue;
             tradesGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            
+            // Alternating row colors for better readability
+            tradesGrid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(32, 32, 32);
+            tradesGrid.AlternatingRowsDefaultCellStyle.ForeColor = TextWhite;  // CRITICAL: Ensure text visible on alternating rows
+            
+            // Set minimum row height to ensure visibility
+            tradesGrid.RowTemplate.Height = 30;
 
-            // Add columns
+            // Add columns with sorting enabled
             tradesGrid.Columns.Add("Date", "Date");
             tradesGrid.Columns.Add("Symbol", "Symbol");
             tradesGrid.Columns.Add("Type", "Type");
@@ -13106,6 +13142,12 @@ namespace Risk_Manager
             tradesGrid.Columns.Add("RR", "R:R");
             tradesGrid.Columns.Add("Model", "Model");
             tradesGrid.Columns.Add("Notes", "Notes");
+
+            // Enable sorting on all columns
+            foreach (DataGridViewColumn column in tradesGrid.Columns)
+            {
+                column.SortMode = DataGridViewColumnSortMode.Automatic;
+            }
 
             // Set column widths
             tradesGrid.Columns["Date"].Width = 100;
@@ -13117,11 +13159,197 @@ namespace Risk_Manager
             tradesGrid.Columns["RR"].Width = 60;
             tradesGrid.Columns["Model"].Width = 120;
 
+            // Add grid to journal card
             journalCard.Controls.Add(tradesGrid);
+            tradesGrid.BringToFront();  // Ensure grid is on top
+            
+            // DEBUG: Log journal card details
+            System.Diagnostics.Debug.WriteLine("=== JOURNAL CARD DEBUG ===");
+            System.Diagnostics.Debug.WriteLine($"JournalCard: Size={journalCard.Size}, Visible={journalCard.Visible}");
+            System.Diagnostics.Debug.WriteLine($"JournalCard: Dock={journalCard.Dock}, Height={journalCard.Height}, ControlCount={journalCard.Controls.Count}");
+            System.Diagnostics.Debug.WriteLine($"ORANGE TEST PANEL ADDED to Journal Card!");
+            
+            // ADD JOURNAL CARD FIRST - This makes buttons appear at TOP
             pagePanel.Controls.Add(journalCard);
             
+            // Spacer
+            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
+
+            // NOW add stats and filter BELOW the buttons
+            // Enhanced stats summary card with more metrics
+            var statsCard = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 150,  // Increased from 100 for better visibility
+                BackColor = CardBackground,  // Professional dark theme
+                Padding = new Padding(10),
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            
+            // Stats diagnostic label removed - Trade Log now working!
+            
+            var statsHeader = new CustomCardHeaderControl("📊 Trading Statistics", GetIconForTitle("Limits"));
+            statsHeader.Dock = DockStyle.Top;
+            statsCard.Controls.Add(statsHeader);
+            
+            var statsLabelsPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                Padding = new Padding(5),
+                BackColor = CardBackground
+            };
+            
+            // Row 1: Basic stats
+            var totalTradesLabel = new Label { Text = "Total: 0", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 10, FontStyle.Regular) };
+            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            
+            // Row 2: Detailed stats
+            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var largestWinLabel = new Label { Text = "Best: $0.00", AutoSize = true, ForeColor = Color.LimeGreen, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var largestLossLabel = new Label { Text = "Worst: $0.00", AutoSize = true, ForeColor = Color.OrangeRed, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var avgWinLabel = new Label { Text = "Avg Win: $0.00", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var avgLossLabel = new Label { Text = "Avg Loss: $0.00", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            
+            totalTradesLabel.Tag = "TotalTrades";
+            winRateLabel.Tag = "WinRate";
+            totalPLLabel.Tag = "TotalPL";
+            avgPLLabel.Tag = "AvgPL";
+            largestWinLabel.Tag = "LargestWin";
+            largestLossLabel.Tag = "LargestLoss";
+            avgWinLabel.Tag = "AvgWin";
+            avgLossLabel.Tag = "AvgLoss";
+            
+            statsLabelsPanel.Controls.Add(totalTradesLabel);
+            statsLabelsPanel.Controls.Add(winRateLabel);
+            statsLabelsPanel.Controls.Add(totalPLLabel);
+            statsLabelsPanel.Controls.Add(avgPLLabel);
+            statsLabelsPanel.Controls.Add(largestWinLabel);
+            statsLabelsPanel.Controls.Add(largestLossLabel);
+            statsLabelsPanel.Controls.Add(avgWinLabel);
+            statsLabelsPanel.Controls.Add(avgLossLabel);
+            
+            statsCard.Controls.Add(statsLabelsPanel);
+            pagePanel.Controls.Add(statsCard);
+
+            // Spacer
+            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
+
+            // Filter and search panel
+            var filterCard = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 100,  // Increased from 60 for better visibility
+                BackColor = CardBackground,  // Professional dark theme
+                Padding = new Padding(10),
+                Margin = new Padding(0, 0, 0, 10)
+            };
+
+            // Filter diagnostic label removed - Trade Log now working!
+
+            var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", GetIconForTitle("Limits"));
+            filterHeader.Dock = DockStyle.Top;
+            filterCard.Controls.Add(filterHeader);
+
+            var filterPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                Padding = new Padding(5),
+                BackColor = CardBackground
+            };
+
+            // Search box
+            var searchLabel = new Label { Text = "Search:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var searchBox = new TextBox
+            {
+                Width = 150,
+                Height = 25,
+                Margin = new Padding(5),
+                Tag = "SearchBox",
+                Name = "TradeSearchBox"
+            };
+            searchBox.TextChanged += (s, e) => FilterTrades();
+
+            // Outcome filter
+            var outcomeLabel = new Label { Text = "Outcome:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var outcomeFilter = new ComboBox
+            {
+                Width = 100,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Margin = new Padding(5),
+                Tag = "OutcomeFilter",
+                Name = "OutcomeFilterCombo"
+            };
+            outcomeFilter.Items.AddRange(new[] { "All", "Win", "Loss", "Breakeven" });
+            outcomeFilter.SelectedIndex = 0;
+            outcomeFilter.SelectedIndexChanged += (s, e) => FilterTrades();
+
+            // Symbol filter
+            var symbolLabel = new Label { Text = "Symbol:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var symbolFilter = new TextBox
+            {
+                Width = 80,
+                Height = 25,
+                Margin = new Padding(5),
+                Tag = "SymbolFilter",
+                Name = "SymbolFilterBox"
+            };
+            symbolFilter.TextChanged += (s, e) => FilterTrades();
+
+            // Clear filters button
+            var clearFiltersBtn = new Button
+            {
+                Text = "CLEAR",  // Changed to plain text
+                Width = 80,
+                Height = 28,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(100, 100, 100),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(10, 5, 5, 5),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold)
+            };
+            clearFiltersBtn.FlatAppearance.BorderSize = 0;
+            clearFiltersBtn.Click += (s, e) =>
+            {
+                searchBox.Text = "";
+                symbolFilter.Text = "";
+                outcomeFilter.SelectedIndex = 0;
+                FilterTrades();
+            };
+
+            filterPanel.Controls.Add(searchLabel);
+            filterPanel.Controls.Add(searchBox);
+            filterPanel.Controls.Add(outcomeLabel);
+            filterPanel.Controls.Add(outcomeFilter);
+            filterPanel.Controls.Add(symbolLabel);
+            filterPanel.Controls.Add(symbolFilter);
+            filterPanel.Controls.Add(clearFiltersBtn);
+
+            filterCard.Controls.Add(filterPanel);
+            pagePanel.Controls.Add(filterCard);
+            
+            // DEBUG: Log final page panel details
+            System.Diagnostics.Debug.WriteLine("=== PAGE PANEL DEBUG ===");
+            System.Diagnostics.Debug.WriteLine($"PagePanel: Size={pagePanel.Size}, AutoScroll={pagePanel.AutoScroll}");
+            System.Diagnostics.Debug.WriteLine($"PagePanel: ControlCount={pagePanel.Controls.Count}");
+            for (int i = 0; i < pagePanel.Controls.Count; i++)
+            {
+                var ctrl = pagePanel.Controls[i];
+                System.Diagnostics.Debug.WriteLine($"  [{i}] {ctrl.GetType().Name}: Dock={ctrl.Dock}, Size={ctrl.Size}, Visible={ctrl.Visible}");
+            }
+            
             // Load initial data
-            RefreshJournalData(tradesGrid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel);
+            RefreshJournalData(tradesGrid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel, 
+                largestWinLabel, largestLossLabel, avgWinLabel, avgLossLabel);
+
+            // Force layout recalculation to ensure proper sizing
+            pagePanel.PerformLayout();
+            System.Diagnostics.Debug.WriteLine($"After PerformLayout - PagePanel size: {pagePanel.Size}");
 
             return pagePanel;
         }
@@ -14497,18 +14725,28 @@ namespace Risk_Manager
         // Event handlers for Trading Journal
         private void AddTrade_Click(object sender, EventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine("=== AddTrade_Click CALLED ===");
             var accountNumber = GetSelectedAccountNumber();
+            System.Diagnostics.Debug.WriteLine($"Account number: {accountNumber ?? "NULL"}");
+            
             if (string.IsNullOrEmpty(accountNumber))
             {
                 MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
+            System.Diagnostics.Debug.WriteLine("Opening TradeEntryDialog...");
             using (var dialog = new TradeEntryDialog(null, accountNumber))
             {
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
+                    System.Diagnostics.Debug.WriteLine("Trade saved, refreshing journal...");
                     RefreshJournalDataForCurrentAccount();
+                    System.Diagnostics.Debug.WriteLine("Refresh completed.");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("Trade dialog cancelled.");
                 }
             }
         }
@@ -14570,6 +14808,177 @@ namespace Risk_Manager
             }
         }
 
+        /// <summary>
+        /// Applies color coding and styling to a trade row in the DataGridView
+        /// </summary>
+        private void ApplyTradeRowStyling(DataGridViewRow row, JournalTrade trade)
+        {
+            // Color code the outcome
+            if (trade.Outcome?.ToLower() == "win")
+            {
+                row.Cells["Outcome"].Style.ForeColor = Color.LimeGreen;
+                row.Cells["Outcome"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            }
+            else if (trade.Outcome?.ToLower() == "loss")
+            {
+                row.Cells["Outcome"].Style.ForeColor = Color.OrangeRed;
+                row.Cells["Outcome"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            }
+
+            // Color code P/L columns
+            if (trade.NetPL > 0)
+            {
+                row.Cells["PL"].Style.ForeColor = Color.LimeGreen;
+                row.Cells["NetPL"].Style.ForeColor = Color.LimeGreen;
+            }
+            else if (trade.NetPL < 0)
+            {
+                row.Cells["PL"].Style.ForeColor = Color.OrangeRed;
+                row.Cells["NetPL"].Style.ForeColor = Color.OrangeRed;
+            }
+        }
+
+        /// <summary>
+        /// Formats notes for display in the grid, truncating if necessary
+        /// </summary>
+        private string FormatNotesForDisplay(string notes)
+        {
+            if (string.IsNullOrEmpty(notes))
+                return notes;
+
+            return notes.Length > NOTES_DISPLAY_MAX_LENGTH 
+                ? notes.Substring(0, NOTES_DISPLAY_MAX_LENGTH) + "..." 
+                : notes;
+        }
+
+        private void FilterTrades()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return;
+
+            var grid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
+            if (grid == null) return;
+
+            var searchBox = FindControlByName(contentPanel, "TradeSearchBox") as TextBox;
+            var outcomeFilter = FindControlByName(contentPanel, "OutcomeFilterCombo") as ComboBox;
+            var symbolFilter = FindControlByName(contentPanel, "SymbolFilterBox") as TextBox;
+
+            var allTrades = TradingJournalService.Instance.GetTrades(accountNumber);
+            var filteredTrades = allTrades.AsEnumerable();
+
+            // Apply search filter
+            if (searchBox != null && !string.IsNullOrWhiteSpace(searchBox.Text))
+            {
+                var searchTerm = searchBox.Text.ToLower();
+                filteredTrades = filteredTrades.Where(t =>
+                    t.Symbol?.ToLower().Contains(searchTerm) == true ||
+                    t.Model?.ToLower().Contains(searchTerm) == true ||
+                    t.Notes?.ToLower().Contains(searchTerm) == true);
+            }
+
+            // Apply outcome filter
+            if (outcomeFilter != null && outcomeFilter.SelectedItem != null && outcomeFilter.SelectedItem.ToString() != "All")
+            {
+                var outcome = outcomeFilter.SelectedItem.ToString();
+                filteredTrades = filteredTrades.Where(t => t.Outcome?.Equals(outcome, StringComparison.OrdinalIgnoreCase) == true);
+            }
+
+            // Apply symbol filter
+            if (symbolFilter != null && !string.IsNullOrWhiteSpace(symbolFilter.Text))
+            {
+                var symbol = symbolFilter.Text.ToLower();
+                filteredTrades = filteredTrades.Where(t => t.Symbol?.ToLower().Contains(symbol) == true);
+            }
+
+            // Update grid with filtered results
+            grid.Rows.Clear();
+            foreach (var trade in filteredTrades)
+            {
+                var rowIndex = grid.Rows.Add(
+                    trade.Date.ToShortDateString(),
+                    trade.Symbol,
+                    trade.TradeType,
+                    trade.Outcome,
+                    FormatNumeric(trade.PL),
+                    FormatNumeric(trade.NetPL),
+                    trade.RR.ToString("F2"),
+                    trade.Model,
+                    FormatNotesForDisplay(trade.Notes)
+                );
+                grid.Rows[rowIndex].Tag = trade.Id;
+
+                // Apply color coding using helper method
+                ApplyTradeRowStyling(grid.Rows[rowIndex], trade);
+            }
+        }
+
+        private void ExportTrades_Click(object sender, EventArgs e)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+            if (trades.Count == 0)
+            {
+                MessageBox.Show("No trades to export.", "No Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var saveDialog = new SaveFileDialog())
+            {
+                saveDialog.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
+                saveDialog.DefaultExt = "csv";
+                saveDialog.FileName = $"trades_{accountNumber}_{DateTime.Now:yyyyMMdd}.csv";
+                saveDialog.Title = "Export Trades to CSV";
+
+                if (saveDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        using (var writer = new StreamWriter(saveDialog.FileName))
+                        {
+                            // Write header
+                            writer.WriteLine("Date,Symbol,Type,Outcome,P/L,Net P/L,R:R,Entry Time,Exit Time,Entry Price,Exit Price,Contracts,Fees,Model,Emotions,Followed Plan,Notes");
+
+                            // Write data
+                            foreach (var trade in trades)
+                            {
+                                writer.WriteLine($"{trade.Date:yyyy-MM-dd}," +
+                                    $"\"{trade.Symbol}\"," +
+                                    $"\"{trade.TradeType}\"," +
+                                    $"\"{trade.Outcome}\"," +
+                                    $"{trade.PL}," +
+                                    $"{trade.NetPL}," +
+                                    $"{trade.RR}," +
+                                    $"\"{trade.EntryTime}\"," +
+                                    $"\"{trade.ExitTime}\"," +
+                                    $"{trade.EntryPrice}," +
+                                    $"{trade.ExitPrice}," +
+                                    $"{trade.Contracts}," +
+                                    $"{trade.Fees}," +
+                                    $"\"{trade.Model}\"," +
+                                    $"\"{trade.Emotions}\"," +
+                                    $"{trade.FollowedPlan}," +
+                                    $"\"{trade.Notes?.Replace("\"", "\"\"")}\"");
+                            }
+                        }
+
+                        MessageBox.Show($"Successfully exported {trades.Count} trades to:\n{saveDialog.FileName}", 
+                            "Export Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error exporting trades: {ex.Message}", 
+                            "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
         private void RefreshJournalDataForCurrentAccount()
         {
             var accountNumber = GetSelectedAccountNumber();
@@ -14579,15 +14988,27 @@ namespace Risk_Manager
             switch (currentJournalSection)
             {
                 case "Trade Log":
-                    // Refresh trade log grid and stats
-                    var grid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
-                    var totalTradesLabel = FindControlByTag(contentPanel, "TotalTrades") as Label;
-                    var winRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
-                    var totalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
-                    var avgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
+                    // Refresh trade log grid and stats - search in journalContentPanel
+                    var grid = FindControlByName(journalContentPanel, "TradesGrid") as DataGridView;
+                    var totalTradesLabel = FindControlByTag(journalContentPanel, "TotalTrades") as Label;
+                    var winRateLabel = FindControlByTag(journalContentPanel, "WinRate") as Label;
+                    var totalPLLabel = FindControlByTag(journalContentPanel, "TotalPL") as Label;
+                    var avgPLLabel = FindControlByTag(journalContentPanel, "AvgPL") as Label;
+                    var largestWinLabel = FindControlByTag(journalContentPanel, "LargestWin") as Label;
+                    var largestLossLabel = FindControlByTag(journalContentPanel, "LargestLoss") as Label;
+                    var avgWinLabel = FindControlByTag(journalContentPanel, "AvgWin") as Label;
+                    var avgLossLabel = FindControlByTag(journalContentPanel, "AvgLoss") as Label;
+                    
+                    System.Diagnostics.Debug.WriteLine($"RefreshJournalDataForCurrentAccount: Section={currentJournalSection}, Grid={grid != null}");
+                    
                     if (grid != null)
                     {
-                        RefreshJournalData(grid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel);
+                        RefreshJournalData(grid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel,
+                            largestWinLabel, largestLossLabel, avgWinLabel, avgLossLabel);
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("WARNING: TradesGrid not found in journalContentPanel!");
                     }
                     break;
                     
@@ -14608,29 +15029,61 @@ namespace Risk_Manager
                     
                 default:
                     // Default to Trade Log if currentJournalSection is not set
-                    var defaultGrid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
-                    var defaultTotalTradesLabel = FindControlByTag(contentPanel, "TotalTrades") as Label;
-                    var defaultWinRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
-                    var defaultTotalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
-                    var defaultAvgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
+                    var defaultGrid = FindControlByName(journalContentPanel, "TradesGrid") as DataGridView;
+                    var defaultTotalTradesLabel = FindControlByTag(journalContentPanel, "TotalTrades") as Label;
+                    var defaultWinRateLabel = FindControlByTag(journalContentPanel, "WinRate") as Label;
+                    var defaultTotalPLLabel = FindControlByTag(journalContentPanel, "TotalPL") as Label;
+                    var defaultAvgPLLabel = FindControlByTag(journalContentPanel, "AvgPL") as Label;
+                    var defaultLargestWinLabel = FindControlByTag(journalContentPanel, "LargestWin") as Label;
+                    var defaultLargestLossLabel = FindControlByTag(journalContentPanel, "LargestLoss") as Label;
+                    var defaultAvgWinLabel = FindControlByTag(journalContentPanel, "AvgWin") as Label;
+                    var defaultAvgLossLabel = FindControlByTag(journalContentPanel, "AvgLoss") as Label;
                     if (defaultGrid != null)
                     {
-                        RefreshJournalData(defaultGrid, defaultTotalTradesLabel, defaultWinRateLabel, defaultTotalPLLabel, defaultAvgPLLabel);
+                        RefreshJournalData(defaultGrid, defaultTotalTradesLabel, defaultWinRateLabel, defaultTotalPLLabel, defaultAvgPLLabel,
+                            defaultLargestWinLabel, defaultLargestLossLabel, defaultAvgWinLabel, defaultAvgLossLabel);
                     }
                     break;
             }
         }
 
-        private void RefreshJournalData(DataGridView grid, Label totalTradesLabel, Label winRateLabel, Label totalPLLabel, Label avgPLLabel)
+        private static int refreshCallCounter = 0;
+        private static List<string> refreshCallLog = new List<string>();
+        
+        private void RefreshJournalData(DataGridView grid, Label totalTradesLabel, Label winRateLabel, Label totalPLLabel, Label avgPLLabel, 
+            Label largestWinLabel = null, Label largestLossLabel = null, Label avgWinLabel = null, Label avgLossLabel = null)
         {
+            // Track this call
+            refreshCallCounter++;
+            var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+            var callInfo = $"CALL #{refreshCallCounter} at {timestamp}";
+            
+            System.Diagnostics.Debug.WriteLine($"\n=== RefreshJournalData {callInfo} ===");
+            refreshCallLog.Add(callInfo);
+            
             var accountNumber = GetSelectedAccountNumber();
-            if (string.IsNullOrEmpty(accountNumber)) return;
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                var logEntry = $"{callInfo} - NO ACCOUNT";
+                System.Diagnostics.Debug.WriteLine($"RefreshJournalData: No account selected");
+                refreshCallLog.Add(logEntry);
+                return;
+            }
 
             var trades = TradingJournalService.Instance.GetTrades(accountNumber);
             var stats = TradingJournalService.Instance.GetStats(accountNumber);
 
+            // DEBUG: Log trade count
+            var detailLog = $"{callInfo} - Account: {accountNumber}, Trades: {trades.Count}";
+            System.Diagnostics.Debug.WriteLine($"RefreshJournalData: Account={accountNumber}, TradeCount={trades.Count}, GridRows={grid.Rows.Count}");
+            refreshCallLog.Add(detailLog);
+
             // Update grid
+            var rowsBefore = grid.Rows.Count;
+            System.Diagnostics.Debug.WriteLine($"RefreshJournalData: Clearing grid (had {rowsBefore} rows)");
             grid.Rows.Clear();
+            System.Diagnostics.Debug.WriteLine($"RefreshJournalData: Grid cleared (now {grid.Rows.Count} rows)");
+            
             foreach (var trade in trades)
             {
                 var rowIndex = grid.Rows.Add(
@@ -14642,36 +15095,67 @@ namespace Risk_Manager
                     FormatNumeric(trade.NetPL),
                     trade.RR.ToString("F2"),
                     trade.Model,
-                    trade.Notes?.Length > 30 ? trade.Notes.Substring(0, 30) + "..." : trade.Notes
+                    FormatNotesForDisplay(trade.Notes)
                 );
                 grid.Rows[rowIndex].Tag = trade.Id;
+                
+                // DEBUG: Log what we're adding to the grid
+                System.Diagnostics.Debug.WriteLine($"Added row {rowIndex}: {trade.Symbol} | {trade.TradeType} | {trade.Outcome} | {FormatNumeric(trade.PL)}");
+                
+                // Explicitly set row default style to ensure visibility
+                grid.Rows[rowIndex].DefaultCellStyle.BackColor = CardBackground;
+                grid.Rows[rowIndex].DefaultCellStyle.ForeColor = TextWhite;
+                grid.Rows[rowIndex].Height = 30;  // Ensure visible height
 
-                // Color code the outcome
-                if (trade.Outcome?.ToLower() == "win")
-                {
-                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.LimeGreen;
-                }
-                else if (trade.Outcome?.ToLower() == "loss")
-                {
-                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.Red;
-                }
+                // Apply color coding using helper method
+                ApplyTradeRowStyling(grid.Rows[rowIndex], trade);
+                
+                // DEBUG: Check cell values after adding
+                var cellValues = string.Join(" | ", grid.Rows[rowIndex].Cells.Cast<DataGridViewCell>().Select(c => c.Value?.ToString() ?? "NULL"));
+                System.Diagnostics.Debug.WriteLine($"Row {rowIndex} cell values: {cellValues}");
+                System.Diagnostics.Debug.WriteLine($"Row {rowIndex} ForeColor: {grid.Rows[rowIndex].DefaultCellStyle.ForeColor}, BackColor: {grid.Rows[rowIndex].DefaultCellStyle.BackColor}");
             }
+            
+            var finalRowLog = $"{callInfo} - Final rows: {grid.Rows.Count}";
+            System.Diagnostics.Debug.WriteLine($"RefreshJournalData: Grid updated with {grid.Rows.Count} rows");
+            refreshCallLog.Add(finalRowLog);
+            
+            // Force grid to refresh and repaint
+            grid.Refresh();
+            grid.Invalidate();
+            
+            // Show summary of all calls so far
+            var summary = $"RefreshJournalData Call Summary:\n" +
+                         $"Total calls: {refreshCallCounter}\n\n" +
+                         string.Join("\n", refreshCallLog.Skip(Math.Max(0, refreshCallLog.Count - 10)));
+            
+            System.Diagnostics.Debug.WriteLine($"\n=== CALL SUMMARY ===\n{summary}\n==================\n");
 
-            // Update stats labels
+            // Update basic stats labels
             if (totalTradesLabel != null)
-                totalTradesLabel.Text = $"Total Trades: {stats.TotalTrades} (W:{stats.Wins} L:{stats.Losses} BE:{stats.Breakevens})";
+                totalTradesLabel.Text = $"Total: {stats.TotalTrades} (W:{stats.Wins} L:{stats.Losses} BE:{stats.Breakevens})";
             if (winRateLabel != null)
                 winRateLabel.Text = $"Win Rate: {stats.WinRate:F1}%";
             if (totalPLLabel != null)
             {
                 totalPLLabel.Text = $"Total P/L: {FormatNumeric(stats.TotalPL)}";
-                totalPLLabel.ForeColor = stats.TotalPL >= 0 ? Color.LimeGreen : Color.Red;
+                totalPLLabel.ForeColor = stats.TotalPL >= 0 ? Color.LimeGreen : Color.OrangeRed;
             }
             if (avgPLLabel != null)
             {
                 avgPLLabel.Text = $"Avg P/L: {FormatNumeric(stats.AveragePL)}";
-                avgPLLabel.ForeColor = stats.AveragePL >= 0 ? Color.LimeGreen : Color.Red;
+                avgPLLabel.ForeColor = stats.AveragePL >= 0 ? Color.LimeGreen : Color.OrangeRed;
             }
+            
+            // Update advanced stats labels
+            if (largestWinLabel != null)
+                largestWinLabel.Text = $"Best: {FormatNumeric(stats.LargestWin)}";
+            if (largestLossLabel != null)
+                largestLossLabel.Text = $"Worst: {FormatNumeric(stats.LargestLoss)}";
+            if (avgWinLabel != null)
+                avgWinLabel.Text = $"Avg Win: {FormatNumeric(stats.AverageWin)}";
+            if (avgLossLabel != null)
+                avgLossLabel.Text = $"Avg Loss: {FormatNumeric(stats.AverageLoss)}";
         }
 
         private Control FindControlByName(Control parent, string name)
