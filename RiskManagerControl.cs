@@ -12953,11 +12953,16 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"Content added to journalContentPanel. Content type: {content.GetType().Name}");
                 System.Diagnostics.Debug.WriteLine($"JournalContentPanel size: {journalContentPanel.Size}, ControlCount: {journalContentPanel.Controls.Count}");
                 
+                // CRITICAL FIX: Explicitly set width to match parent's ClientSize
+                // This ensures content expands to full width instead of staying at default 200px
+                content.Width = journalContentPanel.ClientSize.Width;
+                
                 // Force layout recalculation to ensure content fills the panel
                 journalContentPanel.PerformLayout();
                 content.PerformLayout();
                 
                 System.Diagnostics.Debug.WriteLine($"After PerformLayout - Content size: {content.Size}");
+                MessageBox.Show($"Content Layout Update:\nJournalContentPanel: {journalContentPanel.ClientSize.Width}x{journalContentPanel.ClientSize.Height}\nContent set to: {content.Width}x{content.Height}\n\nThis should fix the 200px width issue!", "Width Fix Applied", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
