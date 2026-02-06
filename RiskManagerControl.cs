@@ -13183,32 +13183,9 @@ namespace Risk_Manager
             tradesGrid.Columns["RR"].Width = 60;
             tradesGrid.Columns["Model"].Width = 120;
 
-            // ===== ADD ORANGE TEST PANEL TO DIAGNOSE GRID AREA =====
-            var gridTestPanel = new Panel
-            {
-                BackColor = Color.Orange,  // BRIGHT ORANGE - impossible to miss!
-                Dock = DockStyle.Fill,
-                Padding = new Padding(20)
-            };
-            
-            var gridTestLabel = new Label
-            {
-                Text = "🟧 GRID TEST PANEL 🟧\n\nIf you see this bright orange panel,\nthe grid area IS rendering correctly!\n\nThis means we can add the actual grid.",
-                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.Transparent,
-                AutoSize = false,
-                Size = new Size(600, 200),
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Top
-            };
-            gridTestPanel.Controls.Add(gridTestLabel);
-            
-            // Add ORANGE TEST PANEL instead of grid for now
-            journalCard.Controls.Add(gridTestPanel);
-            
-            // Comment out grid temporarily for testing
-            // journalCard.Controls.Add(tradesGrid);
+            // Add grid to journal card
+            journalCard.Controls.Add(tradesGrid);
+            tradesGrid.BringToFront();  // Ensure grid is on top
             
             // DEBUG: Log journal card details
             System.Diagnostics.Debug.WriteLine("=== JOURNAL CARD DEBUG ===");
