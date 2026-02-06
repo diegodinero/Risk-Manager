@@ -12976,6 +12976,171 @@ namespace Risk_Manager
             var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
             System.Diagnostics.Debug.WriteLine($"PagePanel created: AutoScroll={pagePanel.AutoScroll}");
 
+            // ===== IMPORTANT: ADD JOURNAL CARD WITH BUTTONS FIRST =====
+            // This ensures buttons are ALWAYS visible at the top, even if viewport is small
+            
+            // Journal entries card with buttons (ADD FIRST!)
+            var journalCard = new Panel
+            {
+                Dock = DockStyle.Top,  // Changed from Fill to Top so it appears first
+                Height = 400,  // Fixed height to ensure visibility
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            
+            var journalHeader = new CustomCardHeaderControl("📋 Trade Log", GetIconForTitle("Limits"));
+            journalHeader.Dock = DockStyle.Top;
+            journalCard.Controls.Add(journalHeader);
+
+            // Buttons panel with export
+            var buttonsPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = CardBackground,
+                Padding = new Padding(5)
+            };
+
+            var addButton = new Button
+            {
+                Text = "➕ Add Trade",
+                Width = 120,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 150, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+            };
+            addButton.FlatAppearance.BorderSize = 0;
+            addButton.Click += AddTrade_Click;
+
+            var editButton = new Button
+            {
+                Text = "✏️ Edit",
+                Width = 100,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 100, 200),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+            };
+            editButton.FlatAppearance.BorderSize = 0;
+            editButton.Click += EditTrade_Click;
+
+            var deleteButton = new Button
+            {
+                Text = "🗑️ Delete",
+                Width = 100,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(200, 50, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+            };
+            deleteButton.FlatAppearance.BorderSize = 0;
+            deleteButton.Click += DeleteTrade_Click;
+
+            var exportButton = new Button
+            {
+                Text = "📤 Export CSV",
+                Width = 120,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(100, 100, 100),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+            };
+            exportButton.FlatAppearance.BorderSize = 0;
+            exportButton.Click += ExportTrades_Click;
+
+            buttonsPanel.Controls.Add(addButton);
+            buttonsPanel.Controls.Add(editButton);
+            buttonsPanel.Controls.Add(deleteButton);
+            buttonsPanel.Controls.Add(exportButton);
+            
+            // DEBUG: Log button panel details
+            System.Diagnostics.Debug.WriteLine("=== BUTTONS PANEL DEBUG ===");
+            System.Diagnostics.Debug.WriteLine($"AddButton: Size={addButton.Size}, Visible={addButton.Visible}, Enabled={addButton.Enabled}, Text='{addButton.Text}'");
+            System.Diagnostics.Debug.WriteLine($"ButtonsPanel: Size={buttonsPanel.Size}, Visible={buttonsPanel.Visible}, ControlCount={buttonsPanel.Controls.Count}");
+            System.Diagnostics.Debug.WriteLine($"ButtonsPanel: Dock={buttonsPanel.Dock}, Height={buttonsPanel.Height}");
+            
+            journalCard.Controls.Add(buttonsPanel);
+
+            // DataGridView for trades with sorting enabled
+            var tradesGrid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                BackgroundColor = CardBackground,
+                GridColor = DarkerBackground,
+                BorderStyle = BorderStyle.None,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AllowUserToResizeRows = false,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+                RowHeadersVisible = false,
+                Tag = "JournalGrid",
+                Name = "TradesGrid"
+            };
+
+            tradesGrid.DefaultCellStyle.BackColor = CardBackground;
+            tradesGrid.DefaultCellStyle.ForeColor = TextWhite;
+            tradesGrid.DefaultCellStyle.SelectionBackColor = SelectedColor;
+            tradesGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
+            tradesGrid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
+            tradesGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
+            tradesGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+            // Add columns with sorting enabled
+            tradesGrid.Columns.Add("Date", "Date");
+            tradesGrid.Columns.Add("Symbol", "Symbol");
+            tradesGrid.Columns.Add("Type", "Type");
+            tradesGrid.Columns.Add("Outcome", "Outcome");
+            tradesGrid.Columns.Add("PL", "P/L");
+            tradesGrid.Columns.Add("NetPL", "Net P/L");
+            tradesGrid.Columns.Add("RR", "R:R");
+            tradesGrid.Columns.Add("Model", "Model");
+            tradesGrid.Columns.Add("Notes", "Notes");
+
+            // Enable sorting on all columns
+            foreach (DataGridViewColumn column in tradesGrid.Columns)
+            {
+                column.SortMode = DataGridViewColumnSortMode.Automatic;
+            }
+
+            // Set column widths
+            tradesGrid.Columns["Date"].Width = 100;
+            tradesGrid.Columns["Symbol"].Width = 80;
+            tradesGrid.Columns["Type"].Width = 80;
+            tradesGrid.Columns["Outcome"].Width = 90;
+            tradesGrid.Columns["PL"].Width = 90;
+            tradesGrid.Columns["NetPL"].Width = 90;
+            tradesGrid.Columns["RR"].Width = 60;
+            tradesGrid.Columns["Model"].Width = 120;
+
+            journalCard.Controls.Add(tradesGrid);
+            
+            // DEBUG: Log journal card details
+            System.Diagnostics.Debug.WriteLine("=== JOURNAL CARD DEBUG ===");
+            System.Diagnostics.Debug.WriteLine($"JournalCard: Size={journalCard.Size}, Visible={journalCard.Visible}");
+            System.Diagnostics.Debug.WriteLine($"JournalCard: Dock={journalCard.Dock}, Height={journalCard.Height}, ControlCount={journalCard.Controls.Count}");
+            
+            // ADD JOURNAL CARD FIRST - This makes buttons appear at TOP
+            pagePanel.Controls.Add(journalCard);
+            
+            // Spacer
+            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
+
+            // NOW add stats and filter BELOW the buttons
             // Enhanced stats summary card with more metrics
             var statsCard = new Panel
             {
@@ -13128,167 +13293,6 @@ namespace Risk_Manager
 
             filterCard.Controls.Add(filterPanel);
             pagePanel.Controls.Add(filterCard);
-
-            // Spacer
-            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
-
-            // Journal entries grid card
-            var journalCard = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = CardBackground,
-                Padding = new Padding(15),
-                Margin = new Padding(0),
-                MinimumSize = new Size(0, 250)
-            };
-            
-            var journalHeader = new CustomCardHeaderControl("📋 Trade Log", GetIconForTitle("Limits"));
-            journalHeader.Dock = DockStyle.Top;
-            journalCard.Controls.Add(journalHeader);
-
-            // Buttons panel with export
-            var buttonsPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                Height = 50,
-                FlowDirection = FlowDirection.LeftToRight,
-                BackColor = CardBackground,
-                Padding = new Padding(5)
-            };
-
-            var addButton = new Button
-            {
-                Text = "➕ Add Trade",
-                Width = 120,
-                Height = 35,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(50, 150, 50),
-                ForeColor = TextWhite,
-                Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
-            };
-            addButton.FlatAppearance.BorderSize = 0;
-            addButton.Click += AddTrade_Click;
-
-            var editButton = new Button
-            {
-                Text = "✏️ Edit",
-                Width = 100,
-                Height = 35,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(50, 100, 200),
-                ForeColor = TextWhite,
-                Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
-            };
-            editButton.FlatAppearance.BorderSize = 0;
-            editButton.Click += EditTrade_Click;
-
-            var deleteButton = new Button
-            {
-                Text = "🗑️ Delete",
-                Width = 100,
-                Height = 35,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(200, 50, 50),
-                ForeColor = TextWhite,
-                Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
-            };
-            deleteButton.FlatAppearance.BorderSize = 0;
-            deleteButton.Click += DeleteTrade_Click;
-
-            var exportButton = new Button
-            {
-                Text = "📤 Export CSV",
-                Width = 120,
-                Height = 35,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(100, 100, 100),
-                ForeColor = TextWhite,
-                Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
-            };
-            exportButton.FlatAppearance.BorderSize = 0;
-            exportButton.Click += ExportTrades_Click;
-
-            buttonsPanel.Controls.Add(addButton);
-            buttonsPanel.Controls.Add(editButton);
-            buttonsPanel.Controls.Add(deleteButton);
-            buttonsPanel.Controls.Add(exportButton);
-            
-            // DEBUG: Log button panel details
-            System.Diagnostics.Debug.WriteLine("=== BUTTONS PANEL DEBUG ===");
-            System.Diagnostics.Debug.WriteLine($"AddButton: Size={addButton.Size}, Visible={addButton.Visible}, Enabled={addButton.Enabled}, Text='{addButton.Text}'");
-            System.Diagnostics.Debug.WriteLine($"ButtonsPanel: Size={buttonsPanel.Size}, Visible={buttonsPanel.Visible}, ControlCount={buttonsPanel.Controls.Count}");
-            System.Diagnostics.Debug.WriteLine($"ButtonsPanel: Dock={buttonsPanel.Dock}, Height={buttonsPanel.Height}");
-            
-            journalCard.Controls.Add(buttonsPanel);
-
-            // DataGridView for trades with sorting enabled
-            var tradesGrid = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                BackgroundColor = CardBackground,
-                GridColor = DarkerBackground,
-                BorderStyle = BorderStyle.None,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                AllowUserToResizeRows = false,
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
-                RowHeadersVisible = false,
-                Tag = "JournalGrid",
-                Name = "TradesGrid"
-            };
-
-            tradesGrid.DefaultCellStyle.BackColor = CardBackground;
-            tradesGrid.DefaultCellStyle.ForeColor = TextWhite;
-            tradesGrid.DefaultCellStyle.SelectionBackColor = SelectedColor;
-            tradesGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
-            tradesGrid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
-            tradesGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
-            tradesGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
-
-            // Add columns with sorting enabled
-            tradesGrid.Columns.Add("Date", "Date");
-            tradesGrid.Columns.Add("Symbol", "Symbol");
-            tradesGrid.Columns.Add("Type", "Type");
-            tradesGrid.Columns.Add("Outcome", "Outcome");
-            tradesGrid.Columns.Add("PL", "P/L");
-            tradesGrid.Columns.Add("NetPL", "Net P/L");
-            tradesGrid.Columns.Add("RR", "R:R");
-            tradesGrid.Columns.Add("Model", "Model");
-            tradesGrid.Columns.Add("Notes", "Notes");
-
-            // Enable sorting on all columns
-            foreach (DataGridViewColumn column in tradesGrid.Columns)
-            {
-                column.SortMode = DataGridViewColumnSortMode.Automatic;
-            }
-
-            // Set column widths
-            tradesGrid.Columns["Date"].Width = 100;
-            tradesGrid.Columns["Symbol"].Width = 80;
-            tradesGrid.Columns["Type"].Width = 80;
-            tradesGrid.Columns["Outcome"].Width = 90;
-            tradesGrid.Columns["PL"].Width = 90;
-            tradesGrid.Columns["NetPL"].Width = 90;
-            tradesGrid.Columns["RR"].Width = 60;
-            tradesGrid.Columns["Model"].Width = 120;
-
-            journalCard.Controls.Add(tradesGrid);
-            
-            // DEBUG: Log journal card details
-            System.Diagnostics.Debug.WriteLine("=== JOURNAL CARD DEBUG ===");
-            System.Diagnostics.Debug.WriteLine($"JournalCard: Size={journalCard.Size}, MinimumSize={journalCard.MinimumSize}, Visible={journalCard.Visible}");
-            System.Diagnostics.Debug.WriteLine($"JournalCard: Dock={journalCard.Dock}, ControlCount={journalCard.Controls.Count}");
-            System.Diagnostics.Debug.WriteLine($"JournalCard children: {string.Join(", ", journalCard.Controls.Cast<Control>().Select(c => c.GetType().Name))}");
-            
-            pagePanel.Controls.Add(journalCard);
             
             // DEBUG: Log final page panel details
             System.Diagnostics.Debug.WriteLine("=== PAGE PANEL DEBUG ===");
