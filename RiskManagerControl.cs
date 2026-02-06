@@ -12756,6 +12756,10 @@ namespace Risk_Manager
         private Panel journalContentPanel;
         private string currentJournalSection = "Trade Log";
         private Dictionary<string, Button> journalNavButtons = new Dictionary<string, Button>();
+        
+        // Calendar state
+        private DateTime currentCalendarMonth = DateTime.Today;
+        private bool showPlanMode = false; // false = P&L mode, true = Plan mode
 
         /// <summary>
         /// Creates the Trading Journal panel with sidebar navigation
@@ -13359,7 +13363,470 @@ namespace Risk_Manager
         /// </summary>
         private Control CreateCalendarPage()
         {
-            return CreatePlaceholderPage("Calendar", "View your trading activity by date");
+            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true, Tag = "CalendarPagePanel" };
+            
+            // Main content container
+            var contentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground,
+                Padding = new Padding(20),
+                AutoScroll = true
+            };
+            
+            // Header with navigation
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 80,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 10, 0, 10)
+            };
+            
+            // Month/Year label
+            var monthYearLabel = new Label
+            {
+                Name = "MonthYearLabel",
+                Text = currentCalendarMonth.ToString("MMMM yyyy"),
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 10)
+            };
+            headerPanel.Controls.Add(monthYearLabel);
+            
+            // Previous month button
+            var prevButton = new Button
+            {
+                Text = "◀",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Size = new Size(40, 40),
+                Location = new Point(300, 5),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            prevButton.FlatAppearance.BorderSize = 0;
+            prevButton.Click += (s, e) =>
+            {
+                currentCalendarMonth = currentCalendarMonth.AddMonths(-1);
+                RefreshCalendarPage();
+            };
+            headerPanel.Controls.Add(prevButton);
+            
+            // Next month button
+            var nextButton = new Button
+            {
+                Text = "▶",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Size = new Size(40, 40),
+                Location = new Point(350, 5),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            nextButton.FlatAppearance.BorderSize = 0;
+            nextButton.Click += (s, e) =>
+            {
+                currentCalendarMonth = currentCalendarMonth.AddMonths(1);
+                RefreshCalendarPage();
+            };
+            headerPanel.Controls.Add(nextButton);
+            
+            // Toggle buttons for Plan/P&L mode
+            var togglePanel = new FlowLayoutPanel
+            {
+                Location = new Point(450, 10),
+                Size = new Size(300, 40),
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+            
+            var plToggle = new Button
+            {
+                Text = "P&L",
+                Size = new Size(100, 35),
+                BackColor = showPlanMode ? CardBackground : Color.FromArgb(41, 128, 185), // Blue when selected
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Tag = "PLToggle"
+            };
+            plToggle.FlatAppearance.BorderSize = 0;
+            plToggle.Click += (s, e) =>
+            {
+                showPlanMode = false;
+                RefreshCalendarPage();
+            };
+            togglePanel.Controls.Add(plToggle);
+            
+            var planToggle = new Button
+            {
+                Text = "Plan",
+                Size = new Size(100, 35),
+                BackColor = showPlanMode ? Color.FromArgb(41, 128, 185) : CardBackground, // Blue when selected
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(10, 0, 0, 0),
+                Tag = "PlanToggle"
+            };
+            planToggle.FlatAppearance.BorderSize = 0;
+            planToggle.Click += (s, e) =>
+            {
+                showPlanMode = true;
+                RefreshCalendarPage();
+            };
+            togglePanel.Controls.Add(planToggle);
+            
+            headerPanel.Controls.Add(togglePanel);
+            
+            // Monthly stats panel
+            var statsPanel = CreateCalendarStatsPanel();
+            statsPanel.Dock = DockStyle.Top;
+            statsPanel.Height = 100;
+            
+            // Calendar grid panel
+            var calendarPanel = CreateCalendarGrid();
+            calendarPanel.Dock = DockStyle.Top;
+            
+            contentPanel.Controls.Add(calendarPanel);
+            contentPanel.Controls.Add(statsPanel);
+            contentPanel.Controls.Add(headerPanel);
+            
+            pagePanel.Controls.Add(contentPanel);
+            
+            return pagePanel;
+        }
+        
+        /// <summary>
+        /// Refreshes the calendar page when month or mode changes
+        /// </summary>
+        private void RefreshCalendarPage()
+        {
+            if (journalContentPanel == null || currentJournalSection != "Calendar")
+                return;
+                
+            // Find the calendar page panel
+            var calendarPage = FindControlByTag(journalContentPanel, "CalendarPagePanel") as Panel;
+            if (calendarPage == null)
+            {
+                // Recreate the entire page
+                ShowJournalSection("Calendar");
+                return;
+            }
+            
+            // Update month/year label
+            var monthYearLabel = FindControlByName(calendarPage, "MonthYearLabel") as Label;
+            if (monthYearLabel != null)
+                monthYearLabel.Text = currentCalendarMonth.ToString("MMMM yyyy");
+            
+            // Update toggle button colors
+            var plToggle = FindControlByTag(calendarPage, "PLToggle") as Button;
+            var planToggle = FindControlByTag(calendarPage, "PlanToggle") as Button;
+            if (plToggle != null)
+                plToggle.BackColor = showPlanMode ? CardBackground : Color.FromArgb(41, 128, 185);
+            if (planToggle != null)
+                planToggle.BackColor = showPlanMode ? Color.FromArgb(41, 128, 185) : CardBackground;
+            
+            // Refresh the calendar grid
+            var contentPanel = calendarPage.Controls[0] as Panel;
+            if (contentPanel != null)
+            {
+                // Find and remove old calendar grid
+                Control oldGrid = null;
+                foreach (Control ctrl in contentPanel.Controls)
+                {
+                    if (ctrl.Name == "CalendarGrid")
+                    {
+                        oldGrid = ctrl;
+                        break;
+                    }
+                }
+                
+                if (oldGrid != null)
+                {
+                    contentPanel.Controls.Remove(oldGrid);
+                    oldGrid.Dispose();
+                }
+                
+                // Create and add new calendar grid
+                var newGrid = CreateCalendarGrid();
+                newGrid.Dock = DockStyle.Top;
+                contentPanel.Controls.Add(newGrid);
+                contentPanel.Controls.SetChildIndex(newGrid, 0); // Move to top
+                
+                // Refresh stats panel
+                Control oldStats = null;
+                foreach (Control ctrl in contentPanel.Controls)
+                {
+                    if (ctrl.Name == "CalendarStatsPanel")
+                    {
+                        oldStats = ctrl;
+                        break;
+                    }
+                }
+                
+                if (oldStats != null)
+                {
+                    contentPanel.Controls.Remove(oldStats);
+                    oldStats.Dispose();
+                }
+                
+                var newStats = CreateCalendarStatsPanel();
+                newStats.Dock = DockStyle.Top;
+                contentPanel.Controls.Add(newStats);
+                contentPanel.Controls.SetChildIndex(newStats, 1); // Move after grid
+            }
+            
+            calendarPage.Refresh();
+        }
+        
+        /// <summary>
+        /// Creates the monthly statistics panel for the calendar
+        /// </summary>
+        private Panel CreateCalendarStatsPanel()
+        {
+            var panel = new Panel
+            {
+                Name = "CalendarStatsPanel",
+                BackColor = CardBackground,
+                Padding = new Padding(20),
+                Margin = new Padding(0, 10, 0, 10)
+            };
+            
+            var account = GetSelectedAccount();
+            var trades = TradingJournalService.Instance.GetTradesForAccount(account);
+            var monthTrades = trades.Where(t => t.Date.Year == currentCalendarMonth.Year && 
+                                               t.Date.Month == currentCalendarMonth.Month).ToList();
+            
+            int totalTrades = monthTrades.Count;
+            decimal monthlyNetPL = monthTrades.Sum(t => t.NetPL);
+            int tradedDays = monthTrades.Select(t => t.Date.Date).Distinct().Count();
+            
+            // Calculate plan-followed days (days where >= 70% of trades followed plan)
+            int planFollowedDays = monthTrades
+                .GroupBy(t => t.Date.Date)
+                .Count(g =>
+                {
+                    var total = g.Count();
+                    if (total == 0) return false;
+                    var yesCount = g.Count(t => t.FollowedPlan);
+                    return (yesCount * 100.0) / total >= 70.0;
+                });
+            
+            // Create stats labels
+            var titleLabel = new Label
+            {
+                Text = "Monthly Summary",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 0)
+            };
+            panel.Controls.Add(titleLabel);
+            
+            var statsLabel = new Label
+            {
+                Text = $"Total Trades: {totalTrades} | Net P/L: {monthlyNetPL:+$#,##0.00;-$#,##0.00;$0.00} | Days Traded: {tradedDays} | Days Plan Followed (≥70%): {planFollowedDays}",
+                Font = new Font("Segoe UI", 11, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 35)
+            };
+            panel.Controls.Add(statsLabel);
+            
+            return panel;
+        }
+        
+        /// <summary>
+        /// Creates the calendar grid with day cells
+        /// </summary>
+        private Panel CreateCalendarGrid()
+        {
+            var gridPanel = new Panel
+            {
+                Name = "CalendarGrid",
+                BackColor = DarkBackground,
+                AutoSize = true,
+                Padding = new Padding(0, 10, 0, 10)
+            };
+            
+            var account = GetSelectedAccount();
+            var trades = TradingJournalService.Instance.GetTradesForAccount(account);
+            
+            // Day headers (Sun, Mon, Tue, etc.)
+            var dayHeaders = new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+            int cellWidth = 150;
+            int cellHeight = 100;
+            int headerHeight = 30;
+            
+            for (int i = 0; i < 7; i++)
+            {
+                var headerLabel = new Label
+                {
+                    Text = dayHeaders[i],
+                    Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                    ForeColor = TextWhite,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Size = new Size(cellWidth, headerHeight),
+                    Location = new Point(i * cellWidth, 0),
+                    BackColor = Color.FromArgb(50, 50, 50)
+                };
+                gridPanel.Controls.Add(headerLabel);
+            }
+            
+            // Calculate calendar cells
+            DateTime firstOfMonth = new DateTime(currentCalendarMonth.Year, currentCalendarMonth.Month, 1);
+            int daysInMonth = DateTime.DaysInMonth(currentCalendarMonth.Year, currentCalendarMonth.Month);
+            int firstDayOfWeek = (int)firstOfMonth.DayOfWeek; // 0 = Sunday
+            
+            int row = 0;
+            int col = firstDayOfWeek;
+            
+            for (int day = 1; day <= daysInMonth; day++)
+            {
+                DateTime thisDate = new DateTime(currentCalendarMonth.Year, currentCalendarMonth.Month, day);
+                var dayTrades = trades.Where(t => t.Date.Date == thisDate.Date).ToList();
+                
+                var cellPanel = CreateCalendarDayCell(day, dayTrades, thisDate);
+                cellPanel.Location = new Point(col * cellWidth, headerHeight + (row * cellHeight));
+                cellPanel.Size = new Size(cellWidth - 4, cellHeight - 4);
+                cellPanel.Margin = new Padding(2);
+                gridPanel.Controls.Add(cellPanel);
+                
+                col++;
+                if (col >= 7)
+                {
+                    col = 0;
+                    row++;
+                }
+            }
+            
+            // Set final height based on number of rows
+            int totalRows = row + (col > 0 ? 1 : 0);
+            gridPanel.Height = headerHeight + (totalRows * cellHeight) + 20;
+            gridPanel.Width = 7 * cellWidth;
+            
+            return gridPanel;
+        }
+        
+        /// <summary>
+        /// Creates a single day cell for the calendar
+        /// </summary>
+        private Panel CreateCalendarDayCell(int dayNumber, List<JournalTrade> dayTrades, DateTime date)
+        {
+            int tradeCount = dayTrades.Count;
+            Color cellColor = CardBackground;
+            
+            // Calculate cell color based on mode
+            if (tradeCount > 0)
+            {
+                if (showPlanMode)
+                {
+                    // Plan mode: color based on % of trades that followed plan
+                    int yesCount = dayTrades.Count(t => t.FollowedPlan);
+                    double planPct = (yesCount * 100.0) / tradeCount;
+                    
+                    if (planPct >= 70.0)
+                        cellColor = Color.FromArgb(109, 231, 181); // Green
+                    else if (planPct >= 50.0)
+                        cellColor = Color.FromArgb(252, 212, 75); // Yellow
+                    else
+                        cellColor = Color.FromArgb(253, 164, 165); // Red
+                }
+                else
+                {
+                    // P&L mode: color based on net P/L
+                    decimal netPL = dayTrades.Sum(t => t.NetPL);
+                    
+                    if (netPL > 0)
+                        cellColor = Color.FromArgb(109, 231, 181); // Green
+                    else if (netPL == 0)
+                        cellColor = Color.FromArgb(252, 212, 75); // Yellow
+                    else
+                        cellColor = Color.FromArgb(253, 164, 165); // Red
+                }
+            }
+            
+            var cellPanel = new Panel
+            {
+                BackColor = cellColor,
+                BorderStyle = BorderStyle.FixedSingle,
+                Cursor = tradeCount > 0 ? Cursors.Hand : Cursors.Default,
+                Tag = date
+            };
+            
+            // Day number label
+            var dayLabel = new Label
+            {
+                Text = dayNumber.ToString(),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.Black,
+                AutoSize = true,
+                Location = new Point(5, 5)
+            };
+            cellPanel.Controls.Add(dayLabel);
+            
+            // Show trade info if there are trades
+            if (tradeCount > 0)
+            {
+                if (showPlanMode)
+                {
+                    // Show plan percentage
+                    int yesCount = dayTrades.Count(t => t.FollowedPlan);
+                    double planPct = (yesCount * 100.0) / tradeCount;
+                    
+                    var planLabel = new Label
+                    {
+                        Text = $"{planPct:0}% followed",
+                        Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                        ForeColor = Color.Black,
+                        AutoSize = true,
+                        Location = new Point(5, 35)
+                    };
+                    cellPanel.Controls.Add(planLabel);
+                }
+                else
+                {
+                    // Show net P/L
+                    decimal netPL = dayTrades.Sum(t => t.NetPL);
+                    var plLabel = new Label
+                    {
+                        Text = netPL.ToString("+$#,##0.00;-$#,##0.00;$0.00"),
+                        Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                        ForeColor = Color.Black,
+                        AutoSize = true,
+                        Location = new Point(5, 35)
+                    };
+                    cellPanel.Controls.Add(plLabel);
+                }
+                
+                // Trade count badge
+                var countLabel = new Label
+                {
+                    Text = tradeCount.ToString(),
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = Color.FromArgb(100, 0, 0, 0),
+                    AutoSize = true,
+                    Padding = new Padding(4, 2, 4, 2),
+                    Location = new Point(110, 65)
+                };
+                cellPanel.Controls.Add(countLabel);
+                
+                // Click handler to navigate to Trade Log filtered by this date
+                cellPanel.Click += (s, e) =>
+                {
+                    // Navigate to Trade Log with this date
+                    ShowJournalSection("Trade Log");
+                    // TODO: Could add date filtering to Trade Log in future
+                };
+            }
+            
+            return cellPanel;
         }
 
         /// <summary>
