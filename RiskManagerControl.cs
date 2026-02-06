@@ -12953,16 +12953,19 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"Content added to journalContentPanel. Content type: {content.GetType().Name}");
                 System.Diagnostics.Debug.WriteLine($"JournalContentPanel size: {journalContentPanel.Size}, ControlCount: {journalContentPanel.Controls.Count}");
                 
-                // CRITICAL FIX: Explicitly set width to match parent's ClientSize
-                // This ensures content expands to full width instead of staying at default 200px
-                content.Width = journalContentPanel.ClientSize.Width;
+                // CRITICAL FIX: Explicitly set width AND MinimumSize to match parent's ClientSize
+                // This ensures content expands to full width instead of staying at default 200px or collapsing to 0
+                int targetWidth = journalContentPanel.ClientSize.Width;
+                content.Width = targetWidth;
+                content.MinimumSize = new Size(targetWidth, 0);  // Prevent width from collapsing to 0
                 
                 // Force layout recalculation to ensure content fills the panel
                 journalContentPanel.PerformLayout();
                 content.PerformLayout();
                 
                 System.Diagnostics.Debug.WriteLine($"After PerformLayout - Content size: {content.Size}");
-                MessageBox.Show($"Content Layout Update:\nJournalContentPanel: {journalContentPanel.ClientSize.Width}x{journalContentPanel.ClientSize.Height}\nContent set to: {content.Width}x{content.Height}\n\nThis should fix the 200px width issue!", "Width Fix Applied", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                System.Diagnostics.Debug.WriteLine($"Set Width={targetWidth}, MinimumSize.Width={targetWidth}");
+                MessageBox.Show($"Content Layout Update:\nJournalContentPanel: {journalContentPanel.ClientSize.Width}x{journalContentPanel.ClientSize.Height}\nContent set to: {content.Width}x{content.Height}\nMinimumSize: {content.MinimumSize}\n\nThis should fix the width issue!", "Width Fix Applied", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
@@ -12990,10 +12993,13 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Top,  // Changed from Fill to Top so it appears first
                 Height = 600,  // Increased from 400 to 600 for more grid space
+                Width = journalContentPanel?.ClientSize.Width ?? 1836,  // Explicit width to prevent 0-width
+                MinimumSize = new Size(1200, 600),  // Guarantee minimum size
                 BackColor = CardBackground,
                 Padding = new Padding(15),
                 Margin = new Padding(0, 0, 0, 10)
             };
+            System.Diagnostics.Debug.WriteLine($"JournalCard created with Width={journalCard.Width}, MinimumSize={journalCard.MinimumSize}");
             
             var journalHeader = new CustomCardHeaderControl("📋 Trade Log", GetIconForTitle("Limits"));
             journalHeader.Dock = DockStyle.Top;
@@ -13082,6 +13088,8 @@ namespace Risk_Manager
             var tradesGrid = new DataGridView
             {
                 Dock = DockStyle.Fill,
+                Width = 1800,  // Explicit width to prevent 0-width issue
+                MinimumSize = new Size(1200, 200),  // Ensure grid has minimum width and height
                 BackgroundColor = CardBackground,
                 GridColor = DarkerBackground,
                 BorderStyle = BorderStyle.None,
@@ -13094,7 +13102,6 @@ namespace Risk_Manager
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
                 RowHeadersVisible = false,
-                MinimumSize = new Size(0, 200),  // Ensure grid has at least 200px height
                 AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells,  // Ensure rows are sized properly
                 Tag = "JournalGrid",
                 Name = "TradesGrid"
