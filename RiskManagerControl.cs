@@ -13090,6 +13090,7 @@ namespace Risk_Manager
                 ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
                 RowHeadersVisible = false,
                 MinimumSize = new Size(0, 200),  // Ensure grid has at least 200px height
+                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells,  // Ensure rows are sized properly
                 Tag = "JournalGrid",
                 Name = "TradesGrid"
             };
@@ -13098,9 +13099,13 @@ namespace Risk_Manager
             tradesGrid.DefaultCellStyle.ForeColor = TextWhite;
             tradesGrid.DefaultCellStyle.SelectionBackColor = SelectedColor;
             tradesGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
+            tradesGrid.DefaultCellStyle.Padding = new Padding(5);  // Add padding for better visibility
             tradesGrid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
             tradesGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
             tradesGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            
+            // Set minimum row height to ensure visibility
+            tradesGrid.RowTemplate.Height = 30;
 
             // Add columns with sorting enabled
             tradesGrid.Columns.Add("Date", "Date");
@@ -15042,12 +15047,21 @@ namespace Risk_Manager
                     FormatNotesForDisplay(trade.Notes)
                 );
                 grid.Rows[rowIndex].Tag = trade.Id;
+                
+                // Explicitly set row default style to ensure visibility
+                grid.Rows[rowIndex].DefaultCellStyle.BackColor = CardBackground;
+                grid.Rows[rowIndex].DefaultCellStyle.ForeColor = TextWhite;
+                grid.Rows[rowIndex].Height = 30;  // Ensure visible height
 
                 // Apply color coding using helper method
                 ApplyTradeRowStyling(grid.Rows[rowIndex], trade);
             }
             
             System.Diagnostics.Debug.WriteLine($"RefreshJournalData: Grid updated with {grid.Rows.Count} rows");
+            
+            // Force grid to refresh and repaint
+            grid.Refresh();
+            grid.Invalidate();
 
             // Update basic stats labels
             if (totalTradesLabel != null)
