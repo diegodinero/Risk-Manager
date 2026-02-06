@@ -13183,13 +13183,38 @@ namespace Risk_Manager
             tradesGrid.Columns["RR"].Width = 60;
             tradesGrid.Columns["Model"].Width = 120;
 
-            // Add grid to journal card
-            journalCard.Controls.Add(tradesGrid);
+            // ===== ADD ORANGE TEST PANEL TO DIAGNOSE GRID AREA =====
+            var gridTestPanel = new Panel
+            {
+                BackColor = Color.Orange,  // BRIGHT ORANGE - impossible to miss!
+                Dock = DockStyle.Fill,
+                Padding = new Padding(20)
+            };
+            
+            var gridTestLabel = new Label
+            {
+                Text = "🟧 GRID TEST PANEL 🟧\n\nIf you see this bright orange panel,\nthe grid area IS rendering correctly!\n\nThis means we can add the actual grid.",
+                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.Transparent,
+                AutoSize = false,
+                Size = new Size(600, 200),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Top
+            };
+            gridTestPanel.Controls.Add(gridTestLabel);
+            
+            // Add ORANGE TEST PANEL instead of grid for now
+            journalCard.Controls.Add(gridTestPanel);
+            
+            // Comment out grid temporarily for testing
+            // journalCard.Controls.Add(tradesGrid);
             
             // DEBUG: Log journal card details
             System.Diagnostics.Debug.WriteLine("=== JOURNAL CARD DEBUG ===");
             System.Diagnostics.Debug.WriteLine($"JournalCard: Size={journalCard.Size}, Visible={journalCard.Visible}");
             System.Diagnostics.Debug.WriteLine($"JournalCard: Dock={journalCard.Dock}, Height={journalCard.Height}, ControlCount={journalCard.Controls.Count}");
+            System.Diagnostics.Debug.WriteLine($"ORANGE TEST PANEL ADDED to Journal Card!");
             
             // ADD JOURNAL CARD FIRST - This makes buttons appear at TOP
             pagePanel.Controls.Add(journalCard);
