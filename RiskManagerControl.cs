@@ -13378,30 +13378,30 @@ namespace Risk_Manager
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 80,
+                Height = 100,
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 10)
             };
             
-            // Month/Year label
-            var monthYearLabel = new Label
+            // "Trading Calendar" title label
+            var titleLabel = new Label
             {
-                Name = "MonthYearLabel",
-                Text = currentCalendarMonth.ToString("MMMM yyyy"),
-                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                Name = "TradingCalendarTitle",
+                Text = "Trading Calendar",
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Location = new Point(0, 10)
+                Location = new Point(0, 5)
             };
-            headerPanel.Controls.Add(monthYearLabel);
+            headerPanel.Controls.Add(titleLabel);
             
-            // Previous month button
+            // Previous month button (moved left)
             var prevButton = new Button
             {
                 Text = "◀",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Size = new Size(40, 40),
-                Location = new Point(300, 5),
+                Location = new Point(0, 45),
                 BackColor = CardBackground,
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
@@ -13415,13 +13415,25 @@ namespace Risk_Manager
             };
             headerPanel.Controls.Add(prevButton);
             
-            // Next month button
+            // Month/Year label (centered between arrows)
+            var monthYearLabel = new Label
+            {
+                Name = "MonthYearLabel",
+                Text = currentCalendarMonth.ToString("MMMM yyyy"),
+                Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(50, 48)
+            };
+            headerPanel.Controls.Add(monthYearLabel);
+            
+            // Next month button (positioned after month/year label)
             var nextButton = new Button
             {
                 Text = "▶",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Size = new Size(40, 40),
-                Location = new Point(350, 5),
+                Location = new Point(250, 45),
                 BackColor = CardBackground,
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
@@ -13438,7 +13450,7 @@ namespace Risk_Manager
             // Toggle buttons for Plan/P&L mode
             var togglePanel = new FlowLayoutPanel
             {
-                Location = new Point(450, 10),
+                Location = new Point(450, 45),
                 Size = new Size(300, 40),
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false
@@ -13492,6 +13504,11 @@ namespace Risk_Manager
             var calendarPanel = CreateCalendarGrid();
             calendarPanel.Dock = DockStyle.Top;
             
+            // Legend panel at the bottom
+            var legendPanel = CreateCalendarLegendPanel();
+            legendPanel.Dock = DockStyle.Top;
+            
+            contentPanel.Controls.Add(legendPanel);
             contentPanel.Controls.Add(calendarPanel);
             contentPanel.Controls.Add(statsPanel);
             contentPanel.Controls.Add(headerPanel);
@@ -13806,7 +13823,138 @@ namespace Risk_Manager
             };
             panel.Controls.Add(wlLabel);
             
+            // Plan followed ratio with checkmark (e.g., "✓ 12/15")
+            var planRatioLabel = new Label
+            {
+                Text = $"{(planPct >= 70 ? "✓" : "")} {planFollowedCount}/{tradeCount}",
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = planPct >= 70 ? Color.FromArgb(109, 231, 181) : TextWhite, // Green if >=70%
+                AutoSize = true,
+                Location = new Point(100, 35)
+            };
+            panel.Controls.Add(planRatioLabel);
+            
             return panel;
+        }
+        
+        /// <summary>
+        /// Creates the legend panel showing what the colors mean
+        /// </summary>
+        private Panel CreateCalendarLegendPanel()
+        {
+            var legendPanel = new Panel
+            {
+                BackColor = CardBackground,
+                Padding = new Padding(20, 10, 20, 10),
+                Height = 80
+            };
+            
+            var titleLabel = new Label
+            {
+                Text = "Plan Followed Legend:",
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 5)
+            };
+            legendPanel.Controls.Add(titleLabel);
+            
+            // Legend items flow panel
+            var itemsPanel = new FlowLayoutPanel
+            {
+                Location = new Point(0, 35),
+                Size = new Size(1200, 35),
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+            
+            // Green ≥70%
+            var greenLabel = new Label
+            {
+                Text = "●",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = Color.FromArgb(109, 231, 181),
+                AutoSize = true,
+                Margin = new Padding(0, 0, 5, 0)
+            };
+            itemsPanel.Controls.Add(greenLabel);
+            
+            var greenText = new Label
+            {
+                Text = "≥70% Followed",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Margin = new Padding(0, 5, 30, 0)
+            };
+            itemsPanel.Controls.Add(greenText);
+            
+            // Yellow 50-69%
+            var yellowLabel = new Label
+            {
+                Text = "●",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = Color.FromArgb(252, 212, 75),
+                AutoSize = true,
+                Margin = new Padding(0, 0, 5, 0)
+            };
+            itemsPanel.Controls.Add(yellowLabel);
+            
+            var yellowText = new Label
+            {
+                Text = "50-69% Followed",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Margin = new Padding(0, 5, 30, 0)
+            };
+            itemsPanel.Controls.Add(yellowText);
+            
+            // Pink <50%
+            var pinkLabel = new Label
+            {
+                Text = "●",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = Color.FromArgb(253, 164, 165),
+                AutoSize = true,
+                Margin = new Padding(0, 0, 5, 0)
+            };
+            itemsPanel.Controls.Add(pinkLabel);
+            
+            var pinkText = new Label
+            {
+                Text = "<50% Followed",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Margin = new Padding(0, 5, 30, 0)
+            };
+            itemsPanel.Controls.Add(pinkText);
+            
+            // Empty circle - No trades
+            var emptyLabel = new Label
+            {
+                Text = "○",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Margin = new Padding(0, 0, 5, 0)
+            };
+            itemsPanel.Controls.Add(emptyLabel);
+            
+            var emptyText = new Label
+            {
+                Text = "No Trades",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Margin = new Padding(0, 5, 0, 0)
+            };
+            itemsPanel.Controls.Add(emptyText);
+            
+            legendPanel.Controls.Add(itemsPanel);
+            
+            return legendPanel;
         }
         
         /// <summary>
