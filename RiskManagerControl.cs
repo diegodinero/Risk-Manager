@@ -12850,7 +12850,7 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
-                Padding = new Padding(20),
+                Padding = new Padding(20, 10, 20, 20), // Reduced top padding to prevent content being cut off
                 AutoScroll = true
             };
 
@@ -14947,20 +14947,27 @@ namespace Risk_Manager
             switch (currentJournalSection)
             {
                 case "Trade Log":
-                    // Refresh trade log grid and stats
-                    var grid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
-                    var totalTradesLabel = FindControlByTag(contentPanel, "TotalTrades") as Label;
-                    var winRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
-                    var totalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
-                    var avgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
-                    var largestWinLabel = FindControlByTag(contentPanel, "LargestWin") as Label;
-                    var largestLossLabel = FindControlByTag(contentPanel, "LargestLoss") as Label;
-                    var avgWinLabel = FindControlByTag(contentPanel, "AvgWin") as Label;
-                    var avgLossLabel = FindControlByTag(contentPanel, "AvgLoss") as Label;
+                    // Refresh trade log grid and stats - search in journalContentPanel
+                    var grid = FindControlByName(journalContentPanel, "TradesGrid") as DataGridView;
+                    var totalTradesLabel = FindControlByTag(journalContentPanel, "TotalTrades") as Label;
+                    var winRateLabel = FindControlByTag(journalContentPanel, "WinRate") as Label;
+                    var totalPLLabel = FindControlByTag(journalContentPanel, "TotalPL") as Label;
+                    var avgPLLabel = FindControlByTag(journalContentPanel, "AvgPL") as Label;
+                    var largestWinLabel = FindControlByTag(journalContentPanel, "LargestWin") as Label;
+                    var largestLossLabel = FindControlByTag(journalContentPanel, "LargestLoss") as Label;
+                    var avgWinLabel = FindControlByTag(journalContentPanel, "AvgWin") as Label;
+                    var avgLossLabel = FindControlByTag(journalContentPanel, "AvgLoss") as Label;
+                    
+                    System.Diagnostics.Debug.WriteLine($"RefreshJournalDataForCurrentAccount: Grid found = {grid != null}");
+                    
                     if (grid != null)
                     {
                         RefreshJournalData(grid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel,
                             largestWinLabel, largestLossLabel, avgWinLabel, avgLossLabel);
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("WARNING: TradesGrid not found in journalContentPanel!");
                     }
                     break;
                     
@@ -14981,15 +14988,15 @@ namespace Risk_Manager
                     
                 default:
                     // Default to Trade Log if currentJournalSection is not set
-                    var defaultGrid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
-                    var defaultTotalTradesLabel = FindControlByTag(contentPanel, "TotalTrades") as Label;
-                    var defaultWinRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
-                    var defaultTotalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
-                    var defaultAvgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
-                    var defaultLargestWinLabel = FindControlByTag(contentPanel, "LargestWin") as Label;
-                    var defaultLargestLossLabel = FindControlByTag(contentPanel, "LargestLoss") as Label;
-                    var defaultAvgWinLabel = FindControlByTag(contentPanel, "AvgWin") as Label;
-                    var defaultAvgLossLabel = FindControlByTag(contentPanel, "AvgLoss") as Label;
+                    var defaultGrid = FindControlByName(journalContentPanel, "TradesGrid") as DataGridView;
+                    var defaultTotalTradesLabel = FindControlByTag(journalContentPanel, "TotalTrades") as Label;
+                    var defaultWinRateLabel = FindControlByTag(journalContentPanel, "WinRate") as Label;
+                    var defaultTotalPLLabel = FindControlByTag(journalContentPanel, "TotalPL") as Label;
+                    var defaultAvgPLLabel = FindControlByTag(journalContentPanel, "AvgPL") as Label;
+                    var defaultLargestWinLabel = FindControlByTag(journalContentPanel, "LargestWin") as Label;
+                    var defaultLargestLossLabel = FindControlByTag(journalContentPanel, "LargestLoss") as Label;
+                    var defaultAvgWinLabel = FindControlByTag(journalContentPanel, "AvgWin") as Label;
+                    var defaultAvgLossLabel = FindControlByTag(journalContentPanel, "AvgLoss") as Label;
                     if (defaultGrid != null)
                     {
                         RefreshJournalData(defaultGrid, defaultTotalTradesLabel, defaultWinRateLabel, defaultTotalPLLabel, defaultAvgPLLabel,
