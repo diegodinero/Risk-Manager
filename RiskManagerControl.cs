@@ -12984,7 +12984,7 @@ namespace Risk_Manager
             var journalCard = new Panel
             {
                 Dock = DockStyle.Top,  // Changed from Fill to Top so it appears first
-                Height = 400,  // Fixed height to ensure visibility
+                Height = 600,  // Increased from 400 to 600 for more grid space
                 BackColor = CardBackground,
                 Padding = new Padding(15),
                 Margin = new Padding(0, 0, 0, 10)
@@ -13089,6 +13089,7 @@ namespace Risk_Manager
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
                 RowHeadersVisible = false,
+                MinimumSize = new Size(0, 200),  // Ensure grid has at least 200px height
                 Tag = "JournalGrid",
                 Name = "TradesGrid"
             };
@@ -14703,9 +14704,8 @@ namespace Risk_Manager
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
                     System.Diagnostics.Debug.WriteLine("Trade saved, refreshing journal...");
-                    MessageBox.Show("Trade saved! Now refreshing the journal...", "Trade Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     RefreshJournalDataForCurrentAccount();
-                    MessageBox.Show("Refresh completed!", "Refresh Done", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    System.Diagnostics.Debug.WriteLine("Refresh completed.");
                 }
                 else
                 {
@@ -14962,9 +14962,7 @@ namespace Risk_Manager
                     var avgWinLabel = FindControlByTag(journalContentPanel, "AvgWin") as Label;
                     var avgLossLabel = FindControlByTag(journalContentPanel, "AvgLoss") as Label;
                     
-                    System.Diagnostics.Debug.WriteLine($"RefreshJournalDataForCurrentAccount: Grid found = {grid != null}");
-                    MessageBox.Show($"Current Section: {currentJournalSection}\nGrid Found: {grid != null}\njournalContentPanel Controls: {journalContentPanel?.Controls.Count ?? 0}", 
-                        "Refresh Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    System.Diagnostics.Debug.WriteLine($"RefreshJournalDataForCurrentAccount: Section={currentJournalSection}, Grid={grid != null}");
                     
                     if (grid != null)
                     {
@@ -14974,8 +14972,6 @@ namespace Risk_Manager
                     else
                     {
                         System.Diagnostics.Debug.WriteLine("WARNING: TradesGrid not found in journalContentPanel!");
-                        MessageBox.Show("ERROR: TradesGrid not found!\nMake sure you are on the Trade Log page.", 
-                            "Grid Not Found", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                     break;
                     
@@ -15020,16 +15016,15 @@ namespace Risk_Manager
             var accountNumber = GetSelectedAccountNumber();
             if (string.IsNullOrEmpty(accountNumber))
             {
-                MessageBox.Show("No account selected. Cannot refresh journal data.", "Debug Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                System.Diagnostics.Debug.WriteLine("RefreshJournalData: No account selected");
                 return;
             }
 
             var trades = TradingJournalService.Instance.GetTrades(accountNumber);
             var stats = TradingJournalService.Instance.GetStats(accountNumber);
 
-            // DEBUG: Show trade count
-            MessageBox.Show($"Account: {accountNumber}\nTrades found: {trades.Count}\nGrid: {(grid != null ? "Found" : "NULL")}", 
-                "Trade Refresh Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            // DEBUG: Log trade count
+            System.Diagnostics.Debug.WriteLine($"RefreshJournalData: Account={accountNumber}, TradeCount={trades.Count}, GridRows={grid.Rows.Count}");
 
             // Update grid
             grid.Rows.Clear();
@@ -15051,6 +15046,8 @@ namespace Risk_Manager
                 // Apply color coding using helper method
                 ApplyTradeRowStyling(grid.Rows[rowIndex], trade);
             }
+            
+            System.Diagnostics.Debug.WriteLine($"RefreshJournalData: Grid updated with {grid.Rows.Count} rows");
 
             // Update basic stats labels
             if (totalTradesLabel != null)
