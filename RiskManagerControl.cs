@@ -12793,7 +12793,8 @@ namespace Risk_Manager
                 Height = 40,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0, 0, 0, 10)  // Add bottom margin for spacing
             };
             sidebar.Controls.Add(sidebarTitle);
 
@@ -12803,7 +12804,7 @@ namespace Risk_Manager
                 Dock = DockStyle.Top,
                 Height = 1,
                 BackColor = Color.FromArgb(60, 60, 60),
-                Margin = new Padding(0, 0, 0, 12)
+                Margin = new Padding(0, 0, 0, 20)  // Increased from 12 to 20 for more space
             };
             sidebar.Controls.Add(separator);
 
@@ -12874,14 +12875,14 @@ namespace Risk_Manager
             {
                 Text = text,
                 Dock = DockStyle.Top,
-                Height = 40,
+                Height = 44,  // Increased from 40 to 44 for better visibility
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.Transparent,
                 ForeColor = TextWhite,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Cursor = Cursors.Hand,
                 Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
-                Margin = new Padding(0, 0, 0, 8),
+                Margin = new Padding(0, 4, 0, 4),  // Increased vertical margins for better spacing
                 Tag = section
             };
             btn.FlatAppearance.BorderSize = 0;
@@ -14689,6 +14690,7 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine("=== AddTrade_Click CALLED ===");
             var accountNumber = GetSelectedAccountNumber();
             System.Diagnostics.Debug.WriteLine($"Account number: {accountNumber ?? "NULL"}");
+            
             if (string.IsNullOrEmpty(accountNumber))
             {
                 MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -14701,7 +14703,9 @@ namespace Risk_Manager
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
                     System.Diagnostics.Debug.WriteLine("Trade saved, refreshing journal...");
+                    MessageBox.Show("Trade saved! Now refreshing the journal...", "Trade Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     RefreshJournalDataForCurrentAccount();
+                    MessageBox.Show("Refresh completed!", "Refresh Done", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
@@ -14959,6 +14963,8 @@ namespace Risk_Manager
                     var avgLossLabel = FindControlByTag(journalContentPanel, "AvgLoss") as Label;
                     
                     System.Diagnostics.Debug.WriteLine($"RefreshJournalDataForCurrentAccount: Grid found = {grid != null}");
+                    MessageBox.Show($"Current Section: {currentJournalSection}\nGrid Found: {grid != null}\njournalContentPanel Controls: {journalContentPanel?.Controls.Count ?? 0}", 
+                        "Refresh Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     
                     if (grid != null)
                     {
@@ -14968,6 +14974,8 @@ namespace Risk_Manager
                     else
                     {
                         System.Diagnostics.Debug.WriteLine("WARNING: TradesGrid not found in journalContentPanel!");
+                        MessageBox.Show("ERROR: TradesGrid not found!\nMake sure you are on the Trade Log page.", 
+                            "Grid Not Found", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                     break;
                     
@@ -15010,10 +15018,18 @@ namespace Risk_Manager
             Label largestWinLabel = null, Label largestLossLabel = null, Label avgWinLabel = null, Label avgLossLabel = null)
         {
             var accountNumber = GetSelectedAccountNumber();
-            if (string.IsNullOrEmpty(accountNumber)) return;
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("No account selected. Cannot refresh journal data.", "Debug Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
             var trades = TradingJournalService.Instance.GetTrades(accountNumber);
             var stats = TradingJournalService.Instance.GetStats(accountNumber);
+
+            // DEBUG: Show trade count
+            MessageBox.Show($"Account: {accountNumber}\nTrades found: {trades.Count}\nGrid: {(grid != null ? "Found" : "NULL")}", 
+                "Trade Refresh Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             // Update grid
             grid.Rows.Clear();
