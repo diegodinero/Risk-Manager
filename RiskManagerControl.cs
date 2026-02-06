@@ -13010,11 +13010,24 @@ namespace Risk_Manager
                 Height = 600,  // Increased from 400 to 600 for more grid space
                 Width = journalContentPanel?.ClientSize.Width ?? 1836,  // Explicit width to prevent 0-width
                 MinimumSize = new Size(1200, 600),  // Guarantee minimum size
-                BackColor = CardBackground,
+                BackColor = Color.DarkBlue,  // DIAGNOSTIC: Bright blue background
                 Padding = new Padding(15),
                 Margin = new Padding(0, 0, 0, 10)
             };
             System.Diagnostics.Debug.WriteLine($"JournalCard created with Width={journalCard.Width}, MinimumSize={journalCard.MinimumSize}");
+            
+            // Add diagnostic label to journal card
+            var journalDiagLabel = new Label
+            {
+                Text = "JOURNAL CARD (GRID SHOULD BE HERE)",
+                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                ForeColor = Color.Cyan,
+                AutoSize = false,
+                Size = new Size(600, 30),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Dock = DockStyle.Top
+            };
+            journalCard.Controls.Add(journalDiagLabel);
             
             var journalHeader = new CustomCardHeaderControl("📋 Trade Log", GetIconForTitle("Limits"));
             journalHeader.Dock = DockStyle.Top;
@@ -13189,11 +13202,24 @@ namespace Risk_Manager
             var statsCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 100,
-                BackColor = CardBackground,
+                Height = 150,  // Increased from 100 for better visibility
+                BackColor = Color.DarkGreen,  // DIAGNOSTIC: Bright green background
                 Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10)
             };
+            
+            // Add diagnostic label to stats card
+            var statsDiagLabel = new Label
+            {
+                Text = "STATS CARD",
+                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
+                ForeColor = Color.Yellow,
+                AutoSize = false,
+                Size = new Size(400, 40),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Dock = DockStyle.Top
+            };
+            statsCard.Controls.Add(statsDiagLabel);
             
             var statsHeader = new CustomCardHeaderControl("📊 Trading Statistics", GetIconForTitle("Limits"));
             statsHeader.Dock = DockStyle.Top;
@@ -13248,11 +13274,24 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 60,
-                BackColor = CardBackground,
+                Height = 100,  // Increased from 60 for better visibility
+                BackColor = Color.DarkRed,  // DIAGNOSTIC: Bright red background
                 Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10)
             };
+
+            // Add diagnostic label to filter card
+            var filterDiagLabel = new Label
+            {
+                Text = "FILTER CARD",
+                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
+                ForeColor = Color.Yellow,
+                AutoSize = false,
+                Size = new Size(400, 40),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Dock = DockStyle.Top
+            };
+            filterCard.Controls.Add(filterDiagLabel);
 
             var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", GetIconForTitle("Limits"));
             filterHeader.Dock = DockStyle.Top;
