@@ -12951,6 +12951,12 @@ namespace Risk_Manager
                 journalContentPanel.Controls.Add(content);
                 System.Diagnostics.Debug.WriteLine($"Content added to journalContentPanel. Content type: {content.GetType().Name}");
                 System.Diagnostics.Debug.WriteLine($"JournalContentPanel size: {journalContentPanel.Size}, ControlCount: {journalContentPanel.Controls.Count}");
+                
+                // Force layout recalculation to ensure content fills the panel
+                journalContentPanel.PerformLayout();
+                content.PerformLayout();
+                
+                System.Diagnostics.Debug.WriteLine($"After PerformLayout - Content size: {content.Size}");
             }
             else
             {
@@ -13297,6 +13303,10 @@ namespace Risk_Manager
             // Load initial data
             RefreshJournalData(tradesGrid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel, 
                 largestWinLabel, largestLossLabel, avgWinLabel, avgLossLabel);
+
+            // Force layout recalculation to ensure proper sizing
+            pagePanel.PerformLayout();
+            System.Diagnostics.Debug.WriteLine($"After PerformLayout - PagePanel size: {pagePanel.Size}");
 
             return pagePanel;
         }
