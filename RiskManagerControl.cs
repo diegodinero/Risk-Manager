@@ -13123,6 +13123,7 @@ namespace Risk_Manager
             
             // Alternating row colors for better readability
             tradesGrid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(32, 32, 32);
+            tradesGrid.AlternatingRowsDefaultCellStyle.ForeColor = TextWhite;  // CRITICAL: Ensure text visible on alternating rows
             
             // Set minimum row height to ensure visibility
             tradesGrid.RowTemplate.Height = 30;
@@ -15088,6 +15089,9 @@ namespace Risk_Manager
                 );
                 grid.Rows[rowIndex].Tag = trade.Id;
                 
+                // DEBUG: Log what we're adding to the grid
+                System.Diagnostics.Debug.WriteLine($"Added row {rowIndex}: {trade.Symbol} | {trade.TradeType} | {trade.Outcome} | {FormatNumeric(trade.PL)}");
+                
                 // Explicitly set row default style to ensure visibility
                 grid.Rows[rowIndex].DefaultCellStyle.BackColor = CardBackground;
                 grid.Rows[rowIndex].DefaultCellStyle.ForeColor = TextWhite;
@@ -15095,6 +15099,11 @@ namespace Risk_Manager
 
                 // Apply color coding using helper method
                 ApplyTradeRowStyling(grid.Rows[rowIndex], trade);
+                
+                // DEBUG: Check cell values after adding
+                var cellValues = string.Join(" | ", grid.Rows[rowIndex].Cells.Cast<DataGridViewCell>().Select(c => c.Value?.ToString() ?? "NULL"));
+                System.Diagnostics.Debug.WriteLine($"Row {rowIndex} cell values: {cellValues}");
+                System.Diagnostics.Debug.WriteLine($"Row {rowIndex} ForeColor: {grid.Rows[rowIndex].DefaultCellStyle.ForeColor}, BackColor: {grid.Rows[rowIndex].DefaultCellStyle.BackColor}");
             }
             
             var finalRowLog = $"{callInfo} - Final rows: {grid.Rows.Count}";
@@ -15113,6 +15122,19 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine($"\n=== CALL SUMMARY ===\n{summary}\n==================\n");
             
             // DEBUG: Show grid status after refresh
+            var firstRowData = "";
+            if (grid.Rows.Count > 0)
+            {
+                var row = grid.Rows[0];
+                firstRowData = $"\n\nFirst row data:\n" +
+                              $"Symbol: {row.Cells["Symbol"].Value}\n" +
+                              $"Type: {row.Cells["Type"].Value}\n" +
+                              $"Outcome: {row.Cells["Outcome"].Value}\n" +
+                              $"P/L: {row.Cells["PL"].Value}\n" +
+                              $"ForeColor: {row.DefaultCellStyle.ForeColor}\n" +
+                              $"BackColor: {row.DefaultCellStyle.BackColor}";
+            }
+            
             MessageBox.Show(
                 $"Grid Refresh Status (Call #{refreshCallCounter}):\n" +
                 $"Visible: {grid.Visible}\n" +
@@ -15121,7 +15143,10 @@ namespace Risk_Manager
                 $"Bounds: {grid.Bounds}\n" +
                 $"Parent: {grid.Parent?.Name ?? "NULL"}\n" +
                 $"Parent visible: {grid.Parent?.Visible ?? false}\n" +
-                $"ClientSize: {grid.ClientSize}\n\n" +
+                $"ClientSize: {grid.ClientSize}\n" +
+                $"DefaultCellStyle ForeColor: {grid.DefaultCellStyle.ForeColor}\n" +
+                $"AlternatingRows ForeColor: {grid.AlternatingRowsDefaultCellStyle.ForeColor}" +
+                firstRowData + "\n\n" +
                 $"Recent calls:\n{string.Join("\n", refreshCallLog.Skip(Math.Max(0, refreshCallLog.Count - 5)))}",
                 "Grid Refresh Debug",
                 MessageBoxButtons.OK,
