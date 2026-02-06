@@ -1,0 +1,45 @@
+BUTTON VISIBILITY FIX - CODE VERIFICATION CHECKLIST
+====================================================
+
+✅ Stats Card:
+   - Height: 100px (verified)
+   - Padding: 10px (verified)
+   
+✅ Filter Card:
+   - Height: 60px (verified)
+   - Padding: 10px (verified)
+   
+✅ Journal Card:
+   - Dock: Fill (verified)
+   - MinimumSize: (0, 250) (verified) ← CRITICAL
+   
+✅ Stats Labels:
+   - Padding: 5px (verified)
+   - Fonts: 8/7pt (verified)
+   - Margins: 3px (verified)
+   
+✅ Buttons:
+   - Add Trade button exists (verified)
+   - Event handler wired (verified)
+   - Added to buttonsPanel (verified)
+   - buttonsPanel added to journalCard (verified)
+   
+✅ Layout:
+   - pagePanel has AutoScroll = true (verified)
+   - Panels added in correct order (verified)
+   
+TOTAL SPACE:
+   Stats (100px) + Filter (60px) + Spacers (20px) = 180px
+   Journal minimum guaranteed: 250px
+   Total minimum required: 430px
+   
+RESULT: ALL CHECKS PASSED ✅
+
+The Add Trade button MUST be visible with these settings!
+
+If button is STILL not visible, possible causes:
+1. Panel height < 400px (AutoScroll will handle)
+2. Trade Log tab not selected
+3. Visibility property issue (check addButton.Visible)
+4. Parent hierarchy issue (unlikely with verified code)
+
