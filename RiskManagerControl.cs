@@ -13134,7 +13134,35 @@ namespace Risk_Manager
             tradesGrid.Columns["RR"].Width = 60;
             tradesGrid.Columns["Model"].Width = 120;
 
+            // DEBUG: Show grid creation details
+            MessageBox.Show(
+                $"Grid Created:\n" +
+                $"Name: {tradesGrid.Name}\n" +
+                $"Size: {tradesGrid.Width}x{tradesGrid.Height}\n" +
+                $"Visible: {tradesGrid.Visible}\n" +
+                $"Dock: {tradesGrid.Dock}\n" +
+                $"MinimumSize: {tradesGrid.MinimumSize}\n" +
+                $"Location: {tradesGrid.Location}\n" +
+                $"BackColor: {tradesGrid.BackgroundColor}\n" +
+                $"Columns: {tradesGrid.Columns.Count}",
+                "Grid Creation Debug",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            
             journalCard.Controls.Add(tradesGrid);
+            
+            // DEBUG: Show grid after adding to parent
+            MessageBox.Show(
+                $"Grid Added to Parent:\n" +
+                $"JournalCard Controls: {journalCard.Controls.Count}\n" +
+                $"JournalCard Size: {journalCard.Width}x{journalCard.Height}\n" +
+                $"Grid Parent: {tradesGrid.Parent?.Name ?? "NULL"}\n" +
+                $"Grid Bounds: {tradesGrid.Bounds}\n" +
+                $"Grid Visible: {tradesGrid.Visible}\n" +
+                $"Grid ClientSize: {tradesGrid.ClientSize}",
+                "Grid Added Debug",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
             
             // DEBUG: Log journal card details
             System.Diagnostics.Debug.WriteLine("=== JOURNAL CARD DEBUG ===");
@@ -15062,6 +15090,20 @@ namespace Risk_Manager
             // Force grid to refresh and repaint
             grid.Refresh();
             grid.Invalidate();
+            
+            // DEBUG: Show grid status after refresh
+            MessageBox.Show(
+                $"Grid Refresh Status:\n" +
+                $"Visible: {grid.Visible}\n" +
+                $"Size: {grid.Width}x{grid.Height}\n" +
+                $"Row count: {grid.Rows.Count}\n" +
+                $"Bounds: {grid.Bounds}\n" +
+                $"Parent: {grid.Parent?.Name ?? "NULL"}\n" +
+                $"Parent visible: {grid.Parent?.Visible ?? false}\n" +
+                $"ClientSize: {grid.ClientSize}",
+                "Grid Refresh Debug",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
 
             // Update basic stats labels
             if (totalTradesLabel != null)
