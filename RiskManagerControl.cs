@@ -13662,7 +13662,9 @@ namespace Risk_Manager
             int cellWidth = 150;
             int cellHeight = 100;
             int headerHeight = 30;
+            int weeklyStatsWidth = 200;  // Width for weekly statistics column
             
+            // Add day headers
             for (int i = 0; i < 7; i++)
             {
                 var headerLabel = new Label
@@ -13678,7 +13680,20 @@ namespace Risk_Manager
                 gridPanel.Controls.Add(headerLabel);
             }
             
-            // Calculate calendar cells
+            // Add "Week Stats" header
+            var weekStatsHeader = new Label
+            {
+                Text = "Week Stats",
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = TextWhite,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Size = new Size(weeklyStatsWidth, headerHeight),
+                Location = new Point(7 * cellWidth, 0),
+                BackColor = Color.FromArgb(50, 50, 50)
+            };
+            gridPanel.Controls.Add(weekStatsHeader);
+            
+            // Calculate calendar cells and track weekly data
             DateTime firstOfMonth = new DateTime(currentCalendarMonth.Year, currentCalendarMonth.Month, 1);
             int daysInMonth = DateTime.DaysInMonth(currentCalendarMonth.Year, currentCalendarMonth.Month);
             int firstDayOfWeek = (int)firstOfMonth.DayOfWeek; // 0 = Sunday
@@ -13686,10 +13701,18 @@ namespace Risk_Manager
             int row = 0;
             int col = firstDayOfWeek;
             
+            // Track trades per week for statistics
+            var weeklyTrades = new Dictionary<int, List<JournalTrade>>();
+            
             for (int day = 1; day <= daysInMonth; day++)
             {
                 DateTime thisDate = new DateTime(currentCalendarMonth.Year, currentCalendarMonth.Month, day);
                 var dayTrades = trades.Where(t => t.Date.Date == thisDate.Date).ToList();
+                
+                // Track trades for this week
+                if (!weeklyTrades.ContainsKey(row))
+                    weeklyTrades[row] = new List<JournalTrade>();
+                weeklyTrades[row].AddRange(dayTrades);
                 
                 var cellPanel = CreateCalendarDayCell(day, dayTrades, thisDate);
                 cellPanel.Location = new Point(col * cellWidth, headerHeight + (row * cellHeight));
@@ -13705,12 +13728,85 @@ namespace Risk_Manager
                 }
             }
             
-            // Set final height based on number of rows
+            // Add weekly statistics panels
             int totalRows = row + (col > 0 ? 1 : 0);
+            for (int weekRow = 0; weekRow < totalRows; weekRow++)
+            {
+                var weekTrades = weeklyTrades.ContainsKey(weekRow) ? weeklyTrades[weekRow] : new List<JournalTrade>();
+                var weekStatsPanel = CreateWeeklyStatsPanel(weekTrades);
+                weekStatsPanel.Location = new Point(7 * cellWidth, headerHeight + (weekRow * cellHeight));
+                weekStatsPanel.Size = new Size(weeklyStatsWidth - 4, cellHeight - 4);
+                weekStatsPanel.Margin = new Padding(2);
+                gridPanel.Controls.Add(weekStatsPanel);
+            }
+            
+            // Set final height and width
             gridPanel.Height = headerHeight + (totalRows * cellHeight) + 20;
-            gridPanel.Width = 7 * cellWidth;
+            gridPanel.Width = (7 * cellWidth) + weeklyStatsWidth;
             
             return gridPanel;
+        }
+        
+        /// <summary>
+        /// Creates a weekly statistics panel showing trades, plan%, and W/L ratio
+        /// </summary>
+        private Panel CreateWeeklyStatsPanel(List<JournalTrade> weekTrades)
+        {
+            int tradeCount = weekTrades.Count;
+            
+            var panel = new Panel
+            {
+                BackColor = CardBackground,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            
+            if (tradeCount == 0)
+            {
+                // Empty week - just show the panel
+                return panel;
+            }
+            
+            // Calculate statistics
+            int winCount = weekTrades.Count(t => t.Outcome == "Win");
+            int lossCount = weekTrades.Count(t => t.Outcome == "Loss");
+            int planFollowedCount = weekTrades.Count(t => t.FollowedPlan);
+            double planPct = (planFollowedCount * 100.0) / tradeCount;
+            string winLossRatio = $"{winCount}/{lossCount}";
+            
+            // Trades label
+            var tradesLabel = new Label
+            {
+                Text = $"Trades: {tradeCount}",
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(5, 10)
+            };
+            panel.Controls.Add(tradesLabel);
+            
+            // Plan followed label
+            var planLabel = new Label
+            {
+                Text = $"Plan: {planPct:0}%",
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(5, 35)
+            };
+            panel.Controls.Add(planLabel);
+            
+            // Win/Loss ratio label
+            var wlLabel = new Label
+            {
+                Text = $"W/L: {winLossRatio}",
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(5, 60)
+            };
+            panel.Controls.Add(wlLabel);
+            
+            return panel;
         }
         
         /// <summary>
@@ -13759,16 +13855,43 @@ namespace Risk_Manager
                 Tag = date
             };
             
+            // Determine text color based on cell background (use theme color for empty cells, black for colored cells)
+            Color textColor = (tradeCount > 0) ? Color.Black : TextWhite;
+            
             // Day number label
             var dayLabel = new Label
             {
                 Text = dayNumber.ToString(),
                 Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                ForeColor = Color.Black,
+                ForeColor = textColor,
                 AutoSize = true,
                 Location = new Point(5, 5)
             };
             cellPanel.Controls.Add(dayLabel);
+            
+            // Add color dot indicators for days with no trades but may have notes/plan adherence
+            if (tradeCount == 0)
+            {
+                // Check if there are notes for this day
+                var accountNumber = GetSelectedAccountNumber();
+                var notes = TradingJournalService.Instance.GetNotes(accountNumber);
+                var dayNotes = notes.Where(n => n.CreatedAt.Date == date.Date).ToList();
+                
+                if (dayNotes.Count > 0)
+                {
+                    // Add a dot indicator to show there's a note for this day
+                    // Green dot = note exists (suggests plan awareness/discipline)
+                    var dotLabel = new Label
+                    {
+                        Text = "●",
+                        Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                        ForeColor = Color.FromArgb(109, 231, 181), // Green dot
+                        AutoSize = true,
+                        Location = new Point(120, 35)
+                    };
+                    cellPanel.Controls.Add(dotLabel);
+                }
+            }
             
             // Show trade info if there are trades
             if (tradeCount > 0)
