@@ -397,6 +397,9 @@ namespace Risk_Manager
         private const string LOCK_EMOJI = "🔒";
         private const string UNLOCK_EMOJI = "🔓";
         
+        // Trading Journal constants
+        private const int NOTES_DISPLAY_MAX_LENGTH = 30; // Maximum characters to display in notes column before truncation
+        
         // Risk Overview card title constants
         private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
         
@@ -14703,6 +14706,49 @@ namespace Risk_Manager
             }
         }
 
+        /// <summary>
+        /// Applies color coding and styling to a trade row in the DataGridView
+        /// </summary>
+        private void ApplyTradeRowStyling(DataGridViewRow row, JournalTrade trade)
+        {
+            // Color code the outcome
+            if (trade.Outcome?.ToLower() == "win")
+            {
+                row.Cells["Outcome"].Style.ForeColor = Color.LimeGreen;
+                row.Cells["Outcome"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            }
+            else if (trade.Outcome?.ToLower() == "loss")
+            {
+                row.Cells["Outcome"].Style.ForeColor = Color.OrangeRed;
+                row.Cells["Outcome"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            }
+
+            // Color code P/L columns
+            if (trade.NetPL > 0)
+            {
+                row.Cells["PL"].Style.ForeColor = Color.LimeGreen;
+                row.Cells["NetPL"].Style.ForeColor = Color.LimeGreen;
+            }
+            else if (trade.NetPL < 0)
+            {
+                row.Cells["PL"].Style.ForeColor = Color.OrangeRed;
+                row.Cells["NetPL"].Style.ForeColor = Color.OrangeRed;
+            }
+        }
+
+        /// <summary>
+        /// Formats notes for display in the grid, truncating if necessary
+        /// </summary>
+        private string FormatNotesForDisplay(string notes)
+        {
+            if (string.IsNullOrEmpty(notes))
+                return notes;
+
+            return notes.Length > NOTES_DISPLAY_MAX_LENGTH 
+                ? notes.Substring(0, NOTES_DISPLAY_MAX_LENGTH) + "..." 
+                : notes;
+        }
+
         private void FilterTrades()
         {
             var accountNumber = GetSelectedAccountNumber();
@@ -14755,32 +14801,12 @@ namespace Risk_Manager
                     FormatNumeric(trade.NetPL),
                     trade.RR.ToString("F2"),
                     trade.Model,
-                    trade.Notes?.Length > 30 ? trade.Notes.Substring(0, 30) + "..." : trade.Notes
+                    FormatNotesForDisplay(trade.Notes)
                 );
                 grid.Rows[rowIndex].Tag = trade.Id;
 
-                // Color code the outcome and P/L
-                if (trade.Outcome?.ToLower() == "win")
-                {
-                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.LimeGreen;
-                    grid.Rows[rowIndex].Cells["Outcome"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
-                }
-                else if (trade.Outcome?.ToLower() == "loss")
-                {
-                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.OrangeRed;
-                    grid.Rows[rowIndex].Cells["Outcome"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
-                }
-
-                if (trade.NetPL > 0)
-                {
-                    grid.Rows[rowIndex].Cells["PL"].Style.ForeColor = Color.LimeGreen;
-                    grid.Rows[rowIndex].Cells["NetPL"].Style.ForeColor = Color.LimeGreen;
-                }
-                else if (trade.NetPL < 0)
-                {
-                    grid.Rows[rowIndex].Cells["PL"].Style.ForeColor = Color.OrangeRed;
-                    grid.Rows[rowIndex].Cells["NetPL"].Style.ForeColor = Color.OrangeRed;
-                }
+                // Apply color coding using helper method
+                ApplyTradeRowStyling(grid.Rows[rowIndex], trade);
             }
         }
 
@@ -14934,33 +14960,12 @@ namespace Risk_Manager
                     FormatNumeric(trade.NetPL),
                     trade.RR.ToString("F2"),
                     trade.Model,
-                    trade.Notes?.Length > 30 ? trade.Notes.Substring(0, 30) + "..." : trade.Notes
+                    FormatNotesForDisplay(trade.Notes)
                 );
                 grid.Rows[rowIndex].Tag = trade.Id;
 
-                // Color code the outcome and P/L
-                if (trade.Outcome?.ToLower() == "win")
-                {
-                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.LimeGreen;
-                    grid.Rows[rowIndex].Cells["Outcome"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
-                }
-                else if (trade.Outcome?.ToLower() == "loss")
-                {
-                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.OrangeRed;
-                    grid.Rows[rowIndex].Cells["Outcome"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
-                }
-                
-                // Color code P/L columns
-                if (trade.NetPL > 0)
-                {
-                    grid.Rows[rowIndex].Cells["PL"].Style.ForeColor = Color.LimeGreen;
-                    grid.Rows[rowIndex].Cells["NetPL"].Style.ForeColor = Color.LimeGreen;
-                }
-                else if (trade.NetPL < 0)
-                {
-                    grid.Rows[rowIndex].Cells["PL"].Style.ForeColor = Color.OrangeRed;
-                    grid.Rows[rowIndex].Cells["NetPL"].Style.ForeColor = Color.OrangeRed;
-                }
+                // Apply color coding using helper method
+                ApplyTradeRowStyling(grid.Rows[rowIndex], trade);
             }
 
             // Update basic stats labels
