@@ -12960,9 +12960,9 @@ namespace Risk_Manager
             var statsCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 140,
+                Height = 100,
                 BackColor = CardBackground,
-                Padding = new Padding(15),
+                Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10)
             };
             
@@ -12975,21 +12975,21 @@ namespace Risk_Manager
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = true,
-                Padding = new Padding(10),
+                Padding = new Padding(5),
                 BackColor = CardBackground
             };
             
             // Row 1: Basic stats
-            var totalTradesLabel = new Label { Text = "Total: 0", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5), Font = new Font("Segoe UI", 9, FontStyle.Bold) };
-            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
-            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5), Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            var totalTradesLabel = new Label { Text = "Total: 0", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(3), Font = new Font("Segoe UI", 8, FontStyle.Bold) };
+            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(3), Font = new Font("Segoe UI", 8, FontStyle.Regular) };
+            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(3), Font = new Font("Segoe UI", 8, FontStyle.Bold) };
             
             // Row 2: Detailed stats
-            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5), Font = new Font("Segoe UI", 8, FontStyle.Regular) };
-            var largestWinLabel = new Label { Text = "Best: $0.00", AutoSize = true, ForeColor = Color.LimeGreen, Margin = new Padding(5), Font = new Font("Segoe UI", 8, FontStyle.Regular) };
-            var largestLossLabel = new Label { Text = "Worst: $0.00", AutoSize = true, ForeColor = Color.OrangeRed, Margin = new Padding(5), Font = new Font("Segoe UI", 8, FontStyle.Regular) };
-            var avgWinLabel = new Label { Text = "Avg Win: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5), Font = new Font("Segoe UI", 8, FontStyle.Regular) };
-            var avgLossLabel = new Label { Text = "Avg Loss: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5), Font = new Font("Segoe UI", 8, FontStyle.Regular) };
+            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(3), Font = new Font("Segoe UI", 7, FontStyle.Regular) };
+            var largestWinLabel = new Label { Text = "Best: $0.00", AutoSize = true, ForeColor = Color.LimeGreen, Margin = new Padding(3), Font = new Font("Segoe UI", 7, FontStyle.Regular) };
+            var largestLossLabel = new Label { Text = "Worst: $0.00", AutoSize = true, ForeColor = Color.OrangeRed, Margin = new Padding(3), Font = new Font("Segoe UI", 7, FontStyle.Regular) };
+            var avgWinLabel = new Label { Text = "Avg Win: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(3), Font = new Font("Segoe UI", 7, FontStyle.Regular) };
+            var avgLossLabel = new Label { Text = "Avg Loss: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(3), Font = new Font("Segoe UI", 7, FontStyle.Regular) };
             
             totalTradesLabel.Tag = "TotalTrades";
             winRateLabel.Tag = "WinRate";
@@ -13019,9 +13019,9 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 80,
+                Height = 60,
                 BackColor = CardBackground,
-                Padding = new Padding(15),
+                Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10)
             };
 
@@ -13118,7 +13118,8 @@ namespace Risk_Manager
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
                 Padding = new Padding(15),
-                Margin = new Padding(0)
+                Margin = new Padding(0),
+                MinimumSize = new Size(0, 250)
             };
             
             var journalHeader = new CustomCardHeaderControl("📋 Trade Log", GetIconForTitle("Limits"));
