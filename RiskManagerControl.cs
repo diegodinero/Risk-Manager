@@ -12751,6 +12751,8 @@ namespace Risk_Manager
             {
                 Width = journalContentPanel.Width - 60,
                 Height = 120,
+                AutoSize = true,
+                MinimumSize = new Size(journalContentPanel.Width - 60, 120),
                 BackColor = CardBackground,
                 Padding = new Padding(15),
                 Margin = new Padding(0, 0, 0, 15),
