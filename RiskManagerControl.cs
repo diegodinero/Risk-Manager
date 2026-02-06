@@ -12995,9 +12995,9 @@ namespace Risk_Manager
             var journalCard = new Panel
             {
                 Dock = DockStyle.Top,  // Changed from Fill to Top so it appears first
-                Height = 600,  // Increased from 400 to 600 for more grid space
+                Height = 450,  // Reduced from 600 to 450 so stats/filters are visible without scrolling
                 Width = journalContentPanel?.ClientSize.Width ?? 1836,  // Explicit width to prevent 0-width
-                MinimumSize = new Size(1200, 600),  // Guarantee minimum size
+                MinimumSize = new Size(1200, 450),  // Guarantee minimum size
                 BackColor = CardBackground,  // Professional dark theme
                 Padding = new Padding(15),
                 Margin = new Padding(0, 0, 0, 10)
