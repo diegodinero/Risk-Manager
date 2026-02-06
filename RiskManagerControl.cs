@@ -13597,8 +13597,8 @@ namespace Risk_Manager
                 Margin = new Padding(0, 10, 0, 10)
             };
             
-            var account = GetSelectedAccount();
-            var trades = TradingJournalService.Instance.GetTradesForAccount(account);
+            var accountNumber = GetSelectedAccountNumber();
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
             var monthTrades = trades.Where(t => t.Date.Year == currentCalendarMonth.Year && 
                                                t.Date.Month == currentCalendarMonth.Month).ToList();
             
@@ -13654,8 +13654,8 @@ namespace Risk_Manager
                 Padding = new Padding(0, 10, 0, 10)
             };
             
-            var account = GetSelectedAccount();
-            var trades = TradingJournalService.Instance.GetTradesForAccount(account);
+            var accountNumber = GetSelectedAccountNumber();
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
             
             // Day headers (Sun, Mon, Tue, etc.)
             var dayHeaders = new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
