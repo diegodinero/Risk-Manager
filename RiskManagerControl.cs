@@ -436,7 +436,7 @@ namespace Risk_Manager
         // Consolidated tabs: "Positions" (Position Win + Position Loss), "Limits" (Daily Loss + Daily Profit Target), "Symbols" (Block Symbols + Position Size)
         private static readonly string[] NavItems = new[]
         {
-            "📊 Accounts Summary", "📈 Stats", "📋 Type", "🔍 Risk Overview", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
+            "📊 Accounts Summary", "📈 Stats", "📋 Type", "🔍 Risk Overview", "📓 Trading Journal", "⚙️ Feature Toggles", "📋 Copy Settings", "📈 Positions", "📊 Limits", "🛡️ Symbols", "🕐 Allowed Trading Times",
             "🔒 Lock Settings", "🔒 Trading Lock", "⚙️ General Settings"
         };
 
@@ -493,6 +493,8 @@ namespace Risk_Manager
                     placeholder = CreateTypeSummaryPanel();
                 else if (name.EndsWith("Risk Overview"))
                     placeholder = CreateRiskOverviewPanel();
+                else if (name.EndsWith("Trading Journal"))
+                    placeholder = CreateTradingJournalPanel();
                 else if (name.EndsWith("Feature Toggles"))
                     placeholder = CreateFeatureTogglesPanel();
                 else if (name.EndsWith("Copy Settings"))
@@ -1523,6 +1525,12 @@ namespace Risk_Manager
                     }
                 }
                 
+                // Refresh Trading Journal tab if it's currently displayed
+                if (selectedNavItem != null && selectedNavItem.EndsWith("Trading Journal"))
+                {
+                    RefreshJournalDataForCurrentAccount();
+                }
+                
                 // Load settings for the selected account
                 LogToFileAndDebug($"[AccountSelectorOnSelectedIndexChanged] Calling LoadAccountSettings...");
                 LoadAccountSettings();
@@ -2303,6 +2311,32 @@ namespace Risk_Manager
             UpdateTitleWithAccountNumber();
         }
 
+        /// <summary>
+        /// Loads the journal icon from resources, with fallback to copy icon if not available
+        /// </summary>
+        private Image LoadJournalIcon()
+        {
+            try
+            {
+                // Try to load journal icon from file if Resources.Designer.cs hasn't been regenerated
+                var journalPath = System.IO.Path.Combine(
+                    System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location),
+                    "Resources", "journal.png");
+                
+                if (System.IO.File.Exists(journalPath))
+                {
+                    return Image.FromFile(journalPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Could not load journal.png: {ex.Message}");
+            }
+            
+            // Fallback to copy icon
+            return Properties.Resources.copy;
+        }
+
         // Add this helper method in the RiskManagerControl class (anywhere above CreateTopPanel)
         // LoadIcons and helper
         // LoadIcons and helper
@@ -2318,6 +2352,7 @@ namespace Risk_Manager
                 IconMap["Stats"] = Properties.Resources.stats;
                 IconMap["Type"] = Properties.Resources.type;
                 IconMap["Risk Overview"] = Properties.Resources.riskoverview;
+                IconMap["Trading Journal"] = LoadJournalIcon(); // Load journal icon with fallback
                 IconMap["Positions"] = Properties.Resources.positions;
                 IconMap["Feature Toggles"] = Properties.Resources.featuretoggles;
                 IconMap["Copy Settings"] = Properties.Resources.copy;
@@ -2381,6 +2416,7 @@ namespace Risk_Manager
                 IconMap["📈"] = Properties.Resources.stats;
                 IconMap["📋"] = Properties.Resources.type;
                 IconMap["🔍"] = Properties.Resources.riskoverview;
+                IconMap["📓"] = LoadJournalIcon(); // Load journal icon with fallback
                 IconMap["⚙️"] = Properties.Resources.featuretoggles;
                 IconMap["🛡️"] = Properties.Resources.blocked;
                 IconMap["🔒"] = Properties.Resources._lock;
@@ -12713,6 +12749,1953 @@ namespace Risk_Manager
             return $"{hour}:{minute:D2} {ampm}";
         }
 
+        // Store current journal section and content panel
+        private Panel journalContentPanel;
+        private string currentJournalSection = "Trade Log";
+        private Dictionary<string, Button> journalNavButtons = new Dictionary<string, Button>();
+
+        /// <summary>
+        /// Creates the Trading Journal panel with sidebar navigation
+        /// </summary>
+        private Control CreateTradingJournalPanel()
+        {
+            var mainPanel = new Panel { BackColor = DarkBackground, Dock = DockStyle.Fill };
+
+            var header = new CustomHeaderControl("Trading Journal", GetIconForTitle("Trading Journal"));
+            header.Dock = DockStyle.Top;
+            header.Margin = new Padding(10, 0, 0, 0);
+            mainPanel.Controls.Add(header);
+
+            // Container for sidebar and content
+            var containerPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground
+            };
+
+            // SIDEBAR (Left panel - 240px width)
+            var sidebar = new Panel
+            {
+                Width = 240,
+                Dock = DockStyle.Left,
+                BackColor = Color.FromArgb(35, 35, 35), // Slightly different from main background
+                Padding = new Padding(16)
+            };
+
+            // Sidebar title
+            var sidebarTitle = new Label
+            {
+                Text = "Trading Journal",
+                Dock = DockStyle.Top,
+                Height = 40,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            sidebar.Controls.Add(sidebarTitle);
+
+            // Separator
+            var separator = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 1,
+                BackColor = Color.FromArgb(60, 60, 60),
+                Margin = new Padding(0, 0, 0, 12)
+            };
+            sidebar.Controls.Add(separator);
+
+            // Navigation buttons
+            var navButtons = new[]
+            {
+                ("🗓  Calendar", "Calendar"),
+                ("📈  Trading Models", "Trading Models"),
+                ("📓  Trade Log", "Trade Log"),
+                ("🗒  Notes", "Notes"),
+                ("📊  Dashboard", "Dashboard")
+            };
+
+            foreach (var (text, section) in navButtons)
+            {
+                var btn = CreateJournalNavButton(text, section);
+                sidebar.Controls.Add(btn);
+                journalNavButtons[section] = btn;
+            }
+
+            // Theme toggle at bottom
+            var themeToggle = new Button
+            {
+                Text = "❖  Light / Dark Mode",
+                Dock = DockStyle.Bottom,
+                Height = 40,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+                Margin = new Padding(0, 8, 0, 0)
+            };
+            themeToggle.FlatAppearance.BorderSize = 0;
+            themeToggle.Click += (s, e) => {
+                // Toggle between themes (this is a placeholder - would need actual theme switching logic)
+                MessageBox.Show("Theme toggle would switch between Light/Dark modes", "Theme Toggle", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+            sidebar.Controls.Add(themeToggle);
+
+            // CONTENT AREA (Right panel - fills remaining space)
+            journalContentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground,
+                Padding = new Padding(20),
+                AutoScroll = true
+            };
+
+            // Add panels to container
+            containerPanel.Controls.Add(journalContentPanel);
+            containerPanel.Controls.Add(sidebar);
+            mainPanel.Controls.Add(containerPanel);
+
+            // Load initial page (Trade Log)
+            ShowJournalSection("Trade Log");
+
+            return mainPanel;
+        }
+
+        /// <summary>
+        /// Creates a navigation button for the journal sidebar
+        /// </summary>
+        private Button CreateJournalNavButton(string text, string section)
+        {
+            var btn = new Button
+            {
+                Text = text,
+                Dock = DockStyle.Top,
+                Height = 40,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+                Margin = new Padding(0, 0, 0, 8),
+                Tag = section
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.Click += (s, e) => ShowJournalSection(section);
+            
+            return btn;
+        }
+
+        /// <summary>
+        /// Shows the selected journal section in the content area
+        /// </summary>
+        private void ShowJournalSection(string section)
+        {
+            if (journalContentPanel == null) return;
+
+            currentJournalSection = section;
+            journalContentPanel.SuspendLayout();
+            journalContentPanel.Controls.Clear();
+
+            // Update button states
+            foreach (var kvp in journalNavButtons)
+            {
+                if (kvp.Key == section)
+                {
+                    kvp.Value.BackColor = Color.FromArgb(50, 50, 50);
+                    kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Bold);
+                }
+                else
+                {
+                    kvp.Value.BackColor = Color.Transparent;
+                    kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular);
+                }
+            }
+
+            // Load the appropriate content
+            Control content = null;
+            switch (section)
+            {
+                case "Calendar":
+                    content = CreateCalendarPage();
+                    break;
+                case "Trading Models":
+                    content = CreateTradingModelsPage();
+                    break;
+                case "Trade Log":
+                    content = CreateTradeLogPage();
+                    break;
+                case "Notes":
+                    content = CreateNotesPage();
+                    break;
+                case "Dashboard":
+                    content = CreateDashboardPage();
+                    break;
+                default:
+                    content = CreatePlaceholderPage(section);
+                    break;
+            }
+
+            if (content != null)
+            {
+                content.Dock = DockStyle.Fill;
+                journalContentPanel.Controls.Add(content);
+            }
+
+            journalContentPanel.ResumeLayout();
+        }
+
+        /// <summary>
+        /// Creates the Trade Log page (existing implementation)
+        /// </summary>
+        private Control CreateTradeLogPage()
+        {
+            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
+
+            // Stats summary card
+            var statsCard = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 180,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            
+            var statsHeader = new CustomCardHeaderControl("Journal Statistics", GetIconForTitle("Limits"));
+            statsHeader.Dock = DockStyle.Top;
+            statsCard.Controls.Add(statsHeader);
+            
+            var statsLabelsPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                Padding = new Padding(10),
+                BackColor = CardBackground
+            };
+            
+            // Create stat labels
+            var totalTradesLabel = new Label { Text = "Total Trades: 0", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
+            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
+            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
+            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
+            
+            totalTradesLabel.Tag = "TotalTrades";
+            winRateLabel.Tag = "WinRate";
+            totalPLLabel.Tag = "TotalPL";
+            avgPLLabel.Tag = "AvgPL";
+            
+            statsLabelsPanel.Controls.Add(totalTradesLabel);
+            statsLabelsPanel.Controls.Add(winRateLabel);
+            statsLabelsPanel.Controls.Add(totalPLLabel);
+            statsLabelsPanel.Controls.Add(avgPLLabel);
+            
+            statsCard.Controls.Add(statsLabelsPanel);
+            pagePanel.Controls.Add(statsCard);
+
+            // Spacer
+            pagePanel.Controls.Add(new Panel { Height = 20, Dock = DockStyle.Top, BackColor = DarkBackground });
+
+            // Journal entries grid card
+            var journalCard = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0)
+            };
+            
+            var journalHeader = new CustomCardHeaderControl("Trade Log", GetIconForTitle("Limits"));
+            journalHeader.Dock = DockStyle.Top;
+            journalCard.Controls.Add(journalHeader);
+
+            // Buttons panel
+            var buttonsPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                FlowDirection = FlowDirection.LeftToRight,
+                BackColor = CardBackground,
+                Padding = new Padding(5)
+            };
+
+            var addButton = new Button
+            {
+                Text = "➕ Add Trade",
+                Width = 120,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 150, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+            };
+            addButton.FlatAppearance.BorderSize = 0;
+            addButton.Click += AddTrade_Click;
+
+            var editButton = new Button
+            {
+                Text = "✏️ Edit",
+                Width = 100,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 100, 200),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+            };
+            editButton.FlatAppearance.BorderSize = 0;
+            editButton.Click += EditTrade_Click;
+
+            var deleteButton = new Button
+            {
+                Text = "🗑️ Delete",
+                Width = 100,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(200, 50, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+            };
+            deleteButton.FlatAppearance.BorderSize = 0;
+            deleteButton.Click += DeleteTrade_Click;
+
+            buttonsPanel.Controls.Add(addButton);
+            buttonsPanel.Controls.Add(editButton);
+            buttonsPanel.Controls.Add(deleteButton);
+            journalCard.Controls.Add(buttonsPanel);
+
+            // DataGridView for trades
+            var tradesGrid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                BackgroundColor = CardBackground,
+                GridColor = DarkerBackground,
+                BorderStyle = BorderStyle.None,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AllowUserToResizeRows = false,
+                ReadOnly = true,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+                RowHeadersVisible = false,
+                Tag = "JournalGrid",
+                Name = "TradesGrid"
+            };
+
+            tradesGrid.DefaultCellStyle.BackColor = CardBackground;
+            tradesGrid.DefaultCellStyle.ForeColor = TextWhite;
+            tradesGrid.DefaultCellStyle.SelectionBackColor = SelectedColor;
+            tradesGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
+            tradesGrid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
+            tradesGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
+            tradesGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+
+            // Add columns
+            tradesGrid.Columns.Add("Date", "Date");
+            tradesGrid.Columns.Add("Symbol", "Symbol");
+            tradesGrid.Columns.Add("Type", "Type");
+            tradesGrid.Columns.Add("Outcome", "Outcome");
+            tradesGrid.Columns.Add("PL", "P/L");
+            tradesGrid.Columns.Add("NetPL", "Net P/L");
+            tradesGrid.Columns.Add("RR", "R:R");
+            tradesGrid.Columns.Add("Model", "Model");
+            tradesGrid.Columns.Add("Notes", "Notes");
+
+            // Set column widths
+            tradesGrid.Columns["Date"].Width = 100;
+            tradesGrid.Columns["Symbol"].Width = 80;
+            tradesGrid.Columns["Type"].Width = 80;
+            tradesGrid.Columns["Outcome"].Width = 90;
+            tradesGrid.Columns["PL"].Width = 90;
+            tradesGrid.Columns["NetPL"].Width = 90;
+            tradesGrid.Columns["RR"].Width = 60;
+            tradesGrid.Columns["Model"].Width = 120;
+
+            journalCard.Controls.Add(tradesGrid);
+            pagePanel.Controls.Add(journalCard);
+            
+            // Load initial data
+            RefreshJournalData(tradesGrid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel);
+
+            return pagePanel;
+        }
+
+        /// <summary>
+        /// Creates the Calendar page placeholder
+        /// </summary>
+        private Control CreateCalendarPage()
+        {
+            return CreatePlaceholderPage("Calendar", "View your trading activity by date");
+        }
+
+        /// <summary>
+        /// Creates the Trading Models page with add/edit functionality
+        /// </summary>
+        private Control CreateTradingModelsPage()
+        {
+            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
+            
+            // Main content panel
+            var contentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground,
+                Padding = new Padding(20),
+                AutoScroll = true
+            };
+
+            // Header with Add Model button
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = DarkBackground
+            };
+
+            var titleLabel = new Label
+            {
+                Text = "Trading Models",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 10)
+            };
+            headerPanel.Controls.Add(titleLabel);
+
+            var addModelButton = new Button
+            {
+                Text = "+ Add Model",
+                Width = 120,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 150, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Location = new Point(contentPanel.Width - 140, 7),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            addModelButton.FlatAppearance.BorderSize = 0;
+            addModelButton.Click += (s, e) => ToggleModelForm();
+            headerPanel.Controls.Add(addModelButton);
+
+            contentPanel.Controls.Add(headerPanel);
+
+            // Add/Edit Model Form (initially hidden)
+            var modelFormPanel = CreateModelFormPanel();
+            modelFormPanel.Visible = false;
+            modelFormPanel.Tag = "ModelForm";
+            contentPanel.Controls.Add(modelFormPanel);
+
+            // Models list panel
+            var modelsListPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 20, 0, 0),
+                Tag = "ModelsList"
+            };
+            contentPanel.Controls.Add(modelsListPanel);
+
+            pagePanel.Controls.Add(contentPanel);
+
+            // Load models
+            RefreshModelsList(modelsListPanel);
+
+            return pagePanel;
+        }
+
+        /// <summary>
+        /// Creates the add/edit model form panel
+        /// </summary>
+        private Panel CreateModelFormPanel()
+        {
+            var formPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 350,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 10, 0, 20)
+            };
+
+            // Form heading
+            var formTitle = new Label
+            {
+                Text = "Add Trading Model",
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 0)
+            };
+            formPanel.Controls.Add(formTitle);
+
+            // Name label
+            var nameLabel = new Label
+            {
+                Text = "Name *",
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(0, 40),
+                AutoSize = true
+            };
+            formPanel.Controls.Add(nameLabel);
+
+            // Name textbox
+            var nameTextBox = new TextBox
+            {
+                Location = new Point(0, 60),
+                Width = formPanel.Width - 30,
+                Height = 25,
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 10),
+                Tag = "ModelName",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            formPanel.Controls.Add(nameTextBox);
+
+            // Description label
+            var descLabel = new Label
+            {
+                Text = "Description",
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(0, 95),
+                AutoSize = true
+            };
+            formPanel.Controls.Add(descLabel);
+
+            // Description textbox
+            var descTextBox = new TextBox
+            {
+                Location = new Point(0, 115),
+                Width = formPanel.Width - 30,
+                Height = 80,
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 10),
+                Tag = "ModelDescription",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            formPanel.Controls.Add(descTextBox);
+
+            // Image label
+            var imageLabel = new Label
+            {
+                Text = "Image (optional)",
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(0, 205),
+                AutoSize = true
+            };
+            formPanel.Controls.Add(imageLabel);
+
+            // Image status label
+            var imageStatusLabel = new Label
+            {
+                Text = "No image selected",
+                ForeColor = TextGray,
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                Location = new Point(0, 250),
+                Width = formPanel.Width - 130,
+                AutoSize = false,
+                Tag = "ImageStatus",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            formPanel.Controls.Add(imageStatusLabel);
+
+            // Choose File button
+            var chooseFileButton = new Button
+            {
+                Text = "Choose File",
+                Width = 110,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(60, 60, 60),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 9),
+                Location = new Point(0, 225),
+                Tag = "ChooseFile"
+            };
+            chooseFileButton.FlatAppearance.BorderSize = 1;
+            chooseFileButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            chooseFileButton.Click += ChooseModelImage_Click;
+            formPanel.Controls.Add(chooseFileButton);
+
+            // Buttons panel
+            var buttonsPanel = new FlowLayoutPanel
+            {
+                Location = new Point(0, 290),
+                Width = formPanel.Width - 30,
+                Height = 40,
+                FlowDirection = FlowDirection.RightToLeft,
+                BackColor = CardBackground,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+
+            // Save button
+            var saveButton = new Button
+            {
+                Text = "Save Model",
+                Width = 110,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 150, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+            saveButton.FlatAppearance.BorderSize = 0;
+            saveButton.Click += SaveModel_Click;
+            buttonsPanel.Controls.Add(saveButton);
+
+            // Cancel button
+            var cancelButton = new Button
+            {
+                Text = "Cancel",
+                Width = 80,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10),
+                Margin = new Padding(0, 0, 10, 0)
+            };
+            cancelButton.FlatAppearance.BorderSize = 1;
+            cancelButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            cancelButton.Click += (s, e) => ToggleModelForm();
+            buttonsPanel.Controls.Add(cancelButton);
+
+            formPanel.Controls.Add(buttonsPanel);
+
+            // Store hidden fields for model ID and image data
+            var modelIdField = new Label { Visible = false, Tag = "ModelId" };
+            var imageDataField = new Label { Visible = false, Tag = "ImageData" };
+            var imageNameField = new Label { Visible = false, Tag = "ImageName" };
+            formPanel.Controls.Add(modelIdField);
+            formPanel.Controls.Add(imageDataField);
+            formPanel.Controls.Add(imageNameField);
+
+            return formPanel;
+        }
+
+        /// <summary>
+        /// Toggles the model form visibility
+        /// </summary>
+        private void ToggleModelForm()
+        {
+            if (journalContentPanel == null) return;
+
+            var form = FindControlByTag(journalContentPanel, "ModelForm") as Panel;
+            if (form != null)
+            {
+                form.Visible = !form.Visible;
+                
+                if (!form.Visible)
+                {
+                    // Clear form when hiding
+                    ClearModelForm(form);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Clears the model form
+        /// </summary>
+        private void ClearModelForm(Panel form)
+        {
+            var nameBox = FindControlByTag(form, "ModelName") as TextBox;
+            var descBox = FindControlByTag(form, "ModelDescription") as TextBox;
+            var imageStatusLabel = FindControlByTag(form, "ImageStatus") as Label;
+            var modelIdLabel = FindControlByTag(form, "ModelId") as Label;
+            var imageDataLabel = FindControlByTag(form, "ImageData") as Label;
+            var imageNameLabel = FindControlByTag(form, "ImageName") as Label;
+
+            if (nameBox != null) nameBox.Text = "";
+            if (descBox != null) descBox.Text = "";
+            if (imageStatusLabel != null) imageStatusLabel.Text = "No image selected";
+            if (modelIdLabel != null) modelIdLabel.Text = "";
+            if (imageDataLabel != null) imageDataLabel.Text = "";
+            if (imageNameLabel != null) imageNameLabel.Text = "";
+        }
+
+        /// <summary>
+        /// Choose image for trading model
+        /// </summary>
+        private void ChooseModelImage_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new OpenFileDialog())
+            {
+                dialog.Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif";
+                dialog.Title = "Select Image for Trading Model";
+
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        // Read image file as bytes
+                        byte[] imageBytes = System.IO.File.ReadAllBytes(dialog.FileName);
+                        string imageName = Path.GetFileName(dialog.FileName);
+
+                        // Store in hidden labels
+                        var imageStatusLabel = FindControlByTag(journalContentPanel, "ImageStatus") as Label;
+                        var imageDataLabel = FindControlByTag(journalContentPanel, "ImageData") as Label;
+                        var imageNameLabel = FindControlByTag(journalContentPanel, "ImageName") as Label;
+
+                        if (imageStatusLabel != null)
+                            imageStatusLabel.Text = imageName;
+                        
+                        if (imageDataLabel != null)
+                            imageDataLabel.Text = Convert.ToBase64String(imageBytes);
+                        
+                        if (imageNameLabel != null)
+                            imageNameLabel.Text = imageName;
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error loading image: {ex.Message}", "Image Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Save model handler
+        /// </summary>
+        private void SaveModel_Click(object sender, EventArgs e)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("Please select an account first.", "No Account Selected", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var form = FindControlByTag(journalContentPanel, "ModelForm") as Panel;
+            if (form == null) return;
+
+            var nameBox = FindControlByTag(form, "ModelName") as TextBox;
+            var descBox = FindControlByTag(form, "ModelDescription") as TextBox;
+            var modelIdLabel = FindControlByTag(form, "ModelId") as Label;
+            var imageDataLabel = FindControlByTag(form, "ImageData") as Label;
+            var imageNameLabel = FindControlByTag(form, "ImageName") as Label;
+
+            var name = nameBox?.Text ?? "";
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                MessageBox.Show("Please enter a model name.", "Name Required", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var model = new TradingJournalService.TradingModel
+            {
+                Name = name,
+                Description = descBox?.Text ?? "",
+                ImageName = imageNameLabel?.Text ?? "",
+                CreatedAt = DateTime.Now
+            };
+
+            // Get image data if present
+            if (imageDataLabel != null && !string.IsNullOrEmpty(imageDataLabel.Text))
+            {
+                try
+                {
+                    model.ImageData = Convert.FromBase64String(imageDataLabel.Text);
+                }
+                catch
+                {
+                    model.ImageData = null;
+                }
+            }
+
+            // Check if editing existing model
+            if (modelIdLabel != null && !string.IsNullOrEmpty(modelIdLabel.Text))
+            {
+                if (Guid.TryParse(modelIdLabel.Text, out Guid modelId))
+                {
+                    model.Id = modelId;
+                    // Preserve trade count and created date when editing
+                    var existing = TradingJournalService.Instance.GetModels(accountNumber)
+                        .FirstOrDefault(m => m.Id == modelId);
+                    if (existing != null)
+                    {
+                        model.TradeCount = existing.TradeCount;
+                        model.CreatedAt = existing.CreatedAt;
+                    }
+                }
+            }
+
+            TradingJournalService.Instance.SaveModel(accountNumber, model);
+            
+            // Hide form and refresh list
+            ToggleModelForm();
+            RefreshModelsForCurrentAccount();
+        }
+
+        /// <summary>
+        /// Refresh models list for current account
+        /// </summary>
+        private void RefreshModelsForCurrentAccount()
+        {
+            if (journalContentPanel == null)
+            {
+                return;
+            }
+
+            var modelsList = FindControlByTag(journalContentPanel, "ModelsList") as FlowLayoutPanel;
+            if (modelsList != null)
+            {
+                RefreshModelsList(modelsList);
+            }
+        }
+
+        /// <summary>
+        /// Refresh the models list
+        /// </summary>
+        private void RefreshModelsList(FlowLayoutPanel listPanel)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                listPanel.Controls.Clear();
+                return;
+            }
+
+            var models = TradingJournalService.Instance.GetModels(accountNumber);
+            
+            listPanel.SuspendLayout();
+            listPanel.Controls.Clear();
+
+            foreach (var model in models)
+            {
+                var modelCard = CreateModelCard(model);
+                listPanel.Controls.Add(modelCard);
+            }
+
+            listPanel.ResumeLayout();
+        }
+
+        /// <summary>
+        /// Creates a trading model card
+        /// </summary>
+        private Panel CreateModelCard(TradingJournalService.TradingModel model)
+        {
+            var card = new Panel
+            {
+                Width = journalContentPanel.Width - 60,
+                Height = 120,
+                AutoSize = true,
+                MinimumSize = new Size(journalContentPanel.Width - 60, 120),
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 0, 0, 15),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            // Image on the left (or placeholder)
+            PictureBox imageBox;
+            if (model.ImageData != null && model.ImageData.Length > 0)
+            {
+                try
+                {
+                    using (var ms = new MemoryStream(model.ImageData))
+                    {
+                        imageBox = new PictureBox
+                        {
+                            Location = new Point(0, 0),
+                            Width = 90,
+                            Height = 90,
+                            SizeMode = PictureBoxSizeMode.Zoom,
+                            Image = Image.FromStream(ms),
+                            BackColor = DarkerBackground
+                        };
+                    }
+                }
+                catch
+                {
+                    imageBox = CreateModelPlaceholder();
+                }
+            }
+            else
+            {
+                imageBox = CreateModelPlaceholder();
+            }
+            card.Controls.Add(imageBox);
+
+            // Content panel (right of image)
+            var contentPanel = new Panel
+            {
+                Location = new Point(100, 0),
+                Width = card.Width - 130,
+                Height = 90,
+                BackColor = CardBackground,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            // Model name
+            var nameLabel = new Label
+            {
+                Text = model.Name,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                MaximumSize = new Size(contentPanel.Width - 80, 0),
+                Location = new Point(0, 0)
+            };
+            contentPanel.Controls.Add(nameLabel);
+
+            // Edit button (top right)
+            var editButton = new Button
+            {
+                Text = "✏️",
+                Width = 32,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 12),
+                Location = new Point(contentPanel.Width - 70, 0),
+                Tag = model.Id,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            editButton.FlatAppearance.BorderSize = 1;
+            editButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            editButton.Click += EditModel_Click;
+            contentPanel.Controls.Add(editButton);
+
+            // Delete button
+            var deleteButton = new Button
+            {
+                Text = "🗑",
+                Width = 32,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 12),
+                Location = new Point(contentPanel.Width - 32, 0),
+                Tag = model.Id,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            deleteButton.FlatAppearance.BorderSize = 1;
+            deleteButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            deleteButton.Click += DeleteModel_Click;
+            contentPanel.Controls.Add(deleteButton);
+
+            // Description
+            if (!string.IsNullOrWhiteSpace(model.Description))
+            {
+                var descLabel = new Label
+                {
+                    Text = model.Description,
+                    Font = new Font("Segoe UI", 9),
+                    ForeColor = TextGray,
+                    AutoSize = true,
+                    MaximumSize = new Size(contentPanel.Width - 5, 40),
+                    Location = new Point(0, 28)
+                };
+                contentPanel.Controls.Add(descLabel);
+            }
+
+            // Trade count badge
+            var tradeCountLabel = new Label
+            {
+                Text = $"📊 Used in {model.TradeCount} trade{(model.TradeCount != 1 ? "s" : "")}",
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.FromArgb(100, 200, 255),
+                AutoSize = true,
+                Location = new Point(0, 70)
+            };
+            contentPanel.Controls.Add(tradeCountLabel);
+
+            card.Controls.Add(contentPanel);
+
+            return card;
+        }
+
+        /// <summary>
+        /// Creates a placeholder image for models without images
+        /// </summary>
+        private PictureBox CreateModelPlaceholder()
+        {
+            var placeholder = new PictureBox
+            {
+                Location = new Point(0, 0),
+                Width = 90,
+                Height = 90,
+                BackColor = DarkerBackground,
+                SizeMode = PictureBoxSizeMode.CenterImage
+            };
+
+            // Create a simple placeholder with text
+            var bmp = new Bitmap(90, 90);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.FromArgb(50, 50, 50));
+                g.DrawString("📈", new Font("Segoe UI Emoji", 24), Brushes.Gray, new PointF(25, 25));
+            }
+            placeholder.Image = bmp;
+
+            return placeholder;
+        }
+
+        /// <summary>
+        /// Edit model handler
+        /// </summary>
+        private void EditModel_Click(object sender, EventArgs e)
+        {
+            if (!(sender is Button btn) || !(btn.Tag is Guid modelId)) return;
+
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return;
+
+            var models = TradingJournalService.Instance.GetModels(accountNumber);
+            var model = models.FirstOrDefault(m => m.Id == modelId);
+            if (model == null) return;
+
+            // Show form and populate with model data
+            var form = FindControlByTag(journalContentPanel, "ModelForm") as Panel;
+            if (form != null)
+            {
+                form.Visible = true;
+
+                var nameBox = FindControlByTag(form, "ModelName") as TextBox;
+                var descBox = FindControlByTag(form, "ModelDescription") as TextBox;
+                var imageStatusLabel = FindControlByTag(form, "ImageStatus") as Label;
+                var modelIdLabel = FindControlByTag(form, "ModelId") as Label;
+                var imageDataLabel = FindControlByTag(form, "ImageData") as Label;
+                var imageNameLabel = FindControlByTag(form, "ImageName") as Label;
+
+                if (nameBox != null) nameBox.Text = model.Name;
+                if (descBox != null) descBox.Text = model.Description;
+                if (modelIdLabel != null) modelIdLabel.Text = model.Id.ToString();
+                
+                if (imageStatusLabel != null)
+                    imageStatusLabel.Text = string.IsNullOrEmpty(model.ImageName) ? 
+                        "No image selected" : model.ImageName;
+                
+                if (imageDataLabel != null && model.ImageData != null)
+                    imageDataLabel.Text = Convert.ToBase64String(model.ImageData);
+                
+                if (imageNameLabel != null)
+                    imageNameLabel.Text = model.ImageName ?? "";
+            }
+        }
+
+        /// <summary>
+        /// Delete model handler
+        /// </summary>
+        private void DeleteModel_Click(object sender, EventArgs e)
+        {
+            if (!(sender is Button btn) || !(btn.Tag is Guid modelId)) return;
+
+            var result = MessageBox.Show(
+                "Are you sure you want to delete this trading model?",
+                "Confirm Delete",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (result == DialogResult.Yes)
+            {
+                var accountNumber = GetSelectedAccountNumber();
+                if (!string.IsNullOrEmpty(accountNumber))
+                {
+                    TradingJournalService.Instance.DeleteModel(accountNumber, modelId);
+                    RefreshModelsForCurrentAccount();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates the Notes page with add/edit functionality
+        /// </summary>
+        private Control CreateNotesPage()
+        {
+            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
+            
+            // Main content panel
+            var contentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground,
+                Padding = new Padding(20),
+                AutoScroll = true
+            };
+
+            // Header with Add Note button
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = DarkBackground
+            };
+
+            var titleLabel = new Label
+            {
+                Text = "Notes",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 10)
+            };
+            headerPanel.Controls.Add(titleLabel);
+
+            var addNoteButton = new Button
+            {
+                Text = "+ Add Note",
+                Width = 120,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 150, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Location = new Point(contentPanel.Width - 140, 7),
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            addNoteButton.FlatAppearance.BorderSize = 0;
+            addNoteButton.Click += (s, e) => ToggleNoteForm();
+            headerPanel.Controls.Add(addNoteButton);
+
+            contentPanel.Controls.Add(headerPanel);
+
+            // Add/Edit Note Form (initially hidden)
+            var noteFormPanel = CreateNoteFormPanel();
+            noteFormPanel.Visible = false;
+            noteFormPanel.Tag = "NoteForm";
+            contentPanel.Controls.Add(noteFormPanel);
+
+            // Notes list panel
+            var notesListPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 20, 0, 0),
+                Tag = "NotesList"
+            };
+            contentPanel.Controls.Add(notesListPanel);
+
+            pagePanel.Controls.Add(contentPanel);
+
+            // Load notes
+            RefreshNotesList(notesListPanel);
+
+            return pagePanel;
+        }
+
+        /// <summary>
+        /// Creates the add/edit note form panel
+        /// </summary>
+        private Panel CreateNoteFormPanel()
+        {
+            var formPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 400,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 10, 0, 20)
+            };
+
+            // Form heading
+            var formTitle = new Label
+            {
+                Text = "Add Note",
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 0)
+            };
+            formPanel.Controls.Add(formTitle);
+
+            // Title label
+            var titleLabel = new Label
+            {
+                Text = "Title",
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(0, 40),
+                AutoSize = true
+            };
+            formPanel.Controls.Add(titleLabel);
+
+            // Title textbox
+            var titleTextBox = new TextBox
+            {
+                Location = new Point(0, 60),
+                Width = formPanel.Width - 30,
+                Height = 25,
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 10),
+                Tag = "NoteTitle",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            formPanel.Controls.Add(titleTextBox);
+
+            // Content label
+            var contentLabel = new Label
+            {
+                Text = "Content",
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(0, 95),
+                AutoSize = true
+            };
+            formPanel.Controls.Add(contentLabel);
+
+            // Content textbox (multiline)
+            var contentTextBox = new TextBox
+            {
+                Location = new Point(0, 115),
+                Width = formPanel.Width - 30,
+                Height = 100,
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 10),
+                Tag = "NoteContent",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            formPanel.Controls.Add(contentTextBox);
+
+            // Image label
+            var imageLabel = new Label
+            {
+                Text = "Image (optional)",
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 10),
+                Location = new Point(0, 225),
+                AutoSize = true
+            };
+            formPanel.Controls.Add(imageLabel);
+
+            // Image path label
+            var imagePathLabel = new Label
+            {
+                Text = "No image selected",
+                ForeColor = TextGray,
+                Font = new Font("Segoe UI", 9, FontStyle.Italic),
+                Location = new Point(0, 270),
+                Width = formPanel.Width - 130,
+                AutoSize = false,
+                Tag = "ImagePath",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            formPanel.Controls.Add(imagePathLabel);
+
+            // Choose File button
+            var chooseFileButton = new Button
+            {
+                Text = "Choose File",
+                Width = 110,
+                Height = 32,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(60, 60, 60),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 9),
+                Location = new Point(0, 245),
+                Tag = "ChooseFile"
+            };
+            chooseFileButton.FlatAppearance.BorderSize = 1;
+            chooseFileButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            chooseFileButton.Click += ChooseNoteImage_Click;
+            formPanel.Controls.Add(chooseFileButton);
+
+            // Buttons panel
+            var buttonsPanel = new FlowLayoutPanel
+            {
+                Location = new Point(0, 310),
+                Width = formPanel.Width - 30,
+                Height = 40,
+                FlowDirection = FlowDirection.RightToLeft,
+                BackColor = CardBackground,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+
+            // Save button
+            var saveButton = new Button
+            {
+                Text = "Save Note",
+                Width = 100,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 150, 50),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+            saveButton.FlatAppearance.BorderSize = 0;
+            saveButton.Click += SaveNote_Click;
+            buttonsPanel.Controls.Add(saveButton);
+
+            // Cancel button
+            var cancelButton = new Button
+            {
+                Text = "Cancel",
+                Width = 80,
+                Height = 36,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10),
+                Margin = new Padding(0, 0, 10, 0)
+            };
+            cancelButton.FlatAppearance.BorderSize = 1;
+            cancelButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            cancelButton.Click += (s, e) => ToggleNoteForm();
+            buttonsPanel.Controls.Add(cancelButton);
+
+            formPanel.Controls.Add(buttonsPanel);
+
+            // Store a hidden field for note ID (for editing)
+            var noteIdField = new Label { Visible = false, Tag = "NoteId" };
+            formPanel.Controls.Add(noteIdField);
+
+            return formPanel;
+        }
+
+        /// <summary>
+        /// Toggles the note form visibility
+        /// </summary>
+        private void ToggleNoteForm()
+        {
+            if (journalContentPanel == null) return;
+
+            var form = FindControlByTag(journalContentPanel, "NoteForm") as Panel;
+            if (form != null)
+            {
+                form.Visible = !form.Visible;
+                
+                if (!form.Visible)
+                {
+                    // Clear form when hiding
+                    ClearNoteForm(form);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Clears the note form
+        /// </summary>
+        private void ClearNoteForm(Panel form)
+        {
+            var titleBox = FindControlByTag(form, "NoteTitle") as TextBox;
+            var contentBox = FindControlByTag(form, "NoteContent") as TextBox;
+            var imagePathLabel = FindControlByTag(form, "ImagePath") as Label;
+            var noteIdLabel = FindControlByTag(form, "NoteId") as Label;
+
+            if (titleBox != null) titleBox.Text = "";
+            if (contentBox != null) contentBox.Text = "";
+            if (imagePathLabel != null) imagePathLabel.Text = "No image selected";
+            if (noteIdLabel != null) noteIdLabel.Text = "";
+        }
+
+        /// <summary>
+        /// Choose image for note
+        /// </summary>
+        private void ChooseNoteImage_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new OpenFileDialog())
+            {
+                dialog.Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif";
+                dialog.Title = "Select Image for Note";
+
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    var imagePathLabel = FindControlByTag(journalContentPanel, "ImagePath") as Label;
+                    if (imagePathLabel != null)
+                    {
+                        imagePathLabel.Text = dialog.FileName;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Save note handler
+        /// </summary>
+        private void SaveNote_Click(object sender, EventArgs e)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var form = FindControlByTag(journalContentPanel, "NoteForm") as Panel;
+            if (form == null) return;
+
+            var titleBox = FindControlByTag(form, "NoteTitle") as TextBox;
+            var contentBox = FindControlByTag(form, "NoteContent") as TextBox;
+            var imagePathLabel = FindControlByTag(form, "ImagePath") as Label;
+            var noteIdLabel = FindControlByTag(form, "NoteId") as Label;
+
+            var content = contentBox?.Text ?? "";
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                MessageBox.Show("Please enter note content.", "Content Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var note = new TradingJournalService.JournalNote
+            {
+                Title = titleBox?.Text ?? "",
+                Content = content,
+                ImagePath = imagePathLabel?.Text == "No image selected" ? "" : imagePathLabel?.Text ?? "",
+                CreatedAt = DateTime.Now
+            };
+
+            // Check if editing existing note
+            if (noteIdLabel != null && !string.IsNullOrEmpty(noteIdLabel.Text))
+            {
+                if (Guid.TryParse(noteIdLabel.Text, out Guid noteId))
+                {
+                    note.Id = noteId;
+                }
+            }
+
+            TradingJournalService.Instance.SaveNote(accountNumber, note);
+            
+            // Hide form and refresh list
+            ToggleNoteForm();
+            RefreshNotesForCurrentAccount();
+        }
+
+        /// <summary>
+        /// Refresh notes list for current account
+        /// </summary>
+        private void RefreshNotesForCurrentAccount()
+        {
+            if (journalContentPanel == null) return;
+
+            var notesList = FindControlByTag(journalContentPanel, "NotesList") as FlowLayoutPanel;
+            if (notesList != null)
+            {
+                RefreshNotesList(notesList);
+            }
+        }
+
+        /// <summary>
+        /// Refresh the notes list
+        /// </summary>
+        private void RefreshNotesList(FlowLayoutPanel listPanel)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                listPanel.Controls.Clear();
+                return;
+            }
+
+            var notes = TradingJournalService.Instance.GetNotes(accountNumber);
+            listPanel.SuspendLayout();
+            listPanel.Controls.Clear();
+
+            foreach (var note in notes)
+            {
+                var noteCard = CreateNoteCard(note);
+                listPanel.Controls.Add(noteCard);
+            }
+
+            listPanel.ResumeLayout();
+        }
+
+        /// <summary>
+        /// Creates a note card
+        /// </summary>
+        private Panel CreateNoteCard(TradingJournalService.JournalNote note)
+        {
+            var card = new Panel
+            {
+                Width = journalContentPanel.Width - 60,
+                AutoSize = true,
+                MinimumSize = new Size(journalContentPanel.Width - 60, 100),
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 0, 0, 15),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            int yPos = 0;
+
+            // Image (if present)
+            if (!string.IsNullOrEmpty(note.ImagePath) && File.Exists(note.ImagePath))
+            {
+                try
+                {
+                    var pictureBox = new PictureBox
+                    {
+                        Location = new Point(0, yPos),
+                        Width = card.Width - 30,
+                        Height = 120,
+                        SizeMode = PictureBoxSizeMode.Zoom,
+                        Image = Image.FromFile(note.ImagePath),
+                        Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                    };
+                    card.Controls.Add(pictureBox);
+                    yPos += 130;
+                }
+                catch
+                {
+                    // Image failed to load, skip it
+                }
+            }
+
+            // Date and action buttons
+            var datePanel = new Panel
+            {
+                Location = new Point(0, yPos),
+                Width = card.Width - 30,
+                Height = 30,
+                BackColor = CardBackground,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            var dateLabel = new Label
+            {
+                Text = note.CreatedAt.ToString("MMM d, yyyy h:mm tt"),
+                ForeColor = TextGray,
+                Font = new Font("Segoe UI", 9),
+                AutoSize = true,
+                Location = new Point(0, 5)
+            };
+            datePanel.Controls.Add(dateLabel);
+
+            // Delete button
+            var deleteButton = new Button
+            {
+                Text = "🗑",
+                Width = 28,
+                Height = 28,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 12),
+                Location = new Point(datePanel.Width - 28, 0),
+                Tag = note.Id,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            deleteButton.FlatAppearance.BorderSize = 1;
+            deleteButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            deleteButton.Click += DeleteNote_Click;
+            datePanel.Controls.Add(deleteButton);
+
+            // Edit button
+            var editButton = new Button
+            {
+                Text = "✏️",
+                Width = 28,
+                Height = 28,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 12),
+                Location = new Point(datePanel.Width - 63, 0),
+                Tag = note.Id,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            editButton.FlatAppearance.BorderSize = 1;
+            editButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 80);
+            editButton.Click += EditNote_Click;
+            datePanel.Controls.Add(editButton);
+
+            card.Controls.Add(datePanel);
+            yPos += 35;
+
+            // Title (if present)
+            if (!string.IsNullOrWhiteSpace(note.Title))
+            {
+                var titleLabel = new Label
+                {
+                    Text = note.Title,
+                    Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    MaximumSize = new Size(card.Width - 30, 0),
+                    Location = new Point(0, yPos)
+                };
+                card.Controls.Add(titleLabel);
+                yPos += titleLabel.PreferredHeight + 8;
+            }
+
+            // Content
+            var contentLabel = new Label
+            {
+                Text = note.Content,
+                Font = new Font("Segoe UI", 10),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                MaximumSize = new Size(card.Width - 30, 0),
+                Location = new Point(0, yPos)
+            };
+            card.Controls.Add(contentLabel);
+            yPos += contentLabel.PreferredHeight + 10;
+
+            card.Height = yPos;
+
+            return card;
+        }
+
+        /// <summary>
+        /// Edit note handler
+        /// </summary>
+        private void EditNote_Click(object sender, EventArgs e)
+        {
+            if (!(sender is Button btn) || !(btn.Tag is Guid noteId)) return;
+
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return;
+
+            var notes = TradingJournalService.Instance.GetNotes(accountNumber);
+            var note = notes.FirstOrDefault(n => n.Id == noteId);
+            if (note == null) return;
+
+            // Show form and populate with note data
+            var form = FindControlByTag(journalContentPanel, "NoteForm") as Panel;
+            if (form != null)
+            {
+                form.Visible = true;
+
+                var titleBox = FindControlByTag(form, "NoteTitle") as TextBox;
+                var contentBox = FindControlByTag(form, "NoteContent") as TextBox;
+                var imagePathLabel = FindControlByTag(form, "ImagePath") as Label;
+                var noteIdLabel = FindControlByTag(form, "NoteId") as Label;
+
+                if (titleBox != null) titleBox.Text = note.Title;
+                if (contentBox != null) contentBox.Text = note.Content;
+                if (imagePathLabel != null) 
+                    imagePathLabel.Text = string.IsNullOrEmpty(note.ImagePath) ? "No image selected" : note.ImagePath;
+                if (noteIdLabel != null) noteIdLabel.Text = note.Id.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Delete note handler
+        /// </summary>
+        private void DeleteNote_Click(object sender, EventArgs e)
+        {
+            if (!(sender is Button btn) || !(btn.Tag is Guid noteId)) return;
+
+            var result = MessageBox.Show(
+                "Are you sure you want to delete this note?",
+                "Confirm Delete",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (result == DialogResult.Yes)
+            {
+                var accountNumber = GetSelectedAccountNumber();
+                if (!string.IsNullOrEmpty(accountNumber))
+                {
+                    TradingJournalService.Instance.DeleteNote(accountNumber, noteId);
+                    RefreshNotesForCurrentAccount();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates the Dashboard page placeholder
+        /// </summary>
+        private Control CreateDashboardPage()
+        {
+            return CreatePlaceholderPage("Dashboard", "View performance analytics and charts");
+        }
+
+        /// <summary>
+        /// Creates a placeholder page for sections not yet implemented
+        /// </summary>
+        private Control CreatePlaceholderPage(string title, string description = null)
+        {
+            var panel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+
+            var card = new Panel
+            {
+                BackColor = CardBackground,
+                Padding = new Padding(40),
+                Location = new Point(50, 50),
+                Width = 600,
+                Height = 300
+            };
+
+            var titleLabel = new Label
+            {
+                Text = title,
+                Dock = DockStyle.Top,
+                Height = 50,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            card.Controls.Add(titleLabel);
+
+            if (description != null)
+            {
+                var descLabel = new Label
+                {
+                    Text = description,
+                    Dock = DockStyle.Top,
+                    Height = 40,
+                    ForeColor = TextGray,
+                    Font = new Font("Segoe UI", 11, FontStyle.Regular),
+                    TextAlign = ContentAlignment.TopCenter,
+                    Margin = new Padding(0, 10, 0, 0)
+                };
+                card.Controls.Add(descLabel);
+            }
+
+            var comingSoonLabel = new Label
+            {
+                Text = "Coming Soon",
+                Dock = DockStyle.Top,
+                Height = 60,
+                ForeColor = Color.FromArgb(150, 150, 150),
+                Font = new Font("Segoe UI", 14, FontStyle.Italic),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Margin = new Padding(0, 20, 0, 0)
+            };
+            card.Controls.Add(comingSoonLabel);
+
+            panel.Controls.Add(card);
+            return panel;
+        }
+
+        // Event handlers for Trading Journal
+        private void AddTrade_Click(object sender, EventArgs e)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var dialog = new TradeEntryDialog(null, accountNumber))
+            {
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    RefreshJournalDataForCurrentAccount();
+                }
+            }
+        }
+
+        private void EditTrade_Click(object sender, EventArgs e)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var grid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
+            if (grid == null || grid.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select a trade to edit.", "No Trade Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var tradeId = (Guid)grid.SelectedRows[0].Tag;
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+            var trade = trades.FirstOrDefault(t => t.Id == tradeId);
+
+            if (trade != null)
+            {
+                using (var dialog = new TradeEntryDialog(trade, accountNumber))
+                {
+                    if (dialog.ShowDialog() == DialogResult.OK)
+                    {
+                        RefreshJournalDataForCurrentAccount();
+                    }
+                }
+            }
+        }
+
+        private void DeleteTrade_Click(object sender, EventArgs e)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var grid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
+            if (grid == null || grid.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select a trade to delete.", "No Trade Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var result = MessageBox.Show("Are you sure you want to delete this trade?", "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result == DialogResult.Yes)
+            {
+                var tradeId = (Guid)grid.SelectedRows[0].Tag;
+                TradingJournalService.Instance.DeleteTrade(accountNumber, tradeId);
+                RefreshJournalDataForCurrentAccount();
+            }
+        }
+
+        private void RefreshJournalDataForCurrentAccount()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return;
+
+            // Refresh based on current journal section
+            switch (currentJournalSection)
+            {
+                case "Trade Log":
+                    // Refresh trade log grid and stats
+                    var grid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
+                    var totalTradesLabel = FindControlByTag(contentPanel, "TotalTrades") as Label;
+                    var winRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
+                    var totalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
+                    var avgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
+                    if (grid != null)
+                    {
+                        RefreshJournalData(grid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel);
+                    }
+                    break;
+                    
+                case "Trading Models":
+                    // Refresh trading models list
+                    RefreshModelsForCurrentAccount();
+                    break;
+                    
+                case "Notes":
+                    // Refresh notes list
+                    RefreshNotesForCurrentAccount();
+                    break;
+                    
+                case "Calendar":
+                case "Dashboard":
+                    // These sections don't need refresh (placeholders)
+                    break;
+                    
+                default:
+                    // Default to Trade Log if currentJournalSection is not set
+                    var defaultGrid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
+                    var defaultTotalTradesLabel = FindControlByTag(contentPanel, "TotalTrades") as Label;
+                    var defaultWinRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
+                    var defaultTotalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
+                    var defaultAvgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
+                    if (defaultGrid != null)
+                    {
+                        RefreshJournalData(defaultGrid, defaultTotalTradesLabel, defaultWinRateLabel, defaultTotalPLLabel, defaultAvgPLLabel);
+                    }
+                    break;
+            }
+        }
+
+        private void RefreshJournalData(DataGridView grid, Label totalTradesLabel, Label winRateLabel, Label totalPLLabel, Label avgPLLabel)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return;
+
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+            var stats = TradingJournalService.Instance.GetStats(accountNumber);
+
+            // Update grid
+            grid.Rows.Clear();
+            foreach (var trade in trades)
+            {
+                var rowIndex = grid.Rows.Add(
+                    trade.Date.ToShortDateString(),
+                    trade.Symbol,
+                    trade.TradeType,
+                    trade.Outcome,
+                    FormatNumeric(trade.PL),
+                    FormatNumeric(trade.NetPL),
+                    trade.RR.ToString("F2"),
+                    trade.Model,
+                    trade.Notes?.Length > 30 ? trade.Notes.Substring(0, 30) + "..." : trade.Notes
+                );
+                grid.Rows[rowIndex].Tag = trade.Id;
+
+                // Color code the outcome
+                if (trade.Outcome?.ToLower() == "win")
+                {
+                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.LimeGreen;
+                }
+                else if (trade.Outcome?.ToLower() == "loss")
+                {
+                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.Red;
+                }
+            }
+
+            // Update stats labels
+            if (totalTradesLabel != null)
+                totalTradesLabel.Text = $"Total Trades: {stats.TotalTrades} (W:{stats.Wins} L:{stats.Losses} BE:{stats.Breakevens})";
+            if (winRateLabel != null)
+                winRateLabel.Text = $"Win Rate: {stats.WinRate:F1}%";
+            if (totalPLLabel != null)
+            {
+                totalPLLabel.Text = $"Total P/L: {FormatNumeric(stats.TotalPL)}";
+                totalPLLabel.ForeColor = stats.TotalPL >= 0 ? Color.LimeGreen : Color.Red;
+            }
+            if (avgPLLabel != null)
+            {
+                avgPLLabel.Text = $"Avg P/L: {FormatNumeric(stats.AveragePL)}";
+                avgPLLabel.ForeColor = stats.AveragePL >= 0 ? Color.LimeGreen : Color.Red;
+            }
+        }
+
+        private Control FindControlByName(Control parent, string name)
+        {
+            if (parent.Name == name) return parent;
+            foreach (Control child in parent.Controls)
+            {
+                var found = FindControlByName(child, name);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        private Control FindControlByTag(Control parent, string tag)
+        {
+            if (parent.Tag != null && parent.Tag.ToString() == tag) return parent;
+            foreach (Control child in parent.Controls)
+            {
+                var found = FindControlByTag(child, tag);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
         // Helper methods to get risk setting values for Risk Overview
         private string GetAccountLockStatus()
         {
@@ -14392,6 +16375,12 @@ namespace Risk_Manager
                     RefreshRiskOverviewPanel(ctrl);
                 }
                 
+                // Refresh Trading Journal when shown
+                if (name.EndsWith("Trading Journal"))
+                {
+                    RefreshJournalDataForCurrentAccount();
+                }
+                
                 // Reload Trading Time Restrictions when Allowed Trading Times tab is shown
                 if (name.EndsWith("Allowed Trading Times"))
                 {
@@ -14829,27 +16818,6 @@ namespace Risk_Manager
             {
                 lastPoint = Point.Empty;
             };
-        }
-
-        // Helper method to find a control by its Tag property (recursive search)
-        private Control FindControlByTag(Control parent, string tagValue)
-        {
-            if (parent == null || string.IsNullOrEmpty(tagValue))
-                return null;
-
-            // Check if this control has the matching tag
-            if (parent.Tag is string tag && tag == tagValue)
-                return parent;
-
-            // Recursively search children
-            foreach (Control child in parent.Controls)
-            {
-                var found = FindControlByTag(child, tagValue);
-                if (found != null)
-                    return found;
-            }
-
-            return null;
         }
 
         private void ApplyValueLabelColoring(Control root)
