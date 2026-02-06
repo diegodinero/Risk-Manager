@@ -13161,20 +13161,50 @@ namespace Risk_Manager
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
             
-            journalCard.Controls.Add(tradesGrid);
+            // ADD TEST PANEL INSTEAD OF GRID TO DIAGNOSE VISIBILITY
+            var testPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Red,  // BRIGHT RED - VERY OBVIOUS if visible
+                Width = 1800,
+                Height = 400,
+                MinimumSize = new Size(1200, 400)
+            };
             
-            // DEBUG: Show grid after adding to parent
+            var testLabel = new Label
+            {
+                Text = "TEST PANEL - IF YOU SEE THIS RED PANEL, GRID CONTAINER IS WORKING!\n" +
+                       "If you see this, the issue is with DataGridView rendering.\n" +
+                       "If you DON'T see this, the issue is with container hierarchy.",
+                AutoSize = false,
+                Size = new Size(1600, 200),
+                Location = new Point(100, 100),
+                ForeColor = Color.White,
+                BackColor = Color.Red,
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            testPanel.Controls.Add(testLabel);
+            
+            journalCard.Controls.Add(testPanel);
+            //journalCard.Controls.Add(tradesGrid);  // TEMPORARILY DISABLED FOR TESTING
+            
+            // DEBUG: Show test panel and grid info
             MessageBox.Show(
-                $"Grid Added to Parent:\n" +
+                $"TEST PANEL ADDED (Bright Red):\n\n" +
                 $"JournalCard Controls: {journalCard.Controls.Count}\n" +
                 $"JournalCard Size: {journalCard.Width}x{journalCard.Height}\n" +
-                $"Grid Parent: {tradesGrid.Parent?.Name ?? "NULL"}\n" +
-                $"Grid Bounds: {tradesGrid.Bounds}\n" +
-                $"Grid Visible: {tradesGrid.Visible}\n" +
-                $"Grid ClientSize: {tradesGrid.ClientSize}",
-                "Grid Added Debug",
+                $"TestPanel Parent: {testPanel.Parent?.Name ?? "NULL"}\n" +
+                $"TestPanel Bounds: {testPanel.Bounds}\n" +
+                $"TestPanel Visible: {testPanel.Visible}\n" +
+                $"TestPanel BackColor: {testPanel.BackColor}\n\n" +
+                $"IF YOU SEE A BRIGHT RED PANEL:\n" +
+                $"→ Container is working, DataGridView is the issue\n\n" +
+                $"IF YOU DON'T SEE ANY RED:\n" +
+                $"→ Container/hierarchy issue, need different approach",
+                "TEST PANEL Debug",
                 MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+                MessageBoxIcon.Warning);
             
             // DEBUG: Log journal card details
             System.Diagnostics.Debug.WriteLine("=== JOURNAL CARD DEBUG ===");
