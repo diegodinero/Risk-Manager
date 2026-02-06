@@ -12953,17 +12953,17 @@ namespace Risk_Manager
         {
             var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
 
-            // Stats summary card
+            // Enhanced stats summary card with more metrics
             var statsCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 180,
+                Height = 220,
                 BackColor = CardBackground,
                 Padding = new Padding(15),
                 Margin = new Padding(0, 0, 0, 10)
             };
             
-            var statsHeader = new CustomCardHeaderControl("Journal Statistics", GetIconForTitle("Limits"));
+            var statsHeader = new CustomCardHeaderControl("📊 Trading Statistics", GetIconForTitle("Limits"));
             statsHeader.Dock = DockStyle.Top;
             statsCard.Controls.Add(statsHeader);
             
@@ -12976,27 +12976,138 @@ namespace Risk_Manager
                 BackColor = CardBackground
             };
             
-            // Create stat labels
-            var totalTradesLabel = new Label { Text = "Total Trades: 0", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
-            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
-            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
-            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10) };
+            // Row 1: Basic stats
+            var totalTradesLabel = new Label { Text = "Total: 0", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10), Font = new Font("Segoe UI", 10, FontStyle.Regular) };
+            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            
+            // Row 2: Detailed stats
+            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var largestWinLabel = new Label { Text = "Best: $0.00", AutoSize = true, ForeColor = Color.LimeGreen, Margin = new Padding(10), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var largestLossLabel = new Label { Text = "Worst: $0.00", AutoSize = true, ForeColor = Color.OrangeRed, Margin = new Padding(10), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var avgWinLabel = new Label { Text = "Avg Win: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var avgLossLabel = new Label { Text = "Avg Loss: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
             
             totalTradesLabel.Tag = "TotalTrades";
             winRateLabel.Tag = "WinRate";
             totalPLLabel.Tag = "TotalPL";
             avgPLLabel.Tag = "AvgPL";
+            largestWinLabel.Tag = "LargestWin";
+            largestLossLabel.Tag = "LargestLoss";
+            avgWinLabel.Tag = "AvgWin";
+            avgLossLabel.Tag = "AvgLoss";
             
             statsLabelsPanel.Controls.Add(totalTradesLabel);
             statsLabelsPanel.Controls.Add(winRateLabel);
             statsLabelsPanel.Controls.Add(totalPLLabel);
             statsLabelsPanel.Controls.Add(avgPLLabel);
+            statsLabelsPanel.Controls.Add(largestWinLabel);
+            statsLabelsPanel.Controls.Add(largestLossLabel);
+            statsLabelsPanel.Controls.Add(avgWinLabel);
+            statsLabelsPanel.Controls.Add(avgLossLabel);
             
             statsCard.Controls.Add(statsLabelsPanel);
             pagePanel.Controls.Add(statsCard);
 
             // Spacer
-            pagePanel.Controls.Add(new Panel { Height = 20, Dock = DockStyle.Top, BackColor = DarkBackground });
+            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
+
+            // Filter and search panel
+            var filterCard = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 100,
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 0, 0, 10)
+            };
+
+            var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", GetIconForTitle("Limits"));
+            filterHeader.Dock = DockStyle.Top;
+            filterCard.Controls.Add(filterHeader);
+
+            var filterPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                Padding = new Padding(5),
+                BackColor = CardBackground
+            };
+
+            // Search box
+            var searchLabel = new Label { Text = "Search:", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5, 8, 5, 5) };
+            var searchBox = new TextBox
+            {
+                Width = 150,
+                Height = 25,
+                Margin = new Padding(5),
+                Tag = "SearchBox",
+                Name = "TradeSearchBox"
+            };
+            searchBox.TextChanged += (s, e) => FilterTrades();
+
+            // Outcome filter
+            var outcomeLabel = new Label { Text = "Outcome:", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5, 8, 5, 5) };
+            var outcomeFilter = new ComboBox
+            {
+                Width = 100,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Margin = new Padding(5),
+                Tag = "OutcomeFilter",
+                Name = "OutcomeFilterCombo"
+            };
+            outcomeFilter.Items.AddRange(new[] { "All", "Win", "Loss", "Breakeven" });
+            outcomeFilter.SelectedIndex = 0;
+            outcomeFilter.SelectedIndexChanged += (s, e) => FilterTrades();
+
+            // Symbol filter
+            var symbolLabel = new Label { Text = "Symbol:", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5, 8, 5, 5) };
+            var symbolFilter = new TextBox
+            {
+                Width = 80,
+                Height = 25,
+                Margin = new Padding(5),
+                Tag = "SymbolFilter",
+                Name = "SymbolFilterBox"
+            };
+            symbolFilter.TextChanged += (s, e) => FilterTrades();
+
+            // Clear filters button
+            var clearFiltersBtn = new Button
+            {
+                Text = "🔄 Clear",
+                Width = 80,
+                Height = 28,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(100, 100, 100),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(10, 5, 5, 5),
+                Font = new Font("Segoe UI Emoji", 8, FontStyle.Regular)
+            };
+            clearFiltersBtn.FlatAppearance.BorderSize = 0;
+            clearFiltersBtn.Click += (s, e) =>
+            {
+                searchBox.Text = "";
+                symbolFilter.Text = "";
+                outcomeFilter.SelectedIndex = 0;
+                FilterTrades();
+            };
+
+            filterPanel.Controls.Add(searchLabel);
+            filterPanel.Controls.Add(searchBox);
+            filterPanel.Controls.Add(outcomeLabel);
+            filterPanel.Controls.Add(outcomeFilter);
+            filterPanel.Controls.Add(symbolLabel);
+            filterPanel.Controls.Add(symbolFilter);
+            filterPanel.Controls.Add(clearFiltersBtn);
+
+            filterCard.Controls.Add(filterPanel);
+            pagePanel.Controls.Add(filterCard);
+
+            // Spacer
+            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
 
             // Journal entries grid card
             var journalCard = new Panel
@@ -13007,11 +13118,11 @@ namespace Risk_Manager
                 Margin = new Padding(0)
             };
             
-            var journalHeader = new CustomCardHeaderControl("Trade Log", GetIconForTitle("Limits"));
+            var journalHeader = new CustomCardHeaderControl("📋 Trade Log", GetIconForTitle("Limits"));
             journalHeader.Dock = DockStyle.Top;
             journalCard.Controls.Add(journalHeader);
 
-            // Buttons panel
+            // Buttons panel with export
             var buttonsPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -13063,12 +13174,27 @@ namespace Risk_Manager
             deleteButton.FlatAppearance.BorderSize = 0;
             deleteButton.Click += DeleteTrade_Click;
 
+            var exportButton = new Button
+            {
+                Text = "📤 Export CSV",
+                Width = 120,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(100, 100, 100),
+                ForeColor = TextWhite,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular)
+            };
+            exportButton.FlatAppearance.BorderSize = 0;
+            exportButton.Click += ExportTrades_Click;
+
             buttonsPanel.Controls.Add(addButton);
             buttonsPanel.Controls.Add(editButton);
             buttonsPanel.Controls.Add(deleteButton);
+            buttonsPanel.Controls.Add(exportButton);
             journalCard.Controls.Add(buttonsPanel);
 
-            // DataGridView for trades
+            // DataGridView for trades with sorting enabled
             var tradesGrid = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -13096,7 +13222,7 @@ namespace Risk_Manager
             tradesGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
             tradesGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
 
-            // Add columns
+            // Add columns with sorting enabled
             tradesGrid.Columns.Add("Date", "Date");
             tradesGrid.Columns.Add("Symbol", "Symbol");
             tradesGrid.Columns.Add("Type", "Type");
@@ -13106,6 +13232,12 @@ namespace Risk_Manager
             tradesGrid.Columns.Add("RR", "R:R");
             tradesGrid.Columns.Add("Model", "Model");
             tradesGrid.Columns.Add("Notes", "Notes");
+
+            // Enable sorting on all columns
+            foreach (DataGridViewColumn column in tradesGrid.Columns)
+            {
+                column.SortMode = DataGridViewColumnSortMode.Automatic;
+            }
 
             // Set column widths
             tradesGrid.Columns["Date"].Width = 100;
@@ -13121,7 +13253,8 @@ namespace Risk_Manager
             pagePanel.Controls.Add(journalCard);
             
             // Load initial data
-            RefreshJournalData(tradesGrid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel);
+            RefreshJournalData(tradesGrid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel, 
+                largestWinLabel, largestLossLabel, avgWinLabel, avgLossLabel);
 
             return pagePanel;
         }
@@ -14570,6 +14703,154 @@ namespace Risk_Manager
             }
         }
 
+        private void FilterTrades()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return;
+
+            var grid = FindControlByName(contentPanel, "TradesGrid") as DataGridView;
+            if (grid == null) return;
+
+            var searchBox = FindControlByName(contentPanel, "TradeSearchBox") as TextBox;
+            var outcomeFilter = FindControlByName(contentPanel, "OutcomeFilterCombo") as ComboBox;
+            var symbolFilter = FindControlByName(contentPanel, "SymbolFilterBox") as TextBox;
+
+            var allTrades = TradingJournalService.Instance.GetTrades(accountNumber);
+            var filteredTrades = allTrades.AsEnumerable();
+
+            // Apply search filter
+            if (searchBox != null && !string.IsNullOrWhiteSpace(searchBox.Text))
+            {
+                var searchTerm = searchBox.Text.ToLower();
+                filteredTrades = filteredTrades.Where(t =>
+                    t.Symbol?.ToLower().Contains(searchTerm) == true ||
+                    t.Model?.ToLower().Contains(searchTerm) == true ||
+                    t.Notes?.ToLower().Contains(searchTerm) == true);
+            }
+
+            // Apply outcome filter
+            if (outcomeFilter != null && outcomeFilter.SelectedItem != null && outcomeFilter.SelectedItem.ToString() != "All")
+            {
+                var outcome = outcomeFilter.SelectedItem.ToString();
+                filteredTrades = filteredTrades.Where(t => t.Outcome?.Equals(outcome, StringComparison.OrdinalIgnoreCase) == true);
+            }
+
+            // Apply symbol filter
+            if (symbolFilter != null && !string.IsNullOrWhiteSpace(symbolFilter.Text))
+            {
+                var symbol = symbolFilter.Text.ToLower();
+                filteredTrades = filteredTrades.Where(t => t.Symbol?.ToLower().Contains(symbol) == true);
+            }
+
+            // Update grid with filtered results
+            grid.Rows.Clear();
+            foreach (var trade in filteredTrades)
+            {
+                var rowIndex = grid.Rows.Add(
+                    trade.Date.ToShortDateString(),
+                    trade.Symbol,
+                    trade.TradeType,
+                    trade.Outcome,
+                    FormatNumeric(trade.PL),
+                    FormatNumeric(trade.NetPL),
+                    trade.RR.ToString("F2"),
+                    trade.Model,
+                    trade.Notes?.Length > 30 ? trade.Notes.Substring(0, 30) + "..." : trade.Notes
+                );
+                grid.Rows[rowIndex].Tag = trade.Id;
+
+                // Color code the outcome and P/L
+                if (trade.Outcome?.ToLower() == "win")
+                {
+                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.LimeGreen;
+                    grid.Rows[rowIndex].Cells["Outcome"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                }
+                else if (trade.Outcome?.ToLower() == "loss")
+                {
+                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.OrangeRed;
+                    grid.Rows[rowIndex].Cells["Outcome"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                }
+
+                if (trade.NetPL > 0)
+                {
+                    grid.Rows[rowIndex].Cells["PL"].Style.ForeColor = Color.LimeGreen;
+                    grid.Rows[rowIndex].Cells["NetPL"].Style.ForeColor = Color.LimeGreen;
+                }
+                else if (trade.NetPL < 0)
+                {
+                    grid.Rows[rowIndex].Cells["PL"].Style.ForeColor = Color.OrangeRed;
+                    grid.Rows[rowIndex].Cells["NetPL"].Style.ForeColor = Color.OrangeRed;
+                }
+            }
+        }
+
+        private void ExportTrades_Click(object sender, EventArgs e)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+            if (trades.Count == 0)
+            {
+                MessageBox.Show("No trades to export.", "No Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var saveDialog = new SaveFileDialog())
+            {
+                saveDialog.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
+                saveDialog.DefaultExt = "csv";
+                saveDialog.FileName = $"trades_{accountNumber}_{DateTime.Now:yyyyMMdd}.csv";
+                saveDialog.Title = "Export Trades to CSV";
+
+                if (saveDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        using (var writer = new StreamWriter(saveDialog.FileName))
+                        {
+                            // Write header
+                            writer.WriteLine("Date,Symbol,Type,Outcome,P/L,Net P/L,R:R,Entry Time,Exit Time,Entry Price,Exit Price,Contracts,Fees,Model,Emotions,Followed Plan,Notes");
+
+                            // Write data
+                            foreach (var trade in trades)
+                            {
+                                writer.WriteLine($"{trade.Date:yyyy-MM-dd}," +
+                                    $"\"{trade.Symbol}\"," +
+                                    $"\"{trade.TradeType}\"," +
+                                    $"\"{trade.Outcome}\"," +
+                                    $"{trade.PL}," +
+                                    $"{trade.NetPL}," +
+                                    $"{trade.RR}," +
+                                    $"\"{trade.EntryTime}\"," +
+                                    $"\"{trade.ExitTime}\"," +
+                                    $"{trade.EntryPrice}," +
+                                    $"{trade.ExitPrice}," +
+                                    $"{trade.Contracts}," +
+                                    $"{trade.Fees}," +
+                                    $"\"{trade.Model}\"," +
+                                    $"\"{trade.Emotions}\"," +
+                                    $"{trade.FollowedPlan}," +
+                                    $"\"{trade.Notes?.Replace("\"", "\"\"")}\"");
+                            }
+                        }
+
+                        MessageBox.Show($"Successfully exported {trades.Count} trades to:\n{saveDialog.FileName}", 
+                            "Export Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error exporting trades: {ex.Message}", 
+                            "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
         private void RefreshJournalDataForCurrentAccount()
         {
             var accountNumber = GetSelectedAccountNumber();
@@ -14585,9 +14866,14 @@ namespace Risk_Manager
                     var winRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
                     var totalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
                     var avgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
+                    var largestWinLabel = FindControlByTag(contentPanel, "LargestWin") as Label;
+                    var largestLossLabel = FindControlByTag(contentPanel, "LargestLoss") as Label;
+                    var avgWinLabel = FindControlByTag(contentPanel, "AvgWin") as Label;
+                    var avgLossLabel = FindControlByTag(contentPanel, "AvgLoss") as Label;
                     if (grid != null)
                     {
-                        RefreshJournalData(grid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel);
+                        RefreshJournalData(grid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel,
+                            largestWinLabel, largestLossLabel, avgWinLabel, avgLossLabel);
                     }
                     break;
                     
@@ -14613,15 +14899,21 @@ namespace Risk_Manager
                     var defaultWinRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
                     var defaultTotalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
                     var defaultAvgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
+                    var defaultLargestWinLabel = FindControlByTag(contentPanel, "LargestWin") as Label;
+                    var defaultLargestLossLabel = FindControlByTag(contentPanel, "LargestLoss") as Label;
+                    var defaultAvgWinLabel = FindControlByTag(contentPanel, "AvgWin") as Label;
+                    var defaultAvgLossLabel = FindControlByTag(contentPanel, "AvgLoss") as Label;
                     if (defaultGrid != null)
                     {
-                        RefreshJournalData(defaultGrid, defaultTotalTradesLabel, defaultWinRateLabel, defaultTotalPLLabel, defaultAvgPLLabel);
+                        RefreshJournalData(defaultGrid, defaultTotalTradesLabel, defaultWinRateLabel, defaultTotalPLLabel, defaultAvgPLLabel,
+                            defaultLargestWinLabel, defaultLargestLossLabel, defaultAvgWinLabel, defaultAvgLossLabel);
                     }
                     break;
             }
         }
 
-        private void RefreshJournalData(DataGridView grid, Label totalTradesLabel, Label winRateLabel, Label totalPLLabel, Label avgPLLabel)
+        private void RefreshJournalData(DataGridView grid, Label totalTradesLabel, Label winRateLabel, Label totalPLLabel, Label avgPLLabel, 
+            Label largestWinLabel = null, Label largestLossLabel = null, Label avgWinLabel = null, Label avgLossLabel = null)
         {
             var accountNumber = GetSelectedAccountNumber();
             if (string.IsNullOrEmpty(accountNumber)) return;
@@ -14646,32 +14938,56 @@ namespace Risk_Manager
                 );
                 grid.Rows[rowIndex].Tag = trade.Id;
 
-                // Color code the outcome
+                // Color code the outcome and P/L
                 if (trade.Outcome?.ToLower() == "win")
                 {
                     grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.LimeGreen;
+                    grid.Rows[rowIndex].Cells["Outcome"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
                 }
                 else if (trade.Outcome?.ToLower() == "loss")
                 {
-                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.Red;
+                    grid.Rows[rowIndex].Cells["Outcome"].Style.ForeColor = Color.OrangeRed;
+                    grid.Rows[rowIndex].Cells["Outcome"].Style.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                }
+                
+                // Color code P/L columns
+                if (trade.NetPL > 0)
+                {
+                    grid.Rows[rowIndex].Cells["PL"].Style.ForeColor = Color.LimeGreen;
+                    grid.Rows[rowIndex].Cells["NetPL"].Style.ForeColor = Color.LimeGreen;
+                }
+                else if (trade.NetPL < 0)
+                {
+                    grid.Rows[rowIndex].Cells["PL"].Style.ForeColor = Color.OrangeRed;
+                    grid.Rows[rowIndex].Cells["NetPL"].Style.ForeColor = Color.OrangeRed;
                 }
             }
 
-            // Update stats labels
+            // Update basic stats labels
             if (totalTradesLabel != null)
-                totalTradesLabel.Text = $"Total Trades: {stats.TotalTrades} (W:{stats.Wins} L:{stats.Losses} BE:{stats.Breakevens})";
+                totalTradesLabel.Text = $"Total: {stats.TotalTrades} (W:{stats.Wins} L:{stats.Losses} BE:{stats.Breakevens})";
             if (winRateLabel != null)
                 winRateLabel.Text = $"Win Rate: {stats.WinRate:F1}%";
             if (totalPLLabel != null)
             {
                 totalPLLabel.Text = $"Total P/L: {FormatNumeric(stats.TotalPL)}";
-                totalPLLabel.ForeColor = stats.TotalPL >= 0 ? Color.LimeGreen : Color.Red;
+                totalPLLabel.ForeColor = stats.TotalPL >= 0 ? Color.LimeGreen : Color.OrangeRed;
             }
             if (avgPLLabel != null)
             {
                 avgPLLabel.Text = $"Avg P/L: {FormatNumeric(stats.AveragePL)}";
-                avgPLLabel.ForeColor = stats.AveragePL >= 0 ? Color.LimeGreen : Color.Red;
+                avgPLLabel.ForeColor = stats.AveragePL >= 0 ? Color.LimeGreen : Color.OrangeRed;
             }
+            
+            // Update advanced stats labels
+            if (largestWinLabel != null)
+                largestWinLabel.Text = $"Best: {FormatNumeric(stats.LargestWin)}";
+            if (largestLossLabel != null)
+                largestLossLabel.Text = $"Worst: {FormatNumeric(stats.LargestLoss)}";
+            if (avgWinLabel != null)
+                avgWinLabel.Text = $"Avg Win: {FormatNumeric(stats.AverageWin)}";
+            if (avgLossLabel != null)
+                avgLossLabel.Text = $"Avg Loss: {FormatNumeric(stats.AverageLoss)}";
         }
 
         private Control FindControlByName(Control parent, string name)
