@@ -13090,9 +13090,10 @@ namespace Risk_Manager
                 Dock = DockStyle.Fill,
                 Width = 1800,  // Explicit width to prevent 0-width issue
                 MinimumSize = new Size(1200, 200),  // Ensure grid has minimum width and height
-                BackgroundColor = CardBackground,
-                GridColor = DarkerBackground,
+                BackgroundColor = Color.FromArgb(35, 35, 35),  // Slightly lighter than parent (30,30,30) for visibility
+                GridColor = Color.FromArgb(60, 60, 60),  // Visible gray gridlines
                 BorderStyle = BorderStyle.None,
+                CellBorderStyle = DataGridViewCellBorderStyle.Single,  // Visible cell borders
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 AllowUserToResizeRows = false,
@@ -13103,18 +13104,25 @@ namespace Risk_Manager
                 ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
                 RowHeadersVisible = false,
                 AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells,  // Ensure rows are sized properly
+                EnableHeadersVisualStyles = false,  // CRITICAL: Use custom colors instead of system styles
                 Tag = "JournalGrid",
                 Name = "TradesGrid"
             };
 
-            tradesGrid.DefaultCellStyle.BackColor = CardBackground;
+            tradesGrid.DefaultCellStyle.BackColor = Color.FromArgb(35, 35, 35);
             tradesGrid.DefaultCellStyle.ForeColor = TextWhite;
             tradesGrid.DefaultCellStyle.SelectionBackColor = SelectedColor;
             tradesGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
             tradesGrid.DefaultCellStyle.Padding = new Padding(5);  // Add padding for better visibility
-            tradesGrid.ColumnHeadersDefaultCellStyle.BackColor = DarkerBackground;
+            
+            // Column header styling with custom colors
+            tradesGrid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(45, 45, 45);  // Darker than cells
             tradesGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
+            tradesGrid.ColumnHeadersDefaultCellStyle.SelectionBackColor = AccentBlue;
             tradesGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            
+            // Alternating row colors for better readability
+            tradesGrid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(32, 32, 32);
             
             // Set minimum row height to ensure visibility
             tradesGrid.RowTemplate.Height = 30;
@@ -13146,65 +13154,8 @@ namespace Risk_Manager
             tradesGrid.Columns["RR"].Width = 60;
             tradesGrid.Columns["Model"].Width = 120;
 
-            // DEBUG: Show grid creation details
-            MessageBox.Show(
-                $"Grid Created:\n" +
-                $"Name: {tradesGrid.Name}\n" +
-                $"Size: {tradesGrid.Width}x{tradesGrid.Height}\n" +
-                $"Visible: {tradesGrid.Visible}\n" +
-                $"Dock: {tradesGrid.Dock}\n" +
-                $"MinimumSize: {tradesGrid.MinimumSize}\n" +
-                $"Location: {tradesGrid.Location}\n" +
-                $"BackColor: {tradesGrid.BackgroundColor}\n" +
-                $"Columns: {tradesGrid.Columns.Count}",
-                "Grid Creation Debug",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
-            
-            // ADD TEST PANEL INSTEAD OF GRID TO DIAGNOSE VISIBILITY
-            var testPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.Red,  // BRIGHT RED - VERY OBVIOUS if visible
-                Width = 1800,
-                Height = 400,
-                MinimumSize = new Size(1200, 400)
-            };
-            
-            var testLabel = new Label
-            {
-                Text = "TEST PANEL - IF YOU SEE THIS RED PANEL, GRID CONTAINER IS WORKING!\n" +
-                       "If you see this, the issue is with DataGridView rendering.\n" +
-                       "If you DON'T see this, the issue is with container hierarchy.",
-                AutoSize = false,
-                Size = new Size(1600, 200),
-                Location = new Point(100, 100),
-                ForeColor = Color.White,
-                BackColor = Color.Red,
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleCenter
-            };
-            testPanel.Controls.Add(testLabel);
-            
-            journalCard.Controls.Add(testPanel);
-            //journalCard.Controls.Add(tradesGrid);  // TEMPORARILY DISABLED FOR TESTING
-            
-            // DEBUG: Show test panel and grid info
-            MessageBox.Show(
-                $"TEST PANEL ADDED (Bright Red):\n\n" +
-                $"JournalCard Controls: {journalCard.Controls.Count}\n" +
-                $"JournalCard Size: {journalCard.Width}x{journalCard.Height}\n" +
-                $"TestPanel Parent: {testPanel.Parent?.Name ?? "NULL"}\n" +
-                $"TestPanel Bounds: {testPanel.Bounds}\n" +
-                $"TestPanel Visible: {testPanel.Visible}\n" +
-                $"TestPanel BackColor: {testPanel.BackColor}\n\n" +
-                $"IF YOU SEE A BRIGHT RED PANEL:\n" +
-                $"→ Container is working, DataGridView is the issue\n\n" +
-                $"IF YOU DON'T SEE ANY RED:\n" +
-                $"→ Container/hierarchy issue, need different approach",
-                "TEST PANEL Debug",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning);
+            // Add grid to journal card
+            journalCard.Controls.Add(tradesGrid);
             
             // DEBUG: Log journal card details
             System.Diagnostics.Debug.WriteLine("=== JOURNAL CARD DEBUG ===");
