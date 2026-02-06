@@ -12895,7 +12895,12 @@ namespace Risk_Manager
         /// </summary>
         private void ShowJournalSection(string section)
         {
-            if (journalContentPanel == null) return;
+            System.Diagnostics.Debug.WriteLine($"=== ShowJournalSection: {section} ===");
+            if (journalContentPanel == null)
+            {
+                System.Diagnostics.Debug.WriteLine("ERROR: journalContentPanel is NULL!");
+                return;
+            }
 
             currentJournalSection = section;
             journalContentPanel.SuspendLayout();
@@ -12944,9 +12949,16 @@ namespace Risk_Manager
             {
                 content.Dock = DockStyle.Fill;
                 journalContentPanel.Controls.Add(content);
+                System.Diagnostics.Debug.WriteLine($"Content added to journalContentPanel. Content type: {content.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"JournalContentPanel size: {journalContentPanel.Size}, ControlCount: {journalContentPanel.Controls.Count}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("WARNING: content is NULL!");
             }
 
             journalContentPanel.ResumeLayout();
+            System.Diagnostics.Debug.WriteLine($"=== DisplayJournalSection COMPLETE: {section} ===");
         }
 
         /// <summary>
@@ -12954,7 +12966,9 @@ namespace Risk_Manager
         /// </summary>
         private Control CreateTradeLogPage()
         {
+            System.Diagnostics.Debug.WriteLine("=== CreateTradeLogPage CALLED ===");
             var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
+            System.Diagnostics.Debug.WriteLine($"PagePanel created: AutoScroll={pagePanel.AutoScroll}");
 
             // Enhanced stats summary card with more metrics
             var statsCard = new Panel
@@ -13196,6 +13210,13 @@ namespace Risk_Manager
             buttonsPanel.Controls.Add(editButton);
             buttonsPanel.Controls.Add(deleteButton);
             buttonsPanel.Controls.Add(exportButton);
+            
+            // DEBUG: Log button panel details
+            System.Diagnostics.Debug.WriteLine("=== BUTTONS PANEL DEBUG ===");
+            System.Diagnostics.Debug.WriteLine($"AddButton: Size={addButton.Size}, Visible={addButton.Visible}, Enabled={addButton.Enabled}, Text='{addButton.Text}'");
+            System.Diagnostics.Debug.WriteLine($"ButtonsPanel: Size={buttonsPanel.Size}, Visible={buttonsPanel.Visible}, ControlCount={buttonsPanel.Controls.Count}");
+            System.Diagnostics.Debug.WriteLine($"ButtonsPanel: Dock={buttonsPanel.Dock}, Height={buttonsPanel.Height}");
+            
             journalCard.Controls.Add(buttonsPanel);
 
             // DataGridView for trades with sorting enabled
@@ -13254,7 +13275,24 @@ namespace Risk_Manager
             tradesGrid.Columns["Model"].Width = 120;
 
             journalCard.Controls.Add(tradesGrid);
+            
+            // DEBUG: Log journal card details
+            System.Diagnostics.Debug.WriteLine("=== JOURNAL CARD DEBUG ===");
+            System.Diagnostics.Debug.WriteLine($"JournalCard: Size={journalCard.Size}, MinimumSize={journalCard.MinimumSize}, Visible={journalCard.Visible}");
+            System.Diagnostics.Debug.WriteLine($"JournalCard: Dock={journalCard.Dock}, ControlCount={journalCard.Controls.Count}");
+            System.Diagnostics.Debug.WriteLine($"JournalCard children: {string.Join(", ", journalCard.Controls.Cast<Control>().Select(c => c.GetType().Name))}");
+            
             pagePanel.Controls.Add(journalCard);
+            
+            // DEBUG: Log final page panel details
+            System.Diagnostics.Debug.WriteLine("=== PAGE PANEL DEBUG ===");
+            System.Diagnostics.Debug.WriteLine($"PagePanel: Size={pagePanel.Size}, AutoScroll={pagePanel.AutoScroll}");
+            System.Diagnostics.Debug.WriteLine($"PagePanel: ControlCount={pagePanel.Controls.Count}");
+            for (int i = 0; i < pagePanel.Controls.Count; i++)
+            {
+                var ctrl = pagePanel.Controls[i];
+                System.Diagnostics.Debug.WriteLine($"  [{i}] {ctrl.GetType().Name}: Dock={ctrl.Dock}, Size={ctrl.Size}, Visible={ctrl.Visible}");
+            }
             
             // Load initial data
             RefreshJournalData(tradesGrid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel, 
@@ -14634,18 +14672,26 @@ namespace Risk_Manager
         // Event handlers for Trading Journal
         private void AddTrade_Click(object sender, EventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine("=== AddTrade_Click CALLED ===");
             var accountNumber = GetSelectedAccountNumber();
+            System.Diagnostics.Debug.WriteLine($"Account number: {accountNumber ?? "NULL"}");
             if (string.IsNullOrEmpty(accountNumber))
             {
                 MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
+            System.Diagnostics.Debug.WriteLine("Opening TradeEntryDialog...");
             using (var dialog = new TradeEntryDialog(null, accountNumber))
             {
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
+                    System.Diagnostics.Debug.WriteLine("Trade saved, refreshing journal...");
                     RefreshJournalDataForCurrentAccount();
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("Trade dialog cancelled.");
                 }
             }
         }
