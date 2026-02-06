@@ -15048,13 +15048,26 @@ namespace Risk_Manager
             }
         }
 
+        private static int refreshCallCounter = 0;
+        private static List<string> refreshCallLog = new List<string>();
+        
         private void RefreshJournalData(DataGridView grid, Label totalTradesLabel, Label winRateLabel, Label totalPLLabel, Label avgPLLabel, 
             Label largestWinLabel = null, Label largestLossLabel = null, Label avgWinLabel = null, Label avgLossLabel = null)
         {
+            // Track this call
+            refreshCallCounter++;
+            var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+            var callInfo = $"CALL #{refreshCallCounter} at {timestamp}";
+            
+            System.Diagnostics.Debug.WriteLine($"\n=== RefreshJournalData {callInfo} ===");
+            refreshCallLog.Add(callInfo);
+            
             var accountNumber = GetSelectedAccountNumber();
             if (string.IsNullOrEmpty(accountNumber))
             {
-                System.Diagnostics.Debug.WriteLine("RefreshJournalData: No account selected");
+                var logEntry = $"{callInfo} - NO ACCOUNT";
+                System.Diagnostics.Debug.WriteLine($"RefreshJournalData: No account selected");
+                refreshCallLog.Add(logEntry);
                 return;
             }
 
@@ -15062,10 +15075,16 @@ namespace Risk_Manager
             var stats = TradingJournalService.Instance.GetStats(accountNumber);
 
             // DEBUG: Log trade count
+            var detailLog = $"{callInfo} - Account: {accountNumber}, Trades: {trades.Count}";
             System.Diagnostics.Debug.WriteLine($"RefreshJournalData: Account={accountNumber}, TradeCount={trades.Count}, GridRows={grid.Rows.Count}");
+            refreshCallLog.Add(detailLog);
 
             // Update grid
+            var rowsBefore = grid.Rows.Count;
+            System.Diagnostics.Debug.WriteLine($"RefreshJournalData: Clearing grid (had {rowsBefore} rows)");
             grid.Rows.Clear();
+            System.Diagnostics.Debug.WriteLine($"RefreshJournalData: Grid cleared (now {grid.Rows.Count} rows)");
+            
             foreach (var trade in trades)
             {
                 var rowIndex = grid.Rows.Add(
@@ -15090,22 +15109,32 @@ namespace Risk_Manager
                 ApplyTradeRowStyling(grid.Rows[rowIndex], trade);
             }
             
+            var finalRowLog = $"{callInfo} - Final rows: {grid.Rows.Count}";
             System.Diagnostics.Debug.WriteLine($"RefreshJournalData: Grid updated with {grid.Rows.Count} rows");
+            refreshCallLog.Add(finalRowLog);
             
             // Force grid to refresh and repaint
             grid.Refresh();
             grid.Invalidate();
             
+            // Show summary of all calls so far
+            var summary = $"RefreshJournalData Call Summary:\n" +
+                         $"Total calls: {refreshCallCounter}\n\n" +
+                         string.Join("\n", refreshCallLog.Skip(Math.Max(0, refreshCallLog.Count - 10)));
+            
+            System.Diagnostics.Debug.WriteLine($"\n=== CALL SUMMARY ===\n{summary}\n==================\n");
+            
             // DEBUG: Show grid status after refresh
             MessageBox.Show(
-                $"Grid Refresh Status:\n" +
+                $"Grid Refresh Status (Call #{refreshCallCounter}):\n" +
                 $"Visible: {grid.Visible}\n" +
                 $"Size: {grid.Width}x{grid.Height}\n" +
                 $"Row count: {grid.Rows.Count}\n" +
                 $"Bounds: {grid.Bounds}\n" +
                 $"Parent: {grid.Parent?.Name ?? "NULL"}\n" +
                 $"Parent visible: {grid.Parent?.Visible ?? false}\n" +
-                $"ClientSize: {grid.ClientSize}",
+                $"ClientSize: {grid.ClientSize}\n\n" +
+                $"Recent calls:\n{string.Join("\n", refreshCallLog.Skip(Math.Max(0, refreshCallLog.Count - 5)))}",
                 "Grid Refresh Debug",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
