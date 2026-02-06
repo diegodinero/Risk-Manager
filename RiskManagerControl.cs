@@ -12441,8 +12441,8 @@ namespace Risk_Manager
             // Add cards to the flow layout
             flowLayout.Controls.Add(CreateRiskOverviewCard(
                 CARD_TITLE_ACCOUNT_STATUS,
-                new[] { "Lock Status:", "Settings Lock:" },
-                new[] { GetAccountLockStatus, GetSettingsLockStatus }
+                new[] { "Lock Status:", "Settings Lock:", "Automated Settings Lock:", "Automated Trading Lock:" },
+                new[] { GetAccountLockStatus, GetSettingsLockStatus, GetAutomatedSettingsLockInfo, GetAutomatedTradingLockInfo }
             ));
 
             var positionsCard = CreateRiskOverviewCard(
@@ -14719,6 +14719,44 @@ namespace Risk_Manager
 
             var isLocked = settingsService.AreSettingsLocked(accountNumber);
             return isLocked ? "🔒 Locked" : "🔓 Unlocked";
+        }
+
+        private string GetAutomatedSettingsLockInfo()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings == null) return "⚠️ No settings found";
+
+            if (settings.AutoLockSettingsEnabled && settings.AutoLockSettingsTime.HasValue)
+            {
+                var timeStr = FormatTimeSpan(settings.AutoLockSettingsTime.Value);
+                return $"✅ Enabled at {timeStr}";
+            }
+            return "❌ Disabled";
+        }
+
+        private string GetAutomatedTradingLockInfo()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return "⚠️ No account selected";
+
+            var settingsService = RiskManagerSettingsService.Instance;
+            if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
+
+            var settings = settingsService.GetSettings(accountNumber);
+            if (settings == null) return "⚠️ No settings found";
+
+            if (settings.AutoLockTradingEnabled && settings.AutoLockTradingTime.HasValue)
+            {
+                var timeStr = FormatTimeSpan(settings.AutoLockTradingTime.Value);
+                return $"✅ Enabled at {timeStr}";
+            }
+            return "❌ Disabled";
         }
 
         private bool IsFeatureEnabled(Func<AccountSettings, bool> featureGetter)
