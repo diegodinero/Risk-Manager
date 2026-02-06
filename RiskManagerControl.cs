@@ -13596,6 +13596,28 @@ namespace Risk_Manager
                 newStats.Dock = DockStyle.Top;
                 contentPanel.Controls.Add(newStats);
                 contentPanel.Controls.SetChildIndex(newStats, 1); // Move after grid
+                
+                // Refresh legend panel
+                Control oldLegend = null;
+                foreach (Control ctrl in contentPanel.Controls)
+                {
+                    if (ctrl.Name == "CalendarLegendPanel")
+                    {
+                        oldLegend = ctrl;
+                        break;
+                    }
+                }
+                
+                if (oldLegend != null)
+                {
+                    contentPanel.Controls.Remove(oldLegend);
+                    oldLegend.Dispose();
+                }
+                
+                var newLegend = CreateCalendarLegendPanel();
+                newLegend.Dock = DockStyle.Top;
+                contentPanel.Controls.Add(newLegend);
+                contentPanel.Controls.SetChildIndex(newLegend, 0); // Move to top (which is actually bottom due to docking)
             }
             
             calendarPage.Refresh();
@@ -13844,6 +13866,7 @@ namespace Risk_Manager
         {
             var legendPanel = new Panel
             {
+                Name = "CalendarLegendPanel",
                 BackColor = CardBackground,
                 Padding = new Padding(20, 10, 20, 10),
                 Height = 80
