@@ -12960,7 +12960,7 @@ namespace Risk_Manager
             var statsCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 220,
+                Height = 140,
                 BackColor = CardBackground,
                 Padding = new Padding(15),
                 Margin = new Padding(0, 0, 0, 10)
@@ -12980,16 +12980,16 @@ namespace Risk_Manager
             };
             
             // Row 1: Basic stats
-            var totalTradesLabel = new Label { Text = "Total: 0", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10), Font = new Font("Segoe UI", 10, FontStyle.Regular) };
-            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var totalTradesLabel = new Label { Text = "Total: 0", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5), Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5), Font = new Font("Segoe UI", 9, FontStyle.Bold) };
             
             // Row 2: Detailed stats
-            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
-            var largestWinLabel = new Label { Text = "Best: $0.00", AutoSize = true, ForeColor = Color.LimeGreen, Margin = new Padding(10), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
-            var largestLossLabel = new Label { Text = "Worst: $0.00", AutoSize = true, ForeColor = Color.OrangeRed, Margin = new Padding(10), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
-            var avgWinLabel = new Label { Text = "Avg Win: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
-            var avgLossLabel = new Label { Text = "Avg Loss: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(10), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
+            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5), Font = new Font("Segoe UI", 8, FontStyle.Regular) };
+            var largestWinLabel = new Label { Text = "Best: $0.00", AutoSize = true, ForeColor = Color.LimeGreen, Margin = new Padding(5), Font = new Font("Segoe UI", 8, FontStyle.Regular) };
+            var largestLossLabel = new Label { Text = "Worst: $0.00", AutoSize = true, ForeColor = Color.OrangeRed, Margin = new Padding(5), Font = new Font("Segoe UI", 8, FontStyle.Regular) };
+            var avgWinLabel = new Label { Text = "Avg Win: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5), Font = new Font("Segoe UI", 8, FontStyle.Regular) };
+            var avgLossLabel = new Label { Text = "Avg Loss: $0.00", AutoSize = true, ForeColor = TextWhite, Margin = new Padding(5), Font = new Font("Segoe UI", 8, FontStyle.Regular) };
             
             totalTradesLabel.Tag = "TotalTrades";
             winRateLabel.Tag = "WinRate";
@@ -13019,7 +13019,7 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 100,
+                Height = 80,
                 BackColor = CardBackground,
                 Padding = new Padding(15),
                 Margin = new Padding(0, 0, 0, 10)
