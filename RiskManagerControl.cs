@@ -16299,13 +16299,13 @@ namespace Risk_Manager
             var modelSelector = new ComboBox
             {
                 Dock = DockStyle.Right,
-                Width = 150,
+                Width = 120,  // Reduced from 150 to prevent extending card width
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 ForeColor = TextWhite,
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(10, 10, 0, 5)
+                Margin = new Padding(10, 10, 10, 5)  // Added right margin to bring it in
             };
             
             // Get models from database - use same logic as TradeLog
@@ -16495,13 +16495,13 @@ namespace Risk_Manager
             var daySelector = new ComboBox
             {
                 Dock = DockStyle.Right,
-                Width = 130,
+                Width = 110,  // Reduced from 130 to prevent extending card width
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 ForeColor = TextWhite,
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(10, 10, 0, 5)
+                Margin = new Padding(10, 10, 10, 5)  // Added right margin to bring it in
             };
             daySelector.Items.Add("All Days");
             daySelector.Items.Add("Monday");
@@ -16670,13 +16670,13 @@ namespace Risk_Manager
             var sessionSelector = new ComboBox
             {
                 Dock = DockStyle.Right,
-                Width = 130,
+                Width = 110,  // Reduced from 130 to prevent extending card width
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 ForeColor = TextWhite,
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(10, 10, 0, 5)
+                Margin = new Padding(10, 10, 10, 5)  // Added right margin to bring it in
             };
             sessionSelector.Items.Add("All Sessions");
             
