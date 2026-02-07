@@ -13787,7 +13787,7 @@ namespace Risk_Manager
         }
         
         /// <summary>
-        /// Creates a weekly statistics panel showing trades, plan%, and W/L ratio
+        /// Creates a weekly statistics panel showing different metrics based on mode
         /// </summary>
         private Panel CreateWeeklyStatsPanel(List<JournalTrade> weekTrades)
         {
@@ -13808,11 +13808,13 @@ namespace Risk_Manager
             // Calculate statistics
             int winCount = weekTrades.Count(t => t.Outcome == "Win");
             int lossCount = weekTrades.Count(t => t.Outcome == "Loss");
+            decimal weeklyPL = weekTrades.Sum(t => t.NetPL);
+            double winPct = (winCount * 100.0) / tradeCount;
             int planFollowedCount = weekTrades.Count(t => t.FollowedPlan);
             double planPct = (planFollowedCount * 100.0) / tradeCount;
             string winLossRatio = $"{winCount}/{lossCount}";
             
-            // Trades label
+            // Trades label (always shown)
             var tradesLabel = new Label
             {
                 Text = $"Trades: {tradeCount}",
@@ -13823,44 +13825,86 @@ namespace Risk_Manager
             };
             panel.Controls.Add(tradesLabel);
             
-            // Plan followed label
-            var planLabel = new Label
+            if (showPlanMode)
             {
-                Text = $"Plan: {planPct:0}%",
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                ForeColor = TextWhite,
-                AutoSize = true,
-                Location = new Point(5, 35)
-            };
-            panel.Controls.Add(planLabel);
-            
-            // Win/Loss ratio label
-            var wlLabel = new Label
+                // Plan Mode: Show plan adherence metrics
+                
+                // Plan followed percentage
+                var planLabel = new Label
+                {
+                    Text = $"Plan: {planPct:0}%",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Location = new Point(5, 35)
+                };
+                panel.Controls.Add(planLabel);
+                
+                // Win/Loss ratio
+                var wlLabel = new Label
+                {
+                    Text = $"W/L: {winLossRatio}",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Location = new Point(5, 60)
+                };
+                panel.Controls.Add(wlLabel);
+                
+                // Plan followed ratio with checkmark (e.g., "✓ 12/15")
+                var planRatioLabel = new Label
+                {
+                    Text = $"{(planPct >= 70 ? "✓" : "")} {planFollowedCount}/{tradeCount}",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = planPct >= 70 ? Color.FromArgb(109, 231, 181) : TextWhite, // Green if >=70%
+                    AutoSize = true,
+                    Location = new Point(100, 35)
+                };
+                panel.Controls.Add(planRatioLabel);
+            }
+            else
             {
-                Text = $"W/L: {winLossRatio}",
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                ForeColor = TextWhite,
-                AutoSize = true,
-                Location = new Point(5, 60)
-            };
-            panel.Controls.Add(wlLabel);
-            
-            // Plan followed ratio with checkmark (e.g., "✓ 12/15")
-            var planRatioLabel = new Label
-            {
-                Text = $"{(planPct >= 70 ? "✓" : "")} {planFollowedCount}/{tradeCount}",
-                Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                ForeColor = planPct >= 70 ? Color.FromArgb(109, 231, 181) : TextWhite, // Green if >=70%
-                AutoSize = true,
-                Location = new Point(100, 35)
-            };
-            panel.Controls.Add(planRatioLabel);
+                // P&L Mode: Show profit/loss metrics
+                
+                // Weekly P&L total
+                var plLabel = new Label
+                {
+                    Text = $"P&L: {weeklyPL:+$#,##0.00;-$#,##0.00;$0.00}",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Location = new Point(5, 35)
+                };
+                panel.Controls.Add(plLabel);
+                
+                // Win/Loss ratio
+                var wlLabel = new Label
+                {
+                    Text = $"W/L: {winLossRatio}",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Location = new Point(5, 60)
+                };
+                panel.Controls.Add(wlLabel);
+                
+                // Win percentage
+                var winPctLabel = new Label
+                {
+                    Text = $"Win%: {winPct:0}%",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Location = new Point(100, 35)
+                };
+                panel.Controls.Add(winPctLabel);
+            }
             
             return panel;
         }
         
         /// <summary>
-        /// Creates the legend panel showing what the colors mean
+        /// Creates the legend panel showing what the colors mean based on current mode
         /// </summary>
         private Panel CreateCalendarLegendPanel()
         {
@@ -13872,9 +13916,10 @@ namespace Risk_Manager
                 Height = 80
             };
             
+            // Legend title changes based on mode
             var titleLabel = new Label
             {
-                Text = "Plan Followed Legend:",
+                Text = showPlanMode ? "Plan Followed Legend:" : "Win Loss Ratio Legend:",
                 Font = new Font("Segoe UI", 11, FontStyle.Bold),
                 ForeColor = TextWhite,
                 AutoSize = true,
@@ -13891,7 +13936,7 @@ namespace Risk_Manager
                 WrapContents = false
             };
             
-            // Green ≥70%
+            // Green indicator
             var greenLabel = new Label
             {
                 Text = "●",
@@ -13904,7 +13949,7 @@ namespace Risk_Manager
             
             var greenText = new Label
             {
-                Text = "≥70% Followed",
+                Text = showPlanMode ? "≥70% Followed" : "Profitable",
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = TextWhite,
                 AutoSize = true,
@@ -13912,7 +13957,7 @@ namespace Risk_Manager
             };
             itemsPanel.Controls.Add(greenText);
             
-            // Yellow 50-69%
+            // Yellow indicator
             var yellowLabel = new Label
             {
                 Text = "●",
@@ -13925,7 +13970,7 @@ namespace Risk_Manager
             
             var yellowText = new Label
             {
-                Text = "50-69% Followed",
+                Text = showPlanMode ? "50-69% Followed" : "Breakeven",
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = TextWhite,
                 AutoSize = true,
@@ -13933,7 +13978,7 @@ namespace Risk_Manager
             };
             itemsPanel.Controls.Add(yellowText);
             
-            // Pink <50%
+            // Pink/Red indicator
             var pinkLabel = new Label
             {
                 Text = "●",
@@ -13946,7 +13991,7 @@ namespace Risk_Manager
             
             var pinkText = new Label
             {
-                Text = "<50% Followed",
+                Text = showPlanMode ? "<50% Followed" : "Loss",
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = TextWhite,
                 AutoSize = true,
@@ -13954,7 +13999,7 @@ namespace Risk_Manager
             };
             itemsPanel.Controls.Add(pinkText);
             
-            // Empty circle - No trades
+            // Empty circle - No trades (always the same)
             var emptyLabel = new Label
             {
                 Text = "○",
