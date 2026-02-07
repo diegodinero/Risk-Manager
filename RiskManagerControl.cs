@@ -16188,8 +16188,8 @@ namespace Risk_Manager
                 BackColor = DarkBackground
             };
 
-            // Get unique models from trades
-            var modelNames = trades.Select(t => t.Model).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().OrderBy(m => m).ToList();
+            // Get models from database instead of extracting from trades
+            var modelNames = models.Select(m => m.Name).Where(n => !string.IsNullOrWhiteSpace(n)).OrderBy(n => n).ToList();
             
             // Add model selector ComboBox FIRST (for proper right-docking)
             var modelSelector = new ComboBox
@@ -16538,7 +16538,10 @@ namespace Risk_Manager
                 BackColor = DarkBackground
             };
 
-            // Get unique sessions from trades
+            // Predefined session options
+            var predefinedSessions = new[] { "New York", "London", "Asia" };
+            
+            // Get unique sessions from trades to see what's actually being used
             var sessionNames = trades.Select(t => t.Session).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
 
             // Session selector ComboBox - ADD FIRST for proper right-docking
@@ -16554,10 +16557,22 @@ namespace Risk_Manager
                 Margin = new Padding(10, 10, 0, 5)
             };
             sessionSelector.Items.Add("All Sessions");
-            foreach (var session in sessionNames)
+            
+            // Add predefined sessions first
+            foreach (var session in predefinedSessions)
             {
                 sessionSelector.Items.Add(session);
             }
+            
+            // Add any additional sessions from trades that aren't in predefined list
+            foreach (var session in sessionNames)
+            {
+                if (!predefinedSessions.Contains(session, StringComparer.OrdinalIgnoreCase))
+                {
+                    sessionSelector.Items.Add(session);
+                }
+            }
+            
             sessionSelector.SelectedIndex = 0;
             headerPanel.Controls.Add(sessionSelector);
 

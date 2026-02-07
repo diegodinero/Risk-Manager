@@ -20,7 +20,7 @@ namespace Risk_Manager
         private ComboBox outcomeCombo;
         private ComboBox typeCombo;
         private ComboBox modelInput;  // Changed from TextBox to ComboBox
-        private TextBox sessionInput;
+        private ComboBox sessionInput;  // Changed from TextBox to ComboBox
         private TextBox plInput;
         private TextBox rrInput;
         private TextBox entryTimeInput;
@@ -133,9 +133,16 @@ namespace Risk_Manager
             mainPanel.Controls.Add(modelInput);
             yPos += spacing;
 
-            // Session
+            // Session - Changed to ComboBox with predefined sessions
             AddLabel(mainPanel, "Session:", 10, yPos, labelWidth);
-            sessionInput = AddTextBox(mainPanel, labelWidth + 20, yPos, inputWidth);
+            sessionInput = new ComboBox
+            {
+                Location = new Point(labelWidth + 20, yPos),
+                Width = inputWidth,
+                DropDownStyle = ComboBoxStyle.DropDown  // Allow custom entry
+            };
+            sessionInput.Items.AddRange(new[] { "New York", "London", "Asia" });
+            mainPanel.Controls.Add(sessionInput);
             yPos += spacing;
 
             // P/L
