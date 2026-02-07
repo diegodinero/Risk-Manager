@@ -15990,36 +15990,63 @@ namespace Risk_Manager
                 }
             };
 
-            // Determine emoji based on label
+            // Determine emoji and its color based on label
             string emoji = "";
+            Color emojiColor = TextWhite;  // Default color
             switch (label)
             {
                 case "Plan Adherence":
                     emoji = "📋";  // Clipboard emoji
+                    emojiColor = Color.FromArgb(91, 140, 255);  // Blue
                     break;
                 case "Win Rate":
                     emoji = "✅";  // Check mark emoji
+                    emojiColor = valueColor;  // Match value color (green/red based on performance)
                     break;
                 case "Profit Factor":
                     emoji = "💰";  // Money bag emoji
+                    emojiColor = Color.FromArgb(255, 200, 91);  // Orange/Yellow
                     break;
                 case "Total P&L":
                     emoji = "💵";  // Dollar emoji
+                    emojiColor = valueColor;  // Match value color (green/red based on P&L)
                     break;
             }
 
-            // Label with emoji BEFORE the text - single line, no wrapping
-            var labelControl = new Label
+            // Create a container for emoji and label text
+            var labelContainer = new Panel
             {
-                Text = $"{emoji} {label}",  // Emoji before label text
                 Dock = DockStyle.Top,
-                Height = 22,  // Reduced height
-                ForeColor = TextWhite,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Bold),  // Use Segoe UI Emoji for emoji support
-                TextAlign = ContentAlignment.MiddleLeft,
-                AutoSize = false  // Prevent wrapping
+                Height = 22,
+                BackColor = Color.Transparent
             };
-            card.Controls.Add(labelControl);
+
+            // Emoji label with color
+            var emojiLabel = new Label
+            {
+                Text = emoji,
+                Dock = DockStyle.Left,
+                Width = 20,
+                ForeColor = emojiColor,
+                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoSize = false
+            };
+            labelContainer.Controls.Add(emojiLabel);
+
+            // Text label
+            var textLabel = new Label
+            {
+                Text = label,
+                Dock = DockStyle.Fill,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoSize = false
+            };
+            labelContainer.Controls.Add(textLabel);
+
+            card.Controls.Add(labelContainer);
 
             // Value
             var valueControl = new Label
