@@ -183,6 +183,12 @@ class CustomHeaderControl : Panel
 
 namespace Risk_Manager
 {
+    // Win32 imports for rounded regions
+    internal static class NativeMethods
+    {
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        internal static extern IntPtr CreateRoundRectRgn(int x1, int y1, int x2, int y2, int cx, int cy);
+    }
 
     public class RiskManagerControl : UserControl
     {
@@ -446,6 +452,9 @@ namespace Risk_Manager
         private const int LeftPanelWidth = 200;
         private const int LeftPanelCollapsedWidth = 65; // Width when collapsed (show only icons)
         private const int LeftPanelExpandedWidth = 200; // Width when expanded (show icons + text)
+        
+        // Calendar UI constants
+        private const int BORDER_RADIUS = 15; // Rounded border radius for calendar elements
 
         public RiskManagerControl()
         {
@@ -13359,19 +13368,57 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Helper method to create a rounded rectangle region
+        /// </summary>
+        private GraphicsPath GetRoundedRectangle(Rectangle bounds, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            int diameter = radius * 2;
+            
+            // Top-left corner
+            path.AddArc(bounds.X, bounds.Y, diameter, diameter, 180, 90);
+            // Top-right corner
+            path.AddArc(bounds.Right - diameter, bounds.Y, diameter, diameter, 270, 90);
+            // Bottom-right corner
+            path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+            // Bottom-left corner
+            path.AddArc(bounds.X, bounds.Bottom - diameter, diameter, diameter, 90, 90);
+            
+            path.CloseFigure();
+            return path;
+        }
+        
+        /// <summary>
         /// Creates the Calendar page placeholder
         /// </summary>
         private Control CreateCalendarPage()
         {
             var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true, Tag = "CalendarPagePanel" };
             
-            // Main content container
+            // Main content container with rounded border
             var contentPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
                 Padding = new Padding(20),
                 AutoScroll = true
+            };
+            
+            // Add rounded border to content panel
+            contentPanel.Paint += (s, e) =>
+            {
+                if (contentPanel.ClientRectangle.Width > 20 && contentPanel.ClientRectangle.Height > 20)
+                {
+                    var borderRect = new Rectangle(10, 10, contentPanel.ClientRectangle.Width - 20, contentPanel.ClientRectangle.Height - 20);
+                    using (GraphicsPath borderPath = GetRoundedRectangle(borderRect, BORDER_RADIUS))
+                    {
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        using (Pen borderPen = new Pen(CardBackground, 2))
+                        {
+                            e.Graphics.DrawPath(borderPen, borderPath);
+                        }
+                    }
+                }
             };
             
             // Header with reorganized layout
@@ -13413,6 +13460,7 @@ namespace Risk_Manager
                 Cursor = Cursors.Hand
             };
             prevButton.FlatAppearance.BorderSize = 0;
+            prevButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, prevButton.Width, prevButton.Height, BORDER_RADIUS, BORDER_RADIUS));
             prevButton.Click += (s, e) =>
             {
                 currentCalendarMonth = currentCalendarMonth.AddMonths(-1);
@@ -13448,6 +13496,7 @@ namespace Risk_Manager
                 Cursor = Cursors.Hand
             };
             nextButton.FlatAppearance.BorderSize = 0;
+            nextButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, nextButton.Width, nextButton.Height, BORDER_RADIUS, BORDER_RADIUS));
             nextButton.Click += (s, e) =>
             {
                 currentCalendarMonth = currentCalendarMonth.AddMonths(1);
@@ -13476,6 +13525,7 @@ namespace Risk_Manager
                 Tag = "PLToggle"
             };
             plToggle.FlatAppearance.BorderSize = 0;
+            plToggle.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, plToggle.Width, plToggle.Height, BORDER_RADIUS, BORDER_RADIUS));
             plToggle.Click += (s, e) =>
             {
                 showPlanMode = false;
@@ -13497,6 +13547,7 @@ namespace Risk_Manager
                 Tag = "PlanToggle"
             };
             planToggle.FlatAppearance.BorderSize = 0;
+            planToggle.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, planToggle.Width, planToggle.Height, BORDER_RADIUS, BORDER_RADIUS));
             planToggle.Click += (s, e) =>
             {
                 showPlanMode = true;
