@@ -13506,9 +13506,9 @@ namespace Risk_Manager
             };
             headerPanel.Controls.Add(nextButton);
             
-            // Inline monthly stats - between navigation and toggle buttons
+            // Inline monthly stats - positioned after next button with spacing
             var inlineStatsPanel = CreateInlineMonthlyStats();
-            inlineStatsPanel.Location = new Point(centerX + monthLabelWidth + 50, 10);
+            inlineStatsPanel.Location = new Point(nextButton.Right + 10, 10);
             headerPanel.Controls.Add(inlineStatsPanel);
             
             // Toggle buttons for Plan/P&L mode - FAR RIGHT
@@ -13797,10 +13797,10 @@ namespace Risk_Manager
                 };
                 flowPanel.Controls.Add(label1);
                 
-                // Days Followed number (colored by plan adherence)
+                // Days Followed (number + "Days" combined, colored by plan adherence)
                 var label2 = new Label
                 {
-                    Text = $" {planFollowedDays} ",
+                    Text = $" {planFollowedDays} Days ",
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = Color.Black,
                     BackColor = daysColor,
@@ -13812,23 +13812,8 @@ namespace Risk_Manager
                 label2.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label2.Width + 1, label2.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
                 flowPanel.Controls.Add(label2);
                 
-                // "Days" word with same color
-                var label3 = new Label
-                {
-                    Text = " Days ",
-                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = Color.Black,
-                    BackColor = daysColor,
-                    AutoSize = true,
-                    Margin = new Padding(0, 5, 0, 0),
-                    Padding = new Padding(3, 1, 3, 1)
-                };
-                // Add rounded corners
-                label3.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label3.Width + 1, label3.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
-                flowPanel.Controls.Add(label3);
-                
                 // "Followed" text
-                var label4 = new Label
+                var label3 = new Label
                 {
                     Text = " Followed  ",
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
@@ -13836,37 +13821,22 @@ namespace Risk_Manager
                     AutoSize = true,
                     Margin = new Padding(0, 5, 3, 0)
                 };
+                flowPanel.Controls.Add(label3);
+                
+                // Days Traded (number + "Days" combined with blue background)
+                var label4 = new Label
+                {
+                    Text = $" {tradedDays} Days ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = blueHighlight,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0),
+                    Padding = new Padding(3, 1, 3, 1)
+                };
+                // Add rounded corners
+                label4.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label4.Width + 1, label4.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
                 flowPanel.Controls.Add(label4);
-                
-                // Days Traded number with blue background
-                var label5 = new Label
-                {
-                    Text = $" {tradedDays} ",
-                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = Color.White,
-                    BackColor = blueHighlight,
-                    AutoSize = true,
-                    Margin = new Padding(0, 5, 0, 0),
-                    Padding = new Padding(3, 1, 3, 1)
-                };
-                // Add rounded corners
-                label5.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label5.Width + 1, label5.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
-                flowPanel.Controls.Add(label5);
-                
-                // "Days" word with blue background
-                var label6 = new Label
-                {
-                    Text = " Days ",
-                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = Color.White,
-                    BackColor = blueHighlight,
-                    AutoSize = true,
-                    Margin = new Padding(0, 5, 0, 0),
-                    Padding = new Padding(3, 1, 3, 1)
-                };
-                // Add rounded corners
-                label6.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label6.Width + 1, label6.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
-                flowPanel.Controls.Add(label6);
             }
             else
             {
@@ -13894,10 +13864,10 @@ namespace Risk_Manager
                 };
                 flowPanel.Controls.Add(label2);
                 
-                // Days number with blue background
+                // Days (number + "Days" combined with blue background)
                 var label3 = new Label
                 {
-                    Text = $" {tradedDays} ",
+                    Text = $" {tradedDays} Days ",
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = Color.White,
                     BackColor = blueHighlight,
@@ -13908,21 +13878,6 @@ namespace Risk_Manager
                 // Add rounded corners
                 label3.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label3.Width + 1, label3.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
                 flowPanel.Controls.Add(label3);
-                
-                // "Days" word with blue background
-                var label4 = new Label
-                {
-                    Text = " Days ",
-                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = Color.White,
-                    BackColor = blueHighlight,
-                    AutoSize = true,
-                    Margin = new Padding(0, 5, 0, 0),
-                    Padding = new Padding(3, 1, 3, 1)
-                };
-                // Add rounded corners
-                label4.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label4.Width + 1, label4.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
-                flowPanel.Controls.Add(label4);
             }
             
             panel.Controls.Add(flowPanel);
@@ -14169,12 +14124,15 @@ namespace Risk_Manager
             {
                 // P&L Mode: Show profit/loss metrics
                 
-                // Weekly P&L total
+                // Weekly P&L total (colored by value)
+                Color plColor = weeklyPL >= 0 ? 
+                    Color.FromArgb(109, 231, 181) : // Green #6DE7B5
+                    Color.FromArgb(253, 164, 165);  // Red/Pink #FDA4A5
                 var plLabel = new Label
                 {
                     Text = $"P&L: {weeklyPL:+$#,##0.00;-$#,##0.00;$0.00}",
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                    ForeColor = TextWhite,
+                    ForeColor = plColor,
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Margin = new Padding(0, 3, 0, 3)
@@ -14268,7 +14226,7 @@ namespace Risk_Manager
             
             // Legend items flow panel
             int calendarWidth = 7 * 150; // 7 day columns × 150px each = 1050px
-            legendPanel.Width = calendarWidth;
+            legendPanel.Width = 1000; // Slightly less than calendar to ensure items fit
             
             var itemsPanel = new FlowLayoutPanel
             {
