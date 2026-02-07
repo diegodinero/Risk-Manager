@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Media;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
@@ -16073,38 +16074,6 @@ namespace Risk_Manager
                 Padding = new Padding(20, 10, 0, 0)
             };
             pagePanel.Controls.Add(titleLabel);
-
-            // VISIBLE DEBUG LABEL - Shows where data is written and read
-            var debugInfoText = $"════════════════════════════════════════════════════════════════════════════════\n" +
-                               $"DEBUG INFO - DATA FILE LOCATIONS\n" +
-                               $"════════════════════════════════════════════════════════════════════════════════\n" +
-                               $"Data Directory (TradeLog WRITES here / Dashboard READS here):\n" +
-                               $"  {dataDir}\n\n" +
-                               $"Trading Journal File:\n" +
-                               $"  Path: trading_journal.json\n" +
-                               $"  Exists: {File.Exists(journalFile)}\n" +
-                               $"  Size: {(File.Exists(journalFile) ? new FileInfo(journalFile).Length : 0)} bytes\n\n" +
-                               $"Trading Models File:\n" +
-                               $"  Path: trading_models.json\n" +
-                               $"  Exists: {File.Exists(modelsFile)}\n" +
-                               $"  Size: {(File.Exists(modelsFile) ? new FileInfo(modelsFile).Length : 0)} bytes\n\n" +
-                               $"Current Account: '{accountNumber}'\n" +
-                               $"Trades Loaded: {trades.Count}\n" +
-                               $"Models Loaded: {models.Count}\n" +
-                               $"════════════════════════════════════════════════════════════════════════════════";
-            
-            var debugLabel = new Label
-            {
-                Text = debugInfoText,
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                BackColor = Color.Yellow,
-                ForeColor = Color.Black,
-                Font = new Font("Consolas", 10, FontStyle.Bold),
-                Padding = new Padding(10),
-                BorderStyle = BorderStyle.FixedSingle
-            };
-            pagePanel.Controls.Add(debugLabel);
 
             // Add panels in reverse order since Dock.Top stacks from bottom to top
             // Session Performance Section (always show, handles empty state internally)
