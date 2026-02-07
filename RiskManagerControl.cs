@@ -16026,9 +16026,9 @@ namespace Risk_Manager
             {
                 Text = emoji,
                 Dock = DockStyle.Left,
-                Width = 25,  // Increased width to accommodate larger emoji
+                Width = 20,
                 ForeColor = emojiColor,
-                Font = new Font("Segoe UI Emoji", 16, FontStyle.Regular),  // Increased from 10 to 16
+                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleLeft,
                 AutoSize = false
             };
@@ -16055,7 +16055,7 @@ namespace Risk_Manager
                 Dock = DockStyle.Fill,
                 ForeColor = valueColor,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),  // Slightly smaller
-                TextAlign = ContentAlignment.MiddleRight,  // Right-aligned for colored values
+                TextAlign = ContentAlignment.MiddleLeft,
                 AutoSize = false  // Prevent wrapping
             };
             card.Controls.Add(valueControl);
