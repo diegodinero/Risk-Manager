@@ -13422,16 +13422,21 @@ namespace Risk_Manager
             };
             
             // Header with reorganized layout
+            int calendarWidth = 7 * 150; // 1050px to match calendar grid
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 60,
+                Width = calendarWidth,
                 BackColor = DarkBackground,
                 Padding = new Padding(10, 10, 10, 10)
             };
             
-            int currentX = 10;
             Color blueHighlight = Color.FromArgb(41, 128, 185);
+            
+            // Calculate centered position for month/year
+            int monthLabelWidth = 160;
+            int centerX = (calendarWidth - monthLabelWidth) / 2;
             
             // "Trading Calendar" title label - FAR LEFT
             var titleLabel = new Label
@@ -13441,19 +13446,18 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Location = new Point(currentX, 15)
+                Location = new Point(10, 15)
             };
             headerPanel.Controls.Add(titleLabel);
-            currentX += 180; // Space for title
             
-            // Previous month button - navigation arrows get blue background
+            // Previous month button - left of center
             var prevButton = new Button
             {
                 Name = "PrevMonthButton",
                 Text = "◀",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Size = new Size(35, 35),
-                Location = new Point(currentX, 10),
+                Location = new Point(centerX - 200, 10),
                 BackColor = blueHighlight, // Blue background for navigation
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
@@ -13467,9 +13471,8 @@ namespace Risk_Manager
                 RefreshCalendarPage();
             };
             headerPanel.Controls.Add(prevButton);
-            currentX += 40;
             
-            // Month/Year label (between arrows)
+            // Month/Year label - CENTERED
             var monthYearLabel = new Label
             {
                 Name = "MonthYearLabel",
@@ -13477,19 +13480,18 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Location = new Point(currentX, 15)
+                Location = new Point(centerX, 15)
             };
             headerPanel.Controls.Add(monthYearLabel);
-            currentX += 160; // Space for month/year
             
-            // Next month button
+            // Next month button - right of center
             var nextButton = new Button
             {
                 Name = "NextMonthButton",
                 Text = "▶",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Size = new Size(35, 35),
-                Location = new Point(currentX, 10),
+                Location = new Point(centerX + monthLabelWidth + 5, 10),
                 BackColor = blueHighlight, // Blue background for navigation
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
@@ -13503,15 +13505,14 @@ namespace Risk_Manager
                 RefreshCalendarPage();
             };
             headerPanel.Controls.Add(nextButton);
-            currentX += 45;
             
             // Inline monthly stats - between navigation and toggle buttons
             var inlineStatsPanel = CreateInlineMonthlyStats();
-            inlineStatsPanel.Location = new Point(currentX, 10);
+            inlineStatsPanel.Location = new Point(centerX + monthLabelWidth + 50, 10);
             headerPanel.Controls.Add(inlineStatsPanel);
-            currentX += inlineStatsPanel.Width + 20;
             
             // Toggle buttons for Plan/P&L mode - FAR RIGHT
+            int toggleStartX = calendarWidth - 175; // Room for both toggle buttons
             var plToggle = new Button
             {
                 Name = "PLToggle",
@@ -13521,7 +13522,7 @@ namespace Risk_Manager
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Location = new Point(currentX, 10),
+                Location = new Point(toggleStartX, 10),
                 Tag = "PLToggle"
             };
             plToggle.FlatAppearance.BorderSize = 0;
@@ -13532,7 +13533,6 @@ namespace Risk_Manager
                 RefreshCalendarPage();
             };
             headerPanel.Controls.Add(plToggle);
-            currentX += 85;
             
             var planToggle = new Button
             {
@@ -13543,7 +13543,7 @@ namespace Risk_Manager
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Location = new Point(currentX, 10),
+                Location = new Point(toggleStartX + 85, 10),
                 Tag = "PlanToggle"
             };
             planToggle.FlatAppearance.BorderSize = 0;
@@ -13808,6 +13808,8 @@ namespace Risk_Manager
                     Margin = new Padding(0, 5, 0, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
+                // Add rounded corners
+                label2.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label2.Width + 1, label2.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
                 flowPanel.Controls.Add(label2);
                 
                 // "Days" word with same color
@@ -13821,18 +13823,50 @@ namespace Risk_Manager
                     Margin = new Padding(0, 5, 0, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
+                // Add rounded corners
+                label3.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label3.Width + 1, label3.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
                 flowPanel.Controls.Add(label3);
                 
                 // "Followed" text
                 var label4 = new Label
                 {
-                    Text = " Followed",
+                    Text = " Followed  ",
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
                     ForeColor = TextWhite,
                     AutoSize = true,
-                    Margin = new Padding(0, 5, 0, 0)
+                    Margin = new Padding(0, 5, 3, 0)
                 };
                 flowPanel.Controls.Add(label4);
+                
+                // Days Traded number with blue background
+                var label5 = new Label
+                {
+                    Text = $" {tradedDays} ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = blueHighlight,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0),
+                    Padding = new Padding(3, 1, 3, 1)
+                };
+                // Add rounded corners
+                label5.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label5.Width + 1, label5.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
+                flowPanel.Controls.Add(label5);
+                
+                // "Days" word with blue background
+                var label6 = new Label
+                {
+                    Text = " Days ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = blueHighlight,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0),
+                    Padding = new Padding(3, 1, 3, 1)
+                };
+                // Add rounded corners
+                label6.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label6.Width + 1, label6.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
+                flowPanel.Controls.Add(label6);
             }
             else
             {
@@ -13871,6 +13905,8 @@ namespace Risk_Manager
                     Margin = new Padding(0, 5, 0, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
+                // Add rounded corners
+                label3.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label3.Width + 1, label3.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
                 flowPanel.Controls.Add(label3);
                 
                 // "Days" word with blue background
@@ -13884,6 +13920,8 @@ namespace Risk_Manager
                     Margin = new Padding(0, 5, 0, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
+                // Add rounded corners
+                label4.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label4.Width + 1, label4.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
                 flowPanel.Controls.Add(label4);
             }
             
@@ -14229,12 +14267,24 @@ namespace Risk_Manager
             legendPanel.Controls.Add(titleLabel);
             
             // Legend items flow panel
+            int calendarWidth = 7 * 150; // 7 day columns × 150px each = 1050px
+            legendPanel.Width = calendarWidth;
+            
             var itemsPanel = new FlowLayoutPanel
             {
-                Location = new Point(0, 35),
-                Size = new Size(1200, 35),
+                AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false
+            };
+            
+            // Center items horizontally
+            legendPanel.Layout += (s, e) =>
+            {
+                if (itemsPanel.PreferredSize.Width > 0)
+                {
+                    int centerX = (legendPanel.Width - itemsPanel.PreferredSize.Width) / 2;
+                    itemsPanel.Location = new Point(Math.Max(0, centerX), 35);
+                }
             };
             
             // Green indicator
@@ -14372,25 +14422,7 @@ namespace Risk_Manager
                 Tag = date
             };
             
-            // Add rounded corners
-            cellPanel.Paint += (s, e) =>
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                Rectangle bounds = new Rectangle(0, 0, cellPanel.Width - 1, cellPanel.Height - 1);
-                using (GraphicsPath path = GetRoundedRectangle(bounds, BORDER_RADIUS))
-                {
-                    // Fill with background color
-                    using (SolidBrush brush = new SolidBrush(cellColor))
-                    {
-                        e.Graphics.FillPath(brush, path);
-                    }
-                    // Draw border
-                    using (Pen pen = new Pen(DarkerBackground, 1))
-                    {
-                        e.Graphics.DrawPath(pen, path);
-                    }
-                }
-            };
+            // Add rounded corners using Region (no Paint handler needed - causes artifacts)
             cellPanel.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, 150, 95, BORDER_RADIUS, BORDER_RADIUS));
             
             // Determine text color based on cell background (use theme color for empty cells, black for colored cells)
