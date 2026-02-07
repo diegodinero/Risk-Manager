@@ -15891,11 +15891,11 @@ namespace Risk_Manager
             debugText.AppendLine($"   File: trading_journal.json (SAME FILE)");
             debugText.AppendLine($"   Path: {dataDir}");
             
-            // Get TradeLog account
-            var tradeLogAccount = TradingPlatform.Instance?.CurrentAccount?.AccountNumber ?? "Unknown";
+            // Both TradeLog and Dashboard use the same account from the dropdown selector
             debugText.AppendLine();
-            debugText.AppendLine($"TradeLog uses Account: {tradeLogAccount}");
-            debugText.AppendLine($"Dashboard uses Account: {accountNumber}");
+            debugText.AppendLine("Account Information:");
+            debugText.AppendLine($"   Selected Account (from dropdown): {accountNumber}");
+            debugText.AppendLine($"   (Both TradeLog and Dashboard use this same account)");
             debugText.AppendLine();
             debugText.AppendLine("Current Status:");
             debugText.AppendLine($"   Journal File Exists: {File.Exists(journalFile)}");
