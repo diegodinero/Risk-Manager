@@ -16635,7 +16635,6 @@ namespace Risk_Manager
         /// </summary>
         private Panel CreateSessionStatsDisplay(List<JournalTrade> sessionTrades)
         {
-            var sessionTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Session)).ToList();
             var sessionWins = sessionTrades.Count(t => t.Outcome?.ToLower() == "win");
             var sessionLosses = sessionTrades.Count(t => t.Outcome?.ToLower() == "loss");
             var sessionBreakevens = sessionTrades.Count(t => t.Outcome?.ToLower() == "breakeven");
