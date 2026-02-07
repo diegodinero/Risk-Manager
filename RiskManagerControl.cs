@@ -13470,7 +13470,7 @@ namespace Risk_Manager
                 currentCalendarMonth = currentCalendarMonth.AddMonths(-1);
                 RefreshCalendarPage();
             };
-            headerPanel.Controls.Add(prevButton);
+            // prevButton added later to fix z-order
             
             // Month/Year label - CENTERED
             var monthYearLabel = new Label
@@ -13504,14 +13504,18 @@ namespace Risk_Manager
                 currentCalendarMonth = currentCalendarMonth.AddMonths(1);
                 RefreshCalendarPage();
             };
-            headerPanel.Controls.Add(nextButton);
-            
             // Inline monthly stats - positioned after next button with spacing, constrained to not overlap toggles
             int toggleStartX = calendarWidth - 175; // Room for both toggle buttons
             var inlineStatsPanel = CreateInlineMonthlyStats();
             inlineStatsPanel.Location = new Point(nextButton.Right + 10, 10);
             inlineStatsPanel.MaximumSize = new Size(toggleStartX - (nextButton.Right + 10) - 20, 40); // Prevent overlap with toggles
             headerPanel.Controls.Add(inlineStatsPanel);
+            
+            // Add navigation buttons after stats panel so they're on top (fix z-order)
+            headerPanel.Controls.Add(prevButton);
+            headerPanel.Controls.Add(nextButton);
+            prevButton.BringToFront(); // Ensure buttons are visible on top
+            nextButton.BringToFront();
             
             // Toggle buttons for Plan/P&L mode - FAR RIGHT (at calendar edge)
             var plToggle = new Button
@@ -14225,8 +14229,7 @@ namespace Risk_Manager
             };
             legendPanel.Controls.Add(titleLabel);
             
-            // Legend items flow panel
-            int calendarWidth = 7 * 150; // 7 day columns × 150px each = 1050px
+            // Legend items flow panel - legend width matches full calendar
             legendPanel.Width = (7 * 150) + 200; // 1250px - match full calendar width including weekly stats
             
             var itemsPanel = new FlowLayoutPanel
