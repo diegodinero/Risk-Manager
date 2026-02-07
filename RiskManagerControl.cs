@@ -13374,35 +13374,40 @@ namespace Risk_Manager
                 AutoScroll = true
             };
             
-            // Header with navigation
+            // Header with reorganized layout
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 100,
+                Height = 60,
                 BackColor = DarkBackground,
-                Padding = new Padding(0, 10, 0, 10)
+                Padding = new Padding(10, 10, 10, 10)
             };
             
-            // "Trading Calendar" title label
+            int currentX = 10;
+            Color blueHighlight = Color.FromArgb(41, 128, 185);
+            
+            // "Trading Calendar" title label - FAR LEFT
             var titleLabel = new Label
             {
                 Name = "TradingCalendarTitle",
                 Text = "Trading Calendar",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Location = new Point(0, 5)
+                Location = new Point(currentX, 15)
             };
             headerPanel.Controls.Add(titleLabel);
+            currentX += 180; // Space for title
             
-            // Previous month button (moved left)
+            // Previous month button - navigation arrows get blue background
             var prevButton = new Button
             {
+                Name = "PrevMonthButton",
                 Text = "◀",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                Size = new Size(40, 40),
-                Location = new Point(0, 45),
-                BackColor = CardBackground,
+                Size = new Size(35, 35),
+                Location = new Point(currentX, 10),
+                BackColor = blueHighlight, // Blue background for navigation
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand
@@ -13414,27 +13419,30 @@ namespace Risk_Manager
                 RefreshCalendarPage();
             };
             headerPanel.Controls.Add(prevButton);
+            currentX += 40;
             
-            // Month/Year label (centered between arrows)
+            // Month/Year label (between arrows)
             var monthYearLabel = new Label
             {
                 Name = "MonthYearLabel",
                 Text = currentCalendarMonth.ToString("MMMM yyyy"),
-                Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Location = new Point(50, 48)
+                Location = new Point(currentX, 15)
             };
             headerPanel.Controls.Add(monthYearLabel);
+            currentX += 160; // Space for month/year
             
-            // Next month button (positioned after month/year label)
+            // Next month button
             var nextButton = new Button
             {
+                Name = "NextMonthButton",
                 Text = "▶",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                Size = new Size(40, 40),
-                Location = new Point(250, 45),
-                BackColor = CardBackground,
+                Size = new Size(35, 35),
+                Location = new Point(currentX, 10),
+                BackColor = blueHighlight, // Blue background for navigation
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand
@@ -13446,24 +13454,25 @@ namespace Risk_Manager
                 RefreshCalendarPage();
             };
             headerPanel.Controls.Add(nextButton);
+            currentX += 45;
             
-            // Toggle buttons for Plan/P&L mode
-            var togglePanel = new FlowLayoutPanel
-            {
-                Location = new Point(450, 45),
-                Size = new Size(300, 40),
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false
-            };
+            // Inline monthly stats - between navigation and toggle buttons
+            var inlineStatsPanel = CreateInlineMonthlyStats();
+            inlineStatsPanel.Location = new Point(currentX, 10);
+            headerPanel.Controls.Add(inlineStatsPanel);
+            currentX += inlineStatsPanel.Width + 20;
             
+            // Toggle buttons for Plan/P&L mode - FAR RIGHT
             var plToggle = new Button
             {
+                Name = "PLToggle",
                 Text = "P&L",
-                Size = new Size(100, 35),
-                BackColor = showPlanMode ? CardBackground : Color.FromArgb(41, 128, 185), // Blue when selected
+                Size = new Size(80, 35),
+                BackColor = showPlanMode ? CardBackground : blueHighlight, // Blue when selected
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
+                Location = new Point(currentX, 10),
                 Tag = "PLToggle"
             };
             plToggle.FlatAppearance.BorderSize = 0;
@@ -13472,17 +13481,19 @@ namespace Risk_Manager
                 showPlanMode = false;
                 RefreshCalendarPage();
             };
-            togglePanel.Controls.Add(plToggle);
+            headerPanel.Controls.Add(plToggle);
+            currentX += 85;
             
             var planToggle = new Button
             {
+                Name = "PlanToggle",
                 Text = "Plan",
-                Size = new Size(100, 35),
-                BackColor = showPlanMode ? Color.FromArgb(41, 128, 185) : CardBackground, // Blue when selected
+                Size = new Size(80, 35),
+                BackColor = showPlanMode ? blueHighlight : CardBackground, // Blue when selected
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Margin = new Padding(10, 0, 0, 0),
+                Location = new Point(currentX, 10),
                 Tag = "PlanToggle"
             };
             planToggle.FlatAppearance.BorderSize = 0;
@@ -13491,14 +13502,7 @@ namespace Risk_Manager
                 showPlanMode = true;
                 RefreshCalendarPage();
             };
-            togglePanel.Controls.Add(planToggle);
-            
-            headerPanel.Controls.Add(togglePanel);
-            
-            // Monthly stats panel
-            var statsPanel = CreateCalendarStatsPanel();
-            statsPanel.Dock = DockStyle.Top;
-            statsPanel.Height = 100;
+            headerPanel.Controls.Add(planToggle);
             
             // Calendar grid panel
             var calendarPanel = CreateCalendarGrid();
@@ -13510,7 +13514,6 @@ namespace Risk_Manager
             
             contentPanel.Controls.Add(legendPanel);
             contentPanel.Controls.Add(calendarPanel);
-            contentPanel.Controls.Add(statsPanel);
             contentPanel.Controls.Add(headerPanel);
             
             pagePanel.Controls.Add(contentPanel);
@@ -13548,6 +13551,20 @@ namespace Risk_Manager
             if (planToggle != null)
                 planToggle.BackColor = showPlanMode ? Color.FromArgb(41, 128, 185) : CardBackground;
             
+            // Update inline monthly stats panel
+            var oldInlineStats = FindControlByName(calendarPage, "InlineMonthlyStats") as Panel;
+            if (oldInlineStats != null)
+            {
+                var headerPanel = oldInlineStats.Parent;
+                var statsLocation = oldInlineStats.Location;
+                headerPanel.Controls.Remove(oldInlineStats);
+                oldInlineStats.Dispose();
+                
+                var newInlineStats = CreateInlineMonthlyStats();
+                newInlineStats.Location = statsLocation;
+                headerPanel.Controls.Add(newInlineStats);
+            }
+            
             // Refresh the calendar grid
             var contentPanel = calendarPage.Controls[0] as Panel;
             if (contentPanel != null)
@@ -13574,27 +13591,6 @@ namespace Risk_Manager
                 newGrid.Dock = DockStyle.Top;
                 contentPanel.Controls.Add(newGrid);
                 contentPanel.Controls.SetChildIndex(newGrid, 0); // Move to top
-                
-                // Refresh stats panel
-                Control oldStats = null;
-                foreach (Control ctrl in contentPanel.Controls)
-                {
-                    if (ctrl.Name == "CalendarStatsPanel")
-                    {
-                        oldStats = ctrl;
-                        break;
-                    }
-                }
-                
-                if (oldStats != null)
-                {
-                    contentPanel.Controls.Remove(oldStats);
-                    oldStats.Dispose();
-                }
-                
-                var newStats = CreateCalendarStatsPanel();
-                newStats.Dock = DockStyle.Top;
-                contentPanel.Controls.Add(newStats);
                 contentPanel.Controls.SetChildIndex(newStats, 1); // Move after grid
                 
                 // Refresh legend panel
@@ -13676,6 +13672,172 @@ namespace Risk_Manager
                 Location = new Point(0, 35)
             };
             panel.Controls.Add(statsLabel);
+            
+            return panel;
+        }
+        
+        /// <summary>
+        /// Creates inline monthly stats panel for header (mode-specific)
+        /// </summary>
+        private Panel CreateInlineMonthlyStats()
+        {
+            var panel = new Panel
+            {
+                Name = "InlineMonthlyStats",
+                BackColor = DarkBackground,
+                AutoSize = true,
+                Height = 35
+            };
+            
+            var accountNumber = GetSelectedAccountNumber();
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+            var monthTrades = trades.Where(t => t.Date.Year == currentCalendarMonth.Year && 
+                                               t.Date.Month == currentCalendarMonth.Month).ToList();
+            
+            int tradedDays = monthTrades.Select(t => t.Date.Date).Distinct().Count();
+            decimal monthlyNetPL = monthTrades.Sum(t => t.NetPL);
+            
+            // Calculate plan-followed days (days where >= 70% of trades followed plan)
+            int planFollowedDays = monthTrades
+                .GroupBy(t => t.Date.Date)
+                .Count(g =>
+                {
+                    var total = g.Count();
+                    if (total == 0) return false;
+                    var yesCount = g.Count(t => t.FollowedPlan);
+                    return (yesCount * 100.0) / total >= 70.0;
+                });
+            
+            Color blueHighlight = Color.FromArgb(41, 128, 185);
+            Color positiveColor = Color.FromArgb(110, 231, 183); // Green
+            Color negativeColor = Color.FromArgb(253, 164, 165); // Pink/Red
+            
+            var flowPanel = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = false,
+                Margin = new Padding(0)
+            };
+            
+            if (showPlanMode)
+            {
+                // Plan Mode: "Monthly stats: Days Traded and Days Followed"
+                // Days Followed has blue background
+                
+                var label1 = new Label
+                {
+                    Text = "Monthly stats: ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0)
+                };
+                flowPanel.Controls.Add(label1);
+                
+                var label2 = new Label
+                {
+                    Text = $"{tradedDays}",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 3, 0)
+                };
+                flowPanel.Controls.Add(label2);
+                
+                var label3 = new Label
+                {
+                    Text = "Days Traded and ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0)
+                };
+                flowPanel.Controls.Add(label3);
+                
+                var label4 = new Label
+                {
+                    Text = $" {planFollowedDays} ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = blueHighlight,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 3, 0),
+                    Padding = new Padding(3, 1, 3, 1)
+                };
+                flowPanel.Controls.Add(label4);
+                
+                var label5 = new Label
+                {
+                    Text = "Days Followed",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0)
+                };
+                flowPanel.Controls.Add(label5);
+            }
+            else
+            {
+                // P&L Mode: "Monthly stats: P&L for the month then Days traded"
+                // Days Traded has blue background, dollar amount is green/red based on value
+                
+                var label1 = new Label
+                {
+                    Text = "Monthly stats: ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0)
+                };
+                flowPanel.Controls.Add(label1);
+                
+                var plColor = monthlyNetPL >= 0 ? positiveColor : negativeColor;
+                var label2 = new Label
+                {
+                    Text = $"{monthlyNetPL:+$#,##0.00;-$#,##0.00;$0.00}",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = plColor,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 3, 0)
+                };
+                flowPanel.Controls.Add(label2);
+                
+                var label3 = new Label
+                {
+                    Text = "for the month then ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0)
+                };
+                flowPanel.Controls.Add(label3);
+                
+                var label4 = new Label
+                {
+                    Text = $" {tradedDays} ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = blueHighlight,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 3, 0),
+                    Padding = new Padding(3, 1, 3, 1)
+                };
+                flowPanel.Controls.Add(label4);
+                
+                var label5 = new Label
+                {
+                    Text = "Days Traded",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0)
+                };
+                flowPanel.Controls.Add(label5);
+            }
+            
+            panel.Controls.Add(flowPanel);
+            panel.Width = flowPanel.PreferredSize.Width;
             
             return panel;
         }
