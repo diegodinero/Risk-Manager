@@ -15845,6 +15845,9 @@ namespace Risk_Manager
             var trades = TradingJournalService.Instance.GetTrades(accountNumber);
             var models = TradingJournalService.Instance.GetModels(accountNumber);
 
+            // Debug output for data loading
+            System.Diagnostics.Debug.WriteLine($"Dashboard Data: Account={accountNumber}, Trades={trades.Count}, Models={models.Count}, Stats.TotalTrades={stats.TotalTrades}");
+
             // Calculate additional metrics
             int followedPlan = trades.Count(t => t.FollowedPlan);
             int violatedPlan = trades.Count - followedPlan;
@@ -15995,13 +15998,13 @@ namespace Risk_Manager
                 }
             };
 
-            // Icon - positioned on the left with smaller size
+            // Icon - positioned on the left with minimal size
             var iconLabel = new Label
             {
-                Width = 22,
+                Width = 18,
                 Dock = DockStyle.Left,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Segoe UI Emoji", 12, FontStyle.Regular)
+                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular)
             };
 
             // Set icon and color based on label
@@ -16009,22 +16012,22 @@ namespace Risk_Manager
             {
                 case "Plan Adherence":
                     iconLabel.Text = "\uE9D2"; // Segoe MDL2 Assets icon
-                    iconLabel.Font = new Font("Segoe MDL2 Assets", 12, FontStyle.Regular);
+                    iconLabel.Font = new Font("Segoe MDL2 Assets", 10, FontStyle.Regular);
                     iconLabel.ForeColor = Color.FromArgb(91, 140, 255); // Blue
                     break;
                 case "Win Rate":
                     iconLabel.Text = "\uE74C"; // Segoe MDL2 Assets icon
-                    iconLabel.Font = new Font("Segoe MDL2 Assets", 12, FontStyle.Regular);
+                    iconLabel.Font = new Font("Segoe MDL2 Assets", 10, FontStyle.Regular);
                     iconLabel.ForeColor = Color.FromArgb(71, 199, 132); // Green
                     break;
                 case "Profit Factor":
                     iconLabel.Text = "💰"; // Money bag emoji
-                    iconLabel.Font = new Font("Segoe UI Emoji", 12, FontStyle.Regular);
+                    iconLabel.Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular);
                     iconLabel.ForeColor = Color.FromArgb(255, 200, 91); // Orange
                     break;
                 case "Total P&L":
                     iconLabel.Text = "💵"; // Dollar emoji
-                    iconLabel.Font = new Font("Segoe UI Emoji", 12, FontStyle.Regular);
+                    iconLabel.Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular);
                     iconLabel.ForeColor = Color.FromArgb(71, 199, 132); // Green
                     break;
                 default:
@@ -16275,14 +16278,23 @@ namespace Risk_Manager
             
             // Get models from database - use same logic as TradeLog
             // Load models exactly like TradeEntryDialog does
+            // Debug output
+            System.Diagnostics.Debug.WriteLine($"Dashboard: Loading models. Total count: {models.Count}");
+            
             modelSelector.Items.Add("All Models");
             foreach (var model in models)
             {
                 if (!string.IsNullOrEmpty(model.Name))
                 {
+                    System.Diagnostics.Debug.WriteLine($"Dashboard: Adding model '{model.Name}' to dropdown");
                     modelSelector.Items.Add(model.Name);
                 }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"Dashboard: Skipping model with empty name. ID: {model.Id}");
+                }
             }
+            System.Diagnostics.Debug.WriteLine($"Dashboard: Model dropdown has {modelSelector.Items.Count} items (including 'All Models')");
             modelSelector.SelectedIndex = 0;
             headerPanel.Controls.Add(modelSelector);
 
