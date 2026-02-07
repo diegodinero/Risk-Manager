@@ -16195,14 +16195,37 @@ namespace Risk_Manager
                 BackColor = DarkBackground
             };
 
-            // Icon for Model section (use emoji)
+            // Get unique models from trades
+            var modelNames = trades.Select(t => t.Model).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().OrderBy(m => m).ToList();
+            
+            // Add model selector ComboBox FIRST (for proper right-docking)
+            var modelSelector = new ComboBox
+            {
+                Dock = DockStyle.Right,
+                Width = 150,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Margin = new Padding(10, 10, 0, 5)
+            };
+            modelSelector.Items.Add("All Models");
+            foreach (var model in modelNames)
+            {
+                modelSelector.Items.Add(model);
+            }
+            modelSelector.SelectedIndex = 0;
+            headerPanel.Controls.Add(modelSelector);
+
+            // Icon for Model section (Segoe MDL2 Assets - chart icon)
             var iconLabel = new Label
             {
-                Text = "📊",
+                Text = "\uE719", // Chart icon from Segoe MDL2 Assets
                 Dock = DockStyle.Left,
                 Width = 30,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI Emoji", 18, FontStyle.Regular),
+                Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(0, 7, 0, 0)
             };
@@ -16219,28 +16242,6 @@ namespace Risk_Manager
                 Padding = new Padding(5, 7, 0, 0)
             };
             headerPanel.Controls.Add(titleLabel);
-
-            // Get unique models from trades
-            var modelNames = trades.Select(t => t.Model).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().OrderBy(m => m).ToList();
-            
-            // Add model selector ComboBox
-            var modelSelector = new ComboBox
-            {
-                Dock = DockStyle.Right,
-                Width = 150,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                ForeColor = TextWhite,
-                BackColor = CardBackground,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(0, 5, 0, 5)
-            };
-            modelSelector.Items.Add("All Models");
-            foreach (var model in modelNames)
-            {
-                modelSelector.Items.Add(model);
-            }
-            modelSelector.SelectedIndex = 0;
             
             // Store reference for event handler
             var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
@@ -16267,7 +16268,6 @@ namespace Risk_Manager
                 statsContainer.Controls.Add(statsPanel);
             };
             
-            headerPanel.Controls.Add(modelSelector);
             sectionPanel.Controls.Add(headerPanel);
 
             if (modelNames.Count == 0)
@@ -16377,14 +16377,37 @@ namespace Risk_Manager
                 BackColor = DarkBackground
             };
 
-            // Icon for Day section (use emoji)
+            // Day selector ComboBox - ADD FIRST for proper right-docking
+            var daySelector = new ComboBox
+            {
+                Dock = DockStyle.Right,
+                Width = 130,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Margin = new Padding(10, 10, 0, 5)
+            };
+            daySelector.Items.Add("All Days");
+            daySelector.Items.Add("Monday");
+            daySelector.Items.Add("Tuesday");
+            daySelector.Items.Add("Wednesday");
+            daySelector.Items.Add("Thursday");
+            daySelector.Items.Add("Friday");
+            daySelector.Items.Add("Saturday");
+            daySelector.Items.Add("Sunday");
+            daySelector.SelectedIndex = 0;
+            headerPanel.Controls.Add(daySelector);
+
+            // Icon for Day section (Segoe MDL2 Assets - calendar icon)
             var iconLabel = new Label
             {
-                Text = "📅",
+                Text = "\uE787", // Calendar icon from Segoe MDL2 Assets
                 Dock = DockStyle.Left,
                 Width = 30,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI Emoji", 18, FontStyle.Regular),
+                Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(0, 7, 0, 0)
             };
@@ -16401,28 +16424,6 @@ namespace Risk_Manager
                 Padding = new Padding(5, 7, 0, 0)
             };
             headerPanel.Controls.Add(titleLabel);
-
-            // Day selector ComboBox
-            var daySelector = new ComboBox
-            {
-                Dock = DockStyle.Right,
-                Width = 130,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                ForeColor = TextWhite,
-                BackColor = CardBackground,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(0, 5, 0, 5)
-            };
-            daySelector.Items.Add("All Days");
-            daySelector.Items.Add("Monday");
-            daySelector.Items.Add("Tuesday");
-            daySelector.Items.Add("Wednesday");
-            daySelector.Items.Add("Thursday");
-            daySelector.Items.Add("Friday");
-            daySelector.Items.Add("Saturday");
-            daySelector.Items.Add("Sunday");
-            daySelector.SelectedIndex = 0;
 
             // Store reference for event handler
             var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
@@ -16451,7 +16452,6 @@ namespace Risk_Manager
                 statsContainer.Controls.Add(statsPanel);
             };
 
-            headerPanel.Controls.Add(daySelector);
             sectionPanel.Controls.Add(headerPanel);
 
             // Initial display with all days
@@ -16545,10 +16545,33 @@ namespace Risk_Manager
                 BackColor = DarkBackground
             };
 
-            // Icon for Session section (use emoji)
+            // Get unique sessions from trades
+            var sessionNames = trades.Select(t => t.Session).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
+
+            // Session selector ComboBox - ADD FIRST for proper right-docking
+            var sessionSelector = new ComboBox
+            {
+                Dock = DockStyle.Right,
+                Width = 130,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Margin = new Padding(10, 10, 0, 5)
+            };
+            sessionSelector.Items.Add("All Sessions");
+            foreach (var session in sessionNames)
+            {
+                sessionSelector.Items.Add(session);
+            }
+            sessionSelector.SelectedIndex = 0;
+            headerPanel.Controls.Add(sessionSelector);
+
+            // Icon for Session section (alarm clock emoji - matches TradingJournalApp)
             var iconLabel = new Label
             {
-                Text = "🕐",
+                Text = "⏰", // Alarm clock emoji
                 Dock = DockStyle.Left,
                 Width = 30,
                 ForeColor = TextWhite,
@@ -16569,28 +16592,6 @@ namespace Risk_Manager
                 Padding = new Padding(5, 7, 0, 0)
             };
             headerPanel.Controls.Add(titleLabel);
-
-            // Get unique sessions from trades
-            var sessionNames = trades.Select(t => t.Session).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
-
-            // Session selector ComboBox
-            var sessionSelector = new ComboBox
-            {
-                Dock = DockStyle.Right,
-                Width = 130,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                ForeColor = TextWhite,
-                BackColor = CardBackground,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(0, 5, 0, 5)
-            };
-            sessionSelector.Items.Add("All Sessions");
-            foreach (var session in sessionNames)
-            {
-                sessionSelector.Items.Add(session);
-            }
-            sessionSelector.SelectedIndex = 0;
 
             // Store reference for event handler
             var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
@@ -16617,7 +16618,6 @@ namespace Risk_Manager
                 statsContainer.Controls.Add(statsPanel);
             };
 
-            headerPanel.Controls.Add(sessionSelector);
             sectionPanel.Controls.Add(headerPanel);
 
             // Initial display with all sessions
