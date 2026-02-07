@@ -2332,7 +2332,7 @@ namespace Risk_Manager
             try
             {
                 // Use journal.png from Resources
-                return Properties.Resources.journal;
+                return Properties.Resources.diary;
             }
             catch (Exception ex)
             {
