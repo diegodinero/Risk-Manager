@@ -15867,6 +15867,178 @@ namespace Risk_Manager
             }
             System.Diagnostics.Debug.WriteLine($"===================================");
 
+            // CREATE VISIBLE DEBUG LABEL WITH TWO SEPARATE LINES AND ACCOUNT DIAGNOSIS
+            var debugPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                BackColor = Color.Yellow,
+                ForeColor = Color.Black,
+                Padding = new Padding(10),
+                AutoSize = true
+            };
+            
+            var debugText = new StringBuilder();
+            debugText.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+            debugText.AppendLine("DEBUG INFO - DATA LOCATIONS & ACCOUNT DIAGNOSIS");
+            debugText.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+            debugText.AppendLine();
+            debugText.AppendLine("1. TradeLog WRITES to:");
+            debugText.AppendLine($"   File: trading_journal.json");
+            debugText.AppendLine($"   Path: {dataDir}");
+            debugText.AppendLine();
+            debugText.AppendLine("2. Dashboard READS from:");
+            debugText.AppendLine($"   File: trading_journal.json (SAME FILE)");
+            debugText.AppendLine($"   Path: {dataDir}");
+            debugText.AppendLine($"   Account Used by Dashboard: '{accountNumber}'");
+            debugText.AppendLine();
+            debugText.AppendLine("Current Status:");
+            debugText.AppendLine($"   Journal File Exists: {File.Exists(journalFile)}");
+            debugText.AppendLine($"   Journal File Size: {(File.Exists(journalFile) ? new FileInfo(journalFile).Length : 0)} bytes");
+            debugText.AppendLine($"   Models File Exists: {File.Exists(modelsFile)}");
+            debugText.AppendLine($"   Models File Size: {(File.Exists(modelsFile) ? new FileInfo(modelsFile).Length : 0)} bytes");
+            debugText.AppendLine($"   Trades Loaded: {trades.Count}");
+            debugText.AppendLine($"   Models Loaded: {models.Count}");
+            debugText.AppendLine();
+            debugText.AppendLine("───────────────────────────────────────────────────────────────────────────────");
+            
+            // Parse JSON files to find ALL account keys
+            var journalAccounts = new List<string>();
+            var modelsAccounts = new List<string>();
+            var journalAccountCounts = new Dictionary<string, int>();
+            var modelsAccountCounts = new Dictionary<string, int>();
+            
+            try
+            {
+                if (File.Exists(journalFile))
+                {
+                    var journalJson = File.ReadAllText(journalFile);
+                    if (!string.IsNullOrWhiteSpace(journalJson) && journalJson.Length > 2)
+                    {
+                        var journalData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(journalJson);
+                        if (journalData != null)
+                        {
+                            foreach (var kvp in journalData)
+                            {
+                                journalAccounts.Add(kvp.Key);
+                                int count = 0;
+                                if (kvp.Value.ValueKind == System.Text.Json.JsonValueKind.Array)
+                                {
+                                    count = kvp.Value.GetArrayLength();
+                                }
+                                journalAccountCounts[kvp.Key] = count;
+                            }
+                        }
+                    }
+                }
+                
+                if (File.Exists(modelsFile))
+                {
+                    var modelsJson = File.ReadAllText(modelsFile);
+                    if (!string.IsNullOrWhiteSpace(modelsJson) && modelsJson.Length > 2)
+                    {
+                        var modelsData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(modelsJson);
+                        if (modelsData != null)
+                        {
+                            foreach (var kvp in modelsData)
+                            {
+                                modelsAccounts.Add(kvp.Key);
+                                int count = 0;
+                                if (kvp.Value.ValueKind == System.Text.Json.JsonValueKind.Array)
+                                {
+                                    count = kvp.Value.GetArrayLength();
+                                }
+                                modelsAccountCounts[kvp.Key] = count;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                debugText.AppendLine($"Error reading JSON files: {ex.Message}");
+            }
+            
+            debugText.AppendLine("ACCOUNTS FOUND IN FILES:");
+            debugText.AppendLine();
+            
+            if (journalAccountCounts.Count > 0)
+            {
+                debugText.AppendLine("trading_journal.json contains:");
+                foreach (var kvp in journalAccountCounts.OrderBy(k => k.Key))
+                {
+                    debugText.AppendLine($"  • {kvp.Key} - {kvp.Value} trade(s)");
+                }
+            }
+            else
+            {
+                debugText.AppendLine("trading_journal.json: No accounts found (file empty or doesn't exist)");
+            }
+            
+            debugText.AppendLine();
+            
+            if (modelsAccountCounts.Count > 0)
+            {
+                debugText.AppendLine("trading_models.json contains:");
+                foreach (var kvp in modelsAccountCounts.OrderBy(k => k.Key))
+                {
+                    debugText.AppendLine($"  • {kvp.Key} - {kvp.Value} model(s)");
+                }
+            }
+            else
+            {
+                debugText.AppendLine("trading_models.json: No accounts found (file empty or doesn't exist)");
+            }
+            
+            debugText.AppendLine();
+            debugText.AppendLine("───────────────────────────────────────────────────────────────────────────────");
+            
+            // Check for account mismatch
+            bool accountInJournal = journalAccounts.Contains(accountNumber);
+            bool accountInModels = modelsAccounts.Contains(accountNumber);
+            
+            if (!accountInJournal && journalAccounts.Count > 0)
+            {
+                debugText.AppendLine();
+                debugText.AppendLine("⚠️ ACCOUNT MISMATCH WARNING!");
+                debugText.AppendLine($"   Dashboard is using account: '{accountNumber}'");
+                debugText.AppendLine($"   But no trades found for this account in trading_journal.json");
+                debugText.AppendLine();
+                debugText.AppendLine($"   Accounts with trades: {string.Join(", ", journalAccounts)}");
+                debugText.AppendLine();
+                debugText.AppendLine("   SOLUTION:");
+                debugText.AppendLine("   1. Switch Dashboard to one of the accounts above, OR");
+                debugText.AppendLine("   2. Add trades for current account via TradeLog");
+                debugText.AppendLine();
+            }
+            else if (accountInJournal && trades.Count > 0)
+            {
+                debugText.AppendLine();
+                debugText.AppendLine($"✓ Account '{accountNumber}' found in files with data");
+                debugText.AppendLine();
+            }
+            else if (journalAccounts.Count == 0)
+            {
+                debugText.AppendLine();
+                debugText.AppendLine("ℹ No data in files yet - Add trades via TradeLog to populate dashboard");
+                debugText.AppendLine();
+            }
+            
+            debugText.AppendLine("═══════════════════════════════════════════════════════════════════════════════");
+            
+            var debugLabel = new Label
+            {
+                Text = debugText.ToString(),
+                Dock = DockStyle.Fill,
+                Font = new Font("Consolas", 9, FontStyle.Regular),
+                ForeColor = Color.Black,
+                BackColor = Color.Yellow,
+                AutoSize = true,
+                Padding = new Padding(5)
+            };
+            
+            debugPanel.Controls.Add(debugLabel);
+            pagePanel.Controls.Add(debugPanel);
+
             // Calculate additional metrics
             int followedPlan = trades.Count(t => t.FollowedPlan);
             int violatedPlan = trades.Count - followedPlan;
