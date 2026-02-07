@@ -15845,8 +15845,27 @@ namespace Risk_Manager
             var trades = TradingJournalService.Instance.GetTrades(accountNumber);
             var models = TradingJournalService.Instance.GetModels(accountNumber);
 
-            // Debug output for data loading
-            System.Diagnostics.Debug.WriteLine($"Dashboard Data: Account={accountNumber}, Trades={trades.Count}, Models={models.Count}, Stats.TotalTrades={stats.TotalTrades}");
+            // Enhanced debug output for data loading - verify JSON is being read
+            var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RiskManager", "Journal");
+            var journalFile = Path.Combine(dataDir, "trading_journal.json");
+            var modelsFile = Path.Combine(dataDir, "trading_models.json");
+            
+            System.Diagnostics.Debug.WriteLine($"=== DASHBOARD JSON VERIFICATION ===");
+            System.Diagnostics.Debug.WriteLine($"Data Directory: {dataDir}");
+            System.Diagnostics.Debug.WriteLine($"Journal File Exists: {File.Exists(journalFile)} - Size: {(File.Exists(journalFile) ? new FileInfo(journalFile).Length : 0)} bytes");
+            System.Diagnostics.Debug.WriteLine($"Models File Exists: {File.Exists(modelsFile)} - Size: {(File.Exists(modelsFile) ? new FileInfo(modelsFile).Length : 0)} bytes");
+            System.Diagnostics.Debug.WriteLine($"Account Number: '{accountNumber}'");
+            System.Diagnostics.Debug.WriteLine($"Trades Loaded: {trades.Count}");
+            System.Diagnostics.Debug.WriteLine($"Models Loaded: {models.Count}");
+            System.Diagnostics.Debug.WriteLine($"Stats.TotalTrades: {stats.TotalTrades}");
+            
+            if (trades.Count > 0) {
+                System.Diagnostics.Debug.WriteLine($"First Trade: Date={trades[0].Date:yyyy-MM-dd}, Symbol={trades[0].Symbol}, Account={trades[0].Account}");
+            }
+            if (models.Count > 0) {
+                System.Diagnostics.Debug.WriteLine($"First Model: Name='{models[0].Name}', Account={models[0].Account}");
+            }
+            System.Diagnostics.Debug.WriteLine($"===================================");
 
             // Calculate additional metrics
             int followedPlan = trades.Count(t => t.FollowedPlan);
