@@ -13434,10 +13434,6 @@ namespace Risk_Manager
             
             Color blueHighlight = Color.FromArgb(41, 128, 185);
             
-            // Calculate centered position for month/year
-            int monthLabelWidth = 160;
-            int centerX = (calendarWidth - monthLabelWidth) / 2;
-            
             // "Trading Calendar" title label - FAR LEFT
             var titleLabel = new Label
             {
@@ -13450,14 +13446,17 @@ namespace Risk_Manager
             };
             headerPanel.Controls.Add(titleLabel);
             
-            // Previous month button - left of center (symmetric spacing)
+            // Navigation group positioning - month between arrows
+            int navGroupX = 200; // Start position for navigation group
+            
+            // Previous month button - immediately left of month
             var prevButton = new Button
             {
                 Name = "PrevMonthButton",
                 Text = "◀",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Size = new Size(35, 35),
-                Location = new Point(centerX - monthLabelWidth/2 - 40, 10), // Symmetric with next button
+                Location = new Point(navGroupX, 10),
                 BackColor = blueHighlight, // Blue background for navigation
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
@@ -13470,9 +13469,9 @@ namespace Risk_Manager
                 currentCalendarMonth = currentCalendarMonth.AddMonths(-1);
                 RefreshCalendarPage();
             };
-            // prevButton added later to fix z-order
             
-            // Month/Year label - CENTERED
+            // Month/Year label - between arrows
+            int monthLabelWidth = 160;
             var monthYearLabel = new Label
             {
                 Name = "MonthYearLabel",
@@ -13480,18 +13479,18 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Location = new Point(centerX, 15)
+                Location = new Point(navGroupX + 40, 15) // 5px from prev button
             };
             headerPanel.Controls.Add(monthYearLabel);
             
-            // Next month button - right of center (symmetric spacing)
+            // Next month button - immediately right of month
             var nextButton = new Button
             {
                 Name = "NextMonthButton",
                 Text = "▶",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Size = new Size(35, 35),
-                Location = new Point(centerX + monthLabelWidth/2 + 5, 10), // Symmetric with prev button
+                Location = new Point(navGroupX + 40 + monthLabelWidth + 5, 10), // 5px from month
                 BackColor = blueHighlight, // Blue background for navigation
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
@@ -13504,20 +13503,15 @@ namespace Risk_Manager
                 currentCalendarMonth = currentCalendarMonth.AddMonths(1);
                 RefreshCalendarPage();
             };
-            // Inline monthly stats - positioned after next button with spacing, constrained to not overlap toggles
-            int toggleStartX = calendarWidth - 175; // Room for both toggle buttons
-            var inlineStatsPanel = CreateInlineMonthlyStats();
-            inlineStatsPanel.Location = new Point(nextButton.Right + 10, 10);
-            inlineStatsPanel.MaximumSize = new Size(toggleStartX - (nextButton.Right + 10) - 20, 40); // Prevent overlap with toggles
-            headerPanel.Controls.Add(inlineStatsPanel);
             
-            // Add navigation buttons after stats panel so they're on top (fix z-order)
+            // Add navigation buttons first
             headerPanel.Controls.Add(prevButton);
             headerPanel.Controls.Add(nextButton);
             prevButton.BringToFront(); // Ensure buttons are visible on top
             nextButton.BringToFront();
             
-            // Toggle buttons for Plan/P&L mode - FAR RIGHT (at calendar edge)
+            // Toggle buttons for Plan/P&L mode
+            int toggleStartX = 650; // Position after navigation group
             var plToggle = new Button
             {
                 Name = "PLToggle",
@@ -13559,6 +13553,12 @@ namespace Risk_Manager
                 RefreshCalendarPage();
             };
             headerPanel.Controls.Add(planToggle);
+            
+            // Inline monthly stats - positioned between toggles and right arrow
+            var inlineStatsPanel = CreateInlineMonthlyStats();
+            inlineStatsPanel.Location = new Point(toggleStartX + 175 + 10, 10); // After both toggles
+            inlineStatsPanel.MaximumSize = new Size(200, 40);
+            headerPanel.Controls.Add(inlineStatsPanel);
             
             // Calendar grid panel
             var calendarPanel = CreateCalendarGrid();
@@ -13984,6 +13984,8 @@ namespace Risk_Manager
             
             // Add weekly statistics panels
             int totalRows = row + (col > 0 ? 1 : 0);
+            int gridHeight = headerHeight + (totalRows * cellHeight);
+            
             for (int weekRow = 0; weekRow < totalRows; weekRow++)
             {
                 var weekTrades = weeklyTrades.ContainsKey(weekRow) ? weeklyTrades[weekRow] : new List<JournalTrade>();
@@ -13994,8 +13996,19 @@ namespace Risk_Manager
                 gridPanel.Controls.Add(weekStatsPanel);
             }
             
+            // Add vertical divider between calendar and weekly stats
+            var divider = new Panel
+            {
+                Name = "WeeklyStatsDivider",
+                Width = 3,
+                Height = gridHeight,
+                BackColor = DarkerBackground,
+                Location = new Point(7 * cellWidth - 5, 0) // Position just before weekly stats
+            };
+            gridPanel.Controls.Add(divider);
+            
             // Set final height and width
-            gridPanel.Height = headerHeight + (totalRows * cellHeight) + 20;
+            gridPanel.Height = gridHeight + 20;
             gridPanel.Width = (7 * cellWidth) + weeklyStatsWidth;
             
             return gridPanel;
@@ -14012,7 +14025,7 @@ namespace Risk_Manager
             int planFollowedCount = weekTrades.Count(t => t.FollowedPlan);
             double planPct = tradeCount > 0 ? (planFollowedCount * 100.0) / tradeCount : 0;
             
-            // Color the weekly panel based on plan adherence in Plan mode or win % in P&L mode
+            // Color the weekly panel based on plan adherence in Plan mode or P&L value in P&L mode
             Color panelColor = CardBackground;
             if (tradeCount > 0)
             {
@@ -14028,16 +14041,15 @@ namespace Risk_Manager
                 }
                 else
                 {
-                    // P&L mode: color by win percentage
-                    int colorWinCount = weekTrades.Count(t => t.Outcome == "Win");
-                    double colorWinPct = tradeCount > 0 ? (colorWinCount * 100.0) / tradeCount : 0;
+                    // P&L mode: color by actual P&L value
+                    decimal weeklyPL = weekTrades.Sum(t => t.NetPL);
                     
-                    if (colorWinPct >= 70)
+                    if (weeklyPL > 5) // Positive P&L
                         panelColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
-                    else if (colorWinPct >= 50)
-                        panelColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
-                    else
+                    else if (weeklyPL < -5) // Negative P&L
                         panelColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
+                    else // Breakeven (within ±$5)
+                        panelColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
                 }
             }
             
