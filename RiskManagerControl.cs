@@ -14157,9 +14157,14 @@ namespace Risk_Manager
                 // P&L Mode: Show profit/loss metrics
                 
                 // Weekly P&L total (colored by value)
-                Color plColor = weeklyPL >= 0 ? 
-                    Color.FromArgb(109, 231, 181) : // Green #6DE7B5
-                    Color.FromArgb(253, 164, 165);  // Red/Pink #FDA4A5
+                // Use distinct standard colors for readability
+                Color plColor;
+                if (weeklyPL > 5)
+                    plColor = Color.Green; // Standard green - readable on all backgrounds
+                else if (weeklyPL < -5)
+                    plColor = Color.Red; // Standard red - readable on all backgrounds
+                else
+                    plColor = Color.Orange; // Orange for breakeven - clearly distinct
                 var plLabel = new Label
                 {
                     Text = $"P&L: {weeklyPL:+$#,##0.00;-$#,##0.00;$0.00}",
