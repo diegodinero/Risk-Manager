@@ -14031,12 +14031,12 @@ namespace Risk_Manager
                 else
                 {
                     // P&L mode: color by win percentage
-                    int winCount = weekTrades.Count(t => t.Outcome == "Win");
-                    double winPct = tradeCount > 0 ? (winCount * 100.0) / tradeCount : 0;
+                    int colorWinCount = weekTrades.Count(t => t.Outcome == "Win");
+                    double colorWinPct = tradeCount > 0 ? (colorWinCount * 100.0) / tradeCount : 0;
                     
-                    if (winPct >= 70)
+                    if (colorWinPct >= 70)
                         panelColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
-                    else if (winPct >= 50)
+                    else if (colorWinPct >= 50)
                         panelColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
                     else
                         panelColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
