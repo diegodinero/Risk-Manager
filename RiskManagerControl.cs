@@ -13591,7 +13591,6 @@ namespace Risk_Manager
                 newGrid.Dock = DockStyle.Top;
                 contentPanel.Controls.Add(newGrid);
                 contentPanel.Controls.SetChildIndex(newGrid, 0); // Move to top
-                contentPanel.Controls.SetChildIndex(newStats, 1); // Move after grid
                 
                 // Refresh legend panel
                 Control oldLegend = null;
