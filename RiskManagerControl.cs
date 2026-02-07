@@ -13528,7 +13528,7 @@ namespace Risk_Manager
             var plToggle = new Button
             {
                 Name = "PLToggle",
-                Text = "P&L",
+                Text = "P&&L",
                 Size = new Size(80, 35),
                 BackColor = showPlanMode ? CardBackground : blueHighlight, // Blue when selected
                 ForeColor = Color.White,
