@@ -13446,17 +13446,31 @@ namespace Risk_Manager
             };
             headerPanel.Controls.Add(titleLabel);
             
-            // Navigation group positioning - month between arrows
-            int navGroupX = 200; // Start position for navigation group
+            // Navigation group positioning - center the month with arrows equally distant from text
+            int centerX = calendarWidth / 2;
+            string monthText = currentCalendarMonth.ToString("MMMM yyyy");
             
-            // Previous month button - immediately left of month
+            // Measure actual text width for precise positioning
+            float textWidth;
+            using (Graphics g = headerPanel.CreateGraphics())
+            {
+                SizeF textSize = g.MeasureString(monthText, new Font("Segoe UI", 14, FontStyle.Bold));
+                textWidth = textSize.Width;
+            }
+            
+            // Calculate positions for centered layout with equal arrow spacing
+            int monthX = (int)(centerX - textWidth / 2);
+            int prevX = (int)(centerX - textWidth / 2 - 10 - 35); // 10px gap from text, 35px button width
+            int nextX = (int)(centerX + textWidth / 2 + 10); // 10px gap from text
+            
+            // Previous month button - left of month with equal spacing
             var prevButton = new Button
             {
                 Name = "PrevMonthButton",
                 Text = "◀",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Size = new Size(35, 35),
-                Location = new Point(navGroupX, 10),
+                Location = new Point(prevX, 12), // Vertically centered
                 BackColor = blueHighlight, // Blue background for navigation
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
@@ -13470,27 +13484,26 @@ namespace Risk_Manager
                 RefreshCalendarPage();
             };
             
-            // Month/Year label - between arrows
-            int monthLabelWidth = 160;
+            // Month/Year label - centered in header
             var monthYearLabel = new Label
             {
                 Name = "MonthYearLabel",
-                Text = currentCalendarMonth.ToString("MMMM yyyy"),
+                Text = monthText,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Location = new Point(navGroupX + 40, 15) // 5px from prev button
+                Location = new Point(monthX, 17) // Vertically centered
             };
             headerPanel.Controls.Add(monthYearLabel);
             
-            // Next month button - immediately right of month
+            // Next month button - right of month with equal spacing
             var nextButton = new Button
             {
                 Name = "NextMonthButton",
                 Text = "▶",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Size = new Size(35, 35),
-                Location = new Point(navGroupX + 40 + monthLabelWidth + 5, 10), // 5px from month
+                Location = new Point(nextX, 12), // Vertically centered
                 BackColor = blueHighlight, // Blue background for navigation
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
@@ -13556,7 +13569,7 @@ namespace Risk_Manager
             
             // Inline monthly stats - positioned between navigation and toggles
             var inlineStatsPanel = CreateInlineMonthlyStats();
-            int statsX = navGroupX + 40 + monthLabelWidth + 5 + 40 + 10; // After next button + gap
+            int statsX = nextX + 40; // After next button + gap
             inlineStatsPanel.Location = new Point(statsX, 10);
             int maxStatsWidth = toggleStartX - statsX - 10; // Space between nav and toggles
             inlineStatsPanel.MaximumSize = new Size(maxStatsWidth, 40);
