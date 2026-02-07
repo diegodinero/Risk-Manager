@@ -13721,8 +13721,20 @@ namespace Risk_Manager
             
             if (showPlanMode)
             {
-                // Plan Mode: "Monthly stats: Days Traded and Days Followed"
-                // Days Followed has blue background
+                // Plan Mode: "Monthly stats: Days Followed then Days Traded"
+                // Days Followed colored by legend, Days Traded has blue background
+                
+                // Calculate plan percentage for coloring
+                double monthlyPlanPct = tradedDays > 0 ? (planFollowedDays * 100.0) / tradedDays : 0;
+                Color daysFollowedColor;
+                if (monthlyPlanPct >= 70)
+                    daysFollowedColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
+                else if (monthlyPlanPct >= 50)
+                    daysFollowedColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
+                else if (monthlyPlanPct > 0)
+                    daysFollowedColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
+                else
+                    daysFollowedColor = TextWhite; // No days
                 
                 var label1 = new Label
                 {
@@ -13734,11 +13746,12 @@ namespace Risk_Manager
                 };
                 flowPanel.Controls.Add(label1);
                 
+                // Days Followed number (colored by plan adherence)
                 var label2 = new Label
                 {
-                    Text = $"{tradedDays}",
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                    ForeColor = TextWhite,
+                    Text = $"{planFollowedDays}",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = daysFollowedColor,
                     AutoSize = true,
                     Margin = new Padding(0, 5, 3, 0)
                 };
@@ -13746,7 +13759,7 @@ namespace Risk_Manager
                 
                 var label3 = new Label
                 {
-                    Text = "Days Traded and ",
+                    Text = "Days Followed then ",
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
                     ForeColor = TextWhite,
                     AutoSize = true,
@@ -13754,9 +13767,10 @@ namespace Risk_Manager
                 };
                 flowPanel.Controls.Add(label3);
                 
+                // Days Traded number (blue background)
                 var label4 = new Label
                 {
-                    Text = $" {planFollowedDays} ",
+                    Text = $" {tradedDays} ",
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = Color.White,
                     BackColor = blueHighlight,
@@ -13768,7 +13782,7 @@ namespace Risk_Manager
                 
                 var label5 = new Label
                 {
-                    Text = "Days Followed",
+                    Text = "Days Traded",
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
                     ForeColor = TextWhite,
                     AutoSize = true,
@@ -13954,9 +13968,25 @@ namespace Risk_Manager
         {
             int tradeCount = weekTrades.Count;
             
+            // Calculate plan percentage first
+            int planFollowedCount = weekTrades.Count(t => t.FollowedPlan);
+            double planPct = tradeCount > 0 ? (planFollowedCount * 100.0) / tradeCount : 0;
+            
+            // Color the weekly panel based on plan adherence (matching legend)
+            Color panelColor = CardBackground;
+            if (tradeCount > 0 && showPlanMode)
+            {
+                if (planPct >= 70)
+                    panelColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
+                else if (planPct >= 50)
+                    panelColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
+                else
+                    panelColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
+            }
+            
             var panel = new Panel
             {
-                BackColor = CardBackground,
+                BackColor = panelColor,
                 BorderStyle = BorderStyle.FixedSingle
             };
             
@@ -13971,8 +14001,6 @@ namespace Risk_Manager
             int lossCount = weekTrades.Count(t => t.Outcome == "Loss");
             decimal weeklyPL = weekTrades.Sum(t => t.NetPL);
             double winPct = (winCount * 100.0) / tradeCount;
-            int planFollowedCount = weekTrades.Count(t => t.FollowedPlan);
-            double planPct = (planFollowedCount * 100.0) / tradeCount;
             string winLossRatio = $"{winCount}/{lossCount}";
             
             // Use a FlowLayoutPanel for single column, center-aligned layout
