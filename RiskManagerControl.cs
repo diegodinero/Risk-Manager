@@ -2331,23 +2331,15 @@ namespace Risk_Manager
         {
             try
             {
-                // Try to load journal icon from file if Resources.Designer.cs hasn't been regenerated
-                var journalPath = System.IO.Path.Combine(
-                    System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location),
-                    "Resources", "journal.png");
-                
-                if (System.IO.File.Exists(journalPath))
-                {
-                    return Image.FromFile(journalPath);
-                }
+                // Use journal.png from Resources
+                return Properties.Resources.journal;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Could not load journal.png: {ex.Message}");
+                // Fallback to copy icon
+                return Properties.Resources.copy;
             }
-            
-            // Fallback to copy icon
-            return Properties.Resources.copy;
         }
 
         // Add this helper method in the RiskManagerControl class (anywhere above CreateTopPanel)
@@ -12799,19 +12791,6 @@ namespace Risk_Manager
                 Padding = new Padding(16)
             };
 
-            // Sidebar title
-            var sidebarTitle = new Label
-            {
-                Text = "Trading Journal",
-                Dock = DockStyle.Top,
-                Height = 40,
-                ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Margin = new Padding(0, 0, 0, 10)  // Add bottom margin for spacing
-            };
-            sidebar.Controls.Add(sidebarTitle);
-
             // Separator
             var separator = new Panel
             {
@@ -12839,33 +12818,12 @@ namespace Risk_Manager
                 journalNavButtons[section] = btn;
             }
 
-            // Theme toggle at bottom
-            var themeToggle = new Button
-            {
-                Text = "❖  Light / Dark Mode",
-                Dock = DockStyle.Bottom,
-                Height = 40,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.Transparent,
-                ForeColor = TextWhite,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
-                Margin = new Padding(0, 8, 0, 0)
-            };
-            themeToggle.FlatAppearance.BorderSize = 0;
-            themeToggle.Click += (s, e) => {
-                // Toggle between themes (this is a placeholder - would need actual theme switching logic)
-                MessageBox.Show("Theme toggle would switch between Light/Dark modes", "Theme Toggle", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            };
-            sidebar.Controls.Add(themeToggle);
-
             // CONTENT AREA (Right panel - fills remaining space)
             journalContentPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
-                Padding = new Padding(20, 10, 20, 20), // Reduced top padding to prevent content being cut off
+                Padding = new Padding(20, 20, 20, 20), // Increased top padding to prevent content being cut off
                 AutoScroll = true
             };
 
@@ -15868,19 +15826,6 @@ namespace Risk_Manager
             double monthlyPlanAdherence = monthlyTrades.Count > 0 ? (double)monthlyFollowedPlan / monthlyTrades.Count * 100 : 0;
             double monthlyProfitFactor = monthlyGrossLosses > 0 ? (double)(monthlyGrossWins / monthlyGrossLosses) : 0;
 
-            // Page title
-            var titleLabel = new Label
-            {
-                Text = "Dashboard",
-                Dock = DockStyle.Top,
-                Height = 50,
-                ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 24, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(20, 10, 0, 0)
-            };
-            pagePanel.Controls.Add(titleLabel);
-
             // Add panels in reverse order since Dock.Top stacks from bottom to top
             // Session Performance Section (always show, handles empty state internally)
             var sessionStatsPanel = CreateSessionStatsSection(trades);
@@ -15923,6 +15868,19 @@ namespace Risk_Manager
             });
             overallStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(overallStatsPanel);
+
+            // Page title - added LAST so it appears at the TOP (Dock.Top stacks bottom to top)
+            var titleLabel = new Label
+            {
+                Text = "Dashboard",
+                Dock = DockStyle.Top,
+                Height = 50,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 24, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(20, 10, 0, 0)
+            };
+            pagePanel.Controls.Add(titleLabel);
 
             return pagePanel;
         }
@@ -15979,79 +15937,116 @@ namespace Risk_Manager
         {
             var card = new Panel
             {
-                Width = 180,
-                Height = 80,
+                Width = 165,  // Reduced from 180 to make cards more compact
+                Height = 70,  // Reduced from 80
                 BackColor = CardBackground,
                 Margin = new Padding(0, 0, 10, 0),
-                Padding = new Padding(15, 10, 15, 10)
+                Padding = new Padding(12, 8, 12, 8)  // Reduced padding
             };
 
-            // Add subtle border
+            // Add rounded corners and subtle border
             card.Paint += (s, e) =>
             {
-                using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1))
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                // Create rounded rectangle path
+                int radius = 10;  // Rounded corners
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
                 {
-                    var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
-                    e.Graphics.DrawRectangle(pen, rect);
+                    path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+                    path.AddArc(rect.X + rect.Width - radius, rect.Y, radius, radius, 270, 90);
+                    path.AddArc(rect.X + rect.Width - radius, rect.Y + rect.Height - radius, radius, radius, 0, 90);
+                    path.AddArc(rect.X, rect.Y + rect.Height - radius, radius, radius, 90, 90);
+                    path.CloseFigure();
+                    
+                    // Fill background
+                    using (var brush = new SolidBrush(CardBackground))
+                    {
+                        e.Graphics.FillPath(brush, path);
+                    }
+                    
+                    // Draw border
+                    using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1))
+                    {
+                        e.Graphics.DrawPath(pen, path);
+                    }
+                }
+            };
+            
+            // Set the region to clip the panel to rounded corners
+            card.Resize += (s, e) =>
+            {
+                int radius = 10;
+                var rect = new Rectangle(0, 0, card.Width, card.Height);
+                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+                {
+                    path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+                    path.AddArc(rect.X + rect.Width - radius, rect.Y, radius, radius, 270, 90);
+                    path.AddArc(rect.X + rect.Width - radius, rect.Y + rect.Height - radius, radius, radius, 0, 90);
+                    path.AddArc(rect.X, rect.Y + rect.Height - radius, radius, radius, 90, 90);
+                    path.CloseFigure();
+                    card.Region = new Region(path);
                 }
             };
 
-            // Icon - positioned on the left with minimal size
-            var iconLabel = new Label
-            {
-                Width = 18,
-                Dock = DockStyle.Left,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular)
-            };
-
-            // Set icon and color based on label
+            // Determine emoji and its color based on label
+            string emoji = "";
+            Color emojiColor = TextWhite;  // Default color
             switch (label)
             {
                 case "Plan Adherence":
-                    iconLabel.Text = "\uE9D2"; // Segoe MDL2 Assets icon
-                    iconLabel.Font = new Font("Segoe MDL2 Assets", 10, FontStyle.Regular);
-                    iconLabel.ForeColor = Color.FromArgb(91, 140, 255); // Blue
+                    emoji = "📋";  // Clipboard emoji
+                    emojiColor = Color.FromArgb(91, 140, 255);  // Blue
                     break;
                 case "Win Rate":
-                    iconLabel.Text = "\uE74C"; // Segoe MDL2 Assets icon
-                    iconLabel.Font = new Font("Segoe MDL2 Assets", 10, FontStyle.Regular);
-                    iconLabel.ForeColor = Color.FromArgb(71, 199, 132); // Green
+                    emoji = "✅";  // Check mark emoji
+                    emojiColor = valueColor;  // Match value color (green/red based on performance)
                     break;
                 case "Profit Factor":
-                    iconLabel.Text = "💰"; // Money bag emoji
-                    iconLabel.Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular);
-                    iconLabel.ForeColor = Color.FromArgb(255, 200, 91); // Orange
+                    emoji = "💰";  // Money bag emoji
+                    emojiColor = Color.FromArgb(255, 200, 91);  // Orange/Yellow
                     break;
                 case "Total P&L":
-                    iconLabel.Text = "💵"; // Dollar emoji
-                    iconLabel.Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular);
-                    iconLabel.ForeColor = Color.FromArgb(71, 199, 132); // Green
-                    break;
-                default:
-                    // No icon for other labels
-                    iconLabel.Visible = false;
+                    emoji = "💵";  // Dollar emoji
+                    emojiColor = valueColor;  // Match value color (green/red based on P&L)
                     break;
             }
-            card.Controls.Add(iconLabel);
 
-            // Content panel (label + value)
-            var contentPanel = new Panel
+            // Create a container for emoji and label text
+            var labelContainer = new Panel
             {
-                Dock = DockStyle.Fill
+                Dock = DockStyle.Top,
+                Height = 22,
+                BackColor = Color.Transparent
             };
 
-            // Label
-            var labelControl = new Label
+            // Emoji label with color
+            var emojiLabel = new Label
+            {
+                Text = emoji,
+                Dock = DockStyle.Left,
+                Width = 20,
+                ForeColor = emojiColor,
+                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoSize = false
+            };
+            labelContainer.Controls.Add(emojiLabel);
+
+            // Text label
+            var textLabel = new Label
             {
                 Text = label,
-                Dock = DockStyle.Top,
-                Height = 25,
+                Dock = DockStyle.Fill,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft
+                Font = new Font("Segoe UI Emoji", 9, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoSize = false
             };
-            contentPanel.Controls.Add(labelControl);
+            labelContainer.Controls.Add(textLabel);
+
+            card.Controls.Add(labelContainer);
 
             // Value
             var valueControl = new Label
@@ -16059,12 +16054,11 @@ namespace Risk_Manager
                 Text = value,
                 Dock = DockStyle.Fill,
                 ForeColor = valueColor,
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),  // Slightly smaller
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoSize = false  // Prevent wrapping
             };
-            contentPanel.Controls.Add(valueControl);
-
-            card.Controls.Add(contentPanel);
+            card.Controls.Add(valueControl);
 
             return card;
         }
@@ -16076,7 +16070,7 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 350,
+                Height = 350,  // Restored to original
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 10, 20, 10)
             };
@@ -16089,20 +16083,7 @@ namespace Risk_Manager
                 BackColor = DarkBackground
             };
 
-            // Icon
-            var iconLabel = new Label
-            {
-                Text = "\uE9D2", // Segoe MDL2 Assets stats icon
-                Dock = DockStyle.Left,
-                Width = 30,
-                ForeColor = TextWhite,
-                Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(0, 7, 0, 0)
-            };
-            titlePanel.Controls.Add(iconLabel);
-
-            // Title text
+            // Title text - add FIRST so icon appears before it
             var titleLabel = new Label
             {
                 Text = "Main Statistics",
@@ -16114,6 +16095,19 @@ namespace Risk_Manager
                 Padding = new Padding(5, 7, 0, 0)
             };
             titlePanel.Controls.Add(titleLabel);
+
+            // Icon - add SECOND so it appears at the left (Dock.Left adds to leftmost available space)
+            var iconLabel = new Label
+            {
+                Text = "\uE9D2", // Segoe MDL2 Assets stats icon
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 7, 0, 0)
+            };
+            titlePanel.Controls.Add(iconLabel);
 
             sectionPanel.Controls.Add(titlePanel);
 
@@ -16173,18 +16167,55 @@ namespace Risk_Manager
         {
             var card = new Panel
             {
-                Height = 280,
+                Height = 280,  // Restored to original height
+                MaximumSize = new Size(500, 0),  // Limit card width to 500px
                 BackColor = CardBackground,
-                Padding = new Padding(20)
+                Padding = new Padding(20)  // Restored to original padding
             };
 
-            // Add subtle border
+            // Add rounded corners and subtle border
             card.Paint += (s, e) =>
             {
-                using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1))
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                
+                // Create rounded rectangle path
+                int radius = 10;  // Rounded corners
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
                 {
-                    var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
-                    e.Graphics.DrawRectangle(pen, rect);
+                    path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+                    path.AddArc(rect.X + rect.Width - radius, rect.Y, radius, radius, 270, 90);
+                    path.AddArc(rect.X + rect.Width - radius, rect.Y + rect.Height - radius, radius, radius, 0, 90);
+                    path.AddArc(rect.X, rect.Y + rect.Height - radius, radius, radius, 90, 90);
+                    path.CloseFigure();
+                    
+                    // Fill background
+                    using (var brush = new SolidBrush(CardBackground))
+                    {
+                        e.Graphics.FillPath(brush, path);
+                    }
+                    
+                    // Draw border
+                    using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1))
+                    {
+                        e.Graphics.DrawPath(pen, path);
+                    }
+                }
+            };
+            
+            // Set the region to clip the panel to rounded corners
+            card.Resize += (s, e) =>
+            {
+                int radius = 10;
+                var rect = new Rectangle(0, 0, card.Width, card.Height);
+                using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+                {
+                    path.AddArc(rect.X, rect.Y, radius, radius, 180, 90);
+                    path.AddArc(rect.X + rect.Width - radius, rect.Y, radius, radius, 270, 90);
+                    path.AddArc(rect.X + rect.Width - radius, rect.Y + rect.Height - radius, radius, radius, 0, 90);
+                    path.AddArc(rect.X, rect.Y + rect.Height - radius, radius, radius, 90, 90);
+                    path.CloseFigure();
+                    card.Region = new Region(path);
                 }
             };
 
@@ -16193,22 +16224,22 @@ namespace Risk_Manager
             {
                 Text = title,
                 Dock = DockStyle.Top,
-                Height = 30,
+                Height = 30,  // Restored to original
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 13, FontStyle.Bold),
+                Font = new Font("Segoe UI", 13, FontStyle.Bold),  // Restored to original
                 TextAlign = ContentAlignment.MiddleLeft
             };
             card.Controls.Add(titleLabel);
 
             // Stats
-            int yPos = 35;
+            int yPos = 35;  // Restored to original
             foreach (var (label, value, color) in stats)
             {
                 var statPanel = new Panel
                 {
-                    Height = 25,
-                    Width = card.Width - 40,
-                    Location = new Point(20, yPos),
+                    Height = 25,  // Restored to original
+                    Width = card.Width - 40,  // Restored to original
+                    Location = new Point(20, yPos),  // Restored to original
                     BackColor = Color.Transparent
                 };
 
@@ -16216,10 +16247,12 @@ namespace Risk_Manager
                 {
                     Text = label,
                     Dock = DockStyle.Left,
-                    Width = (statPanel.Width / 2) - 10,
+                    Width = (statPanel.Width * 3 / 5),  // Give label 60% of the space
                     ForeColor = TextWhite,
-                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                    TextAlign = ContentAlignment.MiddleLeft
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),  // Restored to original
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    AutoSize = false,  // Prevent text wrapping
+                    AutoEllipsis = true  // Show ellipsis if text is too long
                 };
                 statPanel.Controls.Add(labelControl);
 
@@ -16227,15 +16260,16 @@ namespace Risk_Manager
                 {
                     Text = value,
                     Dock = DockStyle.Right,
-                    Width = (statPanel.Width / 2) - 10,
+                    Width = (statPanel.Width * 2 / 5) - 5,  // Give value 40% of space
                     ForeColor = color,
-                    Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                    TextAlign = ContentAlignment.MiddleRight
+                    Font = new Font("Segoe UI", 10, FontStyle.Bold),  // Restored to original
+                    TextAlign = ContentAlignment.MiddleRight,
+                    AutoSize = false  // Prevent text wrapping
                 };
                 statPanel.Controls.Add(valueControl);
 
                 card.Controls.Add(statPanel);
-                yPos += 28;
+                yPos += 28;  // Restored to original spacing
             }
 
             return card;
@@ -16248,7 +16282,7 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 400,
+                Height = 400,  // Restored to original
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 10, 20, 10)
             };
@@ -16265,13 +16299,13 @@ namespace Risk_Manager
             var modelSelector = new ComboBox
             {
                 Dock = DockStyle.Right,
-                Width = 150,
+                Width = 120,  // Reduced from 150 to prevent extending card width
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 ForeColor = TextWhite,
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(10, 10, 0, 5)
+                Margin = new Padding(10, 10, 10, 5)  // Added right margin to bring it in
             };
             
             // Get models from database - use same logic as TradeLog
@@ -16296,19 +16330,7 @@ namespace Risk_Manager
             modelSelector.SelectedIndex = 0;
             headerPanel.Controls.Add(modelSelector);
 
-            // Icon for Model section (Segoe MDL2 Assets - chart icon)
-            var iconLabel = new Label
-            {
-                Text = "\uE719", // Chart icon from Segoe MDL2 Assets
-                Dock = DockStyle.Left,
-                Width = 30,
-                ForeColor = TextWhite,
-                Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(0, 7, 0, 0)
-            };
-            headerPanel.Controls.Add(iconLabel);
-
+            // Title text - add FIRST
             var titleLabel = new Label
             {
                 Text = "Trading Model Performance",
@@ -16320,6 +16342,19 @@ namespace Risk_Manager
                 Padding = new Padding(5, 7, 0, 0)
             };
             headerPanel.Controls.Add(titleLabel);
+
+            // Icon for Model section - add SECOND to appear at left
+            var iconLabel = new Label
+            {
+                Text = "\uE719", // Chart icon from Segoe MDL2 Assets
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 7, 0, 0)
+            };
+            headerPanel.Controls.Add(iconLabel);
             
             // Store reference for event handler
             var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
@@ -16443,7 +16478,7 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 400,
+                Height = 400,  // Restored to original
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 10, 20, 10)
             };
@@ -16460,13 +16495,13 @@ namespace Risk_Manager
             var daySelector = new ComboBox
             {
                 Dock = DockStyle.Right,
-                Width = 130,
+                Width = 110,  // Reduced from 130 to prevent extending card width
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 ForeColor = TextWhite,
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(10, 10, 0, 5)
+                Margin = new Padding(10, 10, 10, 5)  // Added right margin to bring it in
             };
             daySelector.Items.Add("All Days");
             daySelector.Items.Add("Monday");
@@ -16479,19 +16514,7 @@ namespace Risk_Manager
             daySelector.SelectedIndex = 0;
             headerPanel.Controls.Add(daySelector);
 
-            // Icon for Day section (Segoe MDL2 Assets - calendar icon)
-            var iconLabel = new Label
-            {
-                Text = "\uE787", // Calendar icon from Segoe MDL2 Assets
-                Dock = DockStyle.Left,
-                Width = 30,
-                ForeColor = TextWhite,
-                Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(0, 7, 0, 0)
-            };
-            headerPanel.Controls.Add(iconLabel);
-
+            // Title - ADD FIRST
             var titleLabel = new Label
             {
                 Text = "Day of Week Performance",
@@ -16503,6 +16526,19 @@ namespace Risk_Manager
                 Padding = new Padding(5, 7, 0, 0)
             };
             headerPanel.Controls.Add(titleLabel);
+
+            // Icon for Day section - ADD SECOND to appear at left
+            var iconLabel = new Label
+            {
+                Text = "\uE787", // Calendar icon from Segoe MDL2 Assets
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 7, 0, 0)
+            };
+            headerPanel.Controls.Add(iconLabel);
 
             // Store reference for event handler
             var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
@@ -16611,7 +16647,7 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 400,
+                Height = 400,  // Restored to original
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 10, 20, 10)
             };
@@ -16634,13 +16670,13 @@ namespace Risk_Manager
             var sessionSelector = new ComboBox
             {
                 Dock = DockStyle.Right,
-                Width = 130,
+                Width = 110,  // Reduced from 130 to prevent extending card width
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 ForeColor = TextWhite,
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(10, 10, 0, 5)
+                Margin = new Padding(10, 10, 10, 5)  // Added right margin to bring it in
             };
             sessionSelector.Items.Add("All Sessions");
             
@@ -16662,19 +16698,7 @@ namespace Risk_Manager
             sessionSelector.SelectedIndex = 0;
             headerPanel.Controls.Add(sessionSelector);
 
-            // Icon for Session section (alarm clock emoji - matches TradingJournalApp)
-            var iconLabel = new Label
-            {
-                Text = "⏰", // Alarm clock emoji
-                Dock = DockStyle.Left,
-                Width = 30,
-                ForeColor = TextWhite,
-                Font = new Font("Segoe UI Emoji", 18, FontStyle.Regular),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(0, 7, 0, 0)
-            };
-            headerPanel.Controls.Add(iconLabel);
-
+            // Title - ADD FIRST
             var titleLabel = new Label
             {
                 Text = "Session Performance",
@@ -16686,6 +16710,19 @@ namespace Risk_Manager
                 Padding = new Padding(5, 7, 0, 0)
             };
             headerPanel.Controls.Add(titleLabel);
+
+            // Icon for Session section - ADD SECOND to appear at left
+            var iconLabel = new Label
+            {
+                Text = "⏰", // Alarm clock emoji
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI Emoji", 18, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 7, 0, 0)
+            };
+            headerPanel.Controls.Add(iconLabel);
 
             // Store reference for event handler
             var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
