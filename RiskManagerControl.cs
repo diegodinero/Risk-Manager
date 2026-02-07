@@ -13814,6 +13814,16 @@ namespace Risk_Manager
             double planPct = (planFollowedCount * 100.0) / tradeCount;
             string winLossRatio = $"{winCount}/{lossCount}";
             
+            // Use a FlowLayoutPanel for single column, center-aligned layout
+            var flowPanel = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.TopDown,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(0),
+                Margin = new Padding(0)
+            };
+            
             // Trades label (always shown)
             var tradesLabel = new Label
             {
@@ -13821,24 +13831,26 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 9, FontStyle.Regular),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Location = new Point(5, 10)
+                TextAlign = ContentAlignment.MiddleCenter,
+                Margin = new Padding(0, 5, 0, 3)
             };
-            panel.Controls.Add(tradesLabel);
+            flowPanel.Controls.Add(tradesLabel);
             
             if (showPlanMode)
             {
                 // Plan Mode: Show plan adherence metrics
                 
-                // Plan followed percentage
+                // Plan followed percentage (bold)
                 var planLabel = new Label
                 {
                     Text = $"Plan: {planPct:0}%",
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = TextWhite,
                     AutoSize = true,
-                    Location = new Point(5, 35)
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 3)
                 };
-                panel.Controls.Add(planLabel);
+                flowPanel.Controls.Add(planLabel);
                 
                 // Win/Loss ratio
                 var wlLabel = new Label
@@ -13847,9 +13859,10 @@ namespace Risk_Manager
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
                     ForeColor = TextWhite,
                     AutoSize = true,
-                    Location = new Point(5, 60)
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 3)
                 };
-                panel.Controls.Add(wlLabel);
+                flowPanel.Controls.Add(wlLabel);
                 
                 // Plan followed ratio with checkmark (e.g., "✓ 12/15")
                 var planRatioLabel = new Label
@@ -13858,9 +13871,10 @@ namespace Risk_Manager
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
                     ForeColor = planPct >= 70 ? Color.FromArgb(109, 231, 181) : TextWhite, // Green if >=70%
                     AutoSize = true,
-                    Location = new Point(100, 35)
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 5)
                 };
-                panel.Controls.Add(planRatioLabel);
+                flowPanel.Controls.Add(planRatioLabel);
             }
             else
             {
@@ -13873,9 +13887,10 @@ namespace Risk_Manager
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
                     ForeColor = TextWhite,
                     AutoSize = true,
-                    Location = new Point(5, 35)
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 3)
                 };
-                panel.Controls.Add(plLabel);
+                flowPanel.Controls.Add(plLabel);
                 
                 // Win/Loss ratio
                 var wlLabel = new Label
@@ -13884,21 +13899,38 @@ namespace Risk_Manager
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
                     ForeColor = TextWhite,
                     AutoSize = true,
-                    Location = new Point(5, 60)
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 3)
                 };
-                panel.Controls.Add(wlLabel);
+                flowPanel.Controls.Add(wlLabel);
                 
-                // Win percentage
+                // Win percentage (bold)
                 var winPctLabel = new Label
                 {
                     Text = $"Win%: {winPct:0}%",
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = TextWhite,
                     AutoSize = true,
-                    Location = new Point(100, 35)
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 5)
                 };
-                panel.Controls.Add(winPctLabel);
+                flowPanel.Controls.Add(winPctLabel);
             }
+            
+            // Center the flow panel in the main panel
+            flowPanel.Location = new Point((panel.Width - flowPanel.Width) / 2, 
+                                           (panel.Height - flowPanel.Height) / 2);
+            panel.Controls.Add(flowPanel);
+            
+            // Adjust position after layout is calculated
+            panel.Layout += (s, e) =>
+            {
+                if (flowPanel.Width > 0 && flowPanel.Height > 0)
+                {
+                    flowPanel.Location = new Point((panel.Width - flowPanel.Width) / 2,
+                                                   (panel.Height - flowPanel.Height) / 2);
+                }
+            };
             
             return panel;
         }
