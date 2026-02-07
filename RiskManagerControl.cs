@@ -183,6 +183,12 @@ class CustomHeaderControl : Panel
 
 namespace Risk_Manager
 {
+    // Win32 imports for rounded regions
+    internal static class NativeMethods
+    {
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        internal static extern IntPtr CreateRoundRectRgn(int x1, int y1, int x2, int y2, int cx, int cy);
+    }
 
     public class RiskManagerControl : UserControl
     {
@@ -446,6 +452,9 @@ namespace Risk_Manager
         private const int LeftPanelWidth = 200;
         private const int LeftPanelCollapsedWidth = 65; // Width when collapsed (show only icons)
         private const int LeftPanelExpandedWidth = 200; // Width when expanded (show icons + text)
+        
+        // Calendar UI constants
+        private const int BORDER_RADIUS = 15; // Rounded border radius for calendar elements
 
         public RiskManagerControl()
         {
@@ -12756,6 +12765,10 @@ namespace Risk_Manager
         private Panel journalContentPanel;
         private string currentJournalSection = "Trade Log";
         private Dictionary<string, Button> journalNavButtons = new Dictionary<string, Button>();
+        
+        // Calendar state
+        private DateTime currentCalendarMonth = DateTime.Today;
+        private bool showPlanMode = false; // false = P&L mode, true = Plan mode
 
         /// <summary>
         /// Creates the Trading Journal panel with sidebar navigation
@@ -13355,11 +13368,1152 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Helper method to create a rounded rectangle region
+        /// </summary>
+        private GraphicsPath GetRoundedRectangle(Rectangle bounds, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            int diameter = radius * 2;
+            
+            // Top-left corner
+            path.AddArc(bounds.X, bounds.Y, diameter, diameter, 180, 90);
+            // Top-right corner
+            path.AddArc(bounds.Right - diameter, bounds.Y, diameter, diameter, 270, 90);
+            // Bottom-right corner
+            path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+            // Bottom-left corner
+            path.AddArc(bounds.X, bounds.Bottom - diameter, diameter, diameter, 90, 90);
+            
+            path.CloseFigure();
+            return path;
+        }
+        
+        /// <summary>
         /// Creates the Calendar page placeholder
         /// </summary>
         private Control CreateCalendarPage()
         {
-            return CreatePlaceholderPage("Calendar", "View your trading activity by date");
+            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true, Tag = "CalendarPagePanel" };
+            
+            // Main content container with rounded border
+            var contentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground,
+                Padding = new Padding(20),
+                AutoScroll = true
+            };
+            
+            // Add rounded border to content panel
+            contentPanel.Paint += (s, e) =>
+            {
+                if (contentPanel.ClientRectangle.Width > 20 && contentPanel.ClientRectangle.Height > 20)
+                {
+                    var borderRect = new Rectangle(10, 10, contentPanel.ClientRectangle.Width - 20, contentPanel.ClientRectangle.Height - 20);
+                    using (GraphicsPath borderPath = GetRoundedRectangle(borderRect, BORDER_RADIUS))
+                    {
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        using (Pen borderPen = new Pen(CardBackground, 2))
+                        {
+                            e.Graphics.DrawPath(borderPen, borderPath);
+                        }
+                    }
+                }
+            };
+            
+            // Header with reorganized layout
+            int calendarWidth = (7 * 150) + 200; // 1250px - full calendar width including weekly stats
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 60,
+                Width = calendarWidth,
+                BackColor = DarkBackground,
+                Padding = new Padding(10, 10, 10, 10)
+            };
+            
+            Color blueHighlight = Color.FromArgb(41, 128, 185);
+            
+            // "Trading Calendar" title label - FAR LEFT
+            var titleLabel = new Label
+            {
+                Name = "TradingCalendarTitle",
+                Text = "Trading Calendar",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(10, 15)
+            };
+            headerPanel.Controls.Add(titleLabel);
+            
+            // Navigation group positioning - center the month with arrows equally distant from text
+            int centerX = calendarWidth / 2;
+            string monthText = currentCalendarMonth.ToString("MMMM yyyy");
+            
+            // Measure actual text width for precise positioning
+            float textWidth;
+            using (Graphics g = headerPanel.CreateGraphics())
+            {
+                SizeF textSize = g.MeasureString(monthText, new Font("Segoe UI", 14, FontStyle.Bold));
+                textWidth = textSize.Width;
+            }
+            
+            // Calculate positions for centered layout with equal arrow spacing
+            int monthX = (int)(centerX - textWidth / 2);
+            int prevX = (int)(centerX - textWidth / 2 - 10 - 35); // 10px gap from text, 35px button width
+            int nextX = (int)(centerX + textWidth / 2 + 10); // 10px gap from text
+            
+            // Previous month button - left of month with equal spacing
+            var prevButton = new Button
+            {
+                Name = "PrevMonthButton",
+                Text = "◀",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Size = new Size(35, 35),
+                Location = new Point(prevX, 12), // Vertically centered
+                BackColor = blueHighlight, // Blue background for navigation
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            prevButton.FlatAppearance.BorderSize = 0;
+            prevButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, prevButton.Width, prevButton.Height, BORDER_RADIUS, BORDER_RADIUS));
+            prevButton.Click += (s, e) =>
+            {
+                currentCalendarMonth = currentCalendarMonth.AddMonths(-1);
+                RefreshCalendarPage();
+            };
+            
+            // Month/Year label - centered in header
+            var monthYearLabel = new Label
+            {
+                Name = "MonthYearLabel",
+                Text = monthText,
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(monthX, 17) // Vertically centered
+            };
+            headerPanel.Controls.Add(monthYearLabel);
+            
+            // Next month button - right of month with equal spacing
+            var nextButton = new Button
+            {
+                Name = "NextMonthButton",
+                Text = "▶",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                Size = new Size(35, 35),
+                Location = new Point(nextX, 12), // Vertically centered
+                BackColor = blueHighlight, // Blue background for navigation
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            nextButton.FlatAppearance.BorderSize = 0;
+            nextButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, nextButton.Width, nextButton.Height, BORDER_RADIUS, BORDER_RADIUS));
+            nextButton.Click += (s, e) =>
+            {
+                currentCalendarMonth = currentCalendarMonth.AddMonths(1);
+                RefreshCalendarPage();
+            };
+            
+            // Add navigation buttons first
+            headerPanel.Controls.Add(prevButton);
+            headerPanel.Controls.Add(nextButton);
+            prevButton.BringToFront(); // Ensure buttons are visible on top
+            nextButton.BringToFront();
+            
+            // Toggle buttons for Plan/P&L mode - positioned on far right
+            int toggleStartX = calendarWidth - 170; // Position at right side (170px = 2 buttons + gap)
+            var plToggle = new Button
+            {
+                Name = "PLToggle",
+                Text = "P&L",
+                Size = new Size(80, 35),
+                BackColor = showPlanMode ? CardBackground : blueHighlight, // Blue when selected
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Location = new Point(toggleStartX, 10),
+                Tag = "PLToggle"
+            };
+            plToggle.FlatAppearance.BorderSize = 0;
+            plToggle.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, plToggle.Width, plToggle.Height, BORDER_RADIUS, BORDER_RADIUS));
+            plToggle.Click += (s, e) =>
+            {
+                showPlanMode = false;
+                RefreshCalendarPage();
+            };
+            headerPanel.Controls.Add(plToggle);
+            
+            var planToggle = new Button
+            {
+                Name = "PlanToggle",
+                Text = "Plan",
+                Size = new Size(80, 35),
+                BackColor = showPlanMode ? blueHighlight : CardBackground, // Blue when selected
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Location = new Point(toggleStartX + 85, 10),
+                Tag = "PlanToggle"
+            };
+            planToggle.FlatAppearance.BorderSize = 0;
+            planToggle.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, planToggle.Width, planToggle.Height, BORDER_RADIUS, BORDER_RADIUS));
+            planToggle.Click += (s, e) =>
+            {
+                showPlanMode = true;
+                RefreshCalendarPage();
+            };
+            headerPanel.Controls.Add(planToggle);
+            
+            // Inline monthly stats - positioned between navigation and toggles
+            var inlineStatsPanel = CreateInlineMonthlyStats();
+            int statsX = nextX + 40; // After next button + gap
+            inlineStatsPanel.Location = new Point(statsX, 10);
+            int maxStatsWidth = toggleStartX - statsX - 10; // Space between nav and toggles
+            inlineStatsPanel.MaximumSize = new Size(maxStatsWidth, 40);
+            headerPanel.Controls.Add(inlineStatsPanel);
+            
+            // Calendar grid panel
+            var calendarPanel = CreateCalendarGrid();
+            calendarPanel.Dock = DockStyle.Top;
+            
+            // Legend panel at the bottom
+            var legendPanel = CreateCalendarLegendPanel();
+            legendPanel.Dock = DockStyle.Top;
+            
+            contentPanel.Controls.Add(legendPanel);
+            contentPanel.Controls.Add(calendarPanel);
+            contentPanel.Controls.Add(headerPanel);
+            
+            pagePanel.Controls.Add(contentPanel);
+            
+            return pagePanel;
+        }
+        
+        /// <summary>
+        /// Refreshes the calendar page when month or mode changes
+        /// </summary>
+        private void RefreshCalendarPage()
+        {
+            if (journalContentPanel == null || currentJournalSection != "Calendar")
+                return;
+                
+            // Find the calendar page panel
+            var calendarPage = FindControlByTag(journalContentPanel, "CalendarPagePanel") as Panel;
+            if (calendarPage == null)
+            {
+                // Recreate the entire page
+                ShowJournalSection("Calendar");
+                return;
+            }
+            
+            // Update month/year label
+            var monthYearLabel = FindControlByName(calendarPage, "MonthYearLabel") as Label;
+            if (monthYearLabel != null)
+                monthYearLabel.Text = currentCalendarMonth.ToString("MMMM yyyy");
+            
+            // Update toggle button colors
+            var plToggle = FindControlByTag(calendarPage, "PLToggle") as Button;
+            var planToggle = FindControlByTag(calendarPage, "PlanToggle") as Button;
+            if (plToggle != null)
+                plToggle.BackColor = showPlanMode ? CardBackground : Color.FromArgb(41, 128, 185);
+            if (planToggle != null)
+                planToggle.BackColor = showPlanMode ? Color.FromArgb(41, 128, 185) : CardBackground;
+            
+            // Update inline monthly stats panel
+            var oldInlineStats = FindControlByName(calendarPage, "InlineMonthlyStats") as Panel;
+            if (oldInlineStats != null)
+            {
+                var headerPanel = oldInlineStats.Parent;
+                var statsLocation = oldInlineStats.Location;
+                headerPanel.Controls.Remove(oldInlineStats);
+                oldInlineStats.Dispose();
+                
+                var newInlineStats = CreateInlineMonthlyStats();
+                newInlineStats.Location = statsLocation;
+                headerPanel.Controls.Add(newInlineStats);
+            }
+            
+            // Refresh the calendar grid
+            var contentPanel = calendarPage.Controls[0] as Panel;
+            if (contentPanel != null)
+            {
+                // Find and remove old calendar grid
+                Control oldGrid = null;
+                foreach (Control ctrl in contentPanel.Controls)
+                {
+                    if (ctrl.Name == "CalendarGrid")
+                    {
+                        oldGrid = ctrl;
+                        break;
+                    }
+                }
+                
+                if (oldGrid != null)
+                {
+                    contentPanel.Controls.Remove(oldGrid);
+                    oldGrid.Dispose();
+                }
+                
+                // Create and add new calendar grid
+                var newGrid = CreateCalendarGrid();
+                newGrid.Dock = DockStyle.Top;
+                contentPanel.Controls.Add(newGrid);
+                contentPanel.Controls.SetChildIndex(newGrid, 0); // Move to top
+                
+                // Refresh legend panel
+                Control oldLegend = null;
+                foreach (Control ctrl in contentPanel.Controls)
+                {
+                    if (ctrl.Name == "CalendarLegendPanel")
+                    {
+                        oldLegend = ctrl;
+                        break;
+                    }
+                }
+                
+                if (oldLegend != null)
+                {
+                    contentPanel.Controls.Remove(oldLegend);
+                    oldLegend.Dispose();
+                }
+                
+                var newLegend = CreateCalendarLegendPanel();
+                newLegend.Dock = DockStyle.Top;
+                contentPanel.Controls.Add(newLegend);
+                contentPanel.Controls.SetChildIndex(newLegend, 0); // Move to top (which is actually bottom due to docking)
+            }
+            
+            calendarPage.Refresh();
+        }
+        
+        /// <summary>
+        /// Creates the monthly statistics panel for the calendar
+        /// </summary>
+        private Panel CreateCalendarStatsPanel()
+        {
+            var panel = new Panel
+            {
+                Name = "CalendarStatsPanel",
+                BackColor = CardBackground,
+                Padding = new Padding(20),
+                Margin = new Padding(0, 10, 0, 10)
+            };
+            
+            var accountNumber = GetSelectedAccountNumber();
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+            var monthTrades = trades.Where(t => t.Date.Year == currentCalendarMonth.Year && 
+                                               t.Date.Month == currentCalendarMonth.Month).ToList();
+            
+            int totalTrades = monthTrades.Count;
+            decimal monthlyNetPL = monthTrades.Sum(t => t.NetPL);
+            int tradedDays = monthTrades.Select(t => t.Date.Date).Distinct().Count();
+            
+            // Calculate plan-followed days (days where >= 70% of trades followed plan)
+            int planFollowedDays = monthTrades
+                .GroupBy(t => t.Date.Date)
+                .Count(g =>
+                {
+                    var total = g.Count();
+                    if (total == 0) return false;
+                    var yesCount = g.Count(t => t.FollowedPlan);
+                    return (yesCount * 100.0) / total >= 70.0;
+                });
+            
+            // Create stats labels
+            var titleLabel = new Label
+            {
+                Text = "Monthly Summary",
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 0)
+            };
+            panel.Controls.Add(titleLabel);
+            
+            var statsLabel = new Label
+            {
+                Text = $"Total Trades: {totalTrades} | Net P/L: {monthlyNetPL:+$#,##0.00;-$#,##0.00;$0.00} | Days Traded: {tradedDays} | Days Plan Followed (≥70%): {planFollowedDays}",
+                Font = new Font("Segoe UI", 11, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 35)
+            };
+            panel.Controls.Add(statsLabel);
+            
+            return panel;
+        }
+        
+        /// <summary>
+        /// Creates inline monthly stats panel for header (mode-specific)
+        /// </summary>
+        private Panel CreateInlineMonthlyStats()
+        {
+            var panel = new Panel
+            {
+                Name = "InlineMonthlyStats",
+                BackColor = DarkBackground,
+                AutoSize = true,
+                Height = 35
+            };
+            
+            var accountNumber = GetSelectedAccountNumber();
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+            var monthTrades = trades.Where(t => t.Date.Year == currentCalendarMonth.Year && 
+                                               t.Date.Month == currentCalendarMonth.Month).ToList();
+            
+            int tradedDays = monthTrades.Select(t => t.Date.Date).Distinct().Count();
+            decimal monthlyNetPL = monthTrades.Sum(t => t.NetPL);
+            
+            // Calculate plan-followed days (days where >= 70% of trades followed plan)
+            int planFollowedDays = monthTrades
+                .GroupBy(t => t.Date.Date)
+                .Count(g =>
+                {
+                    var total = g.Count();
+                    if (total == 0) return false;
+                    var yesCount = g.Count(t => t.FollowedPlan);
+                    return (yesCount * 100.0) / total >= 70.0;
+                });
+            
+            Color blueHighlight = Color.FromArgb(41, 128, 185);
+            Color positiveColor = Color.FromArgb(110, 231, 183); // Green
+            Color negativeColor = Color.FromArgb(253, 164, 165); // Pink/Red
+            
+            var flowPanel = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = false,
+                Margin = new Padding(0)
+            };
+            
+            if (showPlanMode)
+            {
+                // Plan Mode: "Monthly stats: [N] Days Followed"
+                // Both number and "Days" word colored by legend
+                
+                // Calculate plan percentage for coloring
+                double monthlyPlanPct = tradedDays > 0 ? (planFollowedDays * 100.0) / tradedDays : 0;
+                Color daysColor;
+                if (monthlyPlanPct >= 70)
+                    daysColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
+                else if (monthlyPlanPct >= 50)
+                    daysColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
+                else if (monthlyPlanPct > 0)
+                    daysColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
+                else
+                    daysColor = TextWhite; // No days
+                
+                var label1 = new Label
+                {
+                    Text = "Monthly stats: ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0)
+                };
+                flowPanel.Controls.Add(label1);
+                
+                // Days Followed (number + "Days" combined, colored by plan adherence)
+                var label2 = new Label
+                {
+                    Text = $" {planFollowedDays} Days ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.Black,
+                    BackColor = daysColor,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0),
+                    Padding = new Padding(3, 1, 3, 1)
+                };
+                // Add rounded corners
+                label2.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label2.Width + 1, label2.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
+                flowPanel.Controls.Add(label2);
+                
+                // "Followed" text
+                var label3 = new Label
+                {
+                    Text = " Followed  ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 3, 0)
+                };
+                flowPanel.Controls.Add(label3);
+                
+                // Days Traded (number + "Days" combined with blue background)
+                var label4 = new Label
+                {
+                    Text = $" {tradedDays} Days ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = blueHighlight,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0),
+                    Padding = new Padding(3, 1, 3, 1)
+                };
+                // Add rounded corners
+                label4.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label4.Width + 1, label4.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
+                flowPanel.Controls.Add(label4);
+            }
+            else
+            {
+                // P&L Mode: "Monthly stats: +$X [N] [Days]"
+                // Number and "Days" word both have blue background, dollar amount is green/red
+                
+                var label1 = new Label
+                {
+                    Text = "Monthly stats: ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0)
+                };
+                flowPanel.Controls.Add(label1);
+                
+                var plColor = monthlyNetPL >= 0 ? positiveColor : negativeColor;
+                var label2 = new Label
+                {
+                    Text = $"{monthlyNetPL:+$#,##0.00;-$#,##0.00;$0.00} ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = plColor,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 3, 0)
+                };
+                flowPanel.Controls.Add(label2);
+                
+                // Days (number + "Days" combined with blue background)
+                var label3 = new Label
+                {
+                    Text = $" {tradedDays} Days ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = blueHighlight,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0),
+                    Padding = new Padding(3, 1, 3, 1)
+                };
+                // Add rounded corners
+                label3.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label3.Width + 1, label3.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
+                flowPanel.Controls.Add(label3);
+            }
+            
+            panel.Controls.Add(flowPanel);
+            panel.Width = flowPanel.PreferredSize.Width;
+            
+            return panel;
+        }
+        
+        /// <summary>
+        /// Creates the calendar grid with day cells
+        /// </summary>
+        private Panel CreateCalendarGrid()
+        {
+            var gridPanel = new Panel
+            {
+                Name = "CalendarGrid",
+                BackColor = DarkBackground,
+                AutoSize = true,
+                Padding = new Padding(0, 10, 0, 10)
+            };
+            
+            var accountNumber = GetSelectedAccountNumber();
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+            
+            // Day headers (Sun, Mon, Tue, etc.)
+            var dayHeaders = new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+            int cellWidth = 150;
+            int cellHeight = 100;
+            int headerHeight = 30;
+            int weeklyStatsWidth = 200;  // Width for weekly statistics column
+            
+            // Add day headers
+            for (int i = 0; i < 7; i++)
+            {
+                var headerLabel = new Label
+                {
+                    Text = dayHeaders[i],
+                    Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                    ForeColor = TextWhite,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Size = new Size(cellWidth, headerHeight),
+                    Location = new Point(i * cellWidth, 0),
+                    BackColor = Color.FromArgb(50, 50, 50)
+                };
+                // Add rounded corners to header
+                headerLabel.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, cellWidth, headerHeight, BORDER_RADIUS, BORDER_RADIUS));
+                gridPanel.Controls.Add(headerLabel);
+            }
+            
+            // Add "Week Stats" header
+            var weekStatsHeader = new Label
+            {
+                Text = "Week Stats",
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                ForeColor = TextWhite,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Size = new Size(weeklyStatsWidth, headerHeight),
+                Location = new Point(7 * cellWidth, 0),
+                BackColor = Color.FromArgb(50, 50, 50)
+            };
+            // Add rounded corners to week stats header
+            weekStatsHeader.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, weeklyStatsWidth, headerHeight, BORDER_RADIUS, BORDER_RADIUS));
+            gridPanel.Controls.Add(weekStatsHeader);
+            
+            // Calculate calendar cells and track weekly data
+            DateTime firstOfMonth = new DateTime(currentCalendarMonth.Year, currentCalendarMonth.Month, 1);
+            int daysInMonth = DateTime.DaysInMonth(currentCalendarMonth.Year, currentCalendarMonth.Month);
+            int firstDayOfWeek = (int)firstOfMonth.DayOfWeek; // 0 = Sunday
+            
+            int row = 0;
+            int col = firstDayOfWeek;
+            
+            // Track trades per week for statistics
+            var weeklyTrades = new Dictionary<int, List<JournalTrade>>();
+            
+            for (int day = 1; day <= daysInMonth; day++)
+            {
+                DateTime thisDate = new DateTime(currentCalendarMonth.Year, currentCalendarMonth.Month, day);
+                var dayTrades = trades.Where(t => t.Date.Date == thisDate.Date).ToList();
+                
+                // Track trades for this week
+                if (!weeklyTrades.ContainsKey(row))
+                    weeklyTrades[row] = new List<JournalTrade>();
+                weeklyTrades[row].AddRange(dayTrades);
+                
+                var cellPanel = CreateCalendarDayCell(day, dayTrades, thisDate);
+                cellPanel.Location = new Point(col * cellWidth, headerHeight + (row * cellHeight));
+                cellPanel.Size = new Size(cellWidth - 4, cellHeight - 4);
+                cellPanel.Margin = new Padding(2);
+                gridPanel.Controls.Add(cellPanel);
+                
+                col++;
+                if (col >= 7)
+                {
+                    col = 0;
+                    row++;
+                }
+            }
+            
+            // Add weekly statistics panels
+            int totalRows = row + (col > 0 ? 1 : 0);
+            int gridHeight = headerHeight + (totalRows * cellHeight);
+            
+            for (int weekRow = 0; weekRow < totalRows; weekRow++)
+            {
+                var weekTrades = weeklyTrades.ContainsKey(weekRow) ? weeklyTrades[weekRow] : new List<JournalTrade>();
+                var weekStatsPanel = CreateWeeklyStatsPanel(weekTrades);
+                weekStatsPanel.Location = new Point(7 * cellWidth, headerHeight + (weekRow * cellHeight));
+                weekStatsPanel.Size = new Size(weeklyStatsWidth - 4, cellHeight - 4);
+                weekStatsPanel.Margin = new Padding(2);
+                gridPanel.Controls.Add(weekStatsPanel);
+            }
+            
+            // Add vertical divider between calendar and weekly stats
+            var divider = new Panel
+            {
+                Name = "WeeklyStatsDivider",
+                Width = 3,
+                Height = gridHeight,
+                BackColor = DarkerBackground,
+                Location = new Point(7 * cellWidth - 5, 0) // Position just before weekly stats
+            };
+            gridPanel.Controls.Add(divider);
+            
+            // Set final height and width
+            gridPanel.Height = gridHeight + 20;
+            gridPanel.Width = (7 * cellWidth) + weeklyStatsWidth;
+            
+            return gridPanel;
+        }
+        
+        /// <summary>
+        /// Creates a weekly statistics panel showing different metrics based on mode
+        /// </summary>
+        private Panel CreateWeeklyStatsPanel(List<JournalTrade> weekTrades)
+        {
+            int tradeCount = weekTrades.Count;
+            
+            // Calculate plan percentage first
+            int planFollowedCount = weekTrades.Count(t => t.FollowedPlan);
+            double planPct = tradeCount > 0 ? (planFollowedCount * 100.0) / tradeCount : 0;
+            
+            // Color the weekly panel based on plan adherence in Plan mode or P&L value in P&L mode
+            Color panelColor = CardBackground;
+            if (tradeCount > 0)
+            {
+                if (showPlanMode)
+                {
+                    // Plan mode: color by plan adherence
+                    if (planPct >= 70)
+                        panelColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
+                    else if (planPct >= 50)
+                        panelColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
+                    else
+                        panelColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
+                }
+                else
+                {
+                    // P&L mode: color by actual P&L value
+                    decimal colorWeeklyPL = weekTrades.Sum(t => t.NetPL);
+                    
+                    if (colorWeeklyPL > 5) // Positive P&L
+                        panelColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
+                    else if (colorWeeklyPL < -5) // Negative P&L
+                        panelColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
+                    else // Breakeven (within ±$5)
+                        panelColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
+                }
+            }
+            
+            var panel = new Panel
+            {
+                BackColor = panelColor,
+                BorderStyle = BorderStyle.None // Remove border, we'll draw it rounded
+            };
+            
+            // Add rounded region to panel
+            panel.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, 180, 115, BORDER_RADIUS, BORDER_RADIUS));
+            
+            if (tradeCount == 0)
+            {
+                // Empty week - just show the panel
+                return panel;
+            }
+            
+            // Calculate statistics
+            int winCount = weekTrades.Count(t => t.Outcome == "Win");
+            int lossCount = weekTrades.Count(t => t.Outcome == "Loss");
+            decimal weeklyPL = weekTrades.Sum(t => t.NetPL);
+            double winPct = (winCount * 100.0) / tradeCount;
+            string winLossRatio = $"{winCount}/{lossCount}";
+            
+            // Use a FlowLayoutPanel for single column, center-aligned layout
+            var flowPanel = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.TopDown,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(0),
+                Margin = new Padding(0)
+            };
+            
+            // Trades label (always shown)
+            var tradesLabel = new Label
+            {
+                Text = $"Trades: {tradeCount}",
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Margin = new Padding(0, 5, 0, 3)
+            };
+            flowPanel.Controls.Add(tradesLabel);
+            
+            if (showPlanMode)
+            {
+                // Plan Mode: Show plan adherence metrics
+                
+                // Plan followed percentage (bold)
+                var planLabel = new Label
+                {
+                    Text = $"Plan: {planPct:0}%",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 3)
+                };
+                flowPanel.Controls.Add(planLabel);
+                
+                // Win/Loss ratio
+                var wlLabel = new Label
+                {
+                    Text = $"W/L: {winLossRatio}",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 3)
+                };
+                flowPanel.Controls.Add(wlLabel);
+                
+                // Plan followed ratio with checkmark (e.g., "✓ 12/15")
+                var planRatioLabel = new Label
+                {
+                    Text = $"{(planPct >= 70 ? "✓" : "")} {planFollowedCount}/{tradeCount}",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = planPct >= 70 ? Color.FromArgb(109, 231, 181) : TextWhite, // Green if >=70%
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 5)
+                };
+                flowPanel.Controls.Add(planRatioLabel);
+            }
+            else
+            {
+                // P&L Mode: Show profit/loss metrics
+                
+                // Weekly P&L total (colored by value)
+                // Use distinct standard colors for readability
+                Color plColor;
+                if (weeklyPL > 5)
+                    plColor = Color.Green; // Standard green - readable on all backgrounds
+                else if (weeklyPL < -5)
+                    plColor = Color.Red; // Standard red - readable on all backgrounds
+                else
+                    plColor = Color.Orange; // Orange for breakeven - clearly distinct
+                var plLabel = new Label
+                {
+                    Text = $"P&L: {weeklyPL:+$#,##0.00;-$#,##0.00;$0.00}",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = plColor,
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 3)
+                };
+                flowPanel.Controls.Add(plLabel);
+                
+                // Win/Loss ratio
+                var wlLabel = new Label
+                {
+                    Text = $"W/L: {winLossRatio}",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 3)
+                };
+                flowPanel.Controls.Add(wlLabel);
+                
+                // Win percentage (bold)
+                var winPctLabel = new Label
+                {
+                    Text = $"Win%: {winPct:0}%",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = TextWhite,
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 5)
+                };
+                flowPanel.Controls.Add(winPctLabel);
+            }
+            
+            // Center the flow panel in the main panel
+            flowPanel.Location = new Point((panel.Width - flowPanel.Width) / 2, 
+                                           (panel.Height - flowPanel.Height) / 2);
+            panel.Controls.Add(flowPanel);
+            
+            // Adjust position after layout is calculated
+            panel.Layout += (s, e) =>
+            {
+                if (flowPanel.Width > 0 && flowPanel.Height > 0)
+                {
+                    flowPanel.Location = new Point((panel.Width - flowPanel.Width) / 2,
+                                                   (panel.Height - flowPanel.Height) / 2);
+                }
+            };
+            
+            return panel;
+        }
+        
+        /// <summary>
+        /// Creates the legend panel showing what the colors mean based on current mode
+        /// </summary>
+        private Panel CreateCalendarLegendPanel()
+        {
+            var legendPanel = new Panel
+            {
+                Name = "CalendarLegendPanel",
+                BackColor = CardBackground,
+                Padding = new Padding(20, 10, 20, 10),
+                Height = 80
+            };
+            
+            // Add rounded corners
+            legendPanel.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                Rectangle bounds = new Rectangle(0, 0, legendPanel.Width - 1, legendPanel.Height - 1);
+                using (GraphicsPath path = GetRoundedRectangle(bounds, BORDER_RADIUS))
+                {
+                    using (SolidBrush brush = new SolidBrush(CardBackground))
+                    {
+                        e.Graphics.FillPath(brush, path);
+                    }
+                    using (Pen pen = new Pen(DarkerBackground, 1))
+                    {
+                        e.Graphics.DrawPath(pen, path);
+                    }
+                }
+            };
+            
+            // Legend title changes based on mode
+            var titleLabel = new Label
+            {
+                Text = showPlanMode ? "Plan Followed Legend:" : "Win Loss Ratio Legend:",
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(0, 5)
+            };
+            legendPanel.Controls.Add(titleLabel);
+            
+            // Legend items flow panel - legend width matches full calendar
+            legendPanel.Width = (7 * 150) + 200; // 1250px - match full calendar width including weekly stats
+            
+            var itemsPanel = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+            
+            // Center items horizontally
+            legendPanel.Layout += (s, e) =>
+            {
+                if (itemsPanel.PreferredSize.Width > 0)
+                {
+                    int centerX = (legendPanel.Width - itemsPanel.PreferredSize.Width) / 2;
+                    itemsPanel.Location = new Point(Math.Max(0, centerX), 35);
+                }
+            };
+            
+            // Green indicator
+            var greenLabel = new Label
+            {
+                Text = "●",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = Color.FromArgb(109, 231, 181),
+                AutoSize = true,
+                Margin = new Padding(0, 0, 5, 0)
+            };
+            itemsPanel.Controls.Add(greenLabel);
+            
+            var greenText = new Label
+            {
+                Text = showPlanMode ? "≥70% Followed" : "Profitable",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Margin = new Padding(0, 5, 30, 0)
+            };
+            itemsPanel.Controls.Add(greenText);
+            
+            // Yellow indicator
+            var yellowLabel = new Label
+            {
+                Text = "●",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = Color.FromArgb(252, 212, 75),
+                AutoSize = true,
+                Margin = new Padding(0, 0, 5, 0)
+            };
+            itemsPanel.Controls.Add(yellowLabel);
+            
+            var yellowText = new Label
+            {
+                Text = showPlanMode ? "50-69% Followed" : "Breakeven",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Margin = new Padding(0, 5, 30, 0)
+            };
+            itemsPanel.Controls.Add(yellowText);
+            
+            // Pink/Red indicator
+            var pinkLabel = new Label
+            {
+                Text = "●",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = Color.FromArgb(253, 164, 165),
+                AutoSize = true,
+                Margin = new Padding(0, 0, 5, 0)
+            };
+            itemsPanel.Controls.Add(pinkLabel);
+            
+            var pinkText = new Label
+            {
+                Text = showPlanMode ? "<50% Followed" : "Loss",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Margin = new Padding(0, 5, 30, 0)
+            };
+            itemsPanel.Controls.Add(pinkText);
+            
+            // Empty circle - No trades (always the same)
+            var emptyLabel = new Label
+            {
+                Text = "○",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Margin = new Padding(0, 0, 5, 0)
+            };
+            itemsPanel.Controls.Add(emptyLabel);
+            
+            var emptyText = new Label
+            {
+                Text = "No Trades",
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Margin = new Padding(0, 5, 0, 0)
+            };
+            itemsPanel.Controls.Add(emptyText);
+            
+            legendPanel.Controls.Add(itemsPanel);
+            
+            return legendPanel;
+        }
+        
+        /// <summary>
+        /// Creates a single day cell for the calendar
+        /// </summary>
+        private Panel CreateCalendarDayCell(int dayNumber, List<JournalTrade> dayTrades, DateTime date)
+        {
+            int tradeCount = dayTrades.Count;
+            Color cellColor = CardBackground;
+            
+            // Calculate cell color based on mode
+            if (tradeCount > 0)
+            {
+                if (showPlanMode)
+                {
+                    // Plan mode: color based on % of trades that followed plan
+                    int yesCount = dayTrades.Count(t => t.FollowedPlan);
+                    double planPct = (yesCount * 100.0) / tradeCount;
+                    
+                    if (planPct >= 70.0)
+                        cellColor = Color.FromArgb(109, 231, 181); // Green
+                    else if (planPct >= 50.0)
+                        cellColor = Color.FromArgb(252, 212, 75); // Yellow
+                    else
+                        cellColor = Color.FromArgb(253, 164, 165); // Red
+                }
+                else
+                {
+                    // P&L mode: color based on net P/L
+                    decimal netPL = dayTrades.Sum(t => t.NetPL);
+                    
+                    if (netPL > 0)
+                        cellColor = Color.FromArgb(109, 231, 181); // Green
+                    else if (netPL == 0)
+                        cellColor = Color.FromArgb(252, 212, 75); // Yellow
+                    else
+                        cellColor = Color.FromArgb(253, 164, 165); // Red
+                }
+            }
+            
+            var cellPanel = new Panel
+            {
+                BackColor = cellColor,
+                BorderStyle = BorderStyle.None, // Remove border, we'll draw it rounded
+                Cursor = tradeCount > 0 ? Cursors.Hand : Cursors.Default,
+                Tag = date
+            };
+            
+            // Add rounded corners using Region (no Paint handler needed - causes artifacts)
+            cellPanel.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, 150, 95, BORDER_RADIUS, BORDER_RADIUS));
+            
+            // Determine text color based on cell background (use theme color for empty cells, black for colored cells)
+            Color textColor = (tradeCount > 0) ? Color.Black : TextWhite;
+            
+            // Day number label
+            var dayLabel = new Label
+            {
+                Text = dayNumber.ToString(),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = textColor,
+                AutoSize = true,
+                Location = new Point(5, 5)
+            };
+            cellPanel.Controls.Add(dayLabel);
+            
+            // Add color dot indicators for days with no trades but may have notes/plan adherence
+            if (tradeCount == 0)
+            {
+                // Check if there are notes for this day
+                var accountNumber = GetSelectedAccountNumber();
+                var notes = TradingJournalService.Instance.GetNotes(accountNumber);
+                var dayNotes = notes.Where(n => n.CreatedAt.Date == date.Date).ToList();
+                
+                if (dayNotes.Count > 0)
+                {
+                    // Add a dot indicator to show there's a note for this day
+                    // Green dot = note exists (suggests plan awareness/discipline)
+                    var dotLabel = new Label
+                    {
+                        Text = "●",
+                        Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                        ForeColor = Color.FromArgb(109, 231, 181), // Green dot
+                        AutoSize = true,
+                        Location = new Point(120, 35)
+                    };
+                    cellPanel.Controls.Add(dotLabel);
+                }
+            }
+            
+            // Show trade info if there are trades
+            if (tradeCount > 0)
+            {
+                if (showPlanMode)
+                {
+                    // Show plan percentage
+                    int yesCount = dayTrades.Count(t => t.FollowedPlan);
+                    double planPct = (yesCount * 100.0) / tradeCount;
+                    
+                    var planLabel = new Label
+                    {
+                        Text = $"{planPct:0}% followed",
+                        Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                        ForeColor = Color.Black,
+                        AutoSize = true,
+                        Location = new Point(5, 35)
+                    };
+                    cellPanel.Controls.Add(planLabel);
+                }
+                else
+                {
+                    // Show net P/L
+                    decimal netPL = dayTrades.Sum(t => t.NetPL);
+                    var plLabel = new Label
+                    {
+                        Text = netPL.ToString("+$#,##0.00;-$#,##0.00;$0.00"),
+                        Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                        ForeColor = Color.Black,
+                        AutoSize = true,
+                        Location = new Point(5, 35)
+                    };
+                    cellPanel.Controls.Add(plLabel);
+                }
+                
+                // Trade count badge
+                var countLabel = new Label
+                {
+                    Text = tradeCount.ToString(),
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = Color.FromArgb(100, 0, 0, 0),
+                    AutoSize = true,
+                    Padding = new Padding(4, 2, 4, 2),
+                    Location = new Point(110, 65)
+                };
+                cellPanel.Controls.Add(countLabel);
+                
+                // Click handler to navigate to Trade Log filtered by this date
+                cellPanel.Click += (s, e) =>
+                {
+                    // Navigate to Trade Log with this date
+                    ShowJournalSection("Trade Log");
+                    // TODO: Could add date filtering to Trade Log in future
+                };
+            }
+            
+            return cellPanel;
         }
 
         /// <summary>
