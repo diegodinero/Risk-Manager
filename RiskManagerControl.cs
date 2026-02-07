@@ -15907,27 +15907,20 @@ namespace Risk_Manager
             mainStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(mainStatsPanel);
 
-            // Trading Model Performance Section (if models exist)
-            if (models.Count > 0)
-            {
-                var modelStatsPanel = CreateModelStatsSection(trades, models);
-                modelStatsPanel.Dock = DockStyle.Top;
-                pagePanel.Controls.Add(modelStatsPanel);
-            }
+            // Trading Model Performance Section (always show, handles empty state internally)
+            var modelStatsPanel = CreateModelStatsSection(trades, models);
+            modelStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(modelStatsPanel);
 
             // Day of Week Performance Section
             var dayStatsPanel = CreateDayStatsSection(trades);
             dayStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(dayStatsPanel);
 
-            // Session Performance Section (if session data exists)
-            var sessionsExist = trades.Any(t => !string.IsNullOrWhiteSpace(t.Session));
-            if (sessionsExist)
-            {
-                var sessionStatsPanel = CreateSessionStatsSection(trades);
-                sessionStatsPanel.Dock = DockStyle.Top;
-                pagePanel.Controls.Add(sessionStatsPanel);
-            }
+            // Session Performance Section (always show, handles empty state internally)
+            var sessionStatsPanel = CreateSessionStatsSection(trades);
+            sessionStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(sessionStatsPanel);
 
             return pagePanel;
         }
@@ -16620,8 +16613,25 @@ namespace Risk_Manager
 
             sectionPanel.Controls.Add(headerPanel);
 
-            // Initial display with all sessions
+            // Check if there's any session data
             var sessionTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Session)).ToList();
+            
+            if (sessionTrades.Count == 0)
+            {
+                var noDataLabel = new Label
+                {
+                    Text = "No session data available. Add session information to your trades to see session performance.",
+                    Dock = DockStyle.Fill,
+                    ForeColor = TextGray,
+                    Font = new Font("Segoe UI", 12, FontStyle.Italic),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Padding = new Padding(20)
+                };
+                sectionPanel.Controls.Add(noDataLabel);
+                return sectionPanel;
+            }
+
+            // Initial display with all sessions
             var initialStatsPanel = CreateSessionStatsDisplay(sessionTrades);
             initialStatsPanel.Dock = DockStyle.Fill;
             statsContainer.Controls.Add(initialStatsPanel);
