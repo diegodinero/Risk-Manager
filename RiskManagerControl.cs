@@ -16055,7 +16055,7 @@ namespace Risk_Manager
                 Dock = DockStyle.Fill,
                 ForeColor = valueColor,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),  // Slightly smaller
-                TextAlign = ContentAlignment.MiddleLeft,
+                TextAlign = ContentAlignment.MiddleRight,  // Right-aligned for colored values
                 AutoSize = false  // Prevent wrapping
             };
             card.Controls.Add(valueControl);
@@ -16070,7 +16070,7 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 180,  // Reduced from 350 to accommodate smaller cards
+                Height = 350,  // Restored to original
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 10, 20, 10)
             };
@@ -16167,9 +16167,9 @@ namespace Risk_Manager
         {
             var card = new Panel
             {
-                Height = 140,  // Reduced from 280 to half size
+                Height = 280,  // Restored to original height
                 BackColor = CardBackground,
-                Padding = new Padding(15, 10, 15, 10)  // Reduced padding to fit content
+                Padding = new Padding(20)  // Restored to original padding
             };
 
             // Add rounded corners and subtle border
@@ -16223,22 +16223,22 @@ namespace Risk_Manager
             {
                 Text = title,
                 Dock = DockStyle.Top,
-                Height = 20,  // Reduced from 30 to fit in smaller card
+                Height = 30,  // Restored to original
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),  // Slightly smaller font
+                Font = new Font("Segoe UI", 13, FontStyle.Bold),  // Restored to original
                 TextAlign = ContentAlignment.MiddleLeft
             };
             card.Controls.Add(titleLabel);
 
             // Stats
-            int yPos = 25;  // Reduced from 35
+            int yPos = 35;  // Restored to original
             foreach (var (label, value, color) in stats)
             {
                 var statPanel = new Panel
                 {
-                    Height = 15,  // Reduced from 25 to fit more compactly
-                    Width = card.Width - 30,  // Adjusted for new padding
-                    Location = new Point(15, yPos),  // Adjusted for new padding
+                    Height = 25,  // Restored to original
+                    Width = card.Width - 40,  // Restored to original
+                    Location = new Point(20, yPos),  // Restored to original
                     BackColor = Color.Transparent
                 };
 
@@ -16248,7 +16248,7 @@ namespace Risk_Manager
                     Dock = DockStyle.Left,
                     Width = (statPanel.Width * 3 / 5),  // Give label 60% of the space
                     ForeColor = TextWhite,
-                    Font = new Font("Segoe UI", 8, FontStyle.Regular),  // Smaller font for compact view
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),  // Restored to original
                     TextAlign = ContentAlignment.MiddleLeft,
                     AutoSize = false,  // Prevent text wrapping
                     AutoEllipsis = true  // Show ellipsis if text is too long
@@ -16261,14 +16261,14 @@ namespace Risk_Manager
                     Dock = DockStyle.Right,
                     Width = (statPanel.Width * 2 / 5) - 5,  // Give value 40% of space
                     ForeColor = color,
-                    Font = new Font("Segoe UI", 8, FontStyle.Bold),  // Smaller font for compact view
+                    Font = new Font("Segoe UI", 10, FontStyle.Bold),  // Restored to original
                     TextAlign = ContentAlignment.MiddleRight,
                     AutoSize = false  // Prevent text wrapping
                 };
                 statPanel.Controls.Add(valueControl);
 
                 card.Controls.Add(statPanel);
-                yPos += 15;  // Reduced spacing from 28 to 15
+                yPos += 28;  // Restored to original spacing
             }
 
             return card;
@@ -16281,7 +16281,7 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 200,  // Reduced from 400 to accommodate smaller cards
+                Height = 400,  // Restored to original
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 10, 20, 10)
             };
@@ -16477,7 +16477,7 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 200,  // Reduced from 400 to accommodate smaller cards
+                Height = 400,  // Restored to original
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 10, 20, 10)
             };
@@ -16646,7 +16646,7 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 200,  // Reduced from 400 to accommodate smaller cards
+                Height = 400,  // Restored to original
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 10, 20, 10)
             };
