@@ -15998,10 +15998,10 @@ namespace Risk_Manager
             // Icon - positioned on the left
             var iconLabel = new Label
             {
-                Width = 35,
+                Width = 28,
                 Dock = DockStyle.Left,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Segoe UI Emoji", 28, FontStyle.Regular)
+                Font = new Font("Segoe UI Emoji", 16, FontStyle.Regular)
             };
 
             // Set icon and color based on label
@@ -16009,22 +16009,22 @@ namespace Risk_Manager
             {
                 case "Plan Adherence":
                     iconLabel.Text = "\uE9D2"; // Segoe MDL2 Assets icon
-                    iconLabel.Font = new Font("Segoe MDL2 Assets", 28, FontStyle.Regular);
+                    iconLabel.Font = new Font("Segoe MDL2 Assets", 16, FontStyle.Regular);
                     iconLabel.ForeColor = Color.FromArgb(91, 140, 255); // Blue
                     break;
                 case "Win Rate":
                     iconLabel.Text = "\uE74C"; // Segoe MDL2 Assets icon
-                    iconLabel.Font = new Font("Segoe MDL2 Assets", 28, FontStyle.Regular);
+                    iconLabel.Font = new Font("Segoe MDL2 Assets", 16, FontStyle.Regular);
                     iconLabel.ForeColor = Color.FromArgb(71, 199, 132); // Green
                     break;
                 case "Profit Factor":
                     iconLabel.Text = "💰"; // Money bag emoji
-                    iconLabel.Font = new Font("Segoe UI Emoji", 28, FontStyle.Regular);
+                    iconLabel.Font = new Font("Segoe UI Emoji", 16, FontStyle.Regular);
                     iconLabel.ForeColor = Color.FromArgb(255, 200, 91); // Orange
                     break;
                 case "Total P&L":
                     iconLabel.Text = "💵"; // Dollar emoji
-                    iconLabel.Font = new Font("Segoe UI Emoji", 28, FontStyle.Regular);
+                    iconLabel.Font = new Font("Segoe UI Emoji", 16, FontStyle.Regular);
                     iconLabel.ForeColor = Color.FromArgb(71, 199, 132); // Green
                     break;
                 default:
@@ -16262,18 +16262,6 @@ namespace Risk_Manager
 
             // Get models from database instead of extracting from trades
             var modelNames = models.Select(m => m.Name).Where(n => !string.IsNullOrWhiteSpace(n)).OrderBy(n => n).ToList();
-            
-            // DEBUG: Add label showing model count
-            var debugLabel = new Label
-            {
-                Text = $"Models loaded: {models.Count}, Names: {modelNames.Count}",
-                Dock = DockStyle.Top,
-                Height = 20,
-                ForeColor = Color.Yellow,
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                BackColor = Color.Red
-            };
-            headerPanel.Controls.Add(debugLabel);
             
             // Add model selector ComboBox FIRST (for proper right-docking)
             var modelSelector = new ComboBox
@@ -16627,18 +16615,6 @@ namespace Risk_Manager
             
             // Get unique sessions from trades to see what's actually being used
             var sessionNames = trades.Select(t => t.Session).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
-
-            // DEBUG: Add label showing session count
-            var debugLabel = new Label
-            {
-                Text = $"Trades: {trades.Count}, Sessions found: {sessionNames.Count} ({string.Join(", ", sessionNames.Take(3))})",
-                Dock = DockStyle.Top,
-                Height = 20,
-                ForeColor = Color.Yellow,
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                BackColor = Color.Red
-            };
-            headerPanel.Controls.Add(debugLabel);
 
             // Session selector ComboBox - ADD FIRST for proper right-docking
             var sessionSelector = new ComboBox
