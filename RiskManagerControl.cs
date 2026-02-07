@@ -15951,7 +15951,7 @@ namespace Risk_Manager
                 Dock = DockStyle.Top,
                 Height = 30,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 16, FontStyle.SemiBold),
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft
             };
             sectionPanel.Controls.Add(titleLabel);
@@ -16008,7 +16008,7 @@ namespace Risk_Manager
                 Dock = DockStyle.Top,
                 Height = 25,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 11, FontStyle.SemiBold),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft
             };
             card.Controls.Add(labelControl);
@@ -16046,7 +16046,7 @@ namespace Risk_Manager
                 Dock = DockStyle.Top,
                 Height = 30,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 16, FontStyle.SemiBold),
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft
             };
             sectionPanel.Controls.Add(titleLabel);
@@ -16201,7 +16201,7 @@ namespace Risk_Manager
                 Dock = DockStyle.Left,
                 AutoSize = true,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 16, FontStyle.SemiBold),
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(0, 5, 0, 0)
             };
@@ -16305,7 +16305,7 @@ namespace Risk_Manager
                 Dock = DockStyle.Top,
                 Height = 30,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 16, FontStyle.SemiBold),
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft
             };
             sectionPanel.Controls.Add(titleLabel);
@@ -16387,7 +16387,7 @@ namespace Risk_Manager
                 Dock = DockStyle.Top,
                 Height = 30,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 16, FontStyle.SemiBold),
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft
             };
             sectionPanel.Controls.Add(titleLabel);
