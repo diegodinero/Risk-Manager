@@ -16331,14 +16331,15 @@ namespace Risk_Manager
                 
                 // Clear and rebuild stats display
                 statsContainer.Controls.Clear();
-                var statsPanel = CreateModelStatsDisplay(filteredTrades, modelNames.Count);
+                var statsPanel = CreateModelStatsDisplay(filteredTrades, models.Count(m => !string.IsNullOrEmpty(m.Name)));
                 statsPanel.Dock = DockStyle.Fill;
                 statsContainer.Controls.Add(statsPanel);
             };
             
             sectionPanel.Controls.Add(headerPanel);
 
-            if (modelNames.Count == 0)
+            var modelCount = models.Count(m => !string.IsNullOrEmpty(m.Name));
+            if (modelCount == 0)
             {
                 var noDataLabel = new Label
                 {
@@ -16354,7 +16355,7 @@ namespace Risk_Manager
 
             // Initial display with all models
             var modelTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Model)).ToList();
-            var initialStatsPanel = CreateModelStatsDisplay(modelTrades, modelNames.Count);
+            var initialStatsPanel = CreateModelStatsDisplay(modelTrades, modelCount);
             initialStatsPanel.Dock = DockStyle.Fill;
             statsContainer.Controls.Add(initialStatsPanel);
             
