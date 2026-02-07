@@ -13772,20 +13772,20 @@ namespace Risk_Manager
             
             if (showPlanMode)
             {
-                // Plan Mode: "Monthly stats: Days Followed then Days Traded"
-                // Days Followed colored by legend, Days Traded has blue background
+                // Plan Mode: "Monthly stats: [N] Days Followed"
+                // Both number and "Days" word colored by legend
                 
                 // Calculate plan percentage for coloring
                 double monthlyPlanPct = tradedDays > 0 ? (planFollowedDays * 100.0) / tradedDays : 0;
-                Color daysFollowedColor;
+                Color daysColor;
                 if (monthlyPlanPct >= 70)
-                    daysFollowedColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
+                    daysColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
                 else if (monthlyPlanPct >= 50)
-                    daysFollowedColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
+                    daysColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
                 else if (monthlyPlanPct > 0)
-                    daysFollowedColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
+                    daysColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
                 else
-                    daysFollowedColor = TextWhite; // No days
+                    daysColor = TextWhite; // No days
                 
                 var label1 = new Label
                 {
@@ -13800,51 +13800,44 @@ namespace Risk_Manager
                 // Days Followed number (colored by plan adherence)
                 var label2 = new Label
                 {
-                    Text = $"{planFollowedDays}",
+                    Text = $" {planFollowedDays} ",
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = daysFollowedColor,
+                    ForeColor = Color.Black,
+                    BackColor = daysColor,
                     AutoSize = true,
-                    Margin = new Padding(0, 5, 3, 0)
+                    Margin = new Padding(0, 5, 0, 0),
+                    Padding = new Padding(3, 1, 3, 1)
                 };
                 flowPanel.Controls.Add(label2);
                 
+                // "Days" word with same color
                 var label3 = new Label
                 {
-                    Text = "Days Followed then ",
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                    ForeColor = TextWhite,
+                    Text = " Days ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.Black,
+                    BackColor = daysColor,
                     AutoSize = true,
-                    Margin = new Padding(0, 5, 0, 0)
+                    Margin = new Padding(0, 5, 0, 0),
+                    Padding = new Padding(3, 1, 3, 1)
                 };
                 flowPanel.Controls.Add(label3);
                 
-                // Days Traded number (blue background)
+                // "Followed" text
                 var label4 = new Label
                 {
-                    Text = $" {tradedDays} ",
-                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = Color.White,
-                    BackColor = blueHighlight,
-                    AutoSize = true,
-                    Margin = new Padding(0, 5, 3, 0),
-                    Padding = new Padding(3, 1, 3, 1)
-                };
-                flowPanel.Controls.Add(label4);
-                
-                var label5 = new Label
-                {
-                    Text = "Days Traded",
+                    Text = " Followed",
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
                     ForeColor = TextWhite,
                     AutoSize = true,
                     Margin = new Padding(0, 5, 0, 0)
                 };
-                flowPanel.Controls.Add(label5);
+                flowPanel.Controls.Add(label4);
             }
             else
             {
-                // P&L Mode: "Monthly stats: P&L for the month then Days traded"
-                // Days Traded has blue background, dollar amount is green/red based on value
+                // P&L Mode: "Monthly stats: +$X [N] [Days]"
+                // Number and "Days" word both have blue background, dollar amount is green/red
                 
                 var label1 = new Label
                 {
@@ -13859,7 +13852,7 @@ namespace Risk_Manager
                 var plColor = monthlyNetPL >= 0 ? positiveColor : negativeColor;
                 var label2 = new Label
                 {
-                    Text = $"{monthlyNetPL:+$#,##0.00;-$#,##0.00;$0.00}",
+                    Text = $"{monthlyNetPL:+$#,##0.00;-$#,##0.00;$0.00} ",
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = plColor,
                     AutoSize = true,
@@ -13867,37 +13860,31 @@ namespace Risk_Manager
                 };
                 flowPanel.Controls.Add(label2);
                 
+                // Days number with blue background
                 var label3 = new Label
-                {
-                    Text = "for the month then ",
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                    ForeColor = TextWhite,
-                    AutoSize = true,
-                    Margin = new Padding(0, 5, 0, 0)
-                };
-                flowPanel.Controls.Add(label3);
-                
-                var label4 = new Label
                 {
                     Text = $" {tradedDays} ",
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = Color.White,
                     BackColor = blueHighlight,
                     AutoSize = true,
-                    Margin = new Padding(0, 5, 3, 0),
+                    Margin = new Padding(0, 5, 0, 0),
+                    Padding = new Padding(3, 1, 3, 1)
+                };
+                flowPanel.Controls.Add(label3);
+                
+                // "Days" word with blue background
+                var label4 = new Label
+                {
+                    Text = " Days ",
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = blueHighlight,
+                    AutoSize = true,
+                    Margin = new Padding(0, 5, 0, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
                 flowPanel.Controls.Add(label4);
-                
-                var label5 = new Label
-                {
-                    Text = "Days Traded",
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                    ForeColor = TextWhite,
-                    AutoSize = true,
-                    Margin = new Padding(0, 5, 0, 0)
-                };
-                flowPanel.Controls.Add(label5);
             }
             
             panel.Controls.Add(flowPanel);
@@ -14027,16 +14014,33 @@ namespace Risk_Manager
             int planFollowedCount = weekTrades.Count(t => t.FollowedPlan);
             double planPct = tradeCount > 0 ? (planFollowedCount * 100.0) / tradeCount : 0;
             
-            // Color the weekly panel based on plan adherence (matching legend)
+            // Color the weekly panel based on plan adherence in Plan mode or win % in P&L mode
             Color panelColor = CardBackground;
-            if (tradeCount > 0 && showPlanMode)
+            if (tradeCount > 0)
             {
-                if (planPct >= 70)
-                    panelColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
-                else if (planPct >= 50)
-                    panelColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
+                if (showPlanMode)
+                {
+                    // Plan mode: color by plan adherence
+                    if (planPct >= 70)
+                        panelColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
+                    else if (planPct >= 50)
+                        panelColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
+                    else
+                        panelColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
+                }
                 else
-                    panelColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
+                {
+                    // P&L mode: color by win percentage
+                    int winCount = weekTrades.Count(t => t.Outcome == "Win");
+                    double winPct = tradeCount > 0 ? (winCount * 100.0) / tradeCount : 0;
+                    
+                    if (winPct >= 70)
+                        panelColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
+                    else if (winPct >= 50)
+                        panelColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
+                    else
+                        panelColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
+                }
             }
             
             var panel = new Panel
