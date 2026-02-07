@@ -16168,6 +16168,7 @@ namespace Risk_Manager
             var card = new Panel
             {
                 Height = 280,  // Restored to original height
+                MaximumSize = new Size(500, 0),  // Limit card width to 500px
                 BackColor = CardBackground,
                 Padding = new Padding(20)  // Restored to original padding
             };
