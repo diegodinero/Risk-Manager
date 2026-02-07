@@ -14042,11 +14042,11 @@ namespace Risk_Manager
                 else
                 {
                     // P&L mode: color by actual P&L value
-                    decimal weeklyPL = weekTrades.Sum(t => t.NetPL);
+                    decimal colorWeeklyPL = weekTrades.Sum(t => t.NetPL);
                     
-                    if (weeklyPL > 5) // Positive P&L
+                    if (colorWeeklyPL > 5) // Positive P&L
                         panelColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
-                    else if (weeklyPL < -5) // Negative P&L
+                    else if (colorWeeklyPL < -5) // Negative P&L
                         panelColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
                     else // Breakeven (within ±$5)
                         panelColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
