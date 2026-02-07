@@ -13422,7 +13422,7 @@ namespace Risk_Manager
             };
             
             // Header with reorganized layout
-            int calendarWidth = 7 * 150; // 1050px to match calendar grid
+            int calendarWidth = (7 * 150) + 200; // 1250px - full calendar width including weekly stats
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
@@ -13450,14 +13450,14 @@ namespace Risk_Manager
             };
             headerPanel.Controls.Add(titleLabel);
             
-            // Previous month button - left of center
+            // Previous month button - left of center (symmetric spacing)
             var prevButton = new Button
             {
                 Name = "PrevMonthButton",
                 Text = "◀",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Size = new Size(35, 35),
-                Location = new Point(centerX - 200, 10),
+                Location = new Point(centerX - monthLabelWidth/2 - 40, 10), // Symmetric with next button
                 BackColor = blueHighlight, // Blue background for navigation
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
@@ -13484,14 +13484,14 @@ namespace Risk_Manager
             };
             headerPanel.Controls.Add(monthYearLabel);
             
-            // Next month button - right of center
+            // Next month button - right of center (symmetric spacing)
             var nextButton = new Button
             {
                 Name = "NextMonthButton",
                 Text = "▶",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Size = new Size(35, 35),
-                Location = new Point(centerX + monthLabelWidth + 5, 10),
+                Location = new Point(centerX + monthLabelWidth/2 + 5, 10), // Symmetric with prev button
                 BackColor = blueHighlight, // Blue background for navigation
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
@@ -13506,13 +13506,14 @@ namespace Risk_Manager
             };
             headerPanel.Controls.Add(nextButton);
             
-            // Inline monthly stats - positioned after next button with spacing
+            // Inline monthly stats - positioned after next button with spacing, constrained to not overlap toggles
+            int toggleStartX = calendarWidth - 175; // Room for both toggle buttons
             var inlineStatsPanel = CreateInlineMonthlyStats();
             inlineStatsPanel.Location = new Point(nextButton.Right + 10, 10);
+            inlineStatsPanel.MaximumSize = new Size(toggleStartX - (nextButton.Right + 10) - 20, 40); // Prevent overlap with toggles
             headerPanel.Controls.Add(inlineStatsPanel);
             
-            // Toggle buttons for Plan/P&L mode - FAR RIGHT
-            int toggleStartX = calendarWidth - 175; // Room for both toggle buttons
+            // Toggle buttons for Plan/P&L mode - FAR RIGHT (at calendar edge)
             var plToggle = new Button
             {
                 Name = "PLToggle",
@@ -14226,7 +14227,7 @@ namespace Risk_Manager
             
             // Legend items flow panel
             int calendarWidth = 7 * 150; // 7 day columns × 150px each = 1050px
-            legendPanel.Width = 1000; // Slightly less than calendar to ensure items fit
+            legendPanel.Width = (7 * 150) + 200; // 1250px - match full calendar width including weekly stats
             
             var itemsPanel = new FlowLayoutPanel
             {
