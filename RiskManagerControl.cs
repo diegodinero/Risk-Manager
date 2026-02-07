@@ -13510,8 +13510,8 @@ namespace Risk_Manager
             prevButton.BringToFront(); // Ensure buttons are visible on top
             nextButton.BringToFront();
             
-            // Toggle buttons for Plan/P&L mode
-            int toggleStartX = 650; // Position after navigation group
+            // Toggle buttons for Plan/P&L mode - positioned on far right
+            int toggleStartX = calendarWidth - 170; // Position at right side (170px = 2 buttons + gap)
             var plToggle = new Button
             {
                 Name = "PLToggle",
@@ -13554,10 +13554,12 @@ namespace Risk_Manager
             };
             headerPanel.Controls.Add(planToggle);
             
-            // Inline monthly stats - positioned between toggles and right arrow
+            // Inline monthly stats - positioned between navigation and toggles
             var inlineStatsPanel = CreateInlineMonthlyStats();
-            inlineStatsPanel.Location = new Point(toggleStartX + 175 + 10, 10); // After both toggles
-            inlineStatsPanel.MaximumSize = new Size(200, 40);
+            int statsX = navGroupX + 40 + monthLabelWidth + 5 + 40 + 10; // After next button + gap
+            inlineStatsPanel.Location = new Point(statsX, 10);
+            int maxStatsWidth = toggleStartX - statsX - 10; // Space between nav and toggles
+            inlineStatsPanel.MaximumSize = new Size(maxStatsWidth, 40);
             headerPanel.Controls.Add(inlineStatsPanel);
             
             // Calendar grid panel
