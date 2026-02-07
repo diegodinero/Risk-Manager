@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Media;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
@@ -15815,7 +15816,1015 @@ namespace Risk_Manager
         /// </summary>
         private Control CreateDashboardPage()
         {
-            return CreatePlaceholderPage("Dashboard", "View performance analytics and charts");
+            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
+
+            // Get current account using the same method as TradeLog
+            string accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber))
+            {
+                var noAccountPanel = new Panel
+                {
+                    Dock = DockStyle.Fill,
+                    BackColor = CardBackground,
+                    Padding = new Padding(40)
+                };
+                var noAccountLabel = new Label
+                {
+                    Text = "Please select a trading account to view dashboard",
+                    Dock = DockStyle.Fill,
+                    ForeColor = TextWhite,
+                    Font = new Font("Segoe UI", 14, FontStyle.Regular),
+                    TextAlign = ContentAlignment.MiddleCenter
+                };
+                noAccountPanel.Controls.Add(noAccountLabel);
+                pagePanel.Controls.Add(noAccountPanel);
+                return pagePanel;
+            }
+
+            // Get stats from trading journal service
+            var stats = TradingJournalService.Instance.GetStats(accountNumber);
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+            var models = TradingJournalService.Instance.GetModels(accountNumber);
+
+            // Calculate additional metrics
+            int followedPlan = trades.Count(t => t.FollowedPlan);
+            int violatedPlan = trades.Count - followedPlan;
+            double planAdherence = trades.Count > 0 ? (double)followedPlan / trades.Count * 100 : 0;
+            
+            // Calculate profit factor using winning and losing trades only
+            decimal grossWins = trades.Where(t => t.Outcome?.ToLower() == "win" && t.NetPL > 0).Sum(t => t.NetPL);
+            decimal grossLosses = trades.Where(t => t.Outcome?.ToLower() == "loss" && t.NetPL < 0).Sum(t => Math.Abs(t.NetPL));
+            double profitFactor = grossLosses > 0 ? (double)(grossWins / grossLosses) : 0;
+            
+            // Monthly stats
+            var now = DateTime.Now;
+            var monthlyTrades = trades.Where(t => t.Date.Year == now.Year && t.Date.Month == now.Month).ToList();
+            int monthlyWins = monthlyTrades.Count(t => t.Outcome?.ToLower() == "win");
+            int monthlyFollowedPlan = monthlyTrades.Count(t => t.FollowedPlan);
+            decimal monthlyNetPL = monthlyTrades.Sum(t => t.NetPL);
+            decimal monthlyGrossWins = monthlyTrades.Where(t => t.Outcome?.ToLower() == "win").Sum(t => t.NetPL);
+            decimal monthlyGrossLosses = monthlyTrades.Where(t => t.Outcome?.ToLower() == "loss").Sum(t => Math.Abs(t.NetPL));
+            double monthlyWinRate = monthlyTrades.Count > 0 ? (double)monthlyWins / monthlyTrades.Count * 100 : 0;
+            double monthlyPlanAdherence = monthlyTrades.Count > 0 ? (double)monthlyFollowedPlan / monthlyTrades.Count * 100 : 0;
+            double monthlyProfitFactor = monthlyGrossLosses > 0 ? (double)(monthlyGrossWins / monthlyGrossLosses) : 0;
+
+            // Page title
+            var titleLabel = new Label
+            {
+                Text = "Dashboard",
+                Dock = DockStyle.Top,
+                Height = 50,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 24, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(20, 10, 0, 0)
+            };
+            pagePanel.Controls.Add(titleLabel);
+
+            // Add panels in reverse order since Dock.Top stacks from bottom to top
+            // Session Performance Section (always show, handles empty state internally)
+            var sessionStatsPanel = CreateSessionStatsSection(trades);
+            sessionStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(sessionStatsPanel);
+
+            // Day of Week Performance Section
+            var dayStatsPanel = CreateDayStatsSection(trades);
+            dayStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(dayStatsPanel);
+
+            // Trading Model Performance Section (always show, handles empty state internally)
+            var modelStatsPanel = CreateModelStatsSection(trades, models);
+            modelStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(modelStatsPanel);
+
+            // Main Statistics Section
+            var mainStatsPanel = CreateMainStatsSection(stats, followedPlan, violatedPlan, planAdherence, profitFactor);
+            mainStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(mainStatsPanel);
+
+            // Monthly Stats Section
+            var monthlyStatsPanel = CreateStatsSection("Monthly Stats", new[]
+            {
+                ("Plan Adherence", $"{monthlyPlanAdherence:0.0}%", Color.FromArgb(91, 140, 255)),
+                ("Win Rate", $"{monthlyWinRate:0.0}%", GetWinRateColor(monthlyWinRate)),
+                ("Profit Factor", $"{monthlyProfitFactor:0.00}", Color.FromArgb(255, 200, 91)),
+                ("Total P&L", FormatPL(monthlyNetPL), monthlyNetPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77))
+            });
+            monthlyStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(monthlyStatsPanel);
+
+            // Overall Stats Section
+            var overallStatsPanel = CreateStatsSection("Overall Stats", new[]
+            {
+                ("Plan Adherence", $"{planAdherence:0.0}%", Color.FromArgb(91, 140, 255)),
+                ("Win Rate", $"{stats.WinRate:0.0}%", GetWinRateColor(stats.WinRate)),
+                ("Profit Factor", $"{profitFactor:0.00}", Color.FromArgb(255, 200, 91)),
+                ("Total P&L", FormatPL(stats.TotalPL), stats.TotalPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77))
+            });
+            overallStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(overallStatsPanel);
+
+            return pagePanel;
+        }
+
+        /// <summary>
+        /// Creates a section with stat cards
+        /// </summary>
+        private Panel CreateStatsSection(string title, (string label, string value, Color color)[] stats)
+        {
+            var sectionPanel = new Panel
+            {
+                Height = 150,
+                BackColor = DarkBackground,
+                Padding = new Padding(20, 10, 20, 10)
+            };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = title,
+                Dock = DockStyle.Top,
+                Height = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            sectionPanel.Controls.Add(titleLabel);
+
+            // Cards container
+            var cardsPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                AutoSize = false,  // Changed from true to false to work with Dock=Fill
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 10, 0, 0)
+            };
+
+            foreach (var (label, value, color) in stats)
+            {
+                var card = CreateStatCard(label, value, color);
+                cardsPanel.Controls.Add(card);
+            }
+
+            sectionPanel.Controls.Add(cardsPanel);
+            return sectionPanel;
+        }
+
+        /// <summary>
+        /// Creates an individual stat card with emoji icon
+        /// </summary>
+        private Panel CreateStatCard(string label, string value, Color valueColor)
+        {
+            var card = new Panel
+            {
+                Width = 180,
+                Height = 80,
+                BackColor = CardBackground,
+                Margin = new Padding(0, 0, 10, 0),
+                Padding = new Padding(15, 10, 15, 10)
+            };
+
+            // Add subtle border
+            card.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1))
+                {
+                    var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            };
+
+            // Icon - positioned on the left with minimal size
+            var iconLabel = new Label
+            {
+                Width = 18,
+                Dock = DockStyle.Left,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular)
+            };
+
+            // Set icon and color based on label
+            switch (label)
+            {
+                case "Plan Adherence":
+                    iconLabel.Text = "\uE9D2"; // Segoe MDL2 Assets icon
+                    iconLabel.Font = new Font("Segoe MDL2 Assets", 10, FontStyle.Regular);
+                    iconLabel.ForeColor = Color.FromArgb(91, 140, 255); // Blue
+                    break;
+                case "Win Rate":
+                    iconLabel.Text = "\uE74C"; // Segoe MDL2 Assets icon
+                    iconLabel.Font = new Font("Segoe MDL2 Assets", 10, FontStyle.Regular);
+                    iconLabel.ForeColor = Color.FromArgb(71, 199, 132); // Green
+                    break;
+                case "Profit Factor":
+                    iconLabel.Text = "💰"; // Money bag emoji
+                    iconLabel.Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular);
+                    iconLabel.ForeColor = Color.FromArgb(255, 200, 91); // Orange
+                    break;
+                case "Total P&L":
+                    iconLabel.Text = "💵"; // Dollar emoji
+                    iconLabel.Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular);
+                    iconLabel.ForeColor = Color.FromArgb(71, 199, 132); // Green
+                    break;
+                default:
+                    // No icon for other labels
+                    iconLabel.Visible = false;
+                    break;
+            }
+            card.Controls.Add(iconLabel);
+
+            // Content panel (label + value)
+            var contentPanel = new Panel
+            {
+                Dock = DockStyle.Fill
+            };
+
+            // Label
+            var labelControl = new Label
+            {
+                Text = label,
+                Dock = DockStyle.Top,
+                Height = 25,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            contentPanel.Controls.Add(labelControl);
+
+            // Value
+            var valueControl = new Label
+            {
+                Text = value,
+                Dock = DockStyle.Fill,
+                ForeColor = valueColor,
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            contentPanel.Controls.Add(valueControl);
+
+            card.Controls.Add(contentPanel);
+
+            return card;
+        }
+
+        /// <summary>
+        /// Creates the Main Statistics section with two cards
+        /// </summary>
+        private Panel CreateMainStatsSection(JournalStats stats, int followedPlan, int violatedPlan, double planAdherence, double profitFactor)
+        {
+            var sectionPanel = new Panel
+            {
+                Height = 350,
+                BackColor = DarkBackground,
+                Padding = new Padding(20, 10, 20, 10)
+            };
+
+            // Title with icon
+            var titlePanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 35,
+                BackColor = DarkBackground
+            };
+
+            // Icon
+            var iconLabel = new Label
+            {
+                Text = "\uE9D2", // Segoe MDL2 Assets stats icon
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 7, 0, 0)
+            };
+            titlePanel.Controls.Add(iconLabel);
+
+            // Title text
+            var titleLabel = new Label
+            {
+                Text = "Main Statistics",
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(5, 7, 0, 0)
+            };
+            titlePanel.Controls.Add(titleLabel);
+
+            sectionPanel.Controls.Add(titlePanel);
+
+            // Two-column layout using TableLayoutPanel for proper sizing
+            var tableLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 10, 0, 0),
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
+            };
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            // Left card: Trading Statistics
+            var leftCard = CreateDetailCard("Trading Statistics", new[]
+            {
+                ("Total Trades", stats.TotalTrades.ToString(), TextWhite),
+                ("Plan Followed", followedPlan.ToString(), TextWhite),
+                ("Plan Violated", violatedPlan.ToString(), Color.FromArgb(255, 77, 77)),
+                ("P&L", FormatPL(stats.TotalPL), stats.TotalPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77)),
+                ("Winning Trades", stats.Wins.ToString(), Color.FromArgb(71, 199, 132)),
+                ("Losing Trades", stats.Losses.ToString(), Color.FromArgb(255, 77, 77)),
+                ("Break-Even Trades", stats.Breakevens.ToString(), TextWhite)
+            });
+            leftCard.Dock = DockStyle.Fill;
+            leftCard.Margin = new Padding(0, 0, 10, 0);
+            tableLayout.Controls.Add(leftCard, 0, 0);
+
+            // Right card: Overall Performance
+            var rightCard = CreateDetailCard("Overall Performance", new[]
+            {
+                ("Average Win", FormatPL(stats.AverageWin), Color.FromArgb(71, 199, 132)),
+                ("Average Loss", FormatPL(stats.AverageLoss), Color.FromArgb(255, 77, 77)),
+                ("Win Rate", $"{stats.WinRate:0.0}%", GetWinRateColor(stats.WinRate)),
+                ("Plan Adherence", $"{planAdherence:0.0}%", Color.FromArgb(91, 140, 255)),
+                ("Profit Factor", $"{profitFactor:0.00}", Color.FromArgb(255, 200, 91)),
+                ("Largest Win", FormatPL(stats.LargestWin), Color.FromArgb(71, 199, 132)),
+                ("Largest Loss", FormatPL(stats.LargestLoss), Color.FromArgb(255, 77, 77)),
+                ("Average P&L", FormatPL(stats.AveragePL), stats.AveragePL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77))
+            });
+            rightCard.Dock = DockStyle.Fill;
+            rightCard.Margin = new Padding(10, 0, 0, 0);
+            tableLayout.Controls.Add(rightCard, 1, 0);
+
+            sectionPanel.Controls.Add(tableLayout);
+            return sectionPanel;
+        }
+
+        /// <summary>
+        /// Creates a detailed card with multiple stats
+        /// </summary>
+        private Panel CreateDetailCard(string title, (string label, string value, Color color)[] stats)
+        {
+            var card = new Panel
+            {
+                Height = 280,
+                BackColor = CardBackground,
+                Padding = new Padding(20)
+            };
+
+            // Add subtle border
+            card.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1))
+                {
+                    var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            };
+
+            // Title
+            var titleLabel = new Label
+            {
+                Text = title,
+                Dock = DockStyle.Top,
+                Height = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 13, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            card.Controls.Add(titleLabel);
+
+            // Stats
+            int yPos = 35;
+            foreach (var (label, value, color) in stats)
+            {
+                var statPanel = new Panel
+                {
+                    Height = 25,
+                    Width = card.Width - 40,
+                    Location = new Point(20, yPos),
+                    BackColor = Color.Transparent
+                };
+
+                var labelControl = new Label
+                {
+                    Text = label,
+                    Dock = DockStyle.Left,
+                    Width = (statPanel.Width / 2) - 10,
+                    ForeColor = TextWhite,
+                    Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                    TextAlign = ContentAlignment.MiddleLeft
+                };
+                statPanel.Controls.Add(labelControl);
+
+                var valueControl = new Label
+                {
+                    Text = value,
+                    Dock = DockStyle.Right,
+                    Width = (statPanel.Width / 2) - 10,
+                    ForeColor = color,
+                    Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                    TextAlign = ContentAlignment.MiddleRight
+                };
+                statPanel.Controls.Add(valueControl);
+
+                card.Controls.Add(statPanel);
+                yPos += 28;
+            }
+
+            return card;
+        }
+
+        /// <summary>
+        /// Creates Trading Model Performance section
+        /// </summary>
+        private Panel CreateModelStatsSection(List<JournalTrade> trades, List<TradingJournalService.TradingModel> models)
+        {
+            var sectionPanel = new Panel
+            {
+                Height = 400,
+                BackColor = DarkBackground,
+                Padding = new Padding(20, 10, 20, 10)
+            };
+
+            // Title with model selector
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 45,
+                BackColor = DarkBackground
+            };
+
+            // Add model selector ComboBox FIRST (for proper right-docking)
+            var modelSelector = new ComboBox
+            {
+                Dock = DockStyle.Right,
+                Width = 150,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Margin = new Padding(10, 10, 0, 5)
+            };
+            
+            // Get models from database - use same logic as TradeLog
+            // Load models exactly like TradeEntryDialog does
+            // Debug output
+            System.Diagnostics.Debug.WriteLine($"Dashboard: Loading models. Total count: {models.Count}");
+            
+            modelSelector.Items.Add("All Models");
+            foreach (var model in models)
+            {
+                if (!string.IsNullOrEmpty(model.Name))
+                {
+                    System.Diagnostics.Debug.WriteLine($"Dashboard: Adding model '{model.Name}' to dropdown");
+                    modelSelector.Items.Add(model.Name);
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"Dashboard: Skipping model with empty name. ID: {model.Id}");
+                }
+            }
+            System.Diagnostics.Debug.WriteLine($"Dashboard: Model dropdown has {modelSelector.Items.Count} items (including 'All Models')");
+            modelSelector.SelectedIndex = 0;
+            headerPanel.Controls.Add(modelSelector);
+
+            // Icon for Model section (Segoe MDL2 Assets - chart icon)
+            var iconLabel = new Label
+            {
+                Text = "\uE719", // Chart icon from Segoe MDL2 Assets
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 7, 0, 0)
+            };
+            headerPanel.Controls.Add(iconLabel);
+
+            var titleLabel = new Label
+            {
+                Text = "Trading Model Performance",
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(5, 7, 0, 0)
+            };
+            headerPanel.Controls.Add(titleLabel);
+            
+            // Store reference for event handler
+            var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+            
+            // Event handler for model selection change
+            modelSelector.SelectedIndexChanged += (s, e) =>
+            {
+                string selectedModel = modelSelector.SelectedItem?.ToString();
+                List<JournalTrade> filteredTrades;
+                
+                if (selectedModel == "All Models")
+                {
+                    filteredTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Model)).ToList();
+                }
+                else
+                {
+                    filteredTrades = trades.Where(t => t.Model == selectedModel).ToList();
+                }
+                
+                // Clear and rebuild stats display
+                statsContainer.Controls.Clear();
+                var statsPanel = CreateModelStatsDisplay(filteredTrades, models.Count(m => !string.IsNullOrEmpty(m.Name)));
+                statsPanel.Dock = DockStyle.Fill;
+                statsContainer.Controls.Add(statsPanel);
+            };
+            
+            sectionPanel.Controls.Add(headerPanel);
+
+            var modelCount = models.Count(m => !string.IsNullOrEmpty(m.Name));
+            if (modelCount == 0)
+            {
+                var noDataLabel = new Label
+                {
+                    Text = "No trading model data available",
+                    Dock = DockStyle.Fill,
+                    ForeColor = TextGray,
+                    Font = new Font("Segoe UI", 12, FontStyle.Italic),
+                    TextAlign = ContentAlignment.MiddleCenter
+                };
+                sectionPanel.Controls.Add(noDataLabel);
+                return sectionPanel;
+            }
+
+            // Initial display with all models
+            var modelTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Model)).ToList();
+            var initialStatsPanel = CreateModelStatsDisplay(modelTrades, modelCount);
+            initialStatsPanel.Dock = DockStyle.Fill;
+            statsContainer.Controls.Add(initialStatsPanel);
+            
+            sectionPanel.Controls.Add(statsContainer);
+            return sectionPanel;
+        }
+
+        /// <summary>
+        /// Creates the stats display for model performance
+        /// </summary>
+        private Panel CreateModelStatsDisplay(List<JournalTrade> modelTrades, int totalModelsCount)
+        {
+            var modelWins = modelTrades.Count(t => t.Outcome?.ToLower() == "win");
+            var modelLosses = modelTrades.Count(t => t.Outcome?.ToLower() == "loss");
+            var modelBreakevens = modelTrades.Count(t => t.Outcome?.ToLower() == "breakeven");
+            var modelFollowedPlan = modelTrades.Count(t => t.FollowedPlan);
+            var modelNetPL = modelTrades.Sum(t => t.NetPL);
+            var modelGrossWins = modelTrades.Where(t => t.Outcome?.ToLower() == "win" && t.NetPL > 0).Sum(t => t.NetPL);
+            var modelGrossLosses = modelTrades.Where(t => t.Outcome?.ToLower() == "loss" && t.NetPL < 0).Sum(t => Math.Abs(t.NetPL));
+            var modelAvgWin = modelWins > 0 ? modelGrossWins / modelWins : 0;
+            var modelAvgLoss = modelLosses > 0 ? modelGrossLosses / modelLosses : 0;
+            var modelWinRate = modelTrades.Count > 0 ? (double)modelWins / modelTrades.Count * 100 : 0;
+            var modelPlanAdherence = modelTrades.Count > 0 ? (double)modelFollowedPlan / modelTrades.Count * 100 : 0;
+            var modelProfitFactor = modelGrossLosses > 0 ? (double)(modelGrossWins / modelGrossLosses) : 0;
+
+            // Two-column layout using TableLayoutPanel
+            var tableLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 10, 0, 0),
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
+            };
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            var leftCard = CreateDetailCard("Trading Model Stats", new[]
+            {
+                ("Total Trades", modelTrades.Count.ToString(), TextWhite),
+                ("Plan Followed", modelFollowedPlan.ToString(), TextWhite),
+                ("Plan Violated", (modelTrades.Count - modelFollowedPlan).ToString(), Color.FromArgb(255, 77, 77)),
+                ("Average Win", FormatPL(modelAvgWin), Color.FromArgb(71, 199, 132)),
+                ("Average Loss", FormatPL(modelAvgLoss), Color.FromArgb(255, 77, 77)),
+                ("Net P&L", FormatPL(modelNetPL), modelNetPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77)),
+                ("Break-Even Trades", modelBreakevens.ToString(), TextWhite)
+            });
+            leftCard.Dock = DockStyle.Fill;
+            leftCard.Margin = new Padding(0, 0, 10, 0);
+            tableLayout.Controls.Add(leftCard, 0, 0);
+
+            var rightCard = CreateDetailCard("Overall Performance", new[]
+            {
+                ("Win Rate", $"{modelWinRate:0.0}%", GetWinRateColor(modelWinRate)),
+                ("Plan Adherence", $"{modelPlanAdherence:0.0}%", Color.FromArgb(91, 140, 255)),
+                ("Profit Factor", $"{modelProfitFactor:0.00}", Color.FromArgb(255, 200, 91)),
+                ("Winning Trades", modelWins.ToString(), Color.FromArgb(71, 199, 132)),
+                ("Losing Trades", modelLosses.ToString(), Color.FromArgb(255, 77, 77)),
+                ("Break-Even Trades", modelBreakevens.ToString(), TextWhite),
+                ("Models Used", totalModelsCount.ToString(), TextWhite)
+            });
+            rightCard.Dock = DockStyle.Fill;
+            rightCard.Margin = new Padding(10, 0, 0, 0);
+            tableLayout.Controls.Add(rightCard, 1, 0);
+
+            return tableLayout;
+        }
+
+        /// <summary>
+        /// Creates Day of Week Performance section
+        /// </summary>
+        private Panel CreateDayStatsSection(List<JournalTrade> trades)
+        {
+            var sectionPanel = new Panel
+            {
+                Height = 400,
+                BackColor = DarkBackground,
+                Padding = new Padding(20, 10, 20, 10)
+            };
+
+            // Header panel with icon, title, and filter
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 45,
+                BackColor = DarkBackground
+            };
+
+            // Day selector ComboBox - ADD FIRST for proper right-docking
+            var daySelector = new ComboBox
+            {
+                Dock = DockStyle.Right,
+                Width = 130,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Margin = new Padding(10, 10, 0, 5)
+            };
+            daySelector.Items.Add("All Days");
+            daySelector.Items.Add("Monday");
+            daySelector.Items.Add("Tuesday");
+            daySelector.Items.Add("Wednesday");
+            daySelector.Items.Add("Thursday");
+            daySelector.Items.Add("Friday");
+            daySelector.Items.Add("Saturday");
+            daySelector.Items.Add("Sunday");
+            daySelector.SelectedIndex = 0;
+            headerPanel.Controls.Add(daySelector);
+
+            // Icon for Day section (Segoe MDL2 Assets - calendar icon)
+            var iconLabel = new Label
+            {
+                Text = "\uE787", // Calendar icon from Segoe MDL2 Assets
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 7, 0, 0)
+            };
+            headerPanel.Controls.Add(iconLabel);
+
+            var titleLabel = new Label
+            {
+                Text = "Day of Week Performance",
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(5, 7, 0, 0)
+            };
+            headerPanel.Controls.Add(titleLabel);
+
+            // Store reference for event handler
+            var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+
+            // Event handler for day selection change
+            daySelector.SelectedIndexChanged += (s, e) =>
+            {
+                string selectedDay = daySelector.SelectedItem?.ToString();
+                List<JournalTrade> filteredTrades;
+
+                if (selectedDay == "All Days")
+                {
+                    filteredTrades = trades;
+                }
+                else
+                {
+                    // Filter by specific day of week
+                    DayOfWeek targetDay = (DayOfWeek)Enum.Parse(typeof(DayOfWeek), selectedDay);
+                    filteredTrades = trades.Where(t => t.Date.DayOfWeek == targetDay).ToList();
+                }
+
+                // Clear and rebuild stats display
+                statsContainer.Controls.Clear();
+                var statsPanel = CreateDayStatsDisplay(filteredTrades);
+                statsPanel.Dock = DockStyle.Fill;
+                statsContainer.Controls.Add(statsPanel);
+            };
+
+            sectionPanel.Controls.Add(headerPanel);
+
+            // Initial display with all days
+            var initialStatsPanel = CreateDayStatsDisplay(trades);
+            initialStatsPanel.Dock = DockStyle.Fill;
+            statsContainer.Controls.Add(initialStatsPanel);
+
+            sectionPanel.Controls.Add(statsContainer);
+            return sectionPanel;
+        }
+
+        /// <summary>
+        /// Creates the stats display for day performance
+        /// </summary>
+        private Panel CreateDayStatsDisplay(List<JournalTrade> dayTrades)
+        {
+            var dayWins = dayTrades.Count(t => t.Outcome?.ToLower() == "win");
+            var dayLosses = dayTrades.Count(t => t.Outcome?.ToLower() == "loss");
+            var dayBreakevens = dayTrades.Count(t => t.Outcome?.ToLower() == "breakeven");
+            var dayFollowedPlan = dayTrades.Count(t => t.FollowedPlan);
+            var dayNetPL = dayTrades.Sum(t => t.NetPL);
+            var dayGrossWins = dayTrades.Where(t => t.Outcome?.ToLower() == "win" && t.NetPL > 0).Sum(t => t.NetPL);
+            var dayGrossLosses = dayTrades.Where(t => t.Outcome?.ToLower() == "loss" && t.NetPL < 0).Sum(t => Math.Abs(t.NetPL));
+            var dayAvgWin = dayWins > 0 ? dayGrossWins / dayWins : 0;
+            var dayAvgLoss = dayLosses > 0 ? dayGrossLosses / dayLosses : 0;
+            var dayWinRate = dayTrades.Count > 0 ? (double)dayWins / dayTrades.Count * 100 : 0;
+            var dayPlanAdherence = dayTrades.Count > 0 ? (double)dayFollowedPlan / dayTrades.Count * 100 : 0;
+            var dayProfitFactor = dayGrossLosses > 0 ? (double)(dayGrossWins / dayGrossLosses) : 0;
+
+            // Two-column layout using TableLayoutPanel
+            var tableLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 10, 0, 0),
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
+            };
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            var leftCard = CreateDetailCard("Day Stats", new[]
+            {
+                ("Total Trades", dayTrades.Count.ToString(), TextWhite),
+                ("Plan Followed", dayFollowedPlan.ToString(), TextWhite),
+                ("Plan Violated", (dayTrades.Count - dayFollowedPlan).ToString(), Color.FromArgb(255, 77, 77)),
+                ("Average Win", FormatPL(dayAvgWin), Color.FromArgb(71, 199, 132)),
+                ("Average Loss", FormatPL(dayAvgLoss), Color.FromArgb(255, 77, 77)),
+                ("Net P&L", FormatPL(dayNetPL), dayNetPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77)),
+                ("Break-Even Trades", dayBreakevens.ToString(), TextWhite)
+            });
+            leftCard.Dock = DockStyle.Fill;
+            leftCard.Margin = new Padding(0, 0, 10, 0);
+            tableLayout.Controls.Add(leftCard, 0, 0);
+
+            var rightCard = CreateDetailCard("Overall Performance", new[]
+            {
+                ("Win Rate", $"{dayWinRate:0.0}%", GetWinRateColor(dayWinRate)),
+                ("Plan Adherence", $"{dayPlanAdherence:0.0}%", Color.FromArgb(91, 140, 255)),
+                ("Profit Factor", $"{dayProfitFactor:0.00}", Color.FromArgb(255, 200, 91)),
+                ("Winning Trades", dayWins.ToString(), Color.FromArgb(71, 199, 132)),
+                ("Losing Trades", dayLosses.ToString(), Color.FromArgb(255, 77, 77)),
+                ("Break-Even Trades", dayBreakevens.ToString(), TextWhite)
+            });
+            rightCard.Dock = DockStyle.Fill;
+            rightCard.Margin = new Padding(10, 0, 0, 0);
+            tableLayout.Controls.Add(rightCard, 1, 0);
+
+            return tableLayout;
+        }
+
+        /// <summary>
+        /// Creates Session Performance section
+        /// </summary>
+        private Panel CreateSessionStatsSection(List<JournalTrade> trades)
+        {
+            var sectionPanel = new Panel
+            {
+                Height = 400,
+                BackColor = DarkBackground,
+                Padding = new Padding(20, 10, 20, 10)
+            };
+
+            // Header panel with icon, title, and filter
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 45,
+                BackColor = DarkBackground
+            };
+
+            // Predefined session options
+            var predefinedSessions = new[] { "New York", "London", "Asia" };
+            
+            // Get unique sessions from trades to see what's actually being used
+            var sessionNames = trades.Select(t => t.Session).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
+
+            // Session selector ComboBox - ADD FIRST for proper right-docking
+            var sessionSelector = new ComboBox
+            {
+                Dock = DockStyle.Right,
+                Width = 130,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Margin = new Padding(10, 10, 0, 5)
+            };
+            sessionSelector.Items.Add("All Sessions");
+            
+            // Add predefined sessions first
+            foreach (var session in predefinedSessions)
+            {
+                sessionSelector.Items.Add(session);
+            }
+            
+            // Add any additional sessions from trades that aren't in predefined list
+            foreach (var session in sessionNames)
+            {
+                if (!predefinedSessions.Contains(session, StringComparer.OrdinalIgnoreCase))
+                {
+                    sessionSelector.Items.Add(session);
+                }
+            }
+            
+            sessionSelector.SelectedIndex = 0;
+            headerPanel.Controls.Add(sessionSelector);
+
+            // Icon for Session section (alarm clock emoji - matches TradingJournalApp)
+            var iconLabel = new Label
+            {
+                Text = "⏰", // Alarm clock emoji
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI Emoji", 18, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 7, 0, 0)
+            };
+            headerPanel.Controls.Add(iconLabel);
+
+            var titleLabel = new Label
+            {
+                Text = "Session Performance",
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(5, 7, 0, 0)
+            };
+            headerPanel.Controls.Add(titleLabel);
+
+            // Store reference for event handler
+            var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+
+            // Event handler for session selection change
+            sessionSelector.SelectedIndexChanged += (s, e) =>
+            {
+                string selectedSession = sessionSelector.SelectedItem?.ToString();
+                List<JournalTrade> filteredTrades;
+
+                if (selectedSession == "All Sessions")
+                {
+                    filteredTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Session)).ToList();
+                }
+                else
+                {
+                    filteredTrades = trades.Where(t => t.Session == selectedSession).ToList();
+                }
+
+                // Clear and rebuild stats display
+                statsContainer.Controls.Clear();
+                var statsPanel = CreateSessionStatsDisplay(filteredTrades);
+                statsPanel.Dock = DockStyle.Fill;
+                statsContainer.Controls.Add(statsPanel);
+            };
+
+            sectionPanel.Controls.Add(headerPanel);
+
+            // Check if there's any session data
+            var sessionTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Session)).ToList();
+            
+            if (sessionTrades.Count == 0)
+            {
+                var noDataLabel = new Label
+                {
+                    Text = "No session data available. Add session information to your trades to see session performance.",
+                    Dock = DockStyle.Fill,
+                    ForeColor = TextGray,
+                    Font = new Font("Segoe UI", 12, FontStyle.Italic),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Padding = new Padding(20)
+                };
+                sectionPanel.Controls.Add(noDataLabel);
+                return sectionPanel;
+            }
+
+            // Initial display with all sessions
+            var initialStatsPanel = CreateSessionStatsDisplay(sessionTrades);
+            initialStatsPanel.Dock = DockStyle.Fill;
+            statsContainer.Controls.Add(initialStatsPanel);
+
+            sectionPanel.Controls.Add(statsContainer);
+            return sectionPanel;
+        }
+
+        /// <summary>
+        /// Creates the stats display for session performance
+        /// </summary>
+        private Panel CreateSessionStatsDisplay(List<JournalTrade> sessionTrades)
+        {
+            var sessionWins = sessionTrades.Count(t => t.Outcome?.ToLower() == "win");
+            var sessionLosses = sessionTrades.Count(t => t.Outcome?.ToLower() == "loss");
+            var sessionBreakevens = sessionTrades.Count(t => t.Outcome?.ToLower() == "breakeven");
+            var sessionFollowedPlan = sessionTrades.Count(t => t.FollowedPlan);
+            var sessionNetPL = sessionTrades.Sum(t => t.NetPL);
+            var sessionGrossWins = sessionTrades.Where(t => t.Outcome?.ToLower() == "win" && t.NetPL > 0).Sum(t => t.NetPL);
+            var sessionGrossLosses = sessionTrades.Where(t => t.Outcome?.ToLower() == "loss" && t.NetPL < 0).Sum(t => Math.Abs(t.NetPL));
+            var sessionAvgWin = sessionWins > 0 ? sessionGrossWins / sessionWins : 0;
+            var sessionAvgLoss = sessionLosses > 0 ? sessionGrossLosses / sessionLosses : 0;
+            var sessionWinRate = sessionTrades.Count > 0 ? (double)sessionWins / sessionTrades.Count * 100 : 0;
+            var sessionPlanAdherence = sessionTrades.Count > 0 ? (double)sessionFollowedPlan / sessionTrades.Count * 100 : 0;
+            var sessionProfitFactor = sessionGrossLosses > 0 ? (double)(sessionGrossWins / sessionGrossLosses) : 0;
+
+            // Two-column layout using TableLayoutPanel
+            var tableLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 10, 0, 0),
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
+            };
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            var leftCard = CreateDetailCard("Session Stats", new[]
+            {
+                ("Total Trades", sessionTrades.Count.ToString(), TextWhite),
+                ("Plan Followed", sessionFollowedPlan.ToString(), TextWhite),
+                ("Plan Violated", (sessionTrades.Count - sessionFollowedPlan).ToString(), Color.FromArgb(255, 77, 77)),
+                ("Average Win", FormatPL(sessionAvgWin), Color.FromArgb(71, 199, 132)),
+                ("Average Loss", FormatPL(sessionAvgLoss), Color.FromArgb(255, 77, 77)),
+                ("Net P&L", FormatPL(sessionNetPL), sessionNetPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77)),
+                ("Break-Even Trades", sessionBreakevens.ToString(), TextWhite)
+            });
+            leftCard.Dock = DockStyle.Fill;
+            leftCard.Margin = new Padding(0, 0, 10, 0);
+            tableLayout.Controls.Add(leftCard, 0, 0);
+
+            var rightCard = CreateDetailCard("Overall Performance", new[]
+            {
+                ("Win Rate", $"{sessionWinRate:0.0}%", GetWinRateColor(sessionWinRate)),
+                ("Plan Adherence", $"{sessionPlanAdherence:0.0}%", Color.FromArgb(91, 140, 255)),
+                ("Profit Factor", $"{sessionProfitFactor:0.00}", Color.FromArgb(255, 200, 91)),
+                ("Winning Trades", sessionWins.ToString(), Color.FromArgb(71, 199, 132)),
+                ("Losing Trades", sessionLosses.ToString(), Color.FromArgb(255, 77, 77)),
+                ("Break-Even Trades", sessionBreakevens.ToString(), TextWhite)
+            });
+            rightCard.Dock = DockStyle.Fill;
+            rightCard.Margin = new Padding(10, 0, 0, 0);
+            tableLayout.Controls.Add(rightCard, 1, 0);
+
+            return tableLayout;
+        }
+
+        /// <summary>
+        /// Formats P&L with $ and sign
+        /// </summary>
+        private string FormatPL(decimal value)
+        {
+            if (value >= 0)
+                return $"+${value:0.00}";
+            else
+                return $"-${Math.Abs(value):0.00}";
+        }
+
+        /// <summary>
+        /// Gets color based on win rate
+        /// </summary>
+        private Color GetWinRateColor(double winRate)
+        {
+            if (winRate < 50)
+                return Color.FromArgb(255, 77, 77); // Red
+            else if (winRate <= 65)
+                return Color.FromArgb(255, 215, 0); // Gold
+            else
+                return Color.FromArgb(71, 199, 132); // Green
         }
 
         /// <summary>
