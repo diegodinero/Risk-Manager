@@ -16263,6 +16263,18 @@ namespace Risk_Manager
             // Get models from database instead of extracting from trades
             var modelNames = models.Select(m => m.Name).Where(n => !string.IsNullOrWhiteSpace(n)).OrderBy(n => n).ToList();
             
+            // DEBUG: Add label showing model count
+            var debugLabel = new Label
+            {
+                Text = $"Models loaded: {models.Count}, Names: {modelNames.Count}",
+                Dock = DockStyle.Top,
+                Height = 20,
+                ForeColor = Color.Yellow,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = Color.Red
+            };
+            headerPanel.Controls.Add(debugLabel);
+            
             // Add model selector ComboBox FIRST (for proper right-docking)
             var modelSelector = new ComboBox
             {
@@ -16615,6 +16627,18 @@ namespace Risk_Manager
             
             // Get unique sessions from trades to see what's actually being used
             var sessionNames = trades.Select(t => t.Session).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
+
+            // DEBUG: Add label showing session count
+            var debugLabel = new Label
+            {
+                Text = $"Trades: {trades.Count}, Sessions found: {sessionNames.Count} ({string.Join(", ", sessionNames.Take(3))})",
+                Dock = DockStyle.Top,
+                Height = 20,
+                ForeColor = Color.Yellow,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                BackColor = Color.Red
+            };
+            headerPanel.Controls.Add(debugLabel);
 
             // Session selector ComboBox - ADD FIRST for proper right-docking
             var sessionSelector = new ComboBox
