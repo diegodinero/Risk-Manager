@@ -16191,9 +16191,22 @@ namespace Risk_Manager
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 40,
+                Height = 45,
                 BackColor = DarkBackground
             };
+
+            // Icon for Model section (use emoji)
+            var iconLabel = new Label
+            {
+                Text = "📊",
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI Emoji", 18, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 7, 0, 0)
+            };
+            headerPanel.Controls.Add(iconLabel);
 
             var titleLabel = new Label
             {
@@ -16203,15 +16216,60 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(0, 5, 0, 0)
+                Padding = new Padding(5, 7, 0, 0)
             };
             headerPanel.Controls.Add(titleLabel);
 
+            // Get unique models from trades
+            var modelNames = trades.Select(t => t.Model).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().OrderBy(m => m).ToList();
+            
+            // Add model selector ComboBox
+            var modelSelector = new ComboBox
+            {
+                Dock = DockStyle.Right,
+                Width = 150,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Margin = new Padding(0, 5, 0, 5)
+            };
+            modelSelector.Items.Add("All Models");
+            foreach (var model in modelNames)
+            {
+                modelSelector.Items.Add(model);
+            }
+            modelSelector.SelectedIndex = 0;
+            
+            // Store reference for event handler
+            var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+            
+            // Event handler for model selection change
+            modelSelector.SelectedIndexChanged += (s, e) =>
+            {
+                string selectedModel = modelSelector.SelectedItem?.ToString();
+                List<JournalTrade> filteredTrades;
+                
+                if (selectedModel == "All Models")
+                {
+                    filteredTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Model)).ToList();
+                }
+                else
+                {
+                    filteredTrades = trades.Where(t => t.Model == selectedModel).ToList();
+                }
+                
+                // Clear and rebuild stats display
+                statsContainer.Controls.Clear();
+                var statsPanel = CreateModelStatsDisplay(filteredTrades, modelNames.Count);
+                statsPanel.Dock = DockStyle.Fill;
+                statsContainer.Controls.Add(statsPanel);
+            };
+            
+            headerPanel.Controls.Add(modelSelector);
             sectionPanel.Controls.Add(headerPanel);
 
-            // Get unique models from trades
-            var modelNames = trades.Select(t => t.Model).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToList();
-            
             if (modelNames.Count == 0)
             {
                 var noDataLabel = new Label
@@ -16226,8 +16284,21 @@ namespace Risk_Manager
                 return sectionPanel;
             }
 
-            // Show stats for all models combined
+            // Initial display with all models
             var modelTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Model)).ToList();
+            var initialStatsPanel = CreateModelStatsDisplay(modelTrades, modelNames.Count);
+            initialStatsPanel.Dock = DockStyle.Fill;
+            statsContainer.Controls.Add(initialStatsPanel);
+            
+            sectionPanel.Controls.Add(statsContainer);
+            return sectionPanel;
+        }
+
+        /// <summary>
+        /// Creates the stats display for model performance
+        /// </summary>
+        private Panel CreateModelStatsDisplay(List<JournalTrade> modelTrades, int totalModelsCount)
+        {
             var modelWins = modelTrades.Count(t => t.Outcome?.ToLower() == "win");
             var modelLosses = modelTrades.Count(t => t.Outcome?.ToLower() == "loss");
             var modelBreakevens = modelTrades.Count(t => t.Outcome?.ToLower() == "breakeven");
@@ -16277,14 +16348,13 @@ namespace Risk_Manager
                 ("Winning Trades", modelWins.ToString(), Color.FromArgb(71, 199, 132)),
                 ("Losing Trades", modelLosses.ToString(), Color.FromArgb(255, 77, 77)),
                 ("Break-Even Trades", modelBreakevens.ToString(), TextWhite),
-                ("Models Used", modelNames.Count.ToString(), TextWhite)
+                ("Models Used", totalModelsCount.ToString(), TextWhite)
             });
             rightCard.Dock = DockStyle.Fill;
             rightCard.Margin = new Padding(10, 0, 0, 0);
             tableLayout.Controls.Add(rightCard, 1, 0);
 
-            sectionPanel.Controls.Add(tableLayout);
-            return sectionPanel;
+            return tableLayout;
         }
 
         /// <summary>
@@ -16299,29 +16369,116 @@ namespace Risk_Manager
                 Padding = new Padding(20, 10, 20, 10)
             };
 
+            // Header panel with icon, title, and filter
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 45,
+                BackColor = DarkBackground
+            };
+
+            // Icon for Day section (use emoji)
+            var iconLabel = new Label
+            {
+                Text = "📅",
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI Emoji", 18, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 7, 0, 0)
+            };
+            headerPanel.Controls.Add(iconLabel);
+
             var titleLabel = new Label
             {
                 Text = "Day of Week Performance",
-                Dock = DockStyle.Top,
-                Height = 30,
+                Dock = DockStyle.Left,
+                AutoSize = true,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(5, 7, 0, 0)
             };
-            sectionPanel.Controls.Add(titleLabel);
+            headerPanel.Controls.Add(titleLabel);
 
-            // Calculate stats for all days combined
-            var dayWins = trades.Count(t => t.Outcome?.ToLower() == "win");
-            var dayLosses = trades.Count(t => t.Outcome?.ToLower() == "loss");
-            var dayBreakevens = trades.Count(t => t.Outcome?.ToLower() == "breakeven");
-            var dayFollowedPlan = trades.Count(t => t.FollowedPlan);
-            var dayNetPL = trades.Sum(t => t.NetPL);
-            var dayGrossWins = trades.Where(t => t.Outcome?.ToLower() == "win" && t.NetPL > 0).Sum(t => t.NetPL);
-            var dayGrossLosses = trades.Where(t => t.Outcome?.ToLower() == "loss" && t.NetPL < 0).Sum(t => Math.Abs(t.NetPL));
+            // Day selector ComboBox
+            var daySelector = new ComboBox
+            {
+                Dock = DockStyle.Right,
+                Width = 130,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Margin = new Padding(0, 5, 0, 5)
+            };
+            daySelector.Items.Add("All Days");
+            daySelector.Items.Add("Monday");
+            daySelector.Items.Add("Tuesday");
+            daySelector.Items.Add("Wednesday");
+            daySelector.Items.Add("Thursday");
+            daySelector.Items.Add("Friday");
+            daySelector.Items.Add("Saturday");
+            daySelector.Items.Add("Sunday");
+            daySelector.SelectedIndex = 0;
+
+            // Store reference for event handler
+            var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+
+            // Event handler for day selection change
+            daySelector.SelectedIndexChanged += (s, e) =>
+            {
+                string selectedDay = daySelector.SelectedItem?.ToString();
+                List<JournalTrade> filteredTrades;
+
+                if (selectedDay == "All Days")
+                {
+                    filteredTrades = trades;
+                }
+                else
+                {
+                    // Filter by specific day of week
+                    DayOfWeek targetDay = (DayOfWeek)Enum.Parse(typeof(DayOfWeek), selectedDay);
+                    filteredTrades = trades.Where(t => t.Date.DayOfWeek == targetDay).ToList();
+                }
+
+                // Clear and rebuild stats display
+                statsContainer.Controls.Clear();
+                var statsPanel = CreateDayStatsDisplay(filteredTrades);
+                statsPanel.Dock = DockStyle.Fill;
+                statsContainer.Controls.Add(statsPanel);
+            };
+
+            headerPanel.Controls.Add(daySelector);
+            sectionPanel.Controls.Add(headerPanel);
+
+            // Initial display with all days
+            var initialStatsPanel = CreateDayStatsDisplay(trades);
+            initialStatsPanel.Dock = DockStyle.Fill;
+            statsContainer.Controls.Add(initialStatsPanel);
+
+            sectionPanel.Controls.Add(statsContainer);
+            return sectionPanel;
+        }
+
+        /// <summary>
+        /// Creates the stats display for day performance
+        /// </summary>
+        private Panel CreateDayStatsDisplay(List<JournalTrade> dayTrades)
+        {
+            var dayWins = dayTrades.Count(t => t.Outcome?.ToLower() == "win");
+            var dayLosses = dayTrades.Count(t => t.Outcome?.ToLower() == "loss");
+            var dayBreakevens = dayTrades.Count(t => t.Outcome?.ToLower() == "breakeven");
+            var dayFollowedPlan = dayTrades.Count(t => t.FollowedPlan);
+            var dayNetPL = dayTrades.Sum(t => t.NetPL);
+            var dayGrossWins = dayTrades.Where(t => t.Outcome?.ToLower() == "win" && t.NetPL > 0).Sum(t => t.NetPL);
+            var dayGrossLosses = dayTrades.Where(t => t.Outcome?.ToLower() == "loss" && t.NetPL < 0).Sum(t => Math.Abs(t.NetPL));
             var dayAvgWin = dayWins > 0 ? dayGrossWins / dayWins : 0;
             var dayAvgLoss = dayLosses > 0 ? dayGrossLosses / dayLosses : 0;
-            var dayWinRate = trades.Count > 0 ? (double)dayWins / trades.Count * 100 : 0;
-            var dayPlanAdherence = trades.Count > 0 ? (double)dayFollowedPlan / trades.Count * 100 : 0;
+            var dayWinRate = dayTrades.Count > 0 ? (double)dayWins / dayTrades.Count * 100 : 0;
+            var dayPlanAdherence = dayTrades.Count > 0 ? (double)dayFollowedPlan / dayTrades.Count * 100 : 0;
             var dayProfitFactor = dayGrossLosses > 0 ? (double)(dayGrossWins / dayGrossLosses) : 0;
 
             // Two-column layout using TableLayoutPanel
@@ -16340,9 +16497,9 @@ namespace Risk_Manager
 
             var leftCard = CreateDetailCard("Day Stats", new[]
             {
-                ("Total Trades", trades.Count.ToString(), TextWhite),
+                ("Total Trades", dayTrades.Count.ToString(), TextWhite),
                 ("Plan Followed", dayFollowedPlan.ToString(), TextWhite),
-                ("Plan Violated", (trades.Count - dayFollowedPlan).ToString(), Color.FromArgb(255, 77, 77)),
+                ("Plan Violated", (dayTrades.Count - dayFollowedPlan).ToString(), Color.FromArgb(255, 77, 77)),
                 ("Average Win", FormatPL(dayAvgWin), Color.FromArgb(71, 199, 132)),
                 ("Average Loss", FormatPL(dayAvgLoss), Color.FromArgb(255, 77, 77)),
                 ("Net P&L", FormatPL(dayNetPL), dayNetPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77)),
@@ -16365,8 +16522,7 @@ namespace Risk_Manager
             rightCard.Margin = new Padding(10, 0, 0, 0);
             tableLayout.Controls.Add(rightCard, 1, 0);
 
-            sectionPanel.Controls.Add(tableLayout);
-            return sectionPanel;
+            return tableLayout;
         }
 
         /// <summary>
@@ -16381,18 +16537,104 @@ namespace Risk_Manager
                 Padding = new Padding(20, 10, 20, 10)
             };
 
+            // Header panel with icon, title, and filter
+            var headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 45,
+                BackColor = DarkBackground
+            };
+
+            // Icon for Session section (use emoji)
+            var iconLabel = new Label
+            {
+                Text = "🕐",
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI Emoji", 18, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 7, 0, 0)
+            };
+            headerPanel.Controls.Add(iconLabel);
+
             var titleLabel = new Label
             {
                 Text = "Session Performance",
-                Dock = DockStyle.Top,
-                Height = 30,
+                Dock = DockStyle.Left,
+                AutoSize = true,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(5, 7, 0, 0)
             };
-            sectionPanel.Controls.Add(titleLabel);
+            headerPanel.Controls.Add(titleLabel);
 
-            // Calculate stats for all sessions combined
+            // Get unique sessions from trades
+            var sessionNames = trades.Select(t => t.Session).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
+
+            // Session selector ComboBox
+            var sessionSelector = new ComboBox
+            {
+                Dock = DockStyle.Right,
+                Width = 130,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                ForeColor = TextWhite,
+                BackColor = CardBackground,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Margin = new Padding(0, 5, 0, 5)
+            };
+            sessionSelector.Items.Add("All Sessions");
+            foreach (var session in sessionNames)
+            {
+                sessionSelector.Items.Add(session);
+            }
+            sessionSelector.SelectedIndex = 0;
+
+            // Store reference for event handler
+            var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+
+            // Event handler for session selection change
+            sessionSelector.SelectedIndexChanged += (s, e) =>
+            {
+                string selectedSession = sessionSelector.SelectedItem?.ToString();
+                List<JournalTrade> filteredTrades;
+
+                if (selectedSession == "All Sessions")
+                {
+                    filteredTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Session)).ToList();
+                }
+                else
+                {
+                    filteredTrades = trades.Where(t => t.Session == selectedSession).ToList();
+                }
+
+                // Clear and rebuild stats display
+                statsContainer.Controls.Clear();
+                var statsPanel = CreateSessionStatsDisplay(filteredTrades);
+                statsPanel.Dock = DockStyle.Fill;
+                statsContainer.Controls.Add(statsPanel);
+            };
+
+            headerPanel.Controls.Add(sessionSelector);
+            sectionPanel.Controls.Add(headerPanel);
+
+            // Initial display with all sessions
+            var sessionTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Session)).ToList();
+            var initialStatsPanel = CreateSessionStatsDisplay(sessionTrades);
+            initialStatsPanel.Dock = DockStyle.Fill;
+            statsContainer.Controls.Add(initialStatsPanel);
+
+            sectionPanel.Controls.Add(statsContainer);
+            return sectionPanel;
+        }
+
+        /// <summary>
+        /// Creates the stats display for session performance
+        /// </summary>
+        private Panel CreateSessionStatsDisplay(List<JournalTrade> sessionTrades)
+        {
             var sessionTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Session)).ToList();
             var sessionWins = sessionTrades.Count(t => t.Outcome?.ToLower() == "win");
             var sessionLosses = sessionTrades.Count(t => t.Outcome?.ToLower() == "loss");
@@ -16448,8 +16690,7 @@ namespace Risk_Manager
             rightCard.Margin = new Padding(10, 0, 0, 0);
             tableLayout.Controls.Add(rightCard, 1, 0);
 
-            sectionPanel.Controls.Add(tableLayout);
-            return sectionPanel;
+            return tableLayout;
         }
 
         /// <summary>
