@@ -15890,7 +15890,12 @@ namespace Risk_Manager
             debugText.AppendLine("2. Dashboard READS from:");
             debugText.AppendLine($"   File: trading_journal.json (SAME FILE)");
             debugText.AppendLine($"   Path: {dataDir}");
-            debugText.AppendLine($"   Account Used by Dashboard: '{accountNumber}'");
+            
+            // Get TradeLog account
+            var tradeLogAccount = TradingPlatform.Instance?.CurrentAccount?.AccountNumber ?? "Unknown";
+            debugText.AppendLine();
+            debugText.AppendLine($"TradeLog uses Account: {tradeLogAccount}");
+            debugText.AppendLine($"Dashboard uses Account: {accountNumber}");
             debugText.AppendLine();
             debugText.AppendLine("Current Status:");
             debugText.AppendLine($"   Journal File Exists: {File.Exists(journalFile)}");
@@ -15997,18 +16002,58 @@ namespace Risk_Manager
             bool accountInJournal = journalAccounts.Contains(accountNumber);
             bool accountInModels = modelsAccounts.Contains(accountNumber);
             
+            // Check for account name variations (e.g., with/without "Alpaca_" prefix)
+            string matchingAccount = null;
+            if (!accountInJournal && journalAccounts.Count > 0)
+            {
+                // Check if adding "Alpaca_" prefix finds an account
+                if (journalAccounts.Contains("Alpaca_" + accountNumber))
+                {
+                    matchingAccount = "Alpaca_" + accountNumber;
+                }
+                // Check if removing "Alpaca_" prefix finds an account
+                else if (accountNumber.StartsWith("Alpaca_"))
+                {
+                    var withoutPrefix = accountNumber.Substring(7);
+                    if (journalAccounts.Contains(withoutPrefix))
+                    {
+                        matchingAccount = withoutPrefix;
+                    }
+                }
+            }
+            
             if (!accountInJournal && journalAccounts.Count > 0)
             {
                 debugText.AppendLine();
-                debugText.AppendLine("⚠️ ACCOUNT MISMATCH WARNING!");
-                debugText.AppendLine($"   Dashboard is using account: '{accountNumber}'");
-                debugText.AppendLine($"   But no trades found for this account in trading_journal.json");
-                debugText.AppendLine();
-                debugText.AppendLine($"   Accounts with trades: {string.Join(", ", journalAccounts)}");
-                debugText.AppendLine();
-                debugText.AppendLine("   SOLUTION:");
-                debugText.AppendLine("   1. Switch Dashboard to one of the accounts above, OR");
-                debugText.AppendLine("   2. Add trades for current account via TradeLog");
+                
+                if (matchingAccount != null)
+                {
+                    // Account variation detected
+                    debugText.AppendLine("⚠️ ACCOUNT VARIATION DETECTED!");
+                    debugText.AppendLine($"   Dashboard is using account: '{accountNumber}'");
+                    debugText.AppendLine($"   But data exists for: '{matchingAccount}'");
+                    debugText.AppendLine();
+                    debugText.AppendLine("   These appear to be the SAME ACCOUNT with different prefixes!");
+                    debugText.AppendLine($"   ('{accountNumber}' vs '{matchingAccount}')");
+                    debugText.AppendLine();
+                    debugText.AppendLine("   SOLUTION:");
+                    debugText.AppendLine($"   Change Dashboard to use: '{matchingAccount}'");
+                    debugText.AppendLine("   (Match the account name exactly as TradeLog uses it)");
+                }
+                else
+                {
+                    // Regular account mismatch
+                    debugText.AppendLine("⚠️ ACCOUNT MISMATCH WARNING!");
+                    debugText.AppendLine($"   Dashboard is using account: '{accountNumber}'");
+                    debugText.AppendLine($"   But no trades found for this account in trading_journal.json");
+                    debugText.AppendLine();
+                    debugText.AppendLine($"   Accounts with trades: {string.Join(", ", journalAccounts)}");
+                    debugText.AppendLine();
+                    debugText.AppendLine("   SOLUTION:");
+                    debugText.AppendLine("   1. Switch Dashboard to one of the accounts above, OR");
+                    debugText.AppendLine("   2. Add trades for current account via TradeLog");
+                }
+                
                 debugText.AppendLine();
             }
             else if (accountInJournal && trades.Count > 0)
