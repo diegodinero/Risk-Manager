@@ -15850,8 +15850,9 @@ namespace Risk_Manager
             int violatedPlan = trades.Count - followedPlan;
             double planAdherence = trades.Count > 0 ? (double)followedPlan / trades.Count * 100 : 0;
             
-            decimal grossWins = trades.Where(t => t.Outcome?.ToLower() == "win").Sum(t => t.NetPL);
-            decimal grossLosses = trades.Where(t => t.Outcome?.ToLower() == "loss").Sum(t => Math.Abs(t.NetPL));
+            // Calculate profit factor using winning and losing trades only
+            decimal grossWins = trades.Where(t => t.Outcome?.ToLower() == "win" && t.NetPL > 0).Sum(t => t.NetPL);
+            decimal grossLosses = trades.Where(t => t.Outcome?.ToLower() == "loss" && t.NetPL < 0).Sum(t => Math.Abs(t.NetPL));
             double profitFactor = grossLosses > 0 ? (double)(grossWins / grossLosses) : 0;
             
             // Monthly stats
@@ -15961,7 +15962,7 @@ namespace Risk_Manager
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = true,
-                AutoSize = true,
+                AutoSize = false,  // Changed from true to false to work with Dock=Fill
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0)
             };
@@ -16050,13 +16051,19 @@ namespace Risk_Manager
             };
             sectionPanel.Controls.Add(titleLabel);
 
-            // Two-column layout
-            var columnsPanel = new Panel
+            // Two-column layout using TableLayoutPanel for proper sizing
+            var tableLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
                 BackColor = DarkBackground,
-                Padding = new Padding(0, 10, 0, 0)
+                Padding = new Padding(0, 10, 0, 0),
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
             };
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             // Left card: Trading Statistics
             var leftCard = CreateDetailCard("Trading Statistics", new[]
@@ -16064,17 +16071,16 @@ namespace Risk_Manager
                 ("Total Trades", stats.TotalTrades.ToString(), TextWhite),
                 ("Plan Followed", followedPlan.ToString(), TextWhite),
                 ("Plan Violated", violatedPlan.ToString(), Color.FromArgb(255, 77, 77)),
-                ("Risk/Reward", "0.00", TextWhite), // Placeholder
                 ("P&L", FormatPL(stats.TotalPL), stats.TotalPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77)),
                 ("Winning Trades", stats.Wins.ToString(), Color.FromArgb(71, 199, 132)),
                 ("Losing Trades", stats.Losses.ToString(), Color.FromArgb(255, 77, 77)),
                 ("Break-Even Trades", stats.Breakevens.ToString(), TextWhite)
             });
-            leftCard.Width = (columnsPanel.Width - 40) / 2;
-            leftCard.Location = new Point(0, 10);
-            columnsPanel.Controls.Add(leftCard);
+            leftCard.Dock = DockStyle.Fill;
+            leftCard.Margin = new Padding(0, 0, 10, 0);
+            tableLayout.Controls.Add(leftCard, 0, 0);
 
-            // Right card: Monthly Performance
+            // Right card: Overall Performance
             var rightCard = CreateDetailCard("Overall Performance", new[]
             {
                 ("Average Win", FormatPL(stats.AverageWin), Color.FromArgb(71, 199, 132)),
@@ -16086,11 +16092,11 @@ namespace Risk_Manager
                 ("Largest Loss", FormatPL(stats.LargestLoss), Color.FromArgb(255, 77, 77)),
                 ("Average P&L", FormatPL(stats.AveragePL), stats.AveragePL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77))
             });
-            rightCard.Width = (columnsPanel.Width - 40) / 2;
-            rightCard.Location = new Point(leftCard.Width + 20, 10);
-            columnsPanel.Controls.Add(rightCard);
+            rightCard.Dock = DockStyle.Fill;
+            rightCard.Margin = new Padding(10, 0, 0, 0);
+            tableLayout.Controls.Add(rightCard, 1, 0);
 
-            sectionPanel.Controls.Add(columnsPanel);
+            sectionPanel.Controls.Add(tableLayout);
             return sectionPanel;
         }
 
@@ -16227,21 +16233,27 @@ namespace Risk_Manager
             var modelBreakevens = modelTrades.Count(t => t.Outcome?.ToLower() == "breakeven");
             var modelFollowedPlan = modelTrades.Count(t => t.FollowedPlan);
             var modelNetPL = modelTrades.Sum(t => t.NetPL);
-            var modelGrossWins = modelTrades.Where(t => t.Outcome?.ToLower() == "win").Sum(t => t.NetPL);
-            var modelGrossLosses = modelTrades.Where(t => t.Outcome?.ToLower() == "loss").Sum(t => Math.Abs(t.NetPL));
+            var modelGrossWins = modelTrades.Where(t => t.Outcome?.ToLower() == "win" && t.NetPL > 0).Sum(t => t.NetPL);
+            var modelGrossLosses = modelTrades.Where(t => t.Outcome?.ToLower() == "loss" && t.NetPL < 0).Sum(t => Math.Abs(t.NetPL));
             var modelAvgWin = modelWins > 0 ? modelGrossWins / modelWins : 0;
             var modelAvgLoss = modelLosses > 0 ? modelGrossLosses / modelLosses : 0;
             var modelWinRate = modelTrades.Count > 0 ? (double)modelWins / modelTrades.Count * 100 : 0;
             var modelPlanAdherence = modelTrades.Count > 0 ? (double)modelFollowedPlan / modelTrades.Count * 100 : 0;
             var modelProfitFactor = modelGrossLosses > 0 ? (double)(modelGrossWins / modelGrossLosses) : 0;
 
-            // Two-column layout
-            var columnsPanel = new Panel
+            // Two-column layout using TableLayoutPanel
+            var tableLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
                 BackColor = DarkBackground,
-                Padding = new Padding(0, 10, 0, 0)
+                Padding = new Padding(0, 10, 0, 0),
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
             };
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             var leftCard = CreateDetailCard("Trading Model Stats", new[]
             {
@@ -16253,25 +16265,25 @@ namespace Risk_Manager
                 ("Net P&L", FormatPL(modelNetPL), modelNetPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77)),
                 ("Break-Even Trades", modelBreakevens.ToString(), TextWhite)
             });
-            leftCard.Width = (columnsPanel.Width - 40) / 2;
-            leftCard.Location = new Point(0, 10);
-            columnsPanel.Controls.Add(leftCard);
+            leftCard.Dock = DockStyle.Fill;
+            leftCard.Margin = new Padding(0, 0, 10, 0);
+            tableLayout.Controls.Add(leftCard, 0, 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
             {
                 ("Win Rate", $"{modelWinRate:0.0}%", GetWinRateColor(modelWinRate)),
                 ("Plan Adherence", $"{modelPlanAdherence:0.0}%", Color.FromArgb(91, 140, 255)),
                 ("Profit Factor", $"{modelProfitFactor:0.00}", Color.FromArgb(255, 200, 91)),
-                ("Risk/Reward", "0.00", TextWhite), // Placeholder
                 ("Winning Trades", modelWins.ToString(), Color.FromArgb(71, 199, 132)),
                 ("Losing Trades", modelLosses.ToString(), Color.FromArgb(255, 77, 77)),
+                ("Break-Even Trades", modelBreakevens.ToString(), TextWhite),
                 ("Models Used", modelNames.Count.ToString(), TextWhite)
             });
-            rightCard.Width = (columnsPanel.Width - 40) / 2;
-            rightCard.Location = new Point(leftCard.Width + 20, 10);
-            columnsPanel.Controls.Add(rightCard);
+            rightCard.Dock = DockStyle.Fill;
+            rightCard.Margin = new Padding(10, 0, 0, 0);
+            tableLayout.Controls.Add(rightCard, 1, 0);
 
-            sectionPanel.Controls.Add(columnsPanel);
+            sectionPanel.Controls.Add(tableLayout);
             return sectionPanel;
         }
 
@@ -16304,21 +16316,27 @@ namespace Risk_Manager
             var dayBreakevens = trades.Count(t => t.Outcome?.ToLower() == "breakeven");
             var dayFollowedPlan = trades.Count(t => t.FollowedPlan);
             var dayNetPL = trades.Sum(t => t.NetPL);
-            var dayGrossWins = trades.Where(t => t.Outcome?.ToLower() == "win").Sum(t => t.NetPL);
-            var dayGrossLosses = trades.Where(t => t.Outcome?.ToLower() == "loss").Sum(t => Math.Abs(t.NetPL));
+            var dayGrossWins = trades.Where(t => t.Outcome?.ToLower() == "win" && t.NetPL > 0).Sum(t => t.NetPL);
+            var dayGrossLosses = trades.Where(t => t.Outcome?.ToLower() == "loss" && t.NetPL < 0).Sum(t => Math.Abs(t.NetPL));
             var dayAvgWin = dayWins > 0 ? dayGrossWins / dayWins : 0;
             var dayAvgLoss = dayLosses > 0 ? dayGrossLosses / dayLosses : 0;
             var dayWinRate = trades.Count > 0 ? (double)dayWins / trades.Count * 100 : 0;
             var dayPlanAdherence = trades.Count > 0 ? (double)dayFollowedPlan / trades.Count * 100 : 0;
             var dayProfitFactor = dayGrossLosses > 0 ? (double)(dayGrossWins / dayGrossLosses) : 0;
 
-            // Two-column layout
-            var columnsPanel = new Panel
+            // Two-column layout using TableLayoutPanel
+            var tableLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
                 BackColor = DarkBackground,
-                Padding = new Padding(0, 10, 0, 0)
+                Padding = new Padding(0, 10, 0, 0),
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
             };
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             var leftCard = CreateDetailCard("Day Stats", new[]
             {
@@ -16330,24 +16348,24 @@ namespace Risk_Manager
                 ("Net P&L", FormatPL(dayNetPL), dayNetPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77)),
                 ("Break-Even Trades", dayBreakevens.ToString(), TextWhite)
             });
-            leftCard.Width = (columnsPanel.Width - 40) / 2;
-            leftCard.Location = new Point(0, 10);
-            columnsPanel.Controls.Add(leftCard);
+            leftCard.Dock = DockStyle.Fill;
+            leftCard.Margin = new Padding(0, 0, 10, 0);
+            tableLayout.Controls.Add(leftCard, 0, 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
             {
                 ("Win Rate", $"{dayWinRate:0.0}%", GetWinRateColor(dayWinRate)),
                 ("Plan Adherence", $"{dayPlanAdherence:0.0}%", Color.FromArgb(91, 140, 255)),
                 ("Profit Factor", $"{dayProfitFactor:0.00}", Color.FromArgb(255, 200, 91)),
-                ("Risk/Reward", "0.00", TextWhite), // Placeholder
                 ("Winning Trades", dayWins.ToString(), Color.FromArgb(71, 199, 132)),
-                ("Losing Trades", dayLosses.ToString(), Color.FromArgb(255, 77, 77))
+                ("Losing Trades", dayLosses.ToString(), Color.FromArgb(255, 77, 77)),
+                ("Break-Even Trades", dayBreakevens.ToString(), TextWhite)
             });
-            rightCard.Width = (columnsPanel.Width - 40) / 2;
-            rightCard.Location = new Point(leftCard.Width + 20, 10);
-            columnsPanel.Controls.Add(rightCard);
+            rightCard.Dock = DockStyle.Fill;
+            rightCard.Margin = new Padding(10, 0, 0, 0);
+            tableLayout.Controls.Add(rightCard, 1, 0);
 
-            sectionPanel.Controls.Add(columnsPanel);
+            sectionPanel.Controls.Add(tableLayout);
             return sectionPanel;
         }
 
@@ -16381,21 +16399,27 @@ namespace Risk_Manager
             var sessionBreakevens = sessionTrades.Count(t => t.Outcome?.ToLower() == "breakeven");
             var sessionFollowedPlan = sessionTrades.Count(t => t.FollowedPlan);
             var sessionNetPL = sessionTrades.Sum(t => t.NetPL);
-            var sessionGrossWins = sessionTrades.Where(t => t.Outcome?.ToLower() == "win").Sum(t => t.NetPL);
-            var sessionGrossLosses = sessionTrades.Where(t => t.Outcome?.ToLower() == "loss").Sum(t => Math.Abs(t.NetPL));
+            var sessionGrossWins = sessionTrades.Where(t => t.Outcome?.ToLower() == "win" && t.NetPL > 0).Sum(t => t.NetPL);
+            var sessionGrossLosses = sessionTrades.Where(t => t.Outcome?.ToLower() == "loss" && t.NetPL < 0).Sum(t => Math.Abs(t.NetPL));
             var sessionAvgWin = sessionWins > 0 ? sessionGrossWins / sessionWins : 0;
             var sessionAvgLoss = sessionLosses > 0 ? sessionGrossLosses / sessionLosses : 0;
             var sessionWinRate = sessionTrades.Count > 0 ? (double)sessionWins / sessionTrades.Count * 100 : 0;
             var sessionPlanAdherence = sessionTrades.Count > 0 ? (double)sessionFollowedPlan / sessionTrades.Count * 100 : 0;
             var sessionProfitFactor = sessionGrossLosses > 0 ? (double)(sessionGrossWins / sessionGrossLosses) : 0;
 
-            // Two-column layout
-            var columnsPanel = new Panel
+            // Two-column layout using TableLayoutPanel
+            var tableLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
                 BackColor = DarkBackground,
-                Padding = new Padding(0, 10, 0, 0)
+                Padding = new Padding(0, 10, 0, 0),
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
             };
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             var leftCard = CreateDetailCard("Session Stats", new[]
             {
@@ -16407,24 +16431,24 @@ namespace Risk_Manager
                 ("Net P&L", FormatPL(sessionNetPL), sessionNetPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77)),
                 ("Break-Even Trades", sessionBreakevens.ToString(), TextWhite)
             });
-            leftCard.Width = (columnsPanel.Width - 40) / 2;
-            leftCard.Location = new Point(0, 10);
-            columnsPanel.Controls.Add(leftCard);
+            leftCard.Dock = DockStyle.Fill;
+            leftCard.Margin = new Padding(0, 0, 10, 0);
+            tableLayout.Controls.Add(leftCard, 0, 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
             {
                 ("Win Rate", $"{sessionWinRate:0.0}%", GetWinRateColor(sessionWinRate)),
                 ("Plan Adherence", $"{sessionPlanAdherence:0.0}%", Color.FromArgb(91, 140, 255)),
                 ("Profit Factor", $"{sessionProfitFactor:0.00}", Color.FromArgb(255, 200, 91)),
-                ("Risk/Reward", "0.00", TextWhite), // Placeholder
                 ("Winning Trades", sessionWins.ToString(), Color.FromArgb(71, 199, 132)),
-                ("Losing Trades", sessionLosses.ToString(), Color.FromArgb(255, 77, 77))
+                ("Losing Trades", sessionLosses.ToString(), Color.FromArgb(255, 77, 77)),
+                ("Break-Even Trades", sessionBreakevens.ToString(), TextWhite)
             });
-            rightCard.Width = (columnsPanel.Width - 40) / 2;
-            rightCard.Location = new Point(leftCard.Width + 20, 10);
-            columnsPanel.Controls.Add(rightCard);
+            rightCard.Dock = DockStyle.Fill;
+            rightCard.Margin = new Padding(10, 0, 0, 0);
+            tableLayout.Controls.Add(rightCard, 1, 0);
 
-            sectionPanel.Controls.Add(columnsPanel);
+            sectionPanel.Controls.Add(tableLayout);
             return sectionPanel;
         }
 
