@@ -15972,7 +15972,7 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Creates an individual stat card
+        /// Creates an individual stat card with emoji icon
         /// </summary>
         private Panel CreateStatCard(string label, string value, Color valueColor)
         {
@@ -15995,6 +15995,51 @@ namespace Risk_Manager
                 }
             };
 
+            // Icon - positioned on the left
+            var iconLabel = new Label
+            {
+                Width = 35,
+                Dock = DockStyle.Left,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI Emoji", 28, FontStyle.Regular)
+            };
+
+            // Set icon and color based on label
+            switch (label)
+            {
+                case "Plan Adherence":
+                    iconLabel.Text = "\uE9D2"; // Segoe MDL2 Assets icon
+                    iconLabel.Font = new Font("Segoe MDL2 Assets", 28, FontStyle.Regular);
+                    iconLabel.ForeColor = Color.FromArgb(91, 140, 255); // Blue
+                    break;
+                case "Win Rate":
+                    iconLabel.Text = "\uE74C"; // Segoe MDL2 Assets icon
+                    iconLabel.Font = new Font("Segoe MDL2 Assets", 28, FontStyle.Regular);
+                    iconLabel.ForeColor = Color.FromArgb(71, 199, 132); // Green
+                    break;
+                case "Profit Factor":
+                    iconLabel.Text = "💰"; // Money bag emoji
+                    iconLabel.Font = new Font("Segoe UI Emoji", 28, FontStyle.Regular);
+                    iconLabel.ForeColor = Color.FromArgb(255, 200, 91); // Orange
+                    break;
+                case "Total P&L":
+                    iconLabel.Text = "💵"; // Dollar emoji
+                    iconLabel.Font = new Font("Segoe UI Emoji", 28, FontStyle.Regular);
+                    iconLabel.ForeColor = Color.FromArgb(71, 199, 132); // Green
+                    break;
+                default:
+                    // No icon for other labels
+                    iconLabel.Visible = false;
+                    break;
+            }
+            card.Controls.Add(iconLabel);
+
+            // Content panel (label + value)
+            var contentPanel = new Panel
+            {
+                Dock = DockStyle.Fill
+            };
+
             // Label
             var labelControl = new Label
             {
@@ -16005,7 +16050,7 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 11, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft
             };
-            card.Controls.Add(labelControl);
+            contentPanel.Controls.Add(labelControl);
 
             // Value
             var valueControl = new Label
@@ -16016,7 +16061,9 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft
             };
-            card.Controls.Add(valueControl);
+            contentPanel.Controls.Add(valueControl);
+
+            card.Controls.Add(contentPanel);
 
             return card;
         }
@@ -16033,17 +16080,41 @@ namespace Risk_Manager
                 Padding = new Padding(20, 10, 20, 10)
             };
 
-            // Title
+            // Title with icon
+            var titlePanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 35,
+                BackColor = DarkBackground
+            };
+
+            // Icon
+            var iconLabel = new Label
+            {
+                Text = "\uE9D2", // Segoe MDL2 Assets stats icon
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 7, 0, 0)
+            };
+            titlePanel.Controls.Add(iconLabel);
+
+            // Title text
             var titleLabel = new Label
             {
                 Text = "Main Statistics",
-                Dock = DockStyle.Top,
-                Height = 30,
+                Dock = DockStyle.Left,
+                AutoSize = true,
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(5, 7, 0, 0)
             };
-            sectionPanel.Controls.Add(titleLabel);
+            titlePanel.Controls.Add(titleLabel);
+
+            sectionPanel.Controls.Add(titlePanel);
 
             // Two-column layout using TableLayoutPanel for proper sizing
             var tableLayout = new TableLayoutPanel
