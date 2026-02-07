@@ -15880,16 +15880,26 @@ namespace Risk_Manager
             };
             pagePanel.Controls.Add(titleLabel);
 
-            // Overall Stats Section
-            var overallStatsPanel = CreateStatsSection("Overall Stats", new[]
-            {
-                ("Plan Adherence", $"{planAdherence:0.0}%", Color.FromArgb(91, 140, 255)),
-                ("Win Rate", $"{stats.WinRate:0.0}%", GetWinRateColor(stats.WinRate)),
-                ("Profit Factor", $"{profitFactor:0.00}", Color.FromArgb(255, 200, 91)),
-                ("Total P&L", FormatPL(stats.TotalPL), stats.TotalPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77))
-            });
-            overallStatsPanel.Dock = DockStyle.Top;
-            pagePanel.Controls.Add(overallStatsPanel);
+            // Add panels in reverse order since Dock.Top stacks from bottom to top
+            // Session Performance Section (always show, handles empty state internally)
+            var sessionStatsPanel = CreateSessionStatsSection(trades);
+            sessionStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(sessionStatsPanel);
+
+            // Day of Week Performance Section
+            var dayStatsPanel = CreateDayStatsSection(trades);
+            dayStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(dayStatsPanel);
+
+            // Trading Model Performance Section (always show, handles empty state internally)
+            var modelStatsPanel = CreateModelStatsSection(trades, models);
+            modelStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(modelStatsPanel);
+
+            // Main Statistics Section
+            var mainStatsPanel = CreateMainStatsSection(stats, followedPlan, violatedPlan, planAdherence, profitFactor);
+            mainStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(mainStatsPanel);
 
             // Monthly Stats Section
             var monthlyStatsPanel = CreateStatsSection("Monthly Stats", new[]
@@ -15902,25 +15912,16 @@ namespace Risk_Manager
             monthlyStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(monthlyStatsPanel);
 
-            // Main Statistics Section
-            var mainStatsPanel = CreateMainStatsSection(stats, followedPlan, violatedPlan, planAdherence, profitFactor);
-            mainStatsPanel.Dock = DockStyle.Top;
-            pagePanel.Controls.Add(mainStatsPanel);
-
-            // Trading Model Performance Section (always show, handles empty state internally)
-            var modelStatsPanel = CreateModelStatsSection(trades, models);
-            modelStatsPanel.Dock = DockStyle.Top;
-            pagePanel.Controls.Add(modelStatsPanel);
-
-            // Day of Week Performance Section
-            var dayStatsPanel = CreateDayStatsSection(trades);
-            dayStatsPanel.Dock = DockStyle.Top;
-            pagePanel.Controls.Add(dayStatsPanel);
-
-            // Session Performance Section (always show, handles empty state internally)
-            var sessionStatsPanel = CreateSessionStatsSection(trades);
-            sessionStatsPanel.Dock = DockStyle.Top;
-            pagePanel.Controls.Add(sessionStatsPanel);
+            // Overall Stats Section
+            var overallStatsPanel = CreateStatsSection("Overall Stats", new[]
+            {
+                ("Plan Adherence", $"{planAdherence:0.0}%", Color.FromArgb(91, 140, 255)),
+                ("Win Rate", $"{stats.WinRate:0.0}%", GetWinRateColor(stats.WinRate)),
+                ("Profit Factor", $"{profitFactor:0.00}", Color.FromArgb(255, 200, 91)),
+                ("Total P&L", FormatPL(stats.TotalPL), stats.TotalPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77))
+            });
+            overallStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(overallStatsPanel);
 
             return pagePanel;
         }
