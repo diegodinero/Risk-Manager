@@ -13942,6 +13942,8 @@ namespace Risk_Manager
                     Location = new Point(i * cellWidth, 0),
                     BackColor = Color.FromArgb(50, 50, 50)
                 };
+                // Add rounded corners to header
+                headerLabel.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, cellWidth, headerHeight, BORDER_RADIUS, BORDER_RADIUS));
                 gridPanel.Controls.Add(headerLabel);
             }
             
@@ -13956,6 +13958,8 @@ namespace Risk_Manager
                 Location = new Point(7 * cellWidth, 0),
                 BackColor = Color.FromArgb(50, 50, 50)
             };
+            // Add rounded corners to week stats header
+            weekStatsHeader.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, weeklyStatsWidth, headerHeight, BORDER_RADIUS, BORDER_RADIUS));
             gridPanel.Controls.Add(weekStatsHeader);
             
             // Calculate calendar cells and track weekly data
@@ -14038,8 +14042,11 @@ namespace Risk_Manager
             var panel = new Panel
             {
                 BackColor = panelColor,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.None // Remove border, we'll draw it rounded
             };
+            
+            // Add rounded region to panel
+            panel.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, 180, 115, BORDER_RADIUS, BORDER_RADIUS));
             
             if (tradeCount == 0)
             {
@@ -14186,6 +14193,24 @@ namespace Risk_Manager
                 BackColor = CardBackground,
                 Padding = new Padding(20, 10, 20, 10),
                 Height = 80
+            };
+            
+            // Add rounded corners
+            legendPanel.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                Rectangle bounds = new Rectangle(0, 0, legendPanel.Width - 1, legendPanel.Height - 1);
+                using (GraphicsPath path = GetRoundedRectangle(bounds, BORDER_RADIUS))
+                {
+                    using (SolidBrush brush = new SolidBrush(CardBackground))
+                    {
+                        e.Graphics.FillPath(brush, path);
+                    }
+                    using (Pen pen = new Pen(DarkerBackground, 1))
+                    {
+                        e.Graphics.DrawPath(pen, path);
+                    }
+                }
             };
             
             // Legend title changes based on mode
@@ -14338,10 +14363,31 @@ namespace Risk_Manager
             var cellPanel = new Panel
             {
                 BackColor = cellColor,
-                BorderStyle = BorderStyle.FixedSingle,
+                BorderStyle = BorderStyle.None, // Remove border, we'll draw it rounded
                 Cursor = tradeCount > 0 ? Cursors.Hand : Cursors.Default,
                 Tag = date
             };
+            
+            // Add rounded corners
+            cellPanel.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                Rectangle bounds = new Rectangle(0, 0, cellPanel.Width - 1, cellPanel.Height - 1);
+                using (GraphicsPath path = GetRoundedRectangle(bounds, BORDER_RADIUS))
+                {
+                    // Fill with background color
+                    using (SolidBrush brush = new SolidBrush(cellColor))
+                    {
+                        e.Graphics.FillPath(brush, path);
+                    }
+                    // Draw border
+                    using (Pen pen = new Pen(DarkerBackground, 1))
+                    {
+                        e.Graphics.DrawPath(pen, path);
+                    }
+                }
+            };
+            cellPanel.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, 150, 95, BORDER_RADIUS, BORDER_RADIUS));
             
             // Determine text color based on cell background (use theme color for empty cells, black for colored cells)
             Color textColor = (tradeCount > 0) ? Color.Black : TextWhite;
