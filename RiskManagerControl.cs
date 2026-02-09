@@ -13228,7 +13228,7 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 100,  // Increased from 60 for better visibility
+                Height = 120,  // Increased to accommodate date pickers on second row
                 BackColor = CardBackground,  // Professional dark theme
                 Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10)
@@ -17367,10 +17367,22 @@ namespace Risk_Manager
                 );
                 grid.Rows[rowIndex].Tag = trade.Id;
                 
-                // Set View button value only if image exists
+                // Set View button value and style only if image exists
+                var viewCell = grid.Rows[rowIndex].Cells["ViewImage"];
                 if (!string.IsNullOrEmpty(trade.ImagePath))
                 {
-                    grid.Rows[rowIndex].Cells["ViewImage"].Value = "View";
+                    viewCell.Value = "View";
+                    viewCell.Style.BackColor = Color.FromArgb(70, 130, 180);
+                    viewCell.Style.ForeColor = Color.White;
+                    viewCell.Style.SelectionBackColor = Color.FromArgb(90, 150, 200);
+                }
+                else
+                {
+                    // Hide button for rows without images
+                    viewCell.Value = "";
+                    viewCell.Style.BackColor = grid.Rows[rowIndex].DefaultCellStyle.BackColor;
+                    viewCell.Style.ForeColor = grid.Rows[rowIndex].DefaultCellStyle.ForeColor;
+                    viewCell.ReadOnly = true;
                 }
 
                 // Apply color coding using helper method
@@ -17571,10 +17583,22 @@ namespace Risk_Manager
                 // DEBUG: Log what we're adding to the grid
                 System.Diagnostics.Debug.WriteLine($"Added row {rowIndex}: {trade.Symbol} | {trade.TradeType} | {trade.Outcome} | {FormatNumeric(trade.PL)}");
                 
-                // Set View button value only if image exists
+                // Set View button value and style only if image exists
+                var viewCell = grid.Rows[rowIndex].Cells["ViewImage"];
                 if (!string.IsNullOrEmpty(trade.ImagePath))
                 {
-                    grid.Rows[rowIndex].Cells["ViewImage"].Value = "View";
+                    viewCell.Value = "View";
+                    viewCell.Style.BackColor = Color.FromArgb(70, 130, 180);
+                    viewCell.Style.ForeColor = Color.White;
+                    viewCell.Style.SelectionBackColor = Color.FromArgb(90, 150, 200);
+                }
+                else
+                {
+                    // Hide button for rows without images
+                    viewCell.Value = "";
+                    viewCell.Style.BackColor = grid.Rows[rowIndex].DefaultCellStyle.BackColor;
+                    viewCell.Style.ForeColor = grid.Rows[rowIndex].DefaultCellStyle.ForeColor;
+                    viewCell.ReadOnly = true;
                 }
                 
                 // Explicitly set row default style to ensure visibility
