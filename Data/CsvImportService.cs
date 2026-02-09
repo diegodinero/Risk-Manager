@@ -162,7 +162,11 @@ namespace Risk_Manager.Data
                 var columnName = header[i].Trim();
                 if (!string.IsNullOrWhiteSpace(columnName))
                 {
-                    map[columnName] = i;
+                    // Only add the first occurrence of each column name (ignore duplicates)
+                    if (!map.ContainsKey(columnName))
+                    {
+                        map[columnName] = i;
+                    }
                 }
             }
 
