@@ -13353,6 +13353,49 @@ namespace Risk_Manager
             filterCard.Controls.Add(filterPanel);
             pagePanel.Controls.Add(filterCard);
             
+            // Collapsible trade details panel (hidden by default)
+            var detailsCard = new Panel
+            {
+                Name = "TradeDetailsCard",
+                Dock = DockStyle.Top,
+                Height = 0,  // Hidden initially
+                BackColor = CardBackground,
+                Padding = new Padding(15),
+                Margin = new Padding(0, 0, 0, 10),
+                Visible = false
+            };
+            
+            var detailsHeader = new CustomCardHeaderControl("📝 Trade Details", GetIconForTitle("Limits"));
+            detailsHeader.Dock = DockStyle.Top;
+            detailsCard.Controls.Add(detailsHeader);
+            
+            var detailsContent = new FlowLayoutPanel
+            {
+                Name = "TradeDetailsContent",
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                AutoScroll = true,
+                BackColor = CardBackground,
+                Padding = new Padding(10)
+            };
+            detailsCard.Controls.Add(detailsContent);
+            
+            pagePanel.Controls.Add(detailsCard);
+            
+            // Add row selection handler to show/hide details
+            tradesGrid.SelectionChanged += (s, e) =>
+            {
+                if (tradesGrid.SelectedRows.Count > 0)
+                {
+                    ShowTradeDetails(tradesGrid, detailsCard, detailsContent);
+                }
+                else
+                {
+                    detailsCard.Visible = false;
+                    detailsCard.Height = 0;
+                }
+            };
+            
             // DEBUG: Log final page panel details
             System.Diagnostics.Debug.WriteLine("=== PAGE PANEL DEBUG ===");
             System.Diagnostics.Debug.WriteLine($"PagePanel: Size={pagePanel.Size}, AutoScroll={pagePanel.AutoScroll}");
@@ -17133,6 +17176,80 @@ namespace Risk_Manager
             {
                 MessageBox.Show($"Error loading image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void ShowTradeDetails(DataGridView grid, Panel detailsCard, FlowLayoutPanel detailsContent)
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            if (string.IsNullOrEmpty(accountNumber)) return;
+            
+            var tradeId = (Guid)grid.SelectedRows[0].Tag;
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+            var trade = trades.FirstOrDefault(t => t.Id == tradeId);
+            
+            if (trade == null) return;
+            
+            // Clear previous details
+            detailsContent.Controls.Clear();
+            
+            // Create detail labels
+            var detailsData = new[]
+            {
+                ("Date:", trade.Date.ToShortDateString()),
+                ("Symbol:", trade.Symbol),
+                ("Type:", trade.TradeType),
+                ("Outcome:", trade.Outcome),
+                ("Entry Time:", trade.EntryTime),
+                ("Exit Time:", trade.ExitTime),
+                ("Entry Price:", FormatNumeric(trade.EntryPrice)),
+                ("Exit Price:", FormatNumeric(trade.ExitPrice)),
+                ("Contracts:", trade.Contracts.ToString()),
+                ("P/L:", FormatNumeric(trade.PL)),
+                ("Fees:", FormatNumeric(trade.Fees)),
+                ("Net P/L:", FormatNumeric(trade.NetPL)),
+                ("R:R:", trade.RR.ToString("F2")),
+                ("Model/Strategy:", trade.Model),
+                ("Session:", trade.Session),
+                ("Emotions:", trade.Emotions),
+                ("Followed Plan:", trade.FollowedPlan ? "Yes" : "No"),
+                ("Notes:", trade.Notes),
+                ("Image:", !string.IsNullOrEmpty(trade.ImagePath) ? "Attached" : "None")
+            };
+            
+            foreach (var (label, value) in detailsData)
+            {
+                var detailLabel = new Label
+                {
+                    AutoSize = true,
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    ForeColor = Color.White,
+                    Margin = new Padding(5, 3, 5, 3)
+                };
+                
+                detailLabel.Text = $"{label} {value}";
+                
+                // Color code certain fields
+                if (label == "Outcome:")
+                {
+                    if (value == "Win")
+                        detailLabel.ForeColor = Color.LimeGreen;
+                    else if (value == "Loss")
+                        detailLabel.ForeColor = Color.OrangeRed;
+                }
+                else if (label == "Net P/L:")
+                {
+                    if (trade.NetPL > 0)
+                        detailLabel.ForeColor = Color.LimeGreen;
+                    else if (trade.NetPL < 0)
+                        detailLabel.ForeColor = Color.OrangeRed;
+                }
+                
+                detailsContent.Controls.Add(detailLabel);
+            }
+            
+            // Show the details card
+            detailsCard.Visible = true;
+            detailsCard.Height = 250;
         }
 
         /// <summary>
