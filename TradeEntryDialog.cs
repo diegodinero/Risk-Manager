@@ -370,7 +370,6 @@ namespace Risk_Manager
             _trade.FollowedPlan = followedPlanCheckbox.Checked;
             _trade.Emotions = emotionsCombo.Text;
             _trade.Notes = notesInput.Text.Trim();
-            // ImagePath is already set by UploadImageButton_Click
 
             // Parse numeric fields
             if (decimal.TryParse(plInput.Text, out decimal pl))

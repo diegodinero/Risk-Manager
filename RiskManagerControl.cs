@@ -13298,7 +13298,7 @@ namespace Risk_Manager
                 Margin = new Padding(5),
                 Tag = "DateFromPicker",
                 Name = "DateFromPicker",
-                Value = DateTime.Today.AddMonths(-1) // Default to 1 month ago
+                Value = DateTime.Today.AddMonths(-1)
             };
             dateFromPicker.ValueChanged += (s, e) => FilterTrades();
             
@@ -17168,8 +17168,9 @@ namespace Risk_Manager
 
                 imageDialog.Controls.Add(pictureBox);
                 imageDialog.ShowDialog();
+                imageDialog.Dispose();
                 
-                // Clean up
+                // Clean up image after dialog is closed
                 pictureBox.Image.Dispose();
             }
             catch (Exception ex)
@@ -17340,8 +17341,8 @@ namespace Risk_Manager
             if (dateFromPicker != null && dateToPicker != null)
             {
                 var fromDate = dateFromPicker.Value.Date;
-                var toDate = dateToPicker.Value.Date.AddDays(1).AddTicks(-1); // End of day
-                filteredTrades = filteredTrades.Where(t => t.Date >= fromDate && t.Date <= toDate);
+                var toDate = dateToPicker.Value.Date;
+                filteredTrades = filteredTrades.Where(t => t.Date.Date >= fromDate && t.Date.Date <= toDate);
             }
 
             // Update grid with filtered results
