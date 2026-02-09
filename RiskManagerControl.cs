@@ -13114,11 +13114,25 @@ namespace Risk_Manager
             tradesGrid.Columns.Add("RR", "R:R");
             tradesGrid.Columns.Add("Model", "Model");
             tradesGrid.Columns.Add("Notes", "Notes");
+            
+            // Add View Image button column
+            var viewImageColumn = new DataGridViewButtonColumn
+            {
+                Name = "ViewImage",
+                HeaderText = "Image",
+                Text = "View",
+                UseColumnTextForButtonValue = true,
+                Width = 60
+            };
+            tradesGrid.Columns.Add(viewImageColumn);
 
-            // Enable sorting on all columns
+            // Enable sorting on all columns except button column
             foreach (DataGridViewColumn column in tradesGrid.Columns)
             {
-                column.SortMode = DataGridViewColumnSortMode.Automatic;
+                if (column.Name != "ViewImage")
+                {
+                    column.SortMode = DataGridViewColumnSortMode.Automatic;
+                }
             }
 
             // Set column widths
@@ -13130,6 +13144,9 @@ namespace Risk_Manager
             tradesGrid.Columns["NetPL"].Width = 90;
             tradesGrid.Columns["RR"].Width = 60;
             tradesGrid.Columns["Model"].Width = 120;
+            
+            // Handle cell clicks for View button
+            tradesGrid.CellContentClick += TradesGrid_CellContentClick;
 
             // Add grid to journal card
             journalCard.Controls.Add(tradesGrid);
@@ -13272,6 +13289,31 @@ namespace Risk_Manager
             };
             symbolFilter.TextChanged += (s, e) => FilterTrades();
 
+            // Date range filters
+            var dateFromLabel = new Label { Text = "From:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(15, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var dateFromPicker = new DateTimePicker
+            {
+                Width = 120,
+                Format = DateTimePickerFormat.Short,
+                Margin = new Padding(5),
+                Tag = "DateFromPicker",
+                Name = "DateFromPicker",
+                Value = DateTime.Today.AddMonths(-1) // Default to 1 month ago
+            };
+            dateFromPicker.ValueChanged += (s, e) => FilterTrades();
+            
+            var dateToLabel = new Label { Text = "To:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var dateToPicker = new DateTimePicker
+            {
+                Width = 120,
+                Format = DateTimePickerFormat.Short,
+                Margin = new Padding(5),
+                Tag = "DateToPicker",
+                Name = "DateToPicker",
+                Value = DateTime.Today
+            };
+            dateToPicker.ValueChanged += (s, e) => FilterTrades();
+
             // Clear filters button
             var clearFiltersBtn = new Button
             {
@@ -13291,6 +13333,8 @@ namespace Risk_Manager
                 searchBox.Text = "";
                 symbolFilter.Text = "";
                 outcomeFilter.SelectedIndex = 0;
+                dateFromPicker.Value = DateTime.Today.AddMonths(-1);
+                dateToPicker.Value = DateTime.Today;
                 FilterTrades();
             };
 
@@ -13300,6 +13344,10 @@ namespace Risk_Manager
             filterPanel.Controls.Add(outcomeFilter);
             filterPanel.Controls.Add(symbolLabel);
             filterPanel.Controls.Add(symbolFilter);
+            filterPanel.Controls.Add(dateFromLabel);
+            filterPanel.Controls.Add(dateFromPicker);
+            filterPanel.Controls.Add(dateToLabel);
+            filterPanel.Controls.Add(dateToPicker);
             filterPanel.Controls.Add(clearFiltersBtn);
 
             filterCard.Controls.Add(filterPanel);
@@ -14468,7 +14516,19 @@ namespace Risk_Manager
                 {
                     // Navigate to Trade Log with this date
                     ShowJournalSection("Trade Log");
-                    // TODO: Could add date filtering to Trade Log in future
+                    
+                    // Set the date filters to this specific date
+                    var dateFromPicker = FindControlByName(contentPanel, "DateFromPicker") as DateTimePicker;
+                    var dateToPicker = FindControlByName(contentPanel, "DateToPicker") as DateTimePicker;
+                    
+                    if (dateFromPicker != null && dateToPicker != null)
+                    {
+                        dateFromPicker.Value = date.Date;
+                        dateToPicker.Value = date.Date;
+                        
+                        // Trigger filter refresh
+                        FilterTrades();
+                    }
                 };
             }
             
@@ -17008,6 +17068,73 @@ namespace Risk_Manager
             }
         }
 
+        private void TradesGrid_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            // Check if the clicked cell is in the ViewImage column
+            if (e.ColumnIndex >= 0 && e.RowIndex >= 0)
+            {
+                var grid = sender as DataGridView;
+                if (grid.Columns[e.ColumnIndex].Name == "ViewImage")
+                {
+                    var accountNumber = GetSelectedAccountNumber();
+                    if (string.IsNullOrEmpty(accountNumber)) return;
+
+                    var tradeId = (Guid)grid.Rows[e.RowIndex].Tag;
+                    var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+                    var trade = trades.FirstOrDefault(t => t.Id == tradeId);
+
+                    if (trade != null && !string.IsNullOrEmpty(trade.ImagePath))
+                    {
+                        // Show image in viewer dialog
+                        ShowTradeImage(trade.ImagePath);
+                    }
+                    else
+                    {
+                        MessageBox.Show("No image attached to this trade.", "No Image", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+            }
+        }
+
+        private void ShowTradeImage(string imagePath)
+        {
+            if (!File.Exists(imagePath))
+            {
+                MessageBox.Show("Image file not found. It may have been moved or deleted.", "Image Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                // Create a simple image viewer dialog
+                var imageDialog = new Form
+                {
+                    Text = "Trade Image - " + Path.GetFileName(imagePath),
+                    Size = new Size(800, 600),
+                    StartPosition = FormStartPosition.CenterParent,
+                    BackColor = Color.FromArgb(30, 30, 30),
+                    FormBorderStyle = FormBorderStyle.Sizable
+                };
+
+                var pictureBox = new PictureBox
+                {
+                    Dock = DockStyle.Fill,
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    Image = Image.FromFile(imagePath)
+                };
+
+                imageDialog.Controls.Add(pictureBox);
+                imageDialog.ShowDialog();
+                
+                // Clean up
+                pictureBox.Image.Dispose();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading image: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         /// <summary>
         /// Applies color coding and styling to a trade row in the DataGridView
         /// </summary>
@@ -17062,6 +17189,8 @@ namespace Risk_Manager
             var searchBox = FindControlByName(contentPanel, "TradeSearchBox") as TextBox;
             var outcomeFilter = FindControlByName(contentPanel, "OutcomeFilterCombo") as ComboBox;
             var symbolFilter = FindControlByName(contentPanel, "SymbolFilterBox") as TextBox;
+            var dateFromPicker = FindControlByName(contentPanel, "DateFromPicker") as DateTimePicker;
+            var dateToPicker = FindControlByName(contentPanel, "DateToPicker") as DateTimePicker;
 
             var allTrades = TradingJournalService.Instance.GetTrades(accountNumber);
             var filteredTrades = allTrades.AsEnumerable();
@@ -17090,6 +17219,14 @@ namespace Risk_Manager
                 filteredTrades = filteredTrades.Where(t => t.Symbol?.ToLower().Contains(symbol) == true);
             }
 
+            // Apply date range filter
+            if (dateFromPicker != null && dateToPicker != null)
+            {
+                var fromDate = dateFromPicker.Value.Date;
+                var toDate = dateToPicker.Value.Date.AddDays(1).AddTicks(-1); // End of day
+                filteredTrades = filteredTrades.Where(t => t.Date >= fromDate && t.Date <= toDate);
+            }
+
             // Update grid with filtered results
             grid.Rows.Clear();
             foreach (var trade in filteredTrades)
@@ -17110,6 +17247,9 @@ namespace Risk_Manager
                 // Apply color coding using helper method
                 ApplyTradeRowStyling(grid.Rows[rowIndex], trade);
             }
+            
+            // Update statistics after filtering
+            UpdateTradeStatistics(filteredTrades.ToList());
         }
 
         private void ExportTrades_Click(object sender, EventArgs e)
@@ -17356,6 +17496,53 @@ namespace Risk_Manager
                 avgWinLabel.Text = $"Avg Win: {FormatNumeric(stats.AverageWin)}";
             if (avgLossLabel != null)
                 avgLossLabel.Text = $"Avg Loss: {FormatNumeric(stats.AverageLoss)}";
+        }
+
+        private void UpdateTradeStatistics(List<JournalTrade> trades)
+        {
+            // Update statistics labels with filtered trade data
+            var totalTradesLabel = FindControlByTag(contentPanel, "TotalTrades") as Label;
+            var winRateLabel = FindControlByTag(contentPanel, "WinRate") as Label;
+            var totalPLLabel = FindControlByTag(contentPanel, "TotalPL") as Label;
+            var avgPLLabel = FindControlByTag(contentPanel, "AvgPL") as Label;
+            var largestWinLabel = FindControlByTag(contentPanel, "LargestWin") as Label;
+            var largestLossLabel = FindControlByTag(contentPanel, "LargestLoss") as Label;
+            var avgWinLabel = FindControlByTag(contentPanel, "AvgWin") as Label;
+            var avgLossLabel = FindControlByTag(contentPanel, "AvgLoss") as Label;
+            
+            int totalTrades = trades.Count;
+            int winCount = trades.Count(t => t.Outcome == "Win");
+            double winRate = totalTrades > 0 ? (winCount * 100.0) / totalTrades : 0;
+            decimal totalPL = trades.Sum(t => t.NetPL);
+            decimal avgPL = totalTrades > 0 ? totalPL / totalTrades : 0;
+            
+            var winTrades = trades.Where(t => t.Outcome == "Win").ToList();
+            var lossTrades = trades.Where(t => t.Outcome == "Loss").ToList();
+            
+            decimal largestWin = winTrades.Any() ? winTrades.Max(t => t.NetPL) : 0;
+            decimal largestLoss = lossTrades.Any() ? lossTrades.Min(t => t.NetPL) : 0;
+            decimal avgWin = winTrades.Any() ? winTrades.Average(t => t.NetPL) : 0;
+            decimal avgLoss = lossTrades.Any() ? lossTrades.Average(t => t.NetPL) : 0;
+            
+            if (totalTradesLabel != null)
+                totalTradesLabel.Text = $"Total: {totalTrades}";
+            if (winRateLabel != null)
+                winRateLabel.Text = $"Win Rate: {winRate:F1}%";
+            if (totalPLLabel != null)
+            {
+                totalPLLabel.Text = $"Total P/L: {FormatNumeric(totalPL)}";
+                totalPLLabel.ForeColor = totalPL >= 0 ? Color.LimeGreen : Color.OrangeRed;
+            }
+            if (avgPLLabel != null)
+                avgPLLabel.Text = $"Avg P/L: {FormatNumeric(avgPL)}";
+            if (largestWinLabel != null)
+                largestWinLabel.Text = $"Best: {FormatNumeric(largestWin)}";
+            if (largestLossLabel != null)
+                largestLossLabel.Text = $"Worst: {FormatNumeric(largestLoss)}";
+            if (avgWinLabel != null)
+                avgWinLabel.Text = $"Avg Win: {FormatNumeric(avgWin)}";
+            if (avgLossLabel != null)
+                avgLossLabel.Text = $"Avg Loss: {FormatNumeric(avgLoss)}";
         }
 
         private Control FindControlByName(Control parent, string name)

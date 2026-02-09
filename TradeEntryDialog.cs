@@ -34,6 +34,8 @@ namespace Risk_Manager
         private TextBox notesInput;
         private Button saveButton;
         private Button cancelButton;
+        private Button uploadImageButton;
+        private Label imagePathLabel;
 
         public TradeEntryDialog(JournalTrade trade, string accountNumber)
         {
@@ -222,6 +224,35 @@ namespace Risk_Manager
             mainPanel.Controls.Add(notesInput);
             yPos += 90;
 
+            // Image Upload
+            AddLabel(mainPanel, "Trade Image:", 10, yPos, labelWidth);
+            uploadImageButton = new Button
+            {
+                Text = "Upload Image",
+                Location = new Point(labelWidth + 20, yPos),
+                Width = 120,
+                Height = 30,
+                BackColor = Color.FromArgb(70, 130, 180),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+            uploadImageButton.FlatAppearance.BorderSize = 0;
+            uploadImageButton.Click += UploadImageButton_Click;
+            mainPanel.Controls.Add(uploadImageButton);
+            
+            imagePathLabel = new Label
+            {
+                Location = new Point(labelWidth + 150, yPos + 5),
+                Width = 200,
+                ForeColor = Color.LightGray,
+                Text = "No image",
+                AutoEllipsis = true,
+                Font = new Font("Segoe UI", 8, FontStyle.Italic)
+            };
+            mainPanel.Controls.Add(imagePathLabel);
+            yPos += spacing;
+
             // Buttons
             saveButton = new Button
             {
@@ -301,6 +332,12 @@ namespace Risk_Manager
             followedPlanCheckbox.Checked = _trade.FollowedPlan;
             emotionsCombo.Text = _trade.Emotions;
             notesInput.Text = _trade.Notes;
+            
+            // Load image path
+            if (!string.IsNullOrEmpty(_trade.ImagePath))
+            {
+                imagePathLabel.Text = Path.GetFileName(_trade.ImagePath);
+            }
         }
 
         private void SaveButton_Click(object sender, EventArgs e)
@@ -333,6 +370,7 @@ namespace Risk_Manager
             _trade.FollowedPlan = followedPlanCheckbox.Checked;
             _trade.Emotions = emotionsCombo.Text;
             _trade.Notes = notesInput.Text.Trim();
+            // ImagePath is already set by UploadImageButton_Click
 
             // Parse numeric fields
             if (decimal.TryParse(plInput.Text, out decimal pl))
@@ -370,6 +408,22 @@ namespace Risk_Manager
             }
 
             this.DialogResult = DialogResult.OK;
+        }
+
+        private void UploadImageButton_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new OpenFileDialog())
+            {
+                dialog.Filter = "Image files (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp";
+                dialog.Title = "Select Trade Screenshot";
+                
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    _trade.ImagePath = dialog.FileName;
+                    imagePathLabel.Text = Path.GetFileName(dialog.FileName);
+                    imagePathLabel.ForeColor = Color.LightGreen;
+                }
+            }
         }
     }
 }

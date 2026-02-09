@@ -30,6 +30,7 @@ namespace Risk_Manager.Data
         public bool FollowedPlan { get; set; } = true;
         public string Emotions { get; set; } = ""; // How trader felt
         public decimal Fees { get; set; } = 0m;
+        public string ImagePath { get; set; } = ""; // Path to trade screenshot/image
         
         // Computed property
         public decimal NetPL => PL - Fees;
