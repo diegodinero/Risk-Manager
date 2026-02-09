@@ -17477,13 +17477,7 @@ namespace Risk_Manager
 
         private void ImportCsv_Click(object sender, EventArgs e)
         {
-            var accountNumber = GetSelectedAccountNumber();
-            if (string.IsNullOrEmpty(accountNumber))
-            {
-                MessageBox.Show("Please select an account first.", "No Account Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
+            // No longer require account to be selected - trades will go to their respective accounts from CSV
             using (var openDialog = new OpenFileDialog())
             {
                 openDialog.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
@@ -17545,17 +17539,43 @@ namespace Risk_Manager
                                 var tradesToImport = previewDialog.SelectedTrades;
                                 if (tradesToImport.Count > 0)
                                 {
-                                    // Import trades
-                                    int importedCount = TradingJournalService.Instance.ImportTrades(tradesToImport, accountNumber);
+                                    // Import trades to their respective accounts based on CSV data
+                                    var importResults = TradingJournalService.Instance.ImportTradesToRespectiveAccounts(tradesToImport);
 
-                                    // Show result
-                                    if (importedCount > 0)
+                                    // Calculate totals
+                                    int totalImported = importResults.Values.Sum();
+                                    int totalDuplicates = tradesToImport.Count - totalImported;
+
+                                    // Build result message
+                                    var messageLines = new List<string>();
+                                    
+                                    if (totalImported > 0)
                                     {
-                                        MessageBox.Show($"Successfully imported {importedCount} trade(s).\n" +
-                                            $"{tradesToImport.Count - importedCount} duplicate(s) skipped.", 
+                                        messageLines.Add($"Successfully imported {totalImported} trade(s) to {importResults.Count} account(s).");
+                                        
+                                        if (importResults.Count > 1)
+                                        {
+                                            messageLines.Add("");
+                                            messageLines.Add("Breakdown by account:");
+                                            foreach (var kvp in importResults.OrderByDescending(x => x.Value))
+                                            {
+                                                if (kvp.Value > 0)
+                                                {
+                                                    messageLines.Add($"  • {kvp.Key}: {kvp.Value} trade(s)");
+                                                }
+                                            }
+                                        }
+                                        
+                                        if (totalDuplicates > 0)
+                                        {
+                                            messageLines.Add("");
+                                            messageLines.Add($"{totalDuplicates} duplicate(s) skipped.");
+                                        }
+
+                                        MessageBox.Show(string.Join("\n", messageLines), 
                                             "Import Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                                        // Refresh the trade log display
+                                        // Refresh the trade log display for current account
                                         RefreshJournalDataForCurrentAccount();
                                     }
                                     else

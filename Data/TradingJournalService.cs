@@ -547,6 +547,38 @@ namespace Risk_Manager.Data
 
             return importedCount;
         }
+
+        /// <summary>
+        /// Import trades from CSV to their respective accounts based on the Account property in each trade
+        /// Checks for duplicates and adds only new trades
+        /// </summary>
+        /// <param name="trades">List of trades to import (each with Account property set)</param>
+        /// <returns>Dictionary of account numbers to number of trades imported for each account</returns>
+        public Dictionary<string, int> ImportTradesToRespectiveAccounts(List<JournalTrade> trades)
+        {
+            var result = new Dictionary<string, int>();
+
+            if (trades == null || trades.Count == 0)
+                return result;
+
+            // Group trades by account number
+            var tradesByAccount = trades
+                .Where(t => !string.IsNullOrEmpty(t.Account))
+                .GroupBy(t => t.Account)
+                .ToList();
+
+            // Import each group to its respective account
+            foreach (var group in tradesByAccount)
+            {
+                var accountNumber = group.Key;
+                var accountTrades = group.ToList();
+
+                int importedCount = ImportTrades(accountTrades, accountNumber);
+                result[accountNumber] = importedCount;
+            }
+
+            return result;
+        }
     }
 
     /// <summary>

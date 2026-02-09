@@ -256,6 +256,7 @@ namespace Risk_Manager
             };
             _tradesGrid.Columns.Add(checkboxColumn);
 
+            _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Account", HeaderText = "Account", ReadOnly = true, Width = 120 });
             _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Date", HeaderText = "Date", ReadOnly = true });
             _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Symbol", HeaderText = "Symbol", ReadOnly = true });
             _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Type", HeaderText = "Type", ReadOnly = true });
@@ -272,6 +273,7 @@ namespace Risk_Manager
             {
                 var row = _tradesGrid.Rows[_tradesGrid.Rows.Add()];
                 row.Cells["Import"].Value = true; // Selected by default
+                row.Cells["Account"].Value = trade.Account ?? "N/A";
                 row.Cells["Date"].Value = trade.Date.ToString("MM/dd/yyyy");
                 row.Cells["Symbol"].Value = trade.Symbol;
                 row.Cells["Type"].Value = trade.TradeType;
@@ -321,7 +323,16 @@ namespace Risk_Manager
             var totalPL = _allTrades.Sum(t => t.NetPL);
             var winRate = _allTrades.Count > 0 ? (double)wins / _allTrades.Count * 100 : 0;
 
-            _summaryLabel.Text = $"Total Trades: {_allTrades.Count}  |  " +
+            // Count unique accounts
+            var uniqueAccounts = _allTrades
+                .Where(t => !string.IsNullOrEmpty(t.Account))
+                .Select(t => t.Account)
+                .Distinct()
+                .Count();
+
+            var accountInfo = uniqueAccounts > 0 ? $"  |  Accounts: {uniqueAccounts}" : "";
+
+            _summaryLabel.Text = $"Total Trades: {_allTrades.Count}{accountInfo}  |  " +
                                 $"Wins: {wins}  |  Losses: {losses}  |  Breakeven: {breakevens}  |  " +
                                 $"Win Rate: {winRate:F1}%  |  Total P/L: {totalPL:C2}";
         }
