@@ -13228,7 +13228,7 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 120,  // Increased to accommodate date pickers on second row
+                Height = 150,  // Increased to ensure date pickers are fully visible with header
                 BackColor = CardBackground,  // Professional dark theme
                 Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10)
@@ -17504,8 +17504,12 @@ namespace Risk_Manager
                     break;
                     
                 case "Calendar":
+                    // Refresh calendar for the new account
+                    RefreshCalendarPage();
+                    break;
+                    
                 case "Dashboard":
-                    // These sections don't need refresh (placeholders)
+                    // Dashboard doesn't need refresh (placeholder)
                     break;
                     
                 default:
