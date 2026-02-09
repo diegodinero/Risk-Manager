@@ -24,34 +24,40 @@ The CSV import feature allows traders to import their trading history from tradi
 - **Location**: `CsvImportPreviewDialog.cs`
 - **Purpose**: Shows a preview of trades before importing
 - **Features**:
-  - DataGridView showing all parsed trades
-  - Summary statistics (total trades, win rate, total P/L)
+  - DataGridView showing all parsed trades with Account column
+  - Summary statistics (total trades, unique accounts, win rate, total P/L)
   - Checkbox column to select which trades to import
   - "Select All" checkbox for bulk selection
   - Color-coded outcomes (green for wins, red for losses)
   - Displays errors and warnings from parsing
+  - Shows which account each trade will be imported to
   - "Import Selected" and "Cancel" buttons
 
 ### 3. Import Button in Trade Log
 - **Location**: `RiskManagerControl.cs` (Trade Log page)
 - **UI Integration**: Button added to existing toolbar
 - **Workflow**:
-  1. User clicks "IMPORT CSV" button
+  1. User clicks "IMPORT CSV" button (no account selection required)
   2. File dialog opens to select CSV file
   3. Progress message shows while parsing
-  4. Preview dialog displays parsed trades
+  4. Preview dialog displays parsed trades with account information
   5. User selects trades to import
-  6. Duplicate detection prevents importing existing trades
-  7. Success message shows number of trades imported
+  6. Trades are automatically routed to their respective accounts from CSV
+  7. Duplicate detection prevents importing existing trades (per account)
+  8. Success message shows trades imported per account
 
-### 4. ImportTrades Method
+### 4. ImportTrades Methods
 - **Location**: `Data/TradingJournalService.cs`
 - **Purpose**: Imports trades into the journal with duplicate detection
+- **Methods**:
+  - `ImportTrades(trades, accountNumber)`: Imports all trades to a single account
+  - `ImportTradesToRespectiveAccounts(trades)`: **NEW** - Routes trades to their respective accounts based on the Account property in each trade
 - **Features**:
   - Checks for duplicates based on: Date, Symbol, Entry Time, P/L, and Contracts
   - Only imports new trades
-  - Returns count of imported trades
+  - Returns count of imported trades (or dictionary of counts per account)
   - Automatically saves journal after import
+  - Supports multi-account CSV imports
 
 ## CSV Format
 
@@ -158,12 +164,56 @@ if (result.Errors.Count > 0) {
     // Handle errors
 }
 
-// Import trades
+// Import trades to respective accounts (recommended for CSV imports)
+var importResults = TradingJournalService.Instance.ImportTradesToRespectiveAccounts(
+    result.Trades
+);
+
+// Check results per account
+foreach (var kvp in importResults) {
+    Console.WriteLine($"Account {kvp.Key}: {kvp.Value} trades imported");
+}
+
+// Or import all trades to a specific account (legacy method)
 var importedCount = TradingJournalService.Instance.ImportTrades(
     result.Trades, 
     accountNumber
 );
 ```
+
+## Multi-Account Support
+
+The CSV import feature fully supports importing trades from multiple accounts in a single CSV file.
+
+### How It Works
+1. Each trade row in the CSV contains an Account field
+2. The parser extracts the account number (e.g., "FFN-25S951058292787" from "FFN-25S951058292787 LilDee249")
+3. Trades are automatically grouped by account during import
+4. Each group is imported to its respective account in the journal
+5. No need to select an account before importing - routing is automatic
+
+### Preview Dialog
+- Shows Account column for each trade
+- Displays count of unique accounts in summary
+- Example: "Total Trades: 4 | Accounts: 2 | Wins: 3 | Losses: 1"
+
+### Import Success Message
+When importing from a multi-account CSV, the success message shows a breakdown:
+```
+Successfully imported 4 trade(s) to 2 account(s).
+
+Breakdown by account:
+  • FFN-25S951058292787: 2 trade(s)
+  • FFN-25S608685181937: 2 trade(s)
+
+1 duplicate(s) skipped.
+```
+
+### Benefits
+- Import CSV exports from trading platform without pre-filtering by account
+- One CSV file can contain trades from multiple sub-accounts
+- Trades are automatically organized in the correct journal account
+- Duplicate detection works per-account (same trade in different accounts is not a duplicate)
 
 ## Testing
 
@@ -173,6 +223,7 @@ var importedCount = TradingJournalService.Instance.ImportTrades(
 3. **P/L Calculation**: Validated Gross P/L and fees are summed correctly
 4. **Duplicate Detection**: Verified same trade is not imported twice
 5. **Duplicate Column Names**: Confirmed first occurrence is used when column names repeat
+6. **Multi-Account Import**: Verified 8 rows from 2 accounts creates 4 trades routed correctly
 
 ### Test Results
 - ✓ All 6 CSV rows parsed successfully
@@ -181,6 +232,9 @@ var importedCount = TradingJournalService.Instance.ImportTrades(
 - ✓ Duplicate detection prevents re-importing
 - ✓ Outcome calculation (Win/Loss) is accurate
 - ✓ Trade notes preserved from CSV comments
+- ✓ Multi-account CSV (8 rows, 2 accounts) imports correctly
+- ✓ Account routing works (2 trades per account)
+- ✓ Account property preserved in all trades
 
 ## Known Limitations
 
