@@ -496,6 +496,57 @@ namespace Risk_Manager.Data
                 }
             }
         }
+
+        /// <summary>
+        /// Import trades from CSV file into the journal
+        /// Checks for duplicates and adds only new trades
+        /// </summary>
+        /// <param name="trades">List of trades to import</param>
+        /// <param name="accountNumber">Account number to import trades into</param>
+        /// <returns>Number of trades actually imported (excluding duplicates)</returns>
+        public int ImportTrades(List<JournalTrade> trades, string accountNumber)
+        {
+            if (string.IsNullOrEmpty(accountNumber) || trades == null || trades.Count == 0)
+                return 0;
+
+            if (!_accountTrades.ContainsKey(accountNumber))
+            {
+                _accountTrades[accountNumber] = new List<JournalTrade>();
+            }
+
+            int importedCount = 0;
+            var existingTrades = _accountTrades[accountNumber];
+
+            foreach (var trade in trades)
+            {
+                // Check for duplicates based on date, symbol, entry time, and P/L
+                bool isDuplicate = existingTrades.Any(t => 
+                    t.Date.Date == trade.Date.Date &&
+                    t.Symbol == trade.Symbol &&
+                    t.EntryTime == trade.EntryTime &&
+                    t.PL == trade.PL &&
+                    t.Contracts == trade.Contracts);
+
+                if (!isDuplicate)
+                {
+                    // Ensure unique ID
+                    if (trade.Id == Guid.Empty)
+                    {
+                        trade.Id = Guid.NewGuid();
+                    }
+
+                    existingTrades.Add(trade);
+                    importedCount++;
+                }
+            }
+
+            if (importedCount > 0)
+            {
+                SaveJournal();
+            }
+
+            return importedCount;
+        }
     }
 
     /// <summary>
