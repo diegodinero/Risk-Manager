@@ -17184,7 +17184,14 @@ namespace Risk_Manager
             var accountNumber = GetSelectedAccountNumber();
             if (string.IsNullOrEmpty(accountNumber)) return;
             
-            var tradeId = (Guid)grid.SelectedRows[0].Tag;
+            // Validate grid has selected rows
+            if (grid.SelectedRows.Count == 0) return;
+            
+            // Validate Tag is not null and is a Guid
+            var selectedRow = grid.SelectedRows[0];
+            if (selectedRow.Tag == null || !(selectedRow.Tag is Guid)) return;
+            
+            var tradeId = (Guid)selectedRow.Tag;
             var trades = TradingJournalService.Instance.GetTrades(accountNumber);
             var trade = trades.FirstOrDefault(t => t.Id == tradeId);
             
