@@ -13120,8 +13120,6 @@ namespace Risk_Manager
             {
                 Name = "ViewImage",
                 HeaderText = "Image",
-                Text = "View",
-                UseColumnTextForButtonValue = true,
                 Width = 60
             };
             tradesGrid.Columns.Add(viewImageColumn);
@@ -17368,6 +17366,12 @@ namespace Risk_Manager
                     FormatNotesForDisplay(trade.Notes)
                 );
                 grid.Rows[rowIndex].Tag = trade.Id;
+                
+                // Set View button value only if image exists
+                if (!string.IsNullOrEmpty(trade.ImagePath))
+                {
+                    grid.Rows[rowIndex].Cells["ViewImage"].Value = "View";
+                }
 
                 // Apply color coding using helper method
                 ApplyTradeRowStyling(grid.Rows[rowIndex], trade);
@@ -17566,6 +17570,12 @@ namespace Risk_Manager
                 
                 // DEBUG: Log what we're adding to the grid
                 System.Diagnostics.Debug.WriteLine($"Added row {rowIndex}: {trade.Symbol} | {trade.TradeType} | {trade.Outcome} | {FormatNumeric(trade.PL)}");
+                
+                // Set View button value only if image exists
+                if (!string.IsNullOrEmpty(trade.ImagePath))
+                {
+                    grid.Rows[rowIndex].Cells["ViewImage"].Value = "View";
+                }
                 
                 // Explicitly set row default style to ensure visibility
                 grid.Rows[rowIndex].DefaultCellStyle.BackColor = CardBackground;
