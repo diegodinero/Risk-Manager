@@ -291,17 +291,17 @@ namespace Risk_Manager.Data
         }
 
         /// <summary>
-        /// Get all notes for a specific account
+        /// Get all notes from all accounts (shared across accounts)
         /// </summary>
         public List<JournalNote> GetNotes(string accountNumber)
         {
-            if (string.IsNullOrEmpty(accountNumber))
-                return new List<JournalNote>();
-
-            if (!_accountNotes.ContainsKey(accountNumber))
-                _accountNotes[accountNumber] = new List<JournalNote>();
-
-            return _accountNotes[accountNumber].OrderByDescending(n => n.CreatedAt).ToList();
+            // Return notes from all accounts, not just the specified one
+            var allNotes = new List<JournalNote>();
+            foreach (var accountNotesList in _accountNotes.Values)
+            {
+                allNotes.AddRange(accountNotesList);
+            }
+            return allNotes.OrderByDescending(n => n.CreatedAt).ToList();
         }
 
         /// <summary>
@@ -417,17 +417,17 @@ namespace Risk_Manager.Data
         }
 
         /// <summary>
-        /// Get all trading models for a specific account
+        /// Get all trading models from all accounts (shared across accounts)
         /// </summary>
         public List<TradingModel> GetModels(string accountNumber)
         {
-            if (string.IsNullOrEmpty(accountNumber))
-                return new List<TradingModel>();
-
-            if (!_accountModels.ContainsKey(accountNumber))
-                _accountModels[accountNumber] = new List<TradingModel>();
-
-            return _accountModels[accountNumber].OrderByDescending(m => m.CreatedAt).ToList();
+            // Return models from all accounts, not just the specified one
+            var allModels = new List<TradingModel>();
+            foreach (var accountModelsList in _accountModels.Values)
+            {
+                allModels.AddRange(accountModelsList);
+            }
+            return allModels.OrderByDescending(m => m.CreatedAt).ToList();
         }
 
         /// <summary>
