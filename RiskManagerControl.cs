@@ -12832,7 +12832,7 @@ namespace Risk_Manager
 
             var header = new CustomHeaderControl("Trading Journal", GetIconForTitle("Trading Journal"));
             header.Dock = DockStyle.Top;
-            header.Margin = new Padding(10, 0, 0, 0);
+            header.Margin = new Padding(10, 10, 0, 0);  // Increased top margin from 0 to 10
             mainPanel.Controls.Add(header);
 
             // Container for sidebar and content
@@ -12883,7 +12883,7 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
-                Padding = new Padding(20, 20, 20, 20), // Increased top padding to prevent content being cut off
+                Padding = new Padding(20, 30, 20, 20), // Increased top padding from 20 to 30 to prevent overlap
                 AutoScroll = true
             };
 
@@ -13303,8 +13303,8 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 150,  // Increased to ensure date pickers are fully visible with header
-                BackColor = CardBackground,  // Professional dark theme
+                Height = 160,  // Increased from 150 to 160 to ensure date pickers are fully visible
+                BackColor = CardBackground,
                 Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10)
             };
@@ -14384,14 +14384,15 @@ namespace Risk_Manager
             };
             legendPanel.Controls.Add(titleLabel);
             
-            // Legend items flow panel - legend width matches full calendar
-            legendPanel.Width = (7 * 150) + 200; // 1250px - match full calendar width including weekly stats
+            // Legend items flow panel - legend width should match calendar columns only (not weekly stats)
+            legendPanel.Width = (7 * 150); // 1050px - match calendar width WITHOUT weekly stats column
             
             var itemsPanel = new FlowLayoutPanel
             {
                 AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false
+                WrapContents = false,
+                MaximumSize = new Size((7 * 150) - 40, 0)  // Constrain to calendar width with padding
             };
             
             // Center items horizontally
@@ -16050,11 +16051,11 @@ namespace Risk_Manager
             {
                 Text = "Dashboard",
                 Dock = DockStyle.Top,
-                Height = 50,
+                Height = 60,  // Increased from 50 to 60 for better visibility
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 24, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(20, 10, 0, 0)
+                Padding = new Padding(20, 15, 0, 0)  // Increased top padding from 10 to 15
             };
             pagePanel.Controls.Add(titleLabel);
 
@@ -16068,9 +16069,9 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 150,
+                Height = 170,  // Increased from 150 to 170 to prevent card tops from being cut off
                 BackColor = DarkBackground,
-                Padding = new Padding(20, 10, 20, 10)
+                Padding = new Padding(20, 15, 20, 15)  // Increased top/bottom padding from 10 to 15
             };
 
             // Title
@@ -16078,7 +16079,7 @@ namespace Risk_Manager
             {
                 Text = title,
                 Dock = DockStyle.Top,
-                Height = 30,
+                Height = 35,  // Increased from 30 to 35 for better spacing
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft
@@ -16197,26 +16198,26 @@ namespace Risk_Manager
                 BackColor = Color.Transparent
             };
 
-            // Emoji label with color
+            // Emoji label with color - increased width for better emoji display
             var emojiLabel = new Label
             {
                 Text = emoji,
                 Dock = DockStyle.Left,
-                Width = 20,
+                Width = 28,  // Increased from 20 to 28 for better emoji rendering
                 ForeColor = emojiColor,
-                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+                Font = new Font("Segoe UI Emoji", 14, FontStyle.Regular),  // Increased from 10 to 14
                 TextAlign = ContentAlignment.MiddleLeft,
                 AutoSize = false
             };
             labelContainer.Controls.Add(emojiLabel);
 
-            // Text label
+            // Text label - white text, left-aligned
             var textLabel = new Label
             {
                 Text = label,
                 Dock = DockStyle.Fill,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),  // Changed from "Segoe UI Emoji"
                 TextAlign = ContentAlignment.MiddleLeft,
                 AutoSize = false
             };
@@ -16224,15 +16225,15 @@ namespace Risk_Manager
 
             card.Controls.Add(labelContainer);
 
-            // Value
+            // Value - colored text, right-aligned as requested
             var valueControl = new Label
             {
                 Text = value,
                 Dock = DockStyle.Fill,
                 ForeColor = valueColor,
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),  // Slightly smaller
-                TextAlign = ContentAlignment.MiddleLeft,
-                AutoSize = false  // Prevent wrapping
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleRight,  // Changed from MiddleLeft to MiddleRight
+                AutoSize = false
             };
             card.Controls.Add(valueControl);
 
