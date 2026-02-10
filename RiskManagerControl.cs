@@ -12848,7 +12848,7 @@ namespace Risk_Manager
                 Width = 240,
                 Dock = DockStyle.Left,
                 BackColor = Color.FromArgb(35, 35, 35), // Slightly different from main background
-                Padding = new Padding(16)
+                Padding = new Padding(16, 60, 16, 16)  // Increased top padding to 60 to clear the header above
             };
 
             // Separator
@@ -12883,7 +12883,7 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
-                Padding = new Padding(20, 10, 20, 20), // Reduced top padding from 30 to 10 to compensate for taller header
+                Padding = new Padding(20, 20, 20, 20), // Reverted to standard padding - sidebar handles header clearance
                 AutoScroll = true
             };
 
