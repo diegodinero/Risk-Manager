@@ -16216,8 +16216,7 @@ namespace Risk_Manager
             var textLabel = new Label
             {
                 Text = label,
-                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent potential overlap
-                Height = 22,  // Explicit height matching labelContainer
+                Dock = DockStyle.Fill,  // Fill remaining space after emoji (Dock.Left)
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),  // Changed from "Segoe UI Emoji"
                 TextAlign = ContentAlignment.MiddleLeft,
