@@ -16004,7 +16004,9 @@ namespace Risk_Manager
             double monthlyProfitFactor = monthlyGrossLosses > 0 ? (double)(monthlyGrossWins / monthlyGrossLosses) : 0;
 
             // Add panels in reverse order since Dock.Top stacks from bottom to top
-            // Session Performance Section (always show, handles empty state internally)
+            // The order below is reversed - last added appears at top of display
+            
+            // Session Performance Section (appears at bottom)
             var sessionStatsPanel = CreateSessionStatsSection(trades);
             sessionStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(sessionStatsPanel);
@@ -16014,15 +16016,10 @@ namespace Risk_Manager
             dayStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(dayStatsPanel);
 
-            // Trading Model Performance Section (always show, handles empty state internally)
+            // Trading Model Performance Section
             var modelStatsPanel = CreateModelStatsSection(trades, models);
             modelStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(modelStatsPanel);
-
-            // Main Statistics Section
-            var mainStatsPanel = CreateMainStatsSection(stats, followedPlan, violatedPlan, planAdherence, profitFactor);
-            mainStatsPanel.Dock = DockStyle.Top;
-            pagePanel.Controls.Add(mainStatsPanel);
 
             // Monthly Stats Section
             var monthlyStatsPanel = CreateStatsSection("Monthly Stats", new[]
@@ -16045,6 +16042,11 @@ namespace Risk_Manager
             });
             overallStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(overallStatsPanel);
+
+            // Main Statistics Section (appears near top, after Overall/Monthly Stats)
+            var mainStatsPanel = CreateMainStatsSection(stats, followedPlan, violatedPlan, planAdherence, profitFactor);
+            mainStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(mainStatsPanel);
 
             // Page title - added LAST so it appears at the TOP (Dock.Top stacks bottom to top)
             var titleLabel = new Label
