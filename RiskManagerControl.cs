@@ -16097,7 +16097,7 @@ namespace Risk_Manager
                 WrapContents = true,
                 AutoSize = false,
                 BackColor = DarkBackground,
-                Padding = new Padding(0, 10, 0, 0)
+                Padding = new Padding(0, 20, 0, 0)  // Increased to 20px for better separation between title and cards
             };
 
             foreach (var (label, value, color) in stats)
