@@ -12913,9 +12913,12 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+                Font = new Font("Segoe UI", 11, FontStyle.Regular),  // Changed from "Segoe UI Emoji" to "Segoe UI" and increased size
                 Margin = new Padding(0, 4, 0, 4),  // Increased vertical margins for better spacing
-                Tag = section
+                Padding = new Padding(5, 0, 5, 0),  // Add horizontal padding to prevent text clipping
+                Tag = section,
+                AutoEllipsis = true,  // Add ellipsis if text is too long
+                UseCompatibleTextRendering = false  // Better text rendering
             };
             btn.FlatAppearance.BorderSize = 0;
             btn.Click += (s, e) => ShowJournalSection(section);
@@ -12945,12 +12948,12 @@ namespace Risk_Manager
                 if (kvp.Key == section)
                 {
                     kvp.Value.BackColor = Color.FromArgb(50, 50, 50);
-                    kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Bold);
+                    kvp.Value.Font = new Font("Segoe UI", 11, FontStyle.Bold);  // Changed to match new font
                 }
                 else
                 {
                     kvp.Value.BackColor = Color.Transparent;
-                    kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular);
+                    kvp.Value.Font = new Font("Segoe UI", 11, FontStyle.Regular);  // Changed to match new font
                 }
             }
 
