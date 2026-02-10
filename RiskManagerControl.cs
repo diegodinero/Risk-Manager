@@ -146,7 +146,7 @@ class CustomHeaderControl : Panel
     public CustomHeaderControl(string text, Image icon)
     {
         this.Dock = DockStyle.Top;
-        this.Height = 40;
+        this.Height = 60;  // Increased from 40 to 60 to accommodate 48px icon without overflow
         this.BackColor = Color.Transparent;
 
         // Text (Label)
@@ -12832,7 +12832,7 @@ namespace Risk_Manager
 
             var header = new CustomHeaderControl("Trading Journal", GetIconForTitle("Trading Journal"));
             header.Dock = DockStyle.Top;
-            header.Margin = new Padding(10, 10, 0, 0);  // Increased top margin from 0 to 10
+            header.Margin = new Padding(10, 0, 0, 0);  // Removed top margin to prevent overlap
             mainPanel.Controls.Add(header);
 
             // Container for sidebar and content
@@ -12913,12 +12913,9 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI", 11, FontStyle.Regular),  // Changed from "Segoe UI Emoji" to "Segoe UI" and increased size
+                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),  // Reverted back to original
                 Margin = new Padding(0, 4, 0, 4),  // Increased vertical margins for better spacing
-                Padding = new Padding(5, 0, 5, 0),  // Add horizontal padding to prevent text clipping
-                Tag = section,
-                AutoEllipsis = true,  // Add ellipsis if text is too long
-                UseCompatibleTextRendering = false  // Better text rendering
+                Tag = section
             };
             btn.FlatAppearance.BorderSize = 0;
             btn.Click += (s, e) => ShowJournalSection(section);
@@ -12948,12 +12945,12 @@ namespace Risk_Manager
                 if (kvp.Key == section)
                 {
                     kvp.Value.BackColor = Color.FromArgb(50, 50, 50);
-                    kvp.Value.Font = new Font("Segoe UI", 11, FontStyle.Bold);  // Changed to match new font
+                    kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Bold);  // Reverted back to original
                 }
                 else
                 {
                     kvp.Value.BackColor = Color.Transparent;
-                    kvp.Value.Font = new Font("Segoe UI", 11, FontStyle.Regular);  // Changed to match new font
+                    kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular);  // Reverted back to original
                 }
             }
 
