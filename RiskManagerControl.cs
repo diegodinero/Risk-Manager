@@ -16411,8 +16411,8 @@ namespace Risk_Manager
             };
             card.Controls.Add(titleLabel);
 
-            // Stats
-            int yPos = 35;  // Restored to original
+            // Stats - start after title (20px padding + 30px title + 5px buffer = 55px)
+            int yPos = 55;
             foreach (var (label, value, color) in stats)
             {
                 var statPanel = new Panel
