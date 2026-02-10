@@ -16230,7 +16230,8 @@ namespace Risk_Manager
             var valueControl = new Label
             {
                 Text = value,
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping label
+                Height = 30,  // Explicit height: 70 (card) - 16 (padding) - 22 (label) - 2 (buffer) = 30
                 ForeColor = valueColor,
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleRight,  // Changed from MiddleLeft to MiddleRight
