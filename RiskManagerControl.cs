@@ -9686,6 +9686,66 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Maps CSV account numbers to dropdown unique account IDs.
+        /// This ensures CSV imports match to the correct accounts using the same unique ID system.
+        /// </summary>
+        /// <param name="trades">List of trades with CSV account numbers</param>
+        /// <returns>Dictionary mapping CSV account numbers to unique account IDs</returns>
+        private Dictionary<string, string> MapCsvAccountsToDropdownAccounts(List<JournalTrade> trades)
+        {
+            var mapping = new Dictionary<string, string>();
+            var core = Core.Instance;
+            
+            if (core == null || core.Accounts == null || !core.Accounts.Any())
+            {
+                return mapping;
+            }
+            
+            // Get unique CSV account numbers from trades
+            var csvAccounts = trades
+                .Where(t => !string.IsNullOrEmpty(t.Account))
+                .Select(t => t.Account)
+                .Distinct()
+                .ToList();
+            
+            // For each CSV account, try to find matching dropdown account
+            int accountIndex = 0;
+            foreach (var account in core.Accounts)
+            {
+                if (account == null)
+                {
+                    accountIndex++;
+                    continue;
+                }
+                
+                // Get account properties
+                var accountId = account.Id ?? "";
+                var accountName = account.Name ?? "";
+                
+                // Try to match CSV account to this dropdown account
+                // CSV accounts are typically like "FFN-25S951058292787" which could be in Id or Name
+                foreach (var csvAccount in csvAccounts)
+                {
+                    if (!mapping.ContainsKey(csvAccount))
+                    {
+                        // Check if CSV account matches account ID or Name
+                        if (accountId.Contains(csvAccount) || csvAccount.Contains(accountId) ||
+                            accountName.Contains(csvAccount) || csvAccount.Contains(accountName))
+                        {
+                            // Found a match - map CSV account to unique ID
+                            var uniqueId = GetUniqueAccountIdentifier(account, accountIndex);
+                            mapping[csvAccount] = uniqueId;
+                        }
+                    }
+                }
+                
+                accountIndex++;
+            }
+            
+            return mapping;
+        }
+
+        /// <summary>
         /// Gets a simple identifier for an account (without needing the index).
         /// Used for display and operations where we don't have the index.
         /// Delegates to GetUniqueAccountIdentifier with index=-1 for consistency.
@@ -13047,10 +13107,25 @@ namespace Risk_Manager
             exportButton.FlatAppearance.BorderSize = 0;
             exportButton.Click += ExportTrades_Click;
 
+            var importButton = new Button
+            {
+                Text = "IMPORT CSV",  // Changed to plain text for better visibility
+                Width = 130,
+                Height = 35,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(100, 50, 200),
+                ForeColor = Color.White,  // Explicit bright white
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)  // Larger, bold font
+            };
+            importButton.FlatAppearance.BorderSize = 0;
+            importButton.Click += ImportCsv_Click;
+
             buttonsPanel.Controls.Add(addButton);
             buttonsPanel.Controls.Add(editButton);
             buttonsPanel.Controls.Add(deleteButton);
             buttonsPanel.Controls.Add(exportButton);
+            buttonsPanel.Controls.Add(importButton);
             
             // DEBUG: Log button panel details
             System.Diagnostics.Debug.WriteLine("=== BUTTONS PANEL DEBUG ===");
@@ -17455,6 +17530,138 @@ namespace Risk_Manager
                     {
                         MessageBox.Show($"Error exporting trades: {ex.Message}", 
                             "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        private void ImportCsv_Click(object sender, EventArgs e)
+        {
+            using (var openDialog = new OpenFileDialog())
+            {
+                openDialog.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
+                openDialog.DefaultExt = "csv";
+                openDialog.Title = "Import Trades from CSV";
+                openDialog.Multiselect = false;
+
+                if (openDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        // Show progress/loading message
+                        var progressForm = new Form
+                        {
+                            Text = "Importing...",
+                            Size = new Size(300, 100),
+                            StartPosition = FormStartPosition.CenterParent,
+                            FormBorderStyle = FormBorderStyle.FixedDialog,
+                            ControlBox = false,
+                            BackColor = Color.FromArgb(30, 30, 30)
+                        };
+                        var progressLabel = new Label
+                        {
+                            Text = "Parsing CSV file...",
+                            Dock = DockStyle.Fill,
+                            TextAlign = ContentAlignment.MiddleCenter,
+                            Font = new Font("Segoe UI", 10),
+                            ForeColor = Color.White
+                        };
+                        progressForm.Controls.Add(progressLabel);
+                        progressForm.Show();
+                        progressForm.Refresh();
+
+                        // Parse CSV file
+                        var csvService = new CsvImportService();
+                        var result = csvService.ParseCsvFile(openDialog.FileName);
+
+                        progressForm.Close();
+
+                        if (result.Errors.Count > 0 && result.Trades.Count == 0)
+                        {
+                            MessageBox.Show($"Failed to parse CSV file:\n\n{string.Join("\n", result.Errors.Take(5))}", 
+                                "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+
+                        if (result.Trades.Count == 0)
+                        {
+                            MessageBox.Show("No valid trades found in CSV file.", 
+                                "No Trades Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+
+                        // Show preview dialog
+                        using (var previewDialog = new CsvImportPreviewDialog(result.Trades, result.Errors, result.Warnings))
+                        {
+                            if (previewDialog.ShowDialog() == DialogResult.OK)
+                            {
+                                var tradesToImport = previewDialog.SelectedTrades;
+                                if (tradesToImport.Count > 0)
+                                {
+                                    // Map CSV account numbers to dropdown unique account IDs
+                                    var accountMapping = MapCsvAccountsToDropdownAccounts(tradesToImport);
+                                    
+                                    // Update trade accounts to use unique IDs
+                                    foreach (var trade in tradesToImport)
+                                    {
+                                        if (!string.IsNullOrEmpty(trade.Account) && accountMapping.ContainsKey(trade.Account))
+                                        {
+                                            trade.Account = accountMapping[trade.Account];
+                                        }
+                                    }
+                                    
+                                    // Import trades to their respective accounts
+                                    var importResults = TradingJournalService.Instance.ImportTradesToRespectiveAccounts(tradesToImport);
+
+                                    // Calculate totals
+                                    int totalImported = importResults.Values.Sum();
+                                    int totalDuplicates = tradesToImport.Count - totalImported;
+
+                                    // Build result message
+                                    var messageLines = new List<string>();
+                                    
+                                    if (totalImported > 0)
+                                    {
+                                        messageLines.Add($"Successfully imported {totalImported} trade(s) to {importResults.Count} account(s).");
+                                        
+                                        if (importResults.Count > 1)
+                                        {
+                                            messageLines.Add("");
+                                            messageLines.Add("Breakdown by account:");
+                                            foreach (var kvp in importResults.OrderByDescending(x => x.Value))
+                                            {
+                                                if (kvp.Value > 0)
+                                                {
+                                                    messageLines.Add($"  • {kvp.Key}: {kvp.Value} trade(s)");
+                                                }
+                                            }
+                                        }
+                                        
+                                        if (totalDuplicates > 0)
+                                        {
+                                            messageLines.Add("");
+                                            messageLines.Add($"{totalDuplicates} duplicate(s) skipped.");
+                                        }
+
+                                        MessageBox.Show(string.Join("\n", messageLines), 
+                                            "Import Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                                        // Refresh the trade log display for current account
+                                        RefreshJournalDataForCurrentAccount();
+                                    }
+                                    else
+                                    {
+                                        MessageBox.Show("No new trades were imported. All selected trades already exist in the journal.", 
+                                            "No New Trades", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error importing trades: {ex.Message}\n\n{ex.StackTrace}", 
+                            "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
