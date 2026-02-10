@@ -12883,7 +12883,7 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
-                Padding = new Padding(20, 30, 20, 20), // Increased top padding from 20 to 30 to prevent overlap
+                Padding = new Padding(20, 10, 20, 20), // Reduced top padding from 30 to 10 to compensate for taller header
                 AutoScroll = true
             };
 
