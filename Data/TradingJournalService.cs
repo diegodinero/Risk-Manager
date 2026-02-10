@@ -139,14 +139,6 @@ namespace Risk_Manager.Data
         }
 
         /// <summary>
-        /// Get all account numbers that have trades in the journal
-        /// </summary>
-        public List<string> GetAllAccountNumbers()
-        {
-            return _accountTrades.Keys.OrderBy(k => k).ToList();
-        }
-
-        /// <summary>
         /// Get all trades for a specific account
         /// </summary>
         public List<JournalTrade> GetTrades(string accountNumber)

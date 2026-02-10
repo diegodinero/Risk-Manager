@@ -9686,6 +9686,66 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Maps CSV account numbers to dropdown unique account IDs.
+        /// This ensures CSV imports match to the correct accounts using the same unique ID system.
+        /// </summary>
+        /// <param name="trades">List of trades with CSV account numbers</param>
+        /// <returns>Dictionary mapping CSV account numbers to unique account IDs</returns>
+        private Dictionary<string, string> MapCsvAccountsToDropdownAccounts(List<JournalTrade> trades)
+        {
+            var mapping = new Dictionary<string, string>();
+            var core = Core.Instance;
+            
+            if (core == null || core.Accounts == null || !core.Accounts.Any())
+            {
+                return mapping;
+            }
+            
+            // Get unique CSV account numbers from trades
+            var csvAccounts = trades
+                .Where(t => !string.IsNullOrEmpty(t.Account))
+                .Select(t => t.Account)
+                .Distinct()
+                .ToList();
+            
+            // For each CSV account, try to find matching dropdown account
+            int accountIndex = 0;
+            foreach (var account in core.Accounts)
+            {
+                if (account == null)
+                {
+                    accountIndex++;
+                    continue;
+                }
+                
+                // Get account properties
+                var accountId = account.Id ?? "";
+                var accountName = account.Name ?? "";
+                
+                // Try to match CSV account to this dropdown account
+                // CSV accounts are typically like "FFN-25S951058292787" which could be in Id or Name
+                foreach (var csvAccount in csvAccounts)
+                {
+                    if (!mapping.ContainsKey(csvAccount))
+                    {
+                        // Check if CSV account matches account ID or Name
+                        if (accountId.Contains(csvAccount) || csvAccount.Contains(accountId) ||
+                            accountName.Contains(csvAccount) || csvAccount.Contains(accountName))
+                        {
+                            // Found a match - map CSV account to unique ID
+                            var uniqueId = GetUniqueAccountIdentifier(account, accountIndex);
+                            mapping[csvAccount] = uniqueId;
+                        }
+                    }
+                }
+                
+                accountIndex++;
+            }
+            
+            return mapping;
+        }
+
+        /// <summary>
         /// Gets a simple identifier for an account (without needing the index).
         /// Used for display and operations where we don't have the index.
         /// Delegates to GetUniqueAccountIdentifier with index=-1 for consistency.
@@ -17477,7 +17537,6 @@ namespace Risk_Manager
 
         private void ImportCsv_Click(object sender, EventArgs e)
         {
-            // No longer require account to be selected - trades will go to their respective accounts from CSV
             using (var openDialog = new OpenFileDialog())
             {
                 openDialog.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*";
@@ -17539,7 +17598,19 @@ namespace Risk_Manager
                                 var tradesToImport = previewDialog.SelectedTrades;
                                 if (tradesToImport.Count > 0)
                                 {
-                                    // Import trades to their respective accounts based on CSV data
+                                    // Map CSV account numbers to dropdown unique account IDs
+                                    var accountMapping = MapCsvAccountsToDropdownAccounts(tradesToImport);
+                                    
+                                    // Update trade accounts to use unique IDs
+                                    foreach (var trade in tradesToImport)
+                                    {
+                                        if (!string.IsNullOrEmpty(trade.Account) && accountMapping.ContainsKey(trade.Account))
+                                        {
+                                            trade.Account = accountMapping[trade.Account];
+                                        }
+                                    }
+                                    
+                                    // Import trades to their respective accounts
                                     var importResults = TradingJournalService.Instance.ImportTradesToRespectiveAccounts(tradesToImport);
 
                                     // Calculate totals

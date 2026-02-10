@@ -16,7 +16,6 @@ namespace Risk_Manager
         private readonly bool _isEditMode;
 
         // Form controls
-        private ComboBox accountCombo;  // NEW: Account selection
         private DateTimePicker datePicker;
         private TextBox symbolInput;
         private ComboBox outcomeCombo;
@@ -71,31 +70,6 @@ namespace Risk_Manager
             int labelWidth = 120;
             int inputWidth = 200;
             int spacing = 45;
-
-            // Account - NEW: Allow user to specify which account this trade belongs to
-            AddLabel(mainPanel, "Account:", 10, yPos, labelWidth);
-            accountCombo = new ComboBox
-            {
-                Location = new Point(labelWidth + 20, yPos),
-                Width = inputWidth,
-                DropDownStyle = ComboBoxStyle.DropDown  // Allow custom entry
-            };
-            
-            // Load existing accounts
-            var existingAccounts = TradingJournalService.Instance.GetAllAccountNumbers();
-            foreach (var account in existingAccounts)
-            {
-                accountCombo.Items.Add(account);
-            }
-            
-            // Set default to the passed account number
-            if (!string.IsNullOrEmpty(_accountNumber))
-            {
-                accountCombo.Text = _accountNumber;
-            }
-            
-            mainPanel.Controls.Add(accountCombo);
-            yPos += spacing;
 
             // Date
             AddLabel(mainPanel, "Date:", 10, yPos, labelWidth);
@@ -342,9 +316,6 @@ namespace Risk_Manager
         {
             if (_trade == null) return;
 
-            // Load account - use trade's Account property if available, otherwise use passed _accountNumber
-            accountCombo.Text = !string.IsNullOrEmpty(_trade.Account) ? _trade.Account : _accountNumber;
-            
             datePicker.Value = _trade.Date;
             symbolInput.Text = _trade.Symbol;
             outcomeCombo.Text = _trade.Outcome;
@@ -373,13 +344,6 @@ namespace Risk_Manager
         private void SaveButton_Click(object sender, EventArgs e)
         {
             // Validate required fields
-            if (string.IsNullOrWhiteSpace(accountCombo.Text))
-            {
-                MessageBox.Show("Please enter or select an account.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                accountCombo.Focus();
-                return;
-            }
-            
             if (string.IsNullOrWhiteSpace(symbolInput.Text))
             {
                 MessageBox.Show("Please enter a symbol.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -394,9 +358,6 @@ namespace Risk_Manager
                 return;
             }
 
-            // Get the account from the combo box (user-specified)
-            var targetAccount = accountCombo.Text.Trim();
-
             // Update trade object
             _trade.Date = datePicker.Value;
             _trade.Symbol = symbolInput.Text.Trim();
@@ -404,7 +365,7 @@ namespace Risk_Manager
             _trade.TradeType = typeCombo.Text;
             _trade.Model = modelInput.Text.Trim();
             _trade.Session = sessionInput.Text.Trim();
-            _trade.Account = targetAccount;  // Use the account from the combo box
+            _trade.Account = _accountNumber;
             _trade.EntryTime = entryTimeInput.Text.Trim();
             _trade.ExitTime = exitTimeInput.Text.Trim();
             _trade.FollowedPlan = followedPlanCheckbox.Checked;
@@ -430,33 +391,19 @@ namespace Risk_Manager
             if (decimal.TryParse(feesInput.Text, out decimal fees))
                 _trade.Fees = fees;
 
-            // Save to service - use the trade's Account property (from combo box) instead of _accountNumber
+            // Save to service
             if (_isEditMode)
             {
-                // For edit mode, we need to handle potential account changes
-                // If the account changed, we need to delete from old account and add to new account
-                if (_trade.Account != _accountNumber)
-                {
-                    // Remove from old account
-                    TradingJournalService.Instance.DeleteTrade(_accountNumber, _trade.Id);
-                    // Add to new account (with same ID to maintain identity)
-                    TradingJournalService.Instance.AddTrade(_trade.Account, _trade);
-                }
-                else
-                {
-                    // Same account, just update
-                    TradingJournalService.Instance.UpdateTrade(_trade.Account, _trade);
-                }
+                TradingJournalService.Instance.UpdateTrade(_accountNumber, _trade);
             }
             else
             {
-                // For new trades, use the account from the combo box
-                TradingJournalService.Instance.AddTrade(_trade.Account, _trade);
+                TradingJournalService.Instance.AddTrade(_accountNumber, _trade);
                 
                 // Increment model usage count if a model was selected
                 if (!string.IsNullOrWhiteSpace(_trade.Model))
                 {
-                    TradingJournalService.Instance.IncrementModelUsage(_trade.Account, _trade.Model);
+                    TradingJournalService.Instance.IncrementModelUsage(_accountNumber, _trade.Model);
                 }
             }
 
