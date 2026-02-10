@@ -17648,6 +17648,9 @@ namespace Risk_Manager
 
                                         // Refresh the trade log display for current account
                                         RefreshJournalDataForCurrentAccount();
+                                        
+                                        // Always refresh calendar to ensure imported trades are shown
+                                        RefreshCalendarPage();
                                     }
                                     else
                                     {
