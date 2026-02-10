@@ -12883,7 +12883,7 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
-                Padding = new Padding(20, 20, 20, 20), // Reverted to standard padding - sidebar handles header clearance
+                Padding = new Padding(20, 60, 20, 20), // Increased top padding to 60 to clear header above
                 AutoScroll = true
             };
 
