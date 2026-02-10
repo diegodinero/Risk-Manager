@@ -16021,6 +16021,11 @@ namespace Risk_Manager
             modelStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(modelStatsPanel);
 
+            // Main Statistics Section
+            var mainStatsPanel = CreateMainStatsSection(stats, followedPlan, violatedPlan, planAdherence, profitFactor);
+            mainStatsPanel.Dock = DockStyle.Top;
+            pagePanel.Controls.Add(mainStatsPanel);
+
             // Monthly Stats Section
             var monthlyStatsPanel = CreateStatsSection("Monthly Stats", new[]
             {
@@ -16042,11 +16047,6 @@ namespace Risk_Manager
             });
             overallStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(overallStatsPanel);
-
-            // Main Statistics Section (appears near top, after Overall/Monthly Stats)
-            var mainStatsPanel = CreateMainStatsSection(stats, followedPlan, violatedPlan, planAdherence, profitFactor);
-            mainStatsPanel.Dock = DockStyle.Top;
-            pagePanel.Controls.Add(mainStatsPanel);
 
             // Page title - added LAST so it appears at the TOP (Dock.Top stacks bottom to top)
             var titleLabel = new Label
