@@ -16089,10 +16089,11 @@ namespace Risk_Manager
             // Cards container
             var cardsPanel = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping title
+                Height = 130,  // Explicit height: 200 (section) - 30 (padding) - 35 (title) - 5 (buffer) = 130
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = true,
-                AutoSize = false,  // Changed from true to false to work with Dock=Fill
+                AutoSize = false,
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0)
             };
