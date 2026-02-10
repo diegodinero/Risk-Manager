@@ -16292,7 +16292,8 @@ namespace Risk_Manager
             // Two-column layout using TableLayoutPanel for proper sizing
             var tableLayout = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping title
+                Height = 295,  // Explicit height: 350 (section) - 20 (padding) - 35 (title) = 295
                 ColumnCount = 2,
                 RowCount = 1,
                 BackColor = DarkBackground,
@@ -16535,7 +16536,11 @@ namespace Risk_Manager
             headerPanel.Controls.Add(iconLabel);
             
             // Store reference for event handler
-            var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+            var statsContainer = new Panel { 
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping header
+                Height = 335,  // Explicit height: 400 (section) - 20 (padding) - 45 (header) = 335
+                BackColor = DarkBackground 
+            };
             
             // Event handler for model selection change
             modelSelector.SelectedIndexChanged += (s, e) =>
@@ -16719,7 +16724,11 @@ namespace Risk_Manager
             headerPanel.Controls.Add(iconLabel);
 
             // Store reference for event handler
-            var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+            var statsContainer = new Panel { 
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping header
+                Height = 335,  // Explicit height: 400 (section) - 20 (padding) - 45 (header) = 335
+                BackColor = DarkBackground 
+            };
 
             // Event handler for day selection change
             daySelector.SelectedIndexChanged += (s, e) =>
@@ -16903,7 +16912,11 @@ namespace Risk_Manager
             headerPanel.Controls.Add(iconLabel);
 
             // Store reference for event handler
-            var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+            var statsContainer = new Panel { 
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping header
+                Height = 335,  // Explicit height: 400 (section) - 20 (padding) - 45 (header) = 335
+                BackColor = DarkBackground 
+            };
 
             // Event handler for session selection change
             sessionSelector.SelectedIndexChanged += (s, e) =>
