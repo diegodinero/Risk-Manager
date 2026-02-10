@@ -16216,7 +16216,8 @@ namespace Risk_Manager
             var textLabel = new Label
             {
                 Text = label,
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent potential overlap
+                Height = 22,  // Explicit height matching labelContainer
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),  // Changed from "Segoe UI Emoji"
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -17735,7 +17736,8 @@ namespace Risk_Manager
                     break;
                     
                 case "Dashboard":
-                    // Dashboard doesn't need refresh (placeholder)
+                    // Refresh Dashboard for the new account
+                    ShowJournalSection("Dashboard");
                     break;
                     
                 default:
