@@ -16069,7 +16069,7 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 170,  // Increased from 150 to 170 to prevent card tops from being cut off
+                Height = 200,  // Increased from 170 to 200 to prevent card tops from being cut off
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 15, 20, 15)  // Increased top/bottom padding from 10 to 15
             };
