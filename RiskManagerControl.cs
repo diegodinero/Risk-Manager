@@ -16332,9 +16332,7 @@ namespace Risk_Manager
                 RowCount = 1,
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0),
-                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
             };
             // Use absolute pixel width to ensure cards touch
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
@@ -16718,14 +16716,12 @@ namespace Risk_Manager
             // Two-column, two-row layout using TableLayoutPanel
             var tableLayout = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,
+                Dock = DockStyle.Fill,
                 ColumnCount = 2,
                 RowCount = modelSelector != null ? 2 : 1,  // 2 rows if ComboBox exists
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0),
-                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
             };
             
             // Use absolute pixel width to ensure cards touch
@@ -16736,8 +16732,8 @@ namespace Risk_Manager
             {
                 // Row 0: ComboBox above right card (30px height)
                 tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-                // Row 1: Cards (auto height)
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                // Row 1: Cards (remaining space)
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
                 
                 // Add empty panel in top-left
                 var emptyPanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
@@ -16752,7 +16748,7 @@ namespace Risk_Manager
             }
             else
             {
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             }
 
             var leftCard = CreateDetailCard("Trading Model Stats", new[]
@@ -16967,14 +16963,12 @@ namespace Risk_Manager
             // Two-column, two-row layout using TableLayoutPanel
             var tableLayout = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,
+                Dock = DockStyle.Fill,
                 ColumnCount = 2,
                 RowCount = daySelector != null ? 2 : 1,  // 2 rows if ComboBox exists
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0),
-                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
             };
             
             // Use absolute pixel width to ensure cards touch
@@ -16985,8 +16979,8 @@ namespace Risk_Manager
             {
                 // Row 0: ComboBox above right card (30px height)
                 tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-                // Row 1: Cards (auto height)
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                // Row 1: Cards (remaining space)
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
                 
                 // Add empty panel in top-left
                 var emptyPanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
@@ -17001,7 +16995,7 @@ namespace Risk_Manager
             }
             else
             {
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             }
 
             var leftCard = CreateDetailCard("Day Stats", new[]
@@ -17246,14 +17240,12 @@ namespace Risk_Manager
             // Two-column, two-row layout using TableLayoutPanel
             var tableLayout = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,
+                Dock = DockStyle.Fill,
                 ColumnCount = 2,
                 RowCount = sessionSelector != null ? 2 : 1,  // 2 rows if ComboBox exists
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0),
-                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
             };
             
             // Use absolute pixel width to ensure cards touch
@@ -17264,8 +17256,8 @@ namespace Risk_Manager
             {
                 // Row 0: ComboBox above right card (30px height)
                 tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-                // Row 1: Cards (auto height)
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                // Row 1: Cards (remaining space)
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
                 
                 // Add empty panel in top-left
                 var emptyPanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
@@ -17280,7 +17272,7 @@ namespace Risk_Manager
             }
             else
             {
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             }
 
             var leftCard = CreateDetailCard("Session Stats", new[]
