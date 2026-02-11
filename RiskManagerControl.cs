@@ -13380,45 +13380,48 @@ namespace Risk_Manager
             filterPanel.Controls.Add(debugDimensionsLabel);
 
             // Search box
-            var searchLabel = new Label { Text = "Search:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var searchLabel = new Label { Text = "Search:", AutoSize = true, ForeColor = Color.Black, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };  // VISUAL DEBUG: Changed to Black for visibility on yellow
             var searchBox = new TextBox
             {
                 Width = 150,
                 Height = 25,
                 Margin = new Padding(5),
                 Tag = "SearchBox",
-                Name = "TradeSearchBox"
+                Name = "TradeSearchBox",
+                BackColor = Color.White  // VISUAL DEBUG: Ensure visible on yellow
             };
             searchBox.TextChanged += (s, e) => FilterTrades();
 
             // Outcome filter
-            var outcomeLabel = new Label { Text = "Outcome:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var outcomeLabel = new Label { Text = "Outcome:", AutoSize = true, ForeColor = Color.Black, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };  // VISUAL DEBUG: Changed to Black
             var outcomeFilter = new ComboBox
             {
                 Width = 100,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Margin = new Padding(5),
                 Tag = "OutcomeFilter",
-                Name = "OutcomeFilterCombo"
+                Name = "OutcomeFilterCombo",
+                BackColor = Color.White  // VISUAL DEBUG: Ensure visible
             };
             outcomeFilter.Items.AddRange(new[] { "All", "Win", "Loss", "Breakeven" });
             outcomeFilter.SelectedIndex = 0;
             outcomeFilter.SelectedIndexChanged += (s, e) => FilterTrades();
 
             // Symbol filter
-            var symbolLabel = new Label { Text = "Symbol:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var symbolLabel = new Label { Text = "Symbol:", AutoSize = true, ForeColor = Color.Black, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };  // VISUAL DEBUG: Changed to Black
             var symbolFilter = new TextBox
             {
                 Width = 80,
                 Height = 25,
                 Margin = new Padding(5),
                 Tag = "SymbolFilter",
-                Name = "SymbolFilterBox"
+                Name = "SymbolFilterBox",
+                BackColor = Color.White  // VISUAL DEBUG: Ensure visible
             };
             symbolFilter.TextChanged += (s, e) => FilterTrades();
 
             // Date range filters
-            var dateFromLabel = new Label { Text = "From:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(15, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var dateFromLabel = new Label { Text = "From:", AutoSize = true, ForeColor = Color.Black, Margin = new Padding(15, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };  // VISUAL DEBUG: Changed to Black
             var dateFromPicker = new DateTimePicker
             {
                 Width = 120,
@@ -13430,7 +13433,7 @@ namespace Risk_Manager
             };
             dateFromPicker.ValueChanged += (s, e) => FilterTrades();
             
-            var dateToLabel = new Label { Text = "To:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var dateToLabel = new Label { Text = "To:", AutoSize = true, ForeColor = Color.Black, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };  // VISUAL DEBUG: Changed to Black
             var dateToPicker = new DateTimePicker
             {
                 Width = 120,
