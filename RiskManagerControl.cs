@@ -333,6 +333,16 @@ namespace Risk_Manager
         private Form shutdownCountdownForm;
         private int shutdownCountdownSeconds;
 
+        // Dashboard section height constants
+        private const int MAIN_STATS_COLLAPSED_HEIGHT = 55;
+        private const int MAIN_STATS_EXPANDED_HEIGHT = 350;
+        private const int MODEL_STATS_COLLAPSED_HEIGHT = 65;
+        private const int MODEL_STATS_EXPANDED_HEIGHT = 400;
+        private const int DAY_STATS_COLLAPSED_HEIGHT = 65;
+        private const int DAY_STATS_EXPANDED_HEIGHT = 400;
+        private const int SESSION_STATS_COLLAPSED_HEIGHT = 65;
+        private const int SESSION_STATS_EXPANDED_HEIGHT = 400;
+
         /// <summary>
         /// Sets the WPF window reference for dragging functionality
         /// </summary>
@@ -16335,7 +16345,7 @@ namespace Risk_Manager
                 isCollapsed = !isCollapsed;
                 tableLayout.Visible = !isCollapsed;
                 collapseIcon.Text = isCollapsed ? "\uE70E" : "\uE70D"; // ChevronUp : ChevronDown
-                sectionPanel.Height = isCollapsed ? 55 : 350;
+                sectionPanel.Height = isCollapsed ? MAIN_STATS_COLLAPSED_HEIGHT : MAIN_STATS_EXPANDED_HEIGHT;
             };
             
             titlePanel.Click += toggleCollapse;
@@ -16605,14 +16615,19 @@ namespace Risk_Manager
             bool isCollapsed = false;
             EventHandler toggleCollapse = (s, e) =>
             {
-                // Don't collapse if clicking on the combo box
-                if (s == modelSelector) return;
+                // Don't collapse if clicking on the combo box or its elements
+                Control source = s as Control;
+                while (source != null)
+                {
+                    if (source == modelSelector) return;
+                    source = source.Parent;
+                }
                 
                 isCollapsed = !isCollapsed;
                 statsContainer.Visible = !isCollapsed;
                 modelSelector.Visible = !isCollapsed;
                 collapseIcon.Text = isCollapsed ? "\uE70E" : "\uE70D"; // ChevronUp : ChevronDown
-                sectionPanel.Height = isCollapsed ? 65 : 400;
+                sectionPanel.Height = isCollapsed ? MODEL_STATS_COLLAPSED_HEIGHT : MODEL_STATS_EXPANDED_HEIGHT;
             };
             
             headerPanel.Click += toggleCollapse;
@@ -16830,14 +16845,19 @@ namespace Risk_Manager
             bool isCollapsed = false;
             EventHandler toggleCollapse = (s, e) =>
             {
-                // Don't collapse if clicking on the combo box
-                if (s == daySelector) return;
+                // Don't collapse if clicking on the combo box or its elements
+                Control source = s as Control;
+                while (source != null)
+                {
+                    if (source == daySelector) return;
+                    source = source.Parent;
+                }
                 
                 isCollapsed = !isCollapsed;
                 statsContainer.Visible = !isCollapsed;
                 daySelector.Visible = !isCollapsed;
                 collapseIcon.Text = isCollapsed ? "\uE70E" : "\uE70D"; // ChevronUp : ChevronDown
-                sectionPanel.Height = isCollapsed ? 65 : 400;
+                sectionPanel.Height = isCollapsed ? DAY_STATS_COLLAPSED_HEIGHT : DAY_STATS_EXPANDED_HEIGHT;
             };
             
             headerPanel.Click += toggleCollapse;
@@ -17055,14 +17075,19 @@ namespace Risk_Manager
             bool isCollapsed = false;
             EventHandler toggleCollapse = (s, e) =>
             {
-                // Don't collapse if clicking on the combo box
-                if (s == sessionSelector) return;
+                // Don't collapse if clicking on the combo box or its elements
+                Control source = s as Control;
+                while (source != null)
+                {
+                    if (source == sessionSelector) return;
+                    source = source.Parent;
+                }
                 
                 isCollapsed = !isCollapsed;
                 statsContainer.Visible = !isCollapsed;
                 sessionSelector.Visible = !isCollapsed;
                 collapseIcon.Text = isCollapsed ? "\uE70E" : "\uE70D"; // ChevronUp : ChevronDown
-                sectionPanel.Height = isCollapsed ? 65 : 400;
+                sectionPanel.Height = isCollapsed ? SESSION_STATS_COLLAPSED_HEIGHT : SESSION_STATS_EXPANDED_HEIGHT;
             };
             
             headerPanel.Click += toggleCollapse;
