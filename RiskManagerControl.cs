@@ -16194,53 +16194,60 @@ namespace Risk_Manager
                     break;
             }
 
-            // Create a container for emoji and label text
-            var labelContainer = new Panel
+            // LEFT SIDE: Emoji panel (vertically centered)
+            var emojiPanel = new Panel
             {
-                Dock = DockStyle.Top,
-                Height = 22,
+                Dock = DockStyle.Left,
+                Width = 45,  // Width for emoji column
                 BackColor = Color.Transparent
             };
 
-            // Emoji label with color - increased width for better emoji display
             var emojiLabel = new Label
             {
                 Text = emoji,
-                Dock = DockStyle.Left,
-                Width = 28,  // Increased from 20 to 28 for better emoji rendering
+                Dock = DockStyle.Fill,
                 ForeColor = emojiColor,
-                Font = new Font("Segoe UI Emoji", 14, FontStyle.Regular),  // Increased from 10 to 14
-                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI Emoji", 18, FontStyle.Regular),  // Larger emoji
+                TextAlign = ContentAlignment.MiddleCenter,  // Center the emoji
                 AutoSize = false
             };
-            labelContainer.Controls.Add(emojiLabel);
+            emojiPanel.Controls.Add(emojiLabel);
+            card.Controls.Add(emojiPanel);
 
-            // Text label - white text, left-aligned
-            var textLabel = new Label
+            // RIGHT SIDE: Container for title and value (stacked vertically)
+            var rightPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Padding = new Padding(5, 0, 0, 0)  // Small left padding for spacing from emoji
+            };
+
+            // TOP RIGHT: Title label
+            var titleLabel = new Label
             {
                 Text = label,
-                Dock = DockStyle.Fill,  // Fill remaining space after emoji (Dock.Left)
+                Dock = DockStyle.Top,
+                Height = 25,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),  // Changed from "Segoe UI Emoji"
-                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Regular),
+                TextAlign = ContentAlignment.BottomLeft,  // Align to bottom of its space
                 AutoSize = false
             };
-            labelContainer.Controls.Add(textLabel);
+            rightPanel.Controls.Add(titleLabel);
 
-            card.Controls.Add(labelContainer);
-
-            // Value - colored text, right-aligned as requested
+            // BOTTOM RIGHT: Value label
             var valueControl = new Label
             {
                 Text = value,
-                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping label
-                Height = 30,  // Explicit height: 70 (card) - 16 (padding) - 22 (label) - 2 (buffer) = 30
+                Dock = DockStyle.Fill,
                 ForeColor = valueColor,
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleRight,  // Changed from MiddleLeft to MiddleRight
+                Font = new Font("Segoe UI", 13, FontStyle.Bold),
+                TextAlign = ContentAlignment.TopLeft,  // Align to top of its space
                 AutoSize = false
             };
-            card.Controls.Add(valueControl);
+            rightPanel.Controls.Add(valueControl);
+
+            card.Controls.Add(rightPanel);
 
             return card;
         }
@@ -16252,20 +16259,35 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 350,  // Restored to original
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 10, 20, 10)
             };
 
-            // Title with icon
+            // Title with icon and collapse button
             var titlePanel = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 35,
                 BackColor = DarkBackground
             };
+            titlePanel.Cursor = Cursors.Hand;
 
-            // Title text - add FIRST so icon appears before it
+            // Collapse chevron - add FIRST for right alignment
+            var collapseIcon = new Label
+            {
+                Text = "\uE70D", // ChevronDown icon
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe MDL2 Assets", 14, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 10, 0, 0),
+                Cursor = Cursors.Hand
+            };
+
+            // Title text - add SECOND so icon appears before it
             var titleLabel = new Label
             {
                 Text = "Main Statistics",
@@ -16274,11 +16296,11 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(5, 7, 0, 0)
+                Padding = new Padding(5, 7, 0, 0),
+                Cursor = Cursors.Hand
             };
-            titlePanel.Controls.Add(titleLabel);
 
-            // Icon - add SECOND so it appears at the left (Dock.Left adds to leftmost available space)
+            // Icon - add THIRD so it appears at the left (Dock.Left adds to leftmost available space)
             var iconLabel = new Label
             {
                 Text = "\uE9D2", // Segoe MDL2 Assets stats icon
@@ -16287,15 +16309,15 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(0, 7, 0, 0)
+                Padding = new Padding(0, 7, 0, 0),
+                Cursor = Cursors.Hand
             };
-            titlePanel.Controls.Add(iconLabel);
 
             // Two-column layout using TableLayoutPanel for proper sizing
             var tableLayout = new TableLayoutPanel
             {
-                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping title
-                Height = 295,  // Explicit height: 350 (section) - 20 (padding) - 35 (title) = 295
+                Dock = DockStyle.Top,
+                Height = 295,
                 ColumnCount = 2,
                 RowCount = 1,
                 BackColor = DarkBackground,
@@ -16305,6 +16327,25 @@ namespace Risk_Manager
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            // Add collapse functionality
+            bool isCollapsed = false;
+            EventHandler toggleCollapse = (s, e) =>
+            {
+                isCollapsed = !isCollapsed;
+                tableLayout.Visible = !isCollapsed;
+                collapseIcon.Text = isCollapsed ? "\uE70E" : "\uE70D"; // ChevronUp : ChevronDown
+                sectionPanel.Height = isCollapsed ? 55 : 350;
+            };
+            
+            titlePanel.Click += toggleCollapse;
+            collapseIcon.Click += toggleCollapse;
+            titleLabel.Click += toggleCollapse;
+            iconLabel.Click += toggleCollapse;
+
+            titlePanel.Controls.Add(titleLabel);
+            titlePanel.Controls.Add(iconLabel);
+            titlePanel.Controls.Add(collapseIcon);
 
             // Left card: Trading Statistics
             var leftCard = CreateDetailCard("Trading Statistics", new[]
@@ -16464,7 +16505,8 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 400,  // Restored to original
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 10, 20, 10)
             };
@@ -16476,6 +16518,7 @@ namespace Risk_Manager
                 Height = 45,
                 BackColor = DarkBackground
             };
+            headerPanel.Cursor = Cursors.Hand;
 
             // Add model selector ComboBox FIRST (for proper right-docking)
             var modelSelector = new ComboBox
@@ -16487,7 +16530,7 @@ namespace Risk_Manager
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(10, 10, 10, 5)  // Added right margin to bring it in
+                Margin = new Padding(10, 10, 0, 5)  // No right margin - align with cards
             };
             
             // Get models from database - use same logic as TradeLog
@@ -16512,6 +16555,19 @@ namespace Risk_Manager
             modelSelector.SelectedIndex = 0;
             headerPanel.Controls.Add(modelSelector);
 
+            // Collapse chevron - between combo and title
+            var collapseIcon = new Label
+            {
+                Text = "\uE70D", // ChevronDown icon
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe MDL2 Assets", 14, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 14, 0, 0),
+                Cursor = Cursors.Hand
+            };
+
             // Title text - add FIRST
             var titleLabel = new Label
             {
@@ -16521,9 +16577,9 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(5, 7, 0, 0)
+                Padding = new Padding(5, 7, 0, 0),
+                Cursor = Cursors.Hand
             };
-            headerPanel.Controls.Add(titleLabel);
 
             // Icon for Model section - add SECOND to appear at left
             var iconLabel = new Label
@@ -16534,16 +16590,39 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(0, 7, 0, 0)
+                Padding = new Padding(0, 7, 0, 0),
+                Cursor = Cursors.Hand
             };
-            headerPanel.Controls.Add(iconLabel);
             
             // Store reference for event handler
             var statsContainer = new Panel { 
-                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping header
-                Height = 335,  // Explicit height: 400 (section) - 20 (padding) - 45 (header) = 335
+                Dock = DockStyle.Top,
+                Height = 335,
                 BackColor = DarkBackground 
             };
+
+            // Add collapse functionality
+            bool isCollapsed = false;
+            EventHandler toggleCollapse = (s, e) =>
+            {
+                // Don't collapse if clicking on the combo box
+                if (s == modelSelector) return;
+                
+                isCollapsed = !isCollapsed;
+                statsContainer.Visible = !isCollapsed;
+                modelSelector.Visible = !isCollapsed;
+                collapseIcon.Text = isCollapsed ? "\uE70E" : "\uE70D"; // ChevronUp : ChevronDown
+                sectionPanel.Height = isCollapsed ? 65 : 400;
+            };
+            
+            headerPanel.Click += toggleCollapse;
+            collapseIcon.Click += toggleCollapse;
+            titleLabel.Click += toggleCollapse;
+            iconLabel.Click += toggleCollapse;
+            
+            headerPanel.Controls.Add(collapseIcon);
+            headerPanel.Controls.Add(titleLabel);
+            headerPanel.Controls.Add(iconLabel);
             
             // Event handler for model selection change
             modelSelector.SelectedIndexChanged += (s, e) =>
@@ -16663,7 +16742,8 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 400,  // Restored to original
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 10, 20, 10)
             };
@@ -16675,6 +16755,7 @@ namespace Risk_Manager
                 Height = 45,
                 BackColor = DarkBackground
             };
+            headerPanel.Cursor = Cursors.Hand;
 
             // Day selector ComboBox - ADD FIRST for proper right-docking
             var daySelector = new ComboBox
@@ -16686,7 +16767,7 @@ namespace Risk_Manager
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(10, 10, 10, 5)  // Added right margin to bring it in
+                Margin = new Padding(10, 10, 0, 5)  // No right margin - align with cards
             };
             daySelector.Items.Add("All Days");
             daySelector.Items.Add("Monday");
@@ -16699,6 +16780,19 @@ namespace Risk_Manager
             daySelector.SelectedIndex = 0;
             headerPanel.Controls.Add(daySelector);
 
+            // Collapse chevron
+            var collapseIcon = new Label
+            {
+                Text = "\uE70D", // ChevronDown icon
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe MDL2 Assets", 14, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 14, 0, 0),
+                Cursor = Cursors.Hand
+            };
+
             // Title - ADD FIRST
             var titleLabel = new Label
             {
@@ -16708,9 +16802,9 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(5, 7, 0, 0)
+                Padding = new Padding(5, 7, 0, 0),
+                Cursor = Cursors.Hand
             };
-            headerPanel.Controls.Add(titleLabel);
 
             // Icon for Day section - ADD SECOND to appear at left
             var iconLabel = new Label
@@ -16721,16 +16815,39 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 Font = new Font("Segoe MDL2 Assets", 18, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(0, 7, 0, 0)
+                Padding = new Padding(0, 7, 0, 0),
+                Cursor = Cursors.Hand
             };
-            headerPanel.Controls.Add(iconLabel);
 
             // Store reference for event handler
             var statsContainer = new Panel { 
-                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping header
-                Height = 335,  // Explicit height: 400 (section) - 20 (padding) - 45 (header) = 335
+                Dock = DockStyle.Top,
+                Height = 335,
                 BackColor = DarkBackground 
             };
+
+            // Add collapse functionality
+            bool isCollapsed = false;
+            EventHandler toggleCollapse = (s, e) =>
+            {
+                // Don't collapse if clicking on the combo box
+                if (s == daySelector) return;
+                
+                isCollapsed = !isCollapsed;
+                statsContainer.Visible = !isCollapsed;
+                daySelector.Visible = !isCollapsed;
+                collapseIcon.Text = isCollapsed ? "\uE70E" : "\uE70D"; // ChevronUp : ChevronDown
+                sectionPanel.Height = isCollapsed ? 65 : 400;
+            };
+            
+            headerPanel.Click += toggleCollapse;
+            collapseIcon.Click += toggleCollapse;
+            titleLabel.Click += toggleCollapse;
+            iconLabel.Click += toggleCollapse;
+
+            headerPanel.Controls.Add(collapseIcon);
+            headerPanel.Controls.Add(titleLabel);
+            headerPanel.Controls.Add(iconLabel);
 
             // Event handler for day selection change
             daySelector.SelectedIndexChanged += (s, e) =>
@@ -16835,7 +16952,8 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 400,  // Restored to original
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = DarkBackground,
                 Padding = new Padding(20, 10, 20, 10)
             };
@@ -16847,6 +16965,7 @@ namespace Risk_Manager
                 Height = 45,
                 BackColor = DarkBackground
             };
+            headerPanel.Cursor = Cursors.Hand;
 
             // Predefined session options
             var predefinedSessions = new[] { "New York", "London", "Asia" };
@@ -16864,7 +16983,7 @@ namespace Risk_Manager
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(10, 10, 10, 5)  // Added right margin to bring it in
+                Margin = new Padding(10, 10, 0, 5)  // No right margin - align with cards
             };
             sessionSelector.Items.Add("All Sessions");
             
@@ -16886,6 +17005,19 @@ namespace Risk_Manager
             sessionSelector.SelectedIndex = 0;
             headerPanel.Controls.Add(sessionSelector);
 
+            // Collapse chevron
+            var collapseIcon = new Label
+            {
+                Text = "\uE70D", // ChevronDown icon
+                Dock = DockStyle.Left,
+                Width = 30,
+                ForeColor = TextWhite,
+                Font = new Font("Segoe MDL2 Assets", 14, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(0, 14, 0, 0),
+                Cursor = Cursors.Hand
+            };
+
             // Title - ADD FIRST
             var titleLabel = new Label
             {
@@ -16895,9 +17027,9 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(5, 7, 0, 0)
+                Padding = new Padding(5, 7, 0, 0),
+                Cursor = Cursors.Hand
             };
-            headerPanel.Controls.Add(titleLabel);
 
             // Icon for Session section - ADD SECOND to appear at left
             var iconLabel = new Label
@@ -16908,16 +17040,39 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI Emoji", 18, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(0, 7, 0, 0)
+                Padding = new Padding(0, 7, 0, 0),
+                Cursor = Cursors.Hand
             };
-            headerPanel.Controls.Add(iconLabel);
 
             // Store reference for event handler
             var statsContainer = new Panel { 
-                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping header
-                Height = 335,  // Explicit height: 400 (section) - 20 (padding) - 45 (header) = 335
+                Dock = DockStyle.Top,
+                Height = 335,
                 BackColor = DarkBackground 
             };
+
+            // Add collapse functionality
+            bool isCollapsed = false;
+            EventHandler toggleCollapse = (s, e) =>
+            {
+                // Don't collapse if clicking on the combo box
+                if (s == sessionSelector) return;
+                
+                isCollapsed = !isCollapsed;
+                statsContainer.Visible = !isCollapsed;
+                sessionSelector.Visible = !isCollapsed;
+                collapseIcon.Text = isCollapsed ? "\uE70E" : "\uE70D"; // ChevronUp : ChevronDown
+                sectionPanel.Height = isCollapsed ? 65 : 400;
+            };
+            
+            headerPanel.Click += toggleCollapse;
+            collapseIcon.Click += toggleCollapse;
+            titleLabel.Click += toggleCollapse;
+            iconLabel.Click += toggleCollapse;
+
+            headerPanel.Controls.Add(collapseIcon);
+            headerPanel.Controls.Add(titleLabel);
+            headerPanel.Controls.Add(iconLabel);
 
             // Event handler for session selection change
             sessionSelector.SelectedIndexChanged += (s, e) =>
