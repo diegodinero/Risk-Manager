@@ -16209,7 +16209,7 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Left,
                 Width = 45,  // Width for emoji column
-                BackColor = Color.Transparent
+                BackColor = CardBackground
             };
 
             var emojiLabel = new Label
@@ -16228,7 +16228,7 @@ namespace Risk_Manager
             var rightPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.Transparent,
+                BackColor = CardBackground,
                 Padding = new Padding(5, 0, 0, 0)  // Small left padding for spacing from emoji
             };
 
