@@ -13326,10 +13326,8 @@ namespace Risk_Manager
                 AutoSize = false
             };
             
-            // Add header FIRST (will appear below filterPanel with Dock.Top stacking)
-            filterCard.Controls.Add(filterHeader);
-            
-            // Note: filterPanel will be added to filterCard after controls are added to it
+            // Note: filterPanel and filterHeader will be added after controls are created
+            // Header will be added LAST to appear at TOP (Dock.Top reverse stacking)
             
             // Search box
             var searchLabel = new Label { 
@@ -13474,8 +13472,10 @@ namespace Risk_Manager
             filterPanel.Controls.Add(dateToPicker);
             filterPanel.Controls.Add(clearFiltersBtn);
 
-            // Add filterPanel to filterCard AFTER filterHeader so it appears above (Dock.Top reverse order)
-            filterCard.Controls.Add(filterPanel);
+            // Add controls to filterCard in correct order for Dock.Top stacking
+            // With Dock.Top: FIRST added = BOTTOM, LAST added = TOP
+            filterCard.Controls.Add(filterPanel);    // Add FIRST → appears at BOTTOM
+            filterCard.Controls.Add(filterHeader);   // Add LAST → appears at TOP ✅
             // filterCard will be added to pagePanel later in correct Z-order
             
             // Collapsible trade details panel (hidden by default)
