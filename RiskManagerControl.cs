@@ -13302,7 +13302,7 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 300,  // VISUAL DEBUG: Increased to ensure controls have space
+                Height = 200,  // Compact size for filter panel
                 BackColor = Color.Orange,  // VISUAL DEBUG: Bright orange to verify visibility
                 Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10),
@@ -13316,7 +13316,7 @@ namespace Risk_Manager
             var filterPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 100,  // Explicit height for horizontal layout with wrapping
+                Height = 70,   // Compact height for horizontal layout with wrapping
                 FlowDirection = FlowDirection.LeftToRight,  // Horizontal layout
                 WrapContents = true,  // Allow wrapping to multiple rows
                 Padding = new Padding(5),
