@@ -13369,34 +13369,13 @@ namespace Risk_Manager
                 AutoSize = false  // Keep false to respect Dock.Fill
             };
             
-            // VISUAL DEBUG: Add GIANT test control that's impossible to miss
-            var giantTestPanel = new Panel
-            {
-                Width = 800,
-                Height = 100,
-                BackColor = Color.Lime,
-                Visible = true,
-                Margin = new Padding(5)
-            };
-            var giantTestLabel = new Label
-            {
-                Text = "🟢 GIANT TEST CONTROL 🟢\nIf you see this LIME panel, filterPanel CAN render controls!",
-                AutoSize = false,
-                Size = new Size(790, 90),
-                ForeColor = Color.Black,
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.Lime,
-                Dock = DockStyle.Fill,
-                Visible = true
-            };
-            giantTestPanel.Controls.Add(giantTestLabel);
-            filterPanel.Controls.Add(giantTestPanel);  // Add FIRST so it appears at top
+            // GIANT LIME TEST REMOVED - Diagnostic complete! Controls ARE rendering.
+            // Issue identified: filterCard only 200px wide, controls extend to 630px.
             
             // VISUAL DEBUG: Add dimension info label with more details
             var debugDimensionsLabel = new Label
             {
-                Text = $"DEBUG: FilterPanel loaded | Controls will be added below this line",
+                Text = $"DEBUG: FilterPanel loaded | Width={{filterPanel.Width}}",
                 AutoSize = true,
                 ForeColor = Color.Black,
                 BackColor = Color.Yellow,
@@ -13640,6 +13619,19 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine($"filterPanel: Bounds={filterPanel.Bounds}, ClientRectangle={filterPanel.ClientRectangle}");
             System.Diagnostics.Debug.WriteLine($"filterPanel: AutoScroll={filterPanel.AutoScroll}, AutoSize={filterPanel.AutoSize}");
             System.Diagnostics.Debug.WriteLine($"filterPanel: Dock={filterPanel.Dock}, Location={filterPanel.Location}");
+            System.Diagnostics.Debug.WriteLine($"filterPanel: HorizontalScroll.Visible={filterPanel.HorizontalScroll.Visible}, VerticalScroll.Visible={filterPanel.VerticalScroll.Visible}");
+            System.Diagnostics.Debug.WriteLine($"filterPanel: HorizontalScroll.Maximum={filterPanel.HorizontalScroll.Maximum}, VerticalScroll.Maximum={filterPanel.VerticalScroll.Maximum}");
+            
+            // Log parent chain to understand width constraint
+            System.Diagnostics.Debug.WriteLine("=== PARENT CHAIN ===");
+            Control current = filterPanel;
+            int level = 0;
+            while (current != null && level < 5)
+            {
+                System.Diagnostics.Debug.WriteLine($"  Level {level}: {current.GetType().Name} - Size={current.Size}, Dock={current.Dock}");
+                current = current.Parent;
+                level++;
+            }
             
             // Log each control in filterPanel
             System.Diagnostics.Debug.WriteLine("=== FILTER PANEL CONTROLS ===");
