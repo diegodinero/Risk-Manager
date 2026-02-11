@@ -14395,7 +14395,7 @@ namespace Risk_Manager
             legendPanel.Controls.Add(titleLabel);
             
             // Legend items flow panel - legend width should match calendar columns only (not weekly stats)
-            legendPanel.Width = (7 * 150); // 1050px - match calendar width WITHOUT weekly stats column
+            legendPanel.Width = (5 * 150); // 1050px - match calendar width WITHOUT weekly stats column
             
             var itemsPanel = new FlowLayoutPanel
             {
@@ -14482,10 +14482,10 @@ namespace Risk_Manager
             var emptyLabel = new Label
             {
                 Text = "○",
-                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Margin = new Padding(0, 0, 5, 0)
+                Margin = new Padding(0, 5, 5, 0)
             };
             itemsPanel.Controls.Add(emptyLabel);
             
