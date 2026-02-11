@@ -13324,7 +13324,7 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 180,  // Increased from 160 to 180 to ensure all filters are fully visible
+                Height = 300,  // VISUAL DEBUG: Increased from 180 to 300 to ensure controls have space
                 BackColor = Color.Orange,  // VISUAL DEBUG: Bright orange to verify visibility
                 Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10),
@@ -13335,7 +13335,7 @@ namespace Risk_Manager
             var debugTestPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 60,
+                Height = 40,  // VISUAL DEBUG: Reduced from 60 to 40 to give more space to filterPanel
                 BackColor = Color.Red,
                 Visible = true
             };
@@ -13364,23 +13364,33 @@ namespace Risk_Manager
                 WrapContents = true,
                 Padding = new Padding(5),
                 BackColor = Color.Yellow,  // VISUAL DEBUG: Bright yellow to see filterPanel
-                Visible = true  // VISUAL DEBUG: Explicitly set visible
+                Visible = true,  // VISUAL DEBUG: Explicitly set visible
+                AutoScroll = true,  // VISUAL DEBUG: Enable scrolling in case controls overflow
+                AutoSize = false  // Keep false to respect Dock.Fill
             };
             
-            // VISUAL DEBUG: Add dimension info label
+            // VISUAL DEBUG: Add dimension info label with more details
             var debugDimensionsLabel = new Label
             {
-                Text = "DEBUG: FilterPanel loaded",
+                Text = $"DEBUG: FilterPanel loaded | Controls will be added below this line",
                 AutoSize = true,
                 ForeColor = Color.Black,
                 BackColor = Color.Yellow,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Margin = new Padding(5)
+                Margin = new Padding(5),
+                BorderStyle = BorderStyle.FixedSingle  // Add border to make it stand out
             };
             filterPanel.Controls.Add(debugDimensionsLabel);
 
             // Search box
-            var searchLabel = new Label { Text = "Search:", AutoSize = true, ForeColor = Color.Black, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };  // VISUAL DEBUG: Changed to Black for visibility on yellow
+            var searchLabel = new Label { 
+                Text = "Search:", 
+                AutoSize = true, 
+                ForeColor = Color.Black, 
+                Margin = new Padding(5, 8, 5, 5), 
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Visible = true  // VISUAL DEBUG: Explicit
+            };
             var searchBox = new TextBox
             {
                 Width = 150,
@@ -13388,12 +13398,20 @@ namespace Risk_Manager
                 Margin = new Padding(5),
                 Tag = "SearchBox",
                 Name = "TradeSearchBox",
-                BackColor = Color.White  // VISUAL DEBUG: Ensure visible on yellow
+                BackColor = Color.White,  // VISUAL DEBUG: Ensure visible on yellow
+                Visible = true  // VISUAL DEBUG: Explicit
             };
             searchBox.TextChanged += (s, e) => FilterTrades();
 
             // Outcome filter
-            var outcomeLabel = new Label { Text = "Outcome:", AutoSize = true, ForeColor = Color.Black, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };  // VISUAL DEBUG: Changed to Black
+            var outcomeLabel = new Label { 
+                Text = "Outcome:", 
+                AutoSize = true, 
+                ForeColor = Color.Black, 
+                Margin = new Padding(5, 8, 5, 5), 
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Visible = true  // VISUAL DEBUG: Explicit
+            };
             var outcomeFilter = new ComboBox
             {
                 Width = 100,
@@ -13401,14 +13419,22 @@ namespace Risk_Manager
                 Margin = new Padding(5),
                 Tag = "OutcomeFilter",
                 Name = "OutcomeFilterCombo",
-                BackColor = Color.White  // VISUAL DEBUG: Ensure visible
+                BackColor = Color.White,  // VISUAL DEBUG: Ensure visible
+                Visible = true  // VISUAL DEBUG: Explicit
             };
             outcomeFilter.Items.AddRange(new[] { "All", "Win", "Loss", "Breakeven" });
             outcomeFilter.SelectedIndex = 0;
             outcomeFilter.SelectedIndexChanged += (s, e) => FilterTrades();
 
             // Symbol filter
-            var symbolLabel = new Label { Text = "Symbol:", AutoSize = true, ForeColor = Color.Black, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };  // VISUAL DEBUG: Changed to Black
+            var symbolLabel = new Label { 
+                Text = "Symbol:", 
+                AutoSize = true, 
+                ForeColor = Color.Black, 
+                Margin = new Padding(5, 8, 5, 5), 
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Visible = true  // VISUAL DEBUG: Explicit
+            };
             var symbolFilter = new TextBox
             {
                 Width = 80,
@@ -13416,12 +13442,20 @@ namespace Risk_Manager
                 Margin = new Padding(5),
                 Tag = "SymbolFilter",
                 Name = "SymbolFilterBox",
-                BackColor = Color.White  // VISUAL DEBUG: Ensure visible
+                BackColor = Color.White,  // VISUAL DEBUG: Ensure visible
+                Visible = true  // VISUAL DEBUG: Explicit
             };
             symbolFilter.TextChanged += (s, e) => FilterTrades();
 
             // Date range filters
-            var dateFromLabel = new Label { Text = "From:", AutoSize = true, ForeColor = Color.Black, Margin = new Padding(15, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };  // VISUAL DEBUG: Changed to Black
+            var dateFromLabel = new Label { 
+                Text = "From:", 
+                AutoSize = true, 
+                ForeColor = Color.Black, 
+                Margin = new Padding(15, 8, 5, 5), 
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Visible = true  // VISUAL DEBUG: Explicit
+            };
             var dateFromPicker = new DateTimePicker
             {
                 Width = 120,
@@ -13429,11 +13463,19 @@ namespace Risk_Manager
                 Margin = new Padding(5),
                 Tag = "DateFromPicker",
                 Name = "DateFromPicker",
-                Value = DateTime.Today.AddMonths(-1)
+                Value = DateTime.Today.AddMonths(-1),
+                Visible = true  // VISUAL DEBUG: Explicit
             };
             dateFromPicker.ValueChanged += (s, e) => FilterTrades();
             
-            var dateToLabel = new Label { Text = "To:", AutoSize = true, ForeColor = Color.Black, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };  // VISUAL DEBUG: Changed to Black
+            var dateToLabel = new Label { 
+                Text = "To:", 
+                AutoSize = true, 
+                ForeColor = Color.Black, 
+                Margin = new Padding(5, 8, 5, 5), 
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Visible = true  // VISUAL DEBUG: Explicit
+            };
             var dateToPicker = new DateTimePicker
             {
                 Width = 120,
@@ -13441,7 +13483,8 @@ namespace Risk_Manager
                 Margin = new Padding(5),
                 Tag = "DateToPicker",
                 Name = "DateToPicker",
-                Value = DateTime.Today
+                Value = DateTime.Today,
+                Visible = true  // VISUAL DEBUG: Explicit
             };
             dateToPicker.ValueChanged += (s, e) => FilterTrades();
 
@@ -13456,7 +13499,8 @@ namespace Risk_Manager
                 ForeColor = Color.White,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(10, 5, 5, 5),
-                Font = new Font("Segoe UI", 9, FontStyle.Bold)
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Visible = true  // VISUAL DEBUG: Explicit
             };
             clearFiltersBtn.FlatAppearance.BorderSize = 0;
             clearFiltersBtn.Click += (s, e) =>
@@ -13551,12 +13595,23 @@ namespace Risk_Manager
             // VISUAL DEBUG: Force filterCard to front and verify
             filterCard.BringToFront();
             filterCard.Visible = true;
+            filterPanel.PerformLayout();  // Force layout calculation
+            
             System.Diagnostics.Debug.WriteLine("=== FILTER CARD DEBUG ===");
             System.Diagnostics.Debug.WriteLine($"filterCard: Size={filterCard.Size}, Height={filterCard.Height}, Visible={filterCard.Visible}");
             System.Diagnostics.Debug.WriteLine($"filterCard: Dock={filterCard.Dock}, BackColor={filterCard.BackColor}");
             System.Diagnostics.Debug.WriteLine($"filterCard: Location={filterCard.Location}, Bounds={filterCard.Bounds}");
             System.Diagnostics.Debug.WriteLine($"filterCard: Parent={filterCard.Parent?.GetType().Name}, ControlCount={filterCard.Controls.Count}");
-            System.Diagnostics.Debug.WriteLine($"filterPanel: Size={filterPanel.Size}, Visible={filterPanel.Visible}");
+            System.Diagnostics.Debug.WriteLine($"filterPanel: Size={filterPanel.Size}, Visible={filterPanel.Visible}, ControlCount={filterPanel.Controls.Count}");
+            System.Diagnostics.Debug.WriteLine($"filterPanel: AutoScroll={filterPanel.AutoScroll}, Bounds={filterPanel.Bounds}");
+            
+            // Log each control in filterPanel
+            System.Diagnostics.Debug.WriteLine("=== FILTER PANEL CONTROLS ===");
+            for (int i = 0; i < filterPanel.Controls.Count; i++)
+            {
+                var ctrl = filterPanel.Controls[i];
+                System.Diagnostics.Debug.WriteLine($"  [{i}] {ctrl.GetType().Name}: Text='{(ctrl is Label l ? l.Text : ctrl is TextBox t ? $"TextBox({t.Name})" : ctrl is ComboBox c ? $"ComboBox({c.Name})" : ctrl is DateTimePicker d ? $"DatePicker({d.Name})" : ctrl is Button b ? b.Text : "?")}', Size={ctrl.Size}, Visible={ctrl.Visible}, Location={ctrl.Location}");
+            }
             
             // DEBUG: Log final page panel details
             System.Diagnostics.Debug.WriteLine("=== PAGE PANEL DEBUG ===");
