@@ -13331,68 +13331,34 @@ namespace Risk_Manager
                 Visible = true  // VISUAL DEBUG: Explicitly set visible
             };
 
-            // VISUAL DEBUG: Add bright test panel at top of filterCard
-            var debugTestPanel = new Panel
+            // Filter panel with controls - moved to top, horizontal layout
+            var filterPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 40,  // VISUAL DEBUG: Reduced from 60 to 40 to give more space to filterPanel
-                BackColor = Color.Red,
-                Visible = true
+                Height = 100,  // Increased height to accommodate horizontal filter controls
+                FlowDirection = FlowDirection.LeftToRight,  // Horizontal layout as requested
+                WrapContents = true,  // Allow wrapping to multiple rows
+                Padding = new Padding(5),
+                BackColor = CardBackground,  // Normal card background instead of debug yellow
+                Visible = true,
+                AutoScroll = false,  // No scrolling needed with proper height
+                AutoSize = false
             };
-            var debugLabel = new Label
-            {
-                Text = "🔴 VISUAL DEBUG: FILTER CARD TEST PANEL 🔴\nIf you see this RED panel, filterCard is rendering!",
-                AutoSize = false,
-                Size = new Size(800, 50),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.Red,
-                Dock = DockStyle.Fill
-            };
-            debugTestPanel.Controls.Add(debugLabel);
-            filterCard.Controls.Add(debugTestPanel);
-
+            
             var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", GetIconForTitle("Limits"));
             filterHeader.Dock = DockStyle.Top;
             filterCard.Controls.Add(filterHeader);
             
-            var filterPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,  // FIXED: Changed from LeftToRight to TopDown for narrow panel
-                WrapContents = false,  // FIXED: No wrapping needed for vertical layout
-                Padding = new Padding(5),
-                BackColor = Color.Yellow,  // VISUAL DEBUG: Bright yellow to see filterPanel
-                Visible = true,  // VISUAL DEBUG: Explicitly set visible
-                AutoScroll = true,  // VISUAL DEBUG: Enable scrolling in case controls overflow
-                AutoSize = false  // Keep false to respect Dock.Fill
-            };
+            // Note: filterPanel will be added to filterCard after controls are added to it
             
-            // GIANT LIME TEST REMOVED - Diagnostic complete! Controls ARE rendering.
-            // Issue identified: filterCard only 200px wide, controls extend to 630px.
-            
-            // VISUAL DEBUG: Add dimension info label with more details
-            var debugDimensionsLabel = new Label
-            {
-                Text = $"DEBUG: FilterPanel loaded | Width={{filterPanel.Width}}",
-                AutoSize = true,
-                ForeColor = Color.Black,
-                BackColor = Color.Yellow,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Margin = new Padding(5),
-                BorderStyle = BorderStyle.FixedSingle  // Add border to make it stand out
-            };
-            filterPanel.Controls.Add(debugDimensionsLabel);
-
             // Search box
             var searchLabel = new Label { 
                 Text = "Search:", 
                 AutoSize = true, 
-                ForeColor = Color.Black, 
+                ForeColor = Color.White,  // White for dark background
                 Margin = new Padding(5, 8, 5, 5), 
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Visible = true  // VISUAL DEBUG: Explicit
+                Visible = true
             };
             var searchBox = new TextBox
             {
@@ -13401,8 +13367,8 @@ namespace Risk_Manager
                 Margin = new Padding(5),
                 Tag = "SearchBox",
                 Name = "TradeSearchBox",
-                BackColor = Color.White,  // VISUAL DEBUG: Ensure visible on yellow
-                Visible = true  // VISUAL DEBUG: Explicit
+                BackColor = Color.White,
+                Visible = true
             };
             searchBox.TextChanged += (s, e) => FilterTrades();
 
@@ -13410,10 +13376,10 @@ namespace Risk_Manager
             var outcomeLabel = new Label { 
                 Text = "Outcome:", 
                 AutoSize = true, 
-                ForeColor = Color.Black, 
+                ForeColor = Color.White,  // White for dark background
                 Margin = new Padding(5, 8, 5, 5), 
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Visible = true  // VISUAL DEBUG: Explicit
+                Visible = true
             };
             var outcomeFilter = new ComboBox
             {
@@ -13422,8 +13388,8 @@ namespace Risk_Manager
                 Margin = new Padding(5),
                 Tag = "OutcomeFilter",
                 Name = "OutcomeFilterCombo",
-                BackColor = Color.White,  // VISUAL DEBUG: Ensure visible
-                Visible = true  // VISUAL DEBUG: Explicit
+                BackColor = Color.White,
+                Visible = true
             };
             outcomeFilter.Items.AddRange(new[] { "All", "Win", "Loss", "Breakeven" });
             outcomeFilter.SelectedIndex = 0;
@@ -13433,10 +13399,10 @@ namespace Risk_Manager
             var symbolLabel = new Label { 
                 Text = "Symbol:", 
                 AutoSize = true, 
-                ForeColor = Color.Black, 
+                ForeColor = Color.White,  // White for dark background
                 Margin = new Padding(5, 8, 5, 5), 
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Visible = true  // VISUAL DEBUG: Explicit
+                Visible = true
             };
             var symbolFilter = new TextBox
             {
@@ -13445,8 +13411,8 @@ namespace Risk_Manager
                 Margin = new Padding(5),
                 Tag = "SymbolFilter",
                 Name = "SymbolFilterBox",
-                BackColor = Color.White,  // VISUAL DEBUG: Ensure visible
-                Visible = true  // VISUAL DEBUG: Explicit
+                BackColor = Color.White,
+                Visible = true
             };
             symbolFilter.TextChanged += (s, e) => FilterTrades();
 
@@ -13454,10 +13420,10 @@ namespace Risk_Manager
             var dateFromLabel = new Label { 
                 Text = "From:", 
                 AutoSize = true, 
-                ForeColor = Color.Black, 
+                ForeColor = Color.White,  // White for dark background
                 Margin = new Padding(15, 8, 5, 5), 
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Visible = true  // VISUAL DEBUG: Explicit
+                Visible = true
             };
             var dateFromPicker = new DateTimePicker
             {
@@ -13467,17 +13433,17 @@ namespace Risk_Manager
                 Tag = "DateFromPicker",
                 Name = "DateFromPicker",
                 Value = DateTime.Today.AddMonths(-1),
-                Visible = true  // VISUAL DEBUG: Explicit
+                Visible = true
             };
             dateFromPicker.ValueChanged += (s, e) => FilterTrades();
             
             var dateToLabel = new Label { 
                 Text = "To:", 
                 AutoSize = true, 
-                ForeColor = Color.Black, 
+                ForeColor = Color.White,  // White for dark background
                 Margin = new Padding(5, 8, 5, 5), 
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Visible = true  // VISUAL DEBUG: Explicit
+                Visible = true
             };
             var dateToPicker = new DateTimePicker
             {
@@ -13528,6 +13494,7 @@ namespace Risk_Manager
             filterPanel.Controls.Add(dateToPicker);
             filterPanel.Controls.Add(clearFiltersBtn);
 
+            // Add filterPanel to filterCard AFTER filterHeader so it appears above (Dock.Top reverse order)
             filterCard.Controls.Add(filterPanel);
             // filterCard will be added to pagePanel later in correct Z-order
             
