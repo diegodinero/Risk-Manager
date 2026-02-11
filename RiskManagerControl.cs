@@ -17188,7 +17188,6 @@ namespace Risk_Manager
                 var statsPanel = CreateSessionStatsDisplay(filteredTrades, sessionSelector);
                 statsPanel.Dock = DockStyle.Fill;
                 statsContainer.Controls.Add(statsPanel);
-                statsPanel.SendToBack();  // Ensure stats panel is behind ComboBox
             };
 
             // Check if there's any session data
