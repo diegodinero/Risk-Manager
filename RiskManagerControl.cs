@@ -13026,8 +13026,27 @@ namespace Risk_Manager
             var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
             System.Diagnostics.Debug.WriteLine($"PagePanel created: AutoScroll={pagePanel.AutoScroll}");
 
-            // ADD BRIGHT TEST LABEL TO CONFIRM TEXT RENDERING
-            // Test label removed - Trade Log is now working!
+            // VISUAL DEBUG: Add bright test panel at very top to verify page loads
+            var pageDebugPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = Color.Lime,
+                Visible = true
+            };
+            var pageDebugLabel = new Label
+            {
+                Text = "🟢 TRADE LOG PAGE LOADED - This green panel confirms the page is rendering!",
+                AutoSize = false,
+                Size = new Size(900, 40),
+                ForeColor = Color.Black,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter,
+                BackColor = Color.Lime,
+                Dock = DockStyle.Fill
+            };
+            pageDebugPanel.Controls.Add(pageDebugLabel);
+            pagePanel.Controls.Add(pageDebugPanel);
 
             // ===== IMPORTANT: ADD JOURNAL CARD WITH BUTTONS FIRST =====
             // This ensures buttons are ALWAYS visible at the top, even if viewport is small
@@ -13306,25 +13325,59 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Top,
                 Height = 180,  // Increased from 160 to 180 to ensure all filters are fully visible
-                BackColor = CardBackground,
+                BackColor = Color.Orange,  // VISUAL DEBUG: Bright orange to verify visibility
                 Padding = new Padding(10),
-                Margin = new Padding(0, 0, 0, 10)
+                Margin = new Padding(0, 0, 0, 10),
+                Visible = true  // VISUAL DEBUG: Explicitly set visible
             };
 
-            // Filter diagnostic label removed - Trade Log now working!
+            // VISUAL DEBUG: Add bright test panel at top of filterCard
+            var debugTestPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 60,
+                BackColor = Color.Red,
+                Visible = true
+            };
+            var debugLabel = new Label
+            {
+                Text = "🔴 VISUAL DEBUG: FILTER CARD TEST PANEL 🔴\nIf you see this RED panel, filterCard is rendering!",
+                AutoSize = false,
+                Size = new Size(800, 50),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter,
+                BackColor = Color.Red,
+                Dock = DockStyle.Fill
+            };
+            debugTestPanel.Controls.Add(debugLabel);
+            filterCard.Controls.Add(debugTestPanel);
 
             var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", GetIconForTitle("Limits"));
             filterHeader.Dock = DockStyle.Top;
             filterCard.Controls.Add(filterHeader);
-
+            
             var filterPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = true,
                 Padding = new Padding(5),
-                BackColor = CardBackground
+                BackColor = Color.Yellow,  // VISUAL DEBUG: Bright yellow to see filterPanel
+                Visible = true  // VISUAL DEBUG: Explicitly set visible
             };
+            
+            // VISUAL DEBUG: Add dimension info label
+            var debugDimensionsLabel = new Label
+            {
+                Text = "DEBUG: FilterPanel loaded",
+                AutoSize = true,
+                ForeColor = Color.Black,
+                BackColor = Color.Yellow,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Margin = new Padding(5)
+            };
+            filterPanel.Controls.Add(debugDimensionsLabel);
 
             // Search box
             var searchLabel = new Label { Text = "Search:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
@@ -13491,6 +13544,16 @@ namespace Risk_Manager
             
             // Add filterCard LAST (will appear at TOP visually)
             pagePanel.Controls.Add(filterCard);
+            
+            // VISUAL DEBUG: Force filterCard to front and verify
+            filterCard.BringToFront();
+            filterCard.Visible = true;
+            System.Diagnostics.Debug.WriteLine("=== FILTER CARD DEBUG ===");
+            System.Diagnostics.Debug.WriteLine($"filterCard: Size={filterCard.Size}, Height={filterCard.Height}, Visible={filterCard.Visible}");
+            System.Diagnostics.Debug.WriteLine($"filterCard: Dock={filterCard.Dock}, BackColor={filterCard.BackColor}");
+            System.Diagnostics.Debug.WriteLine($"filterCard: Location={filterCard.Location}, Bounds={filterCard.Bounds}");
+            System.Diagnostics.Debug.WriteLine($"filterCard: Parent={filterCard.Parent?.GetType().Name}, ControlCount={filterCard.Controls.Count}");
+            System.Diagnostics.Debug.WriteLine($"filterPanel: Size={filterPanel.Size}, Visible={filterPanel.Visible}");
             
             // DEBUG: Log final page panel details
             System.Diagnostics.Debug.WriteLine("=== PAGE PANEL DEBUG ===");
