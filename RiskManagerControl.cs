@@ -16291,8 +16291,6 @@ namespace Risk_Manager
             };
             titlePanel.Controls.Add(iconLabel);
 
-            sectionPanel.Controls.Add(titlePanel);
-
             // Two-column layout using TableLayoutPanel for proper sizing
             var tableLayout = new TableLayoutPanel
             {
@@ -16340,6 +16338,7 @@ namespace Risk_Manager
             tableLayout.Controls.Add(rightCard, 1, 0);
 
             sectionPanel.Controls.Add(tableLayout);
+            sectionPanel.Controls.Add(titlePanel);  // Add title last so it appears at top
             return sectionPanel;
         }
 
@@ -16568,8 +16567,6 @@ namespace Risk_Manager
                 statsContainer.Controls.Add(statsPanel);
             };
             
-            sectionPanel.Controls.Add(headerPanel);
-
             var modelCount = models.Count(m => !string.IsNullOrEmpty(m.Name));
             if (modelCount == 0)
             {
@@ -16592,6 +16589,7 @@ namespace Risk_Manager
             statsContainer.Controls.Add(initialStatsPanel);
             
             sectionPanel.Controls.Add(statsContainer);
+            sectionPanel.Controls.Add(headerPanel);  // Add header last so it appears at top
             return sectionPanel;
         }
 
@@ -16758,14 +16756,13 @@ namespace Risk_Manager
                 statsContainer.Controls.Add(statsPanel);
             };
 
-            sectionPanel.Controls.Add(headerPanel);
-
             // Initial display with all days
             var initialStatsPanel = CreateDayStatsDisplay(trades);
             initialStatsPanel.Dock = DockStyle.Fill;
             statsContainer.Controls.Add(initialStatsPanel);
 
             sectionPanel.Controls.Add(statsContainer);
+            sectionPanel.Controls.Add(headerPanel);  // Add header last so it appears at top
             return sectionPanel;
         }
 
@@ -16944,8 +16941,6 @@ namespace Risk_Manager
                 statsContainer.Controls.Add(statsPanel);
             };
 
-            sectionPanel.Controls.Add(headerPanel);
-
             // Check if there's any session data
             var sessionTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Session)).ToList();
             
@@ -16970,6 +16965,7 @@ namespace Risk_Manager
             statsContainer.Controls.Add(initialStatsPanel);
 
             sectionPanel.Controls.Add(statsContainer);
+            sectionPanel.Controls.Add(headerPanel);  // Add header last so it appears at top
             return sectionPanel;
         }
 
