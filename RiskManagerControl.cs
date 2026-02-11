@@ -16369,7 +16369,7 @@ namespace Risk_Manager
                 ("Break-Even Trades", stats.Breakevens.ToString(), TextWhite)
             });
             leftCard.Dock = DockStyle.Fill;
-            leftCard.Margin = new Padding(0, 0, 2, 0);  // Reduced spacing between cards (symmetric)
+            leftCard.Margin = new Padding(0, 0, 1, 0);  // Further reduced spacing (1px)
             tableLayout.Controls.Add(leftCard, 0, 0);
 
             // Right card: Overall Performance
@@ -16385,7 +16385,7 @@ namespace Risk_Manager
                 ("Average P&L", FormatPL(stats.AveragePL), stats.AveragePL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77))
             });
             rightCard.Dock = DockStyle.Fill;
-            rightCard.Margin = new Padding(2, 0, 0, 0);  // Reduced spacing between cards (symmetric)
+            rightCard.Margin = new Padding(1, 0, 0, 0);  // Further reduced spacing (1px)
             tableLayout.Controls.Add(rightCard, 1, 0);
 
             sectionPanel.Controls.Add(tableLayout);
@@ -16401,7 +16401,7 @@ namespace Risk_Manager
             var card = new Panel
             {
                 Height = 280,  // Restored to original height
-                MaximumSize = new Size(250, 0),  // Reduced width by half (was 500px)
+                MaximumSize = new Size(300, 0),  // Adjusted width to 300px (was 250px)
                 BackColor = CardBackground,
                 Padding = new Padding(20)  // Restored to original padding
             };
@@ -16730,7 +16730,7 @@ namespace Risk_Manager
                 ("Break-Even Trades", modelBreakevens.ToString(), TextWhite)
             });
             leftCard.Dock = DockStyle.Fill;
-            leftCard.Margin = new Padding(0, 0, 2, 0);  // Reduced spacing between cards (symmetric)
+            leftCard.Margin = new Padding(0, 0, 1, 0);  // Further reduced spacing (1px)
             tableLayout.Controls.Add(leftCard, 0, 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
@@ -16744,7 +16744,7 @@ namespace Risk_Manager
                 ("Models Used", totalModelsCount.ToString(), TextWhite)
             });
             rightCard.Dock = DockStyle.Fill;
-            rightCard.Margin = new Padding(2, 0, 0, 0);  // Reduced spacing between cards (symmetric)
+            rightCard.Margin = new Padding(1, 0, 0, 0);  // Further reduced spacing (1px)
             tableLayout.Controls.Add(rightCard, 1, 0);
 
             return tableLayout;
@@ -16946,7 +16946,7 @@ namespace Risk_Manager
                 ("Break-Even Trades", dayBreakevens.ToString(), TextWhite)
             });
             leftCard.Dock = DockStyle.Fill;
-            leftCard.Margin = new Padding(0, 0, 2, 0);  // Reduced spacing between cards (symmetric)
+            leftCard.Margin = new Padding(0, 0, 1, 0);  // Further reduced spacing (1px)
             tableLayout.Controls.Add(leftCard, 0, 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
@@ -16959,7 +16959,7 @@ namespace Risk_Manager
                 ("Break-Even Trades", dayBreakevens.ToString(), TextWhite)
             });
             rightCard.Dock = DockStyle.Fill;
-            rightCard.Margin = new Padding(2, 0, 0, 0);  // Reduced spacing between cards (symmetric)
+            rightCard.Margin = new Padding(1, 0, 0, 0);  // Further reduced spacing (1px)
             tableLayout.Controls.Add(rightCard, 1, 0);
 
             return tableLayout;
@@ -17192,7 +17192,7 @@ namespace Risk_Manager
                 ("Break-Even Trades", sessionBreakevens.ToString(), TextWhite)
             });
             leftCard.Dock = DockStyle.Fill;
-            leftCard.Margin = new Padding(0, 0, 2, 0);  // Reduced spacing between cards (symmetric)
+            leftCard.Margin = new Padding(0, 0, 1, 0);  // Further reduced spacing (1px)
             tableLayout.Controls.Add(leftCard, 0, 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
@@ -17205,7 +17205,7 @@ namespace Risk_Manager
                 ("Break-Even Trades", sessionBreakevens.ToString(), TextWhite)
             });
             rightCard.Dock = DockStyle.Fill;
-            rightCard.Margin = new Padding(2, 0, 0, 0);  // Reduced spacing between cards (symmetric)
+            rightCard.Margin = new Padding(1, 0, 0, 0);  // Further reduced spacing (1px)
             tableLayout.Controls.Add(rightCard, 1, 0);
 
             return tableLayout;
