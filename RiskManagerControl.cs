@@ -13241,13 +13241,8 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine($"JournalCard: Dock={journalCard.Dock}, Height={journalCard.Height}, ControlCount={journalCard.Controls.Count}");
             System.Diagnostics.Debug.WriteLine($"ORANGE TEST PANEL ADDED to Journal Card!");
             
-            // ADD JOURNAL CARD FIRST - This makes buttons appear at TOP
-            pagePanel.Controls.Add(journalCard);
-            
-            // Spacer
-            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
-
-            // NOW add stats and filter BELOW the buttons
+            // NOTE: With Dock=Top, controls added LAST appear at TOP visually
+            // Add in reverse visual order: filters first, then stats, then journal card last
             // Enhanced stats summary card with more metrics
             var statsCard = new Panel
             {
@@ -13304,16 +13299,13 @@ namespace Risk_Manager
             statsLabelsPanel.Controls.Add(avgLossLabel);
             
             statsCard.Controls.Add(statsLabelsPanel);
-            pagePanel.Controls.Add(statsCard);
-
-            // Spacer
-            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
+            // statsCard will be added to pagePanel later in correct Z-order
 
             // Filter and search panel
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 160,  // Increased from 150 to 160 to ensure date pickers are fully visible
+                Height = 180,  // Increased from 160 to 180 to ensure all filters are fully visible
                 BackColor = CardBackground,
                 Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10)
@@ -13434,7 +13426,7 @@ namespace Risk_Manager
             filterPanel.Controls.Add(clearFiltersBtn);
 
             filterCard.Controls.Add(filterPanel);
-            pagePanel.Controls.Add(filterCard);
+            // filterCard will be added to pagePanel later in correct Z-order
             
             // Collapsible trade details panel (hidden by default)
             var detailsCard = new Panel
@@ -13462,8 +13454,7 @@ namespace Risk_Manager
                 Padding = new Padding(10)
             };
             detailsCard.Controls.Add(detailsContent);
-            
-            pagePanel.Controls.Add(detailsCard);
+            // detailsCard will be added to pagePanel later in correct Z-order
             
             // Add row selection handler to show/hide details
             tradesGrid.SelectionChanged += (s, e) =>
@@ -13478,6 +13469,28 @@ namespace Risk_Manager
                     detailsCard.Height = 0;
                 }
             };
+            
+            // ===== ADD CONTROLS TO PAGEPANEL IN CORRECT Z-ORDER =====
+            // With Dock=Top, controls added LAST appear at TOP visually
+            // So add in REVERSE visual order: we want filters at top, journal at bottom
+            
+            // Add journalCard FIRST (will appear at BOTTOM visually)
+            pagePanel.Controls.Add(journalCard);
+            
+            // Add spacer
+            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
+            
+            // Add detailsCard (collapsible trade details - hidden by default)
+            pagePanel.Controls.Add(detailsCard);
+            
+            // Add statsCard
+            pagePanel.Controls.Add(statsCard);
+            
+            // Add spacer
+            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
+            
+            // Add filterCard LAST (will appear at TOP visually)
+            pagePanel.Controls.Add(filterCard);
             
             // DEBUG: Log final page panel details
             System.Diagnostics.Debug.WriteLine("=== PAGE PANEL DEBUG ===");
