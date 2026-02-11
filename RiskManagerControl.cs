@@ -146,7 +146,7 @@ class CustomHeaderControl : Panel
     public CustomHeaderControl(string text, Image icon)
     {
         this.Dock = DockStyle.Top;
-        this.Height = 40;
+        this.Height = 60;  // Increased from 40 to 60 to accommodate 48px icon without overflow
         this.BackColor = Color.Transparent;
 
         // Text (Label)
@@ -12832,7 +12832,7 @@ namespace Risk_Manager
 
             var header = new CustomHeaderControl("Trading Journal", GetIconForTitle("Trading Journal"));
             header.Dock = DockStyle.Top;
-            header.Margin = new Padding(10, 0, 0, 0);
+            header.Margin = new Padding(10, 0, 0, 0);  // Removed top margin to prevent overlap
             mainPanel.Controls.Add(header);
 
             // Container for sidebar and content
@@ -12848,7 +12848,7 @@ namespace Risk_Manager
                 Width = 240,
                 Dock = DockStyle.Left,
                 BackColor = Color.FromArgb(35, 35, 35), // Slightly different from main background
-                Padding = new Padding(16)
+                Padding = new Padding(16, 60, 16, 16)  // Increased top padding to 60 to clear the header above
             };
 
             // Separator
@@ -12883,7 +12883,7 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
-                Padding = new Padding(20, 20, 20, 20), // Increased top padding to prevent content being cut off
+                Padding = new Padding(20, 60, 20, 20), // Increased top padding to 60 to clear header above
                 AutoScroll = true
             };
 
@@ -12913,7 +12913,7 @@ namespace Risk_Manager
                 ForeColor = TextWhite,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),  // Reverted back to original
                 Margin = new Padding(0, 4, 0, 4),  // Increased vertical margins for better spacing
                 Tag = section
             };
@@ -12945,12 +12945,12 @@ namespace Risk_Manager
                 if (kvp.Key == section)
                 {
                     kvp.Value.BackColor = Color.FromArgb(50, 50, 50);
-                    kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Bold);
+                    kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Bold);  // Reverted back to original
                 }
                 else
                 {
                     kvp.Value.BackColor = Color.Transparent;
-                    kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular);
+                    kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular);  // Reverted back to original
                 }
             }
 
@@ -13303,8 +13303,8 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 150,  // Increased to ensure date pickers are fully visible with header
-                BackColor = CardBackground,  // Professional dark theme
+                Height = 160,  // Increased from 150 to 160 to ensure date pickers are fully visible
+                BackColor = CardBackground,
                 Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10)
             };
@@ -14384,14 +14384,15 @@ namespace Risk_Manager
             };
             legendPanel.Controls.Add(titleLabel);
             
-            // Legend items flow panel - legend width matches full calendar
-            legendPanel.Width = (7 * 150) + 200; // 1250px - match full calendar width including weekly stats
+            // Legend items flow panel - legend width should match calendar columns only (not weekly stats)
+            legendPanel.Width = (7 * 150); // 1050px - match calendar width WITHOUT weekly stats column
             
             var itemsPanel = new FlowLayoutPanel
             {
                 AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false
+                WrapContents = false,
+                MaximumSize = new Size((7 * 150) - 40, 0)  // Constrain to calendar width with padding
             };
             
             // Center items horizontally
@@ -16003,7 +16004,9 @@ namespace Risk_Manager
             double monthlyProfitFactor = monthlyGrossLosses > 0 ? (double)(monthlyGrossWins / monthlyGrossLosses) : 0;
 
             // Add panels in reverse order since Dock.Top stacks from bottom to top
-            // Session Performance Section (always show, handles empty state internally)
+            // The order below is reversed - last added appears at top of display
+            
+            // Session Performance Section (appears at bottom)
             var sessionStatsPanel = CreateSessionStatsSection(trades);
             sessionStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(sessionStatsPanel);
@@ -16013,7 +16016,7 @@ namespace Risk_Manager
             dayStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(dayStatsPanel);
 
-            // Trading Model Performance Section (always show, handles empty state internally)
+            // Trading Model Performance Section
             var modelStatsPanel = CreateModelStatsSection(trades, models);
             modelStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(modelStatsPanel);
@@ -16050,11 +16053,11 @@ namespace Risk_Manager
             {
                 Text = "Dashboard",
                 Dock = DockStyle.Top,
-                Height = 50,
+                Height = 60,  // Increased from 50 to 60 for better visibility
                 ForeColor = TextWhite,
                 Font = new Font("Segoe UI", 24, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(20, 10, 0, 0)
+                Padding = new Padding(20, 15, 0, 0)  // Increased top padding from 10 to 15
             };
             pagePanel.Controls.Add(titleLabel);
 
@@ -16068,32 +16071,22 @@ namespace Risk_Manager
         {
             var sectionPanel = new Panel
             {
-                Height = 150,
+                Height = 200,  // Increased from 170 to 200 to prevent card tops from being cut off
                 BackColor = DarkBackground,
-                Padding = new Padding(20, 10, 20, 10)
+                Padding = new Padding(20, 15, 20, 15)  // Increased top/bottom padding from 10 to 15
             };
 
             // Title
-            var titleLabel = new Label
-            {
-                Text = title,
-                Dock = DockStyle.Top,
-                Height = 30,
-                ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-            sectionPanel.Controls.Add(titleLabel);
-
-            // Cards container
+            // Cards container - add FIRST so it appears at BOTTOM
             var cardsPanel = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping title
+                Height = 130,  // Explicit height: 200 (section) - 30 (padding) - 35 (title) - 5 (buffer) = 130
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = true,
-                AutoSize = false,  // Changed from true to false to work with Dock=Fill
+                AutoSize = false,
                 BackColor = DarkBackground,
-                Padding = new Padding(0, 10, 0, 0)
+                Padding = new Padding(0, 20, 0, 0)  // Increased to 20px for better separation between title and cards
             };
 
             foreach (var (label, value, color) in stats)
@@ -16103,6 +16096,18 @@ namespace Risk_Manager
             }
 
             sectionPanel.Controls.Add(cardsPanel);
+
+            // Title - add SECOND so it appears at TOP
+            var titleLabel = new Label
+            {
+                Text = title,
+                Dock = DockStyle.Top,
+                Height = 35,  // Increased from 30 to 35 for better spacing
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            sectionPanel.Controls.Add(titleLabel);
             return sectionPanel;
         }
 
@@ -16197,26 +16202,26 @@ namespace Risk_Manager
                 BackColor = Color.Transparent
             };
 
-            // Emoji label with color
+            // Emoji label with color - increased width for better emoji display
             var emojiLabel = new Label
             {
                 Text = emoji,
                 Dock = DockStyle.Left,
-                Width = 20,
+                Width = 28,  // Increased from 20 to 28 for better emoji rendering
                 ForeColor = emojiColor,
-                Font = new Font("Segoe UI Emoji", 10, FontStyle.Regular),
+                Font = new Font("Segoe UI Emoji", 14, FontStyle.Regular),  // Increased from 10 to 14
                 TextAlign = ContentAlignment.MiddleLeft,
                 AutoSize = false
             };
             labelContainer.Controls.Add(emojiLabel);
 
-            // Text label
+            // Text label - white text, left-aligned
             var textLabel = new Label
             {
                 Text = label,
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Fill,  // Fill remaining space after emoji (Dock.Left)
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI Emoji", 9, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),  // Changed from "Segoe UI Emoji"
                 TextAlign = ContentAlignment.MiddleLeft,
                 AutoSize = false
             };
@@ -16224,15 +16229,16 @@ namespace Risk_Manager
 
             card.Controls.Add(labelContainer);
 
-            // Value
+            // Value - colored text, right-aligned as requested
             var valueControl = new Label
             {
                 Text = value,
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping label
+                Height = 30,  // Explicit height: 70 (card) - 16 (padding) - 22 (label) - 2 (buffer) = 30
                 ForeColor = valueColor,
-                Font = new Font("Segoe UI", 14, FontStyle.Bold),  // Slightly smaller
-                TextAlign = ContentAlignment.MiddleLeft,
-                AutoSize = false  // Prevent wrapping
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleRight,  // Changed from MiddleLeft to MiddleRight
+                AutoSize = false
             };
             card.Controls.Add(valueControl);
 
@@ -16285,12 +16291,11 @@ namespace Risk_Manager
             };
             titlePanel.Controls.Add(iconLabel);
 
-            sectionPanel.Controls.Add(titlePanel);
-
             // Two-column layout using TableLayoutPanel for proper sizing
             var tableLayout = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping title
+                Height = 295,  // Explicit height: 350 (section) - 20 (padding) - 35 (title) = 295
                 ColumnCount = 2,
                 RowCount = 1,
                 BackColor = DarkBackground,
@@ -16333,6 +16338,7 @@ namespace Risk_Manager
             tableLayout.Controls.Add(rightCard, 1, 0);
 
             sectionPanel.Controls.Add(tableLayout);
+            sectionPanel.Controls.Add(titlePanel);  // Add title last so it appears at top
             return sectionPanel;
         }
 
@@ -16407,8 +16413,8 @@ namespace Risk_Manager
             };
             card.Controls.Add(titleLabel);
 
-            // Stats
-            int yPos = 35;  // Restored to original
+            // Stats - start after title (20px padding + 30px title + 5px buffer = 55px)
+            int yPos = 55;
             foreach (var (label, value, color) in stats)
             {
                 var statPanel = new Panel
@@ -16533,7 +16539,11 @@ namespace Risk_Manager
             headerPanel.Controls.Add(iconLabel);
             
             // Store reference for event handler
-            var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+            var statsContainer = new Panel { 
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping header
+                Height = 335,  // Explicit height: 400 (section) - 20 (padding) - 45 (header) = 335
+                BackColor = DarkBackground 
+            };
             
             // Event handler for model selection change
             modelSelector.SelectedIndexChanged += (s, e) =>
@@ -16557,8 +16567,6 @@ namespace Risk_Manager
                 statsContainer.Controls.Add(statsPanel);
             };
             
-            sectionPanel.Controls.Add(headerPanel);
-
             var modelCount = models.Count(m => !string.IsNullOrEmpty(m.Name));
             if (modelCount == 0)
             {
@@ -16581,6 +16589,7 @@ namespace Risk_Manager
             statsContainer.Controls.Add(initialStatsPanel);
             
             sectionPanel.Controls.Add(statsContainer);
+            sectionPanel.Controls.Add(headerPanel);  // Add header last so it appears at top
             return sectionPanel;
         }
 
@@ -16717,7 +16726,11 @@ namespace Risk_Manager
             headerPanel.Controls.Add(iconLabel);
 
             // Store reference for event handler
-            var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+            var statsContainer = new Panel { 
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping header
+                Height = 335,  // Explicit height: 400 (section) - 20 (padding) - 45 (header) = 335
+                BackColor = DarkBackground 
+            };
 
             // Event handler for day selection change
             daySelector.SelectedIndexChanged += (s, e) =>
@@ -16743,14 +16756,13 @@ namespace Risk_Manager
                 statsContainer.Controls.Add(statsPanel);
             };
 
-            sectionPanel.Controls.Add(headerPanel);
-
             // Initial display with all days
             var initialStatsPanel = CreateDayStatsDisplay(trades);
             initialStatsPanel.Dock = DockStyle.Fill;
             statsContainer.Controls.Add(initialStatsPanel);
 
             sectionPanel.Controls.Add(statsContainer);
+            sectionPanel.Controls.Add(headerPanel);  // Add header last so it appears at top
             return sectionPanel;
         }
 
@@ -16901,7 +16913,11 @@ namespace Risk_Manager
             headerPanel.Controls.Add(iconLabel);
 
             // Store reference for event handler
-            var statsContainer = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+            var statsContainer = new Panel { 
+                Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping header
+                Height = 335,  // Explicit height: 400 (section) - 20 (padding) - 45 (header) = 335
+                BackColor = DarkBackground 
+            };
 
             // Event handler for session selection change
             sessionSelector.SelectedIndexChanged += (s, e) =>
@@ -16924,8 +16940,6 @@ namespace Risk_Manager
                 statsPanel.Dock = DockStyle.Fill;
                 statsContainer.Controls.Add(statsPanel);
             };
-
-            sectionPanel.Controls.Add(headerPanel);
 
             // Check if there's any session data
             var sessionTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Session)).ToList();
@@ -16951,6 +16965,7 @@ namespace Risk_Manager
             statsContainer.Controls.Add(initialStatsPanel);
 
             sectionPanel.Controls.Add(statsContainer);
+            sectionPanel.Controls.Add(headerPanel);  // Add header last so it appears at top
             return sectionPanel;
         }
 
@@ -17719,7 +17734,8 @@ namespace Risk_Manager
                     break;
                     
                 case "Dashboard":
-                    // Dashboard doesn't need refresh (placeholder)
+                    // Refresh Dashboard for the new account
+                    ShowJournalSection("Dashboard");
                     break;
                     
                 default:
