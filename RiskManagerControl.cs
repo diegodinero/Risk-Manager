@@ -13302,19 +13302,21 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 180,  // Increased: Header (40px) + Filter controls with wrapping (120px) + padding
-                BackColor = CardBackground,  // Normal card background
+                Height = 300,  // VISUAL DEBUG: Increased to ensure controls have space
+                BackColor = Color.Orange,  // VISUAL DEBUG: Bright orange to verify visibility
                 Padding = new Padding(10),
-                Margin = new Padding(0, 0, 0, 10)
+                Margin = new Padding(0, 0, 0, 10),
+                Visible = true  // VISUAL DEBUG: Explicitly set visible
             };
 
             var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", GetIconForTitle("Limits"));
             filterHeader.Dock = DockStyle.Top;
             
-            // Filter panel with controls - horizontal layout
+            // Filter panel with controls - at top, horizontal layout
             var filterPanel = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,  // Fill remaining space after header
+                Dock = DockStyle.Top,
+                Height = 100,  // Explicit height for horizontal layout with wrapping
                 FlowDirection = FlowDirection.LeftToRight,  // Horizontal layout
                 WrapContents = true,  // Allow wrapping to multiple rows
                 Padding = new Padding(5),
@@ -13324,7 +13326,7 @@ namespace Risk_Manager
                 AutoSize = false
             };
             
-            // Add header FIRST so it appears at top (Dock.Top stacking)
+            // Add header FIRST (will appear below filterPanel with Dock.Top stacking)
             filterCard.Controls.Add(filterHeader);
             
             // Note: filterPanel will be added to filterCard after controls are added to it
