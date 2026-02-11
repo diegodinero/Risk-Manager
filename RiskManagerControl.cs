@@ -16239,6 +16239,7 @@ namespace Risk_Manager
                 Dock = DockStyle.Top,
                 Height = 30,
                 ForeColor = TextWhite,
+                BackColor = CardBackground,
                 Font = new Font("Segoe UI", 11f, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleLeft,
                 AutoSize = false
@@ -16251,6 +16252,7 @@ namespace Risk_Manager
                 Text = value,
                 Dock = DockStyle.Fill,
                 ForeColor = valueColor,
+                BackColor = CardBackground,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
                 AutoSize = false
@@ -16531,17 +16533,17 @@ namespace Risk_Manager
             };
             headerPanel.Cursor = Cursors.Hand;
 
-            // Add model selector ComboBox - will be positioned above right card
+            // Add model selector ComboBox - positioned in header aligned with title
             var modelSelector = new ComboBox
             {
-                Width = 100,
+                Width = 150,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 ForeColor = TextWhite,
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(0, 0, 0, 5),  // Small bottom margin
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                Dock = DockStyle.Right,
+                Margin = new Padding(0, 8, 0, 0)  // Top margin for vertical alignment
             };
             
             // Get models from database - use same logic as TradeLog
@@ -16607,7 +16609,7 @@ namespace Risk_Manager
             // Store reference for event handler
             var statsContainer = new Panel { 
                 Dock = DockStyle.Top,
-                Height = 335,  // Height for model section with ComboBox in layout
+                Height = 305,  // Height for model section (reduced from 335 since ComboBox is now in header)
                 BackColor = DarkBackground 
             };
 
@@ -16634,6 +16636,7 @@ namespace Risk_Manager
             titleLabel.Click += toggleCollapse;
             iconLabel.Click += toggleCollapse;
             
+            headerPanel.Controls.Add(modelSelector);
             headerPanel.Controls.Add(collapseIcon);
             headerPanel.Controls.Add(titleLabel);
             headerPanel.Controls.Add(iconLabel);
@@ -16713,12 +16716,12 @@ namespace Risk_Manager
                 BackColor = DarkBackground
             };
 
-            // Two-column, two-row layout using TableLayoutPanel
+            // Two-column, one-row layout using TableLayoutPanel
             var tableLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                RowCount = modelSelector != null ? 2 : 1,  // 2 rows if ComboBox exists
+                RowCount = 1,
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0),
                 CellBorderStyle = TableLayoutPanelCellBorderStyle.None
@@ -16727,35 +16730,7 @@ namespace Risk_Manager
             // Use absolute pixel width to ensure cards touch
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
-            
-            if (modelSelector != null)
-            {
-                // Row 0: ComboBox above right card (30px height)
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-                // Row 1: Cards (remaining space)
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-                
-                // Add empty panel in top-left
-                var emptyPanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
-                tableLayout.Controls.Add(emptyPanel, 0, 0);
-                
-                // Add ComboBox in top-right
-                modelSelector.Dock = DockStyle.Right;
-                modelSelector.Margin = new Padding(0, 0, 0, 5);
-                var comboPanel = new Panel { 
-                    Dock = DockStyle.None,  // Fixed width instead of Fill
-                    Width = 300,  // Match right card width
-                    Height = 30,  // Match row height
-                    BackColor = DarkBackground,
-                    Padding = new Padding(6, 0, 0, 0)  // Match right card left margin
-                };
-                comboPanel.Controls.Add(modelSelector);
-                tableLayout.Controls.Add(comboPanel, 1, 0);
-            }
-            else
-            {
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            }
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             var leftCard = CreateDetailCard("Trading Model Stats", new[]
             {
@@ -16769,7 +16744,7 @@ namespace Risk_Manager
             });
             leftCard.Dock = DockStyle.Fill;
             leftCard.Margin = new Padding(0, 0, 6, 0);  // 6px gap on right
-            tableLayout.Controls.Add(leftCard, 0, modelSelector != null ? 1 : 0);
+            tableLayout.Controls.Add(leftCard, 0, 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
             {
@@ -16783,7 +16758,7 @@ namespace Risk_Manager
             });
             rightCard.Dock = DockStyle.Fill;
             rightCard.Margin = new Padding(6, 0, 0, 0);  // 6px gap on left
-            tableLayout.Controls.Add(rightCard, 1, modelSelector != null ? 1 : 0);
+            tableLayout.Controls.Add(rightCard, 1, 0);
 
             container.Controls.Add(tableLayout);
             return container;
@@ -16811,17 +16786,17 @@ namespace Risk_Manager
             };
             headerPanel.Cursor = Cursors.Hand;
 
-            // Day selector ComboBox - will be positioned above right card
+            // Day selector ComboBox - positioned in header aligned with title
             var daySelector = new ComboBox
             {
-                Width = 95,
+                Width = 150,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 ForeColor = TextWhite,
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(0, 0, 0, 5),  // Small bottom margin
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                Dock = DockStyle.Right,
+                Margin = new Padding(0, 8, 0, 0)  // Top margin for vertical alignment
             };
             daySelector.Items.Add("All Days");
             daySelector.Items.Add("Monday");
@@ -16875,7 +16850,7 @@ namespace Risk_Manager
             // Store reference for event handler
             var statsContainer = new Panel { 
                 Dock = DockStyle.Top,
-                Height = 335,  // Height for day section with ComboBox in layout
+                Height = 305,  // Height for day section (reduced from 335 since ComboBox is now in header)
                 BackColor = DarkBackground 
             };
 
@@ -16902,6 +16877,7 @@ namespace Risk_Manager
             titleLabel.Click += toggleCollapse;
             iconLabel.Click += toggleCollapse;
 
+            headerPanel.Controls.Add(daySelector);
             headerPanel.Controls.Add(collapseIcon);
             headerPanel.Controls.Add(titleLabel);
             headerPanel.Controls.Add(iconLabel);
@@ -16966,12 +16942,12 @@ namespace Risk_Manager
                 BackColor = DarkBackground
             };
 
-            // Two-column, two-row layout using TableLayoutPanel
+            // Two-column, one-row layout using TableLayoutPanel
             var tableLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                RowCount = daySelector != null ? 2 : 1,  // 2 rows if ComboBox exists
+                RowCount = 1,
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0),
                 CellBorderStyle = TableLayoutPanelCellBorderStyle.None
@@ -16980,35 +16956,7 @@ namespace Risk_Manager
             // Use absolute pixel width to ensure cards touch
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
-            
-            if (daySelector != null)
-            {
-                // Row 0: ComboBox above right card (30px height)
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-                // Row 1: Cards (remaining space)
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-                
-                // Add empty panel in top-left
-                var emptyPanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
-                tableLayout.Controls.Add(emptyPanel, 0, 0);
-                
-                // Add ComboBox in top-right
-                daySelector.Dock = DockStyle.Right;
-                daySelector.Margin = new Padding(0, 0, 0, 5);
-                var comboPanel = new Panel { 
-                    Dock = DockStyle.None,  // Fixed width instead of Fill
-                    Width = 300,  // Match right card width
-                    Height = 30,  // Match row height
-                    BackColor = DarkBackground,
-                    Padding = new Padding(6, 0, 0, 0)  // Match right card left margin
-                };
-                comboPanel.Controls.Add(daySelector);
-                tableLayout.Controls.Add(comboPanel, 1, 0);
-            }
-            else
-            {
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            }
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             var leftCard = CreateDetailCard("Day Stats", new[]
             {
@@ -17022,7 +16970,7 @@ namespace Risk_Manager
             });
             leftCard.Dock = DockStyle.Fill;
             leftCard.Margin = new Padding(0, 0, 6, 0);  // 6px gap on right
-            tableLayout.Controls.Add(leftCard, 0, daySelector != null ? 1 : 0);
+            tableLayout.Controls.Add(leftCard, 0, 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
             {
@@ -17035,7 +16983,7 @@ namespace Risk_Manager
             });
             rightCard.Dock = DockStyle.Fill;
             rightCard.Margin = new Padding(6, 0, 0, 0);  // 6px gap on left
-            tableLayout.Controls.Add(rightCard, 1, daySelector != null ? 1 : 0);
+            tableLayout.Controls.Add(rightCard, 1, 0);
 
             container.Controls.Add(tableLayout);
             return container;
@@ -17069,17 +17017,17 @@ namespace Risk_Manager
             // Get unique sessions from trades to see what's actually being used
             var sessionNames = trades.Select(t => t.Session).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s).ToList();
 
-            // Session selector ComboBox - will be positioned above right card
+            // Session selector ComboBox - positioned in header aligned with title
             var sessionSelector = new ComboBox
             {
-                Width = 95,
+                Width = 150,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 ForeColor = TextWhite,
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(0, 0, 0, 5),  // Small bottom margin
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                Dock = DockStyle.Right,
+                Margin = new Padding(0, 8, 0, 0)  // Top margin for vertical alignment
             };
             sessionSelector.Items.Add("All Sessions");
             
@@ -17142,7 +17090,7 @@ namespace Risk_Manager
             // Store reference for event handler
             var statsContainer = new Panel { 
                 Dock = DockStyle.Top,
-                Height = 335,  // Height for session section with ComboBox in layout
+                Height = 305,  // Height for session section (reduced from 335 since ComboBox is now in header)
                 BackColor = DarkBackground 
             };
 
@@ -17169,6 +17117,7 @@ namespace Risk_Manager
             titleLabel.Click += toggleCollapse;
             iconLabel.Click += toggleCollapse;
 
+            headerPanel.Controls.Add(sessionSelector);
             headerPanel.Controls.Add(collapseIcon);
             headerPanel.Controls.Add(titleLabel);
             headerPanel.Controls.Add(iconLabel);
@@ -17249,12 +17198,12 @@ namespace Risk_Manager
                 BackColor = DarkBackground
             };
 
-            // Two-column, two-row layout using TableLayoutPanel
+            // Two-column, one-row layout using TableLayoutPanel
             var tableLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                RowCount = sessionSelector != null ? 2 : 1,  // 2 rows if ComboBox exists
+                RowCount = 1,
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0),
                 CellBorderStyle = TableLayoutPanelCellBorderStyle.None
@@ -17263,35 +17212,7 @@ namespace Risk_Manager
             // Use absolute pixel width to ensure cards touch
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
             tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
-            
-            if (sessionSelector != null)
-            {
-                // Row 0: ComboBox above right card (30px height)
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-                // Row 1: Cards (remaining space)
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-                
-                // Add empty panel in top-left
-                var emptyPanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
-                tableLayout.Controls.Add(emptyPanel, 0, 0);
-                
-                // Add ComboBox in top-right
-                sessionSelector.Dock = DockStyle.Right;
-                sessionSelector.Margin = new Padding(0, 0, 0, 5);
-                var comboPanel = new Panel { 
-                    Dock = DockStyle.None,  // Fixed width instead of Fill
-                    Width = 300,  // Match right card width
-                    Height = 30,  // Match row height
-                    BackColor = DarkBackground,
-                    Padding = new Padding(6, 0, 0, 0)  // Match right card left margin
-                };
-                comboPanel.Controls.Add(sessionSelector);
-                tableLayout.Controls.Add(comboPanel, 1, 0);
-            }
-            else
-            {
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            }
+            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             var leftCard = CreateDetailCard("Session Stats", new[]
             {
@@ -17305,7 +17226,7 @@ namespace Risk_Manager
             });
             leftCard.Dock = DockStyle.Fill;
             leftCard.Margin = new Padding(0, 0, 6, 0);  // 6px gap on right
-            tableLayout.Controls.Add(leftCard, 0, sessionSelector != null ? 1 : 0);
+            tableLayout.Controls.Add(leftCard, 0, 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
             {
@@ -17318,7 +17239,7 @@ namespace Risk_Manager
             });
             rightCard.Dock = DockStyle.Fill;
             rightCard.Margin = new Padding(6, 0, 0, 0);  // 6px gap on left
-            tableLayout.Controls.Add(rightCard, 1, sessionSelector != null ? 1 : 0);
+            tableLayout.Controls.Add(rightCard, 1, 0);
 
             container.Controls.Add(tableLayout);
             return container;
