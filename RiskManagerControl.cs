@@ -13026,28 +13026,6 @@ namespace Risk_Manager
             var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
             System.Diagnostics.Debug.WriteLine($"PagePanel created: AutoScroll={pagePanel.AutoScroll}");
 
-            // VISUAL DEBUG: Add bright test panel at very top to verify page loads
-            var pageDebugPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 50,
-                BackColor = Color.Lime,
-                Visible = true
-            };
-            var pageDebugLabel = new Label
-            {
-                Text = "🟢 TRADE LOG PAGE LOADED - This green panel confirms the page is rendering!",
-                AutoSize = false,
-                Size = new Size(900, 40),
-                ForeColor = Color.Black,
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.Lime,
-                Dock = DockStyle.Fill
-            };
-            pageDebugPanel.Controls.Add(pageDebugLabel);
-            pagePanel.Controls.Add(pageDebugPanel);
-
             // ===== IMPORTANT: ADD JOURNAL CARD WITH BUTTONS FIRST =====
             // This ensures buttons are ALWAYS visible at the top, even if viewport is small
             
@@ -13324,29 +13302,29 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 300,  // VISUAL DEBUG: Increased from 180 to 300 to ensure controls have space
-                BackColor = Color.Orange,  // VISUAL DEBUG: Bright orange to verify visibility
+                Height = 150,  // Header (40px) + Filter controls (100px) + padding
+                BackColor = CardBackground,  // Normal card background
                 Padding = new Padding(10),
-                Margin = new Padding(0, 0, 0, 10),
-                Visible = true  // VISUAL DEBUG: Explicitly set visible
+                Margin = new Padding(0, 0, 0, 10)
             };
 
-            // Filter panel with controls - moved to top, horizontal layout
+            var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", GetIconForTitle("Limits"));
+            filterHeader.Dock = DockStyle.Top;
+            
+            // Filter panel with controls - horizontal layout
             var filterPanel = new FlowLayoutPanel
             {
-                Dock = DockStyle.Top,
-                Height = 100,  // Increased height to accommodate horizontal filter controls
-                FlowDirection = FlowDirection.LeftToRight,  // Horizontal layout as requested
+                Dock = DockStyle.Fill,  // Fill remaining space after header
+                FlowDirection = FlowDirection.LeftToRight,  // Horizontal layout
                 WrapContents = true,  // Allow wrapping to multiple rows
                 Padding = new Padding(5),
-                BackColor = CardBackground,  // Normal card background instead of debug yellow
+                BackColor = CardBackground,  // Normal card background
                 Visible = true,
-                AutoScroll = false,  // No scrolling needed with proper height
+                AutoScroll = false,
                 AutoSize = false
             };
             
-            var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", GetIconForTitle("Limits"));
-            filterHeader.Dock = DockStyle.Top;
+            // Add header FIRST so it appears at top (Dock.Top stacking)
             filterCard.Controls.Add(filterHeader);
             
             // Note: filterPanel will be added to filterCard after controls are added to it
