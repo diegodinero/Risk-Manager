@@ -13303,10 +13303,10 @@ namespace Risk_Manager
             {
                 Dock = DockStyle.Top,
                 Height = 150,  // Minimal size - just fits controls without scrollbar
-                BackColor = Color.Orange,  // VISUAL DEBUG: Bright orange to verify visibility
+                BackColor = CardBackground,  // Normal dark theme - production ready
                 Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10),
-                Visible = true  // VISUAL DEBUG: Explicitly set visible
+                Visible = true
             };
 
             var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", GetIconForTitle("Limits"));
