@@ -16370,7 +16370,7 @@ namespace Risk_Manager
                 ("Break-Even Trades", stats.Breakevens.ToString(), TextWhite)
             });
             leftCard.Dock = DockStyle.Fill;
-            leftCard.Margin = new Padding(0, 0, 2, 0);  // Tiny gap on right
+            leftCard.Margin = new Padding(0, 0, 6, 0);  // 6px gap on right
             tableLayout.Controls.Add(leftCard, 0, 0);
 
             // Right card: Overall Performance
@@ -16386,7 +16386,7 @@ namespace Risk_Manager
                 ("Average P&L", FormatPL(stats.AveragePL), stats.AveragePL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77))
             });
             rightCard.Dock = DockStyle.Fill;
-            rightCard.Margin = new Padding(2, 0, 0, 0);  // Tiny gap on left
+            rightCard.Margin = new Padding(6, 0, 0, 0);  // 6px gap on left
             tableLayout.Controls.Add(rightCard, 1, 0);
 
             sectionPanel.Controls.Add(tableLayout);
@@ -16743,9 +16743,11 @@ namespace Risk_Manager
                 modelSelector.Dock = DockStyle.Right;
                 modelSelector.Margin = new Padding(0, 0, 0, 5);
                 var comboPanel = new Panel { 
-                    Dock = DockStyle.Fill, 
+                    Dock = DockStyle.None,  // Fixed width instead of Fill
+                    Width = 300,  // Match right card width
+                    Height = 30,  // Match row height
                     BackColor = DarkBackground,
-                    Padding = new Padding(2, 0, 0, 0)  // Match right card left margin
+                    Padding = new Padding(6, 0, 0, 0)  // Match right card left margin
                 };
                 comboPanel.Controls.Add(modelSelector);
                 tableLayout.Controls.Add(comboPanel, 1, 0);
@@ -16766,7 +16768,7 @@ namespace Risk_Manager
                 ("Break-Even Trades", modelBreakevens.ToString(), TextWhite)
             });
             leftCard.Dock = DockStyle.Fill;
-            leftCard.Margin = new Padding(0, 0, 2, 0);  // Tiny gap on right
+            leftCard.Margin = new Padding(0, 0, 6, 0);  // 6px gap on right
             tableLayout.Controls.Add(leftCard, 0, modelSelector != null ? 1 : 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
@@ -16780,7 +16782,7 @@ namespace Risk_Manager
                 ("Models Used", totalModelsCount.ToString(), TextWhite)
             });
             rightCard.Dock = DockStyle.Fill;
-            rightCard.Margin = new Padding(2, 0, 0, 0);  // Tiny gap on left
+            rightCard.Margin = new Padding(6, 0, 0, 0);  // 6px gap on left
             tableLayout.Controls.Add(rightCard, 1, modelSelector != null ? 1 : 0);
 
             container.Controls.Add(tableLayout);
@@ -16994,9 +16996,11 @@ namespace Risk_Manager
                 daySelector.Dock = DockStyle.Right;
                 daySelector.Margin = new Padding(0, 0, 0, 5);
                 var comboPanel = new Panel { 
-                    Dock = DockStyle.Fill, 
+                    Dock = DockStyle.None,  // Fixed width instead of Fill
+                    Width = 300,  // Match right card width
+                    Height = 30,  // Match row height
                     BackColor = DarkBackground,
-                    Padding = new Padding(2, 0, 0, 0)  // Match right card left margin
+                    Padding = new Padding(6, 0, 0, 0)  // Match right card left margin
                 };
                 comboPanel.Controls.Add(daySelector);
                 tableLayout.Controls.Add(comboPanel, 1, 0);
@@ -17017,7 +17021,7 @@ namespace Risk_Manager
                 ("Break-Even Trades", dayBreakevens.ToString(), TextWhite)
             });
             leftCard.Dock = DockStyle.Fill;
-            leftCard.Margin = new Padding(0, 0, 2, 0);  // Tiny gap on right
+            leftCard.Margin = new Padding(0, 0, 6, 0);  // 6px gap on right
             tableLayout.Controls.Add(leftCard, 0, daySelector != null ? 1 : 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
@@ -17030,7 +17034,7 @@ namespace Risk_Manager
                 ("Break-Even Trades", dayBreakevens.ToString(), TextWhite)
             });
             rightCard.Dock = DockStyle.Fill;
-            rightCard.Margin = new Padding(2, 0, 0, 0);  // Tiny gap on left
+            rightCard.Margin = new Padding(6, 0, 0, 0);  // 6px gap on left
             tableLayout.Controls.Add(rightCard, 1, daySelector != null ? 1 : 0);
 
             container.Controls.Add(tableLayout);
@@ -17275,9 +17279,11 @@ namespace Risk_Manager
                 sessionSelector.Dock = DockStyle.Right;
                 sessionSelector.Margin = new Padding(0, 0, 0, 5);
                 var comboPanel = new Panel { 
-                    Dock = DockStyle.Fill, 
+                    Dock = DockStyle.None,  // Fixed width instead of Fill
+                    Width = 300,  // Match right card width
+                    Height = 30,  // Match row height
                     BackColor = DarkBackground,
-                    Padding = new Padding(2, 0, 0, 0)  // Match right card left margin
+                    Padding = new Padding(6, 0, 0, 0)  // Match right card left margin
                 };
                 comboPanel.Controls.Add(sessionSelector);
                 tableLayout.Controls.Add(comboPanel, 1, 0);
@@ -17298,7 +17304,7 @@ namespace Risk_Manager
                 ("Break-Even Trades", sessionBreakevens.ToString(), TextWhite)
             });
             leftCard.Dock = DockStyle.Fill;
-            leftCard.Margin = new Padding(0, 0, 2, 0);  // Tiny gap on right
+            leftCard.Margin = new Padding(0, 0, 6, 0);  // 6px gap on right
             tableLayout.Controls.Add(leftCard, 0, sessionSelector != null ? 1 : 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
@@ -17311,7 +17317,7 @@ namespace Risk_Manager
                 ("Break-Even Trades", sessionBreakevens.ToString(), TextWhite)
             });
             rightCard.Dock = DockStyle.Fill;
-            rightCard.Margin = new Padding(2, 0, 0, 0);  // Tiny gap on left
+            rightCard.Margin = new Padding(6, 0, 0, 0);  // 6px gap on left
             tableLayout.Controls.Add(rightCard, 1, sessionSelector != null ? 1 : 0);
 
             container.Controls.Add(tableLayout);
