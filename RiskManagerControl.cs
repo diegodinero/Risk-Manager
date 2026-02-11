@@ -13302,7 +13302,7 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 150,  // Header (40px) + Filter controls (100px) + padding
+                Height = 180,  // Increased: Header (40px) + Filter controls with wrapping (120px) + padding
                 BackColor = CardBackground,  // Normal card background
                 Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10)
@@ -13320,7 +13320,7 @@ namespace Risk_Manager
                 Padding = new Padding(5),
                 BackColor = CardBackground,  // Normal card background
                 Visible = true,
-                AutoScroll = false,
+                AutoScroll = true,  // Enable scrolling if needed
                 AutoSize = false
             };
             
