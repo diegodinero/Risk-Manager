@@ -16237,10 +16237,10 @@ namespace Risk_Manager
             {
                 Text = label,
                 Dock = DockStyle.Top,
-                Height = 25,
+                Height = 28,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Regular),
-                TextAlign = ContentAlignment.BottomLeft,  // Align to bottom of its space
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,  // Center vertically for better readability
                 AutoSize = false
             };
             rightPanel.Controls.Add(titleLabel);
@@ -16251,8 +16251,8 @@ namespace Risk_Manager
                 Text = value,
                 Dock = DockStyle.Fill,
                 ForeColor = valueColor,
-                Font = new Font("Segoe UI", 13, FontStyle.Bold),
-                TextAlign = ContentAlignment.TopLeft,  // Align to top of its space
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,  // Center vertically for better readability
                 AutoSize = false
             };
             rightPanel.Controls.Add(valueControl);
@@ -16534,13 +16534,13 @@ namespace Risk_Manager
             var modelSelector = new ComboBox
             {
                 Dock = DockStyle.Right,
-                Width = 120,  // Reduced from 150 to prevent extending card width
+                Width = 100,  // Further reduced to align with card boundaries
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 ForeColor = TextWhite,
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(10, 10, 0, 5)  // No right margin - align with cards
+                Margin = new Padding(10, 10, 20, 5)  // Add right margin to account for section padding
             };
             
             // Get models from database - use same logic as TradeLog
@@ -16776,13 +16776,13 @@ namespace Risk_Manager
             var daySelector = new ComboBox
             {
                 Dock = DockStyle.Right,
-                Width = 110,  // Reduced from 130 to prevent extending card width
+                Width = 95,  // Further reduced to align with card boundaries
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 ForeColor = TextWhite,
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(10, 10, 0, 5)  // No right margin - align with cards
+                Margin = new Padding(10, 10, 20, 5)  // Add right margin to account for section padding
             };
             daySelector.Items.Add("All Days");
             daySelector.Items.Add("Monday");
@@ -16997,13 +16997,13 @@ namespace Risk_Manager
             var sessionSelector = new ComboBox
             {
                 Dock = DockStyle.Right,
-                Width = 110,  // Reduced from 130 to prevent extending card width
+                Width = 95,  // Further reduced to align with card boundaries
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 ForeColor = TextWhite,
                 BackColor = CardBackground,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
-                Margin = new Padding(10, 10, 0, 5)  // No right margin - align with cards
+                Margin = new Padding(10, 10, 20, 5)  // Add right margin to account for section padding
             };
             sessionSelector.Items.Add("All Sessions");
             
