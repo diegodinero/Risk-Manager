@@ -16332,10 +16332,13 @@ namespace Risk_Manager
                 RowCount = 1,
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0),
-                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
-            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            // Use absolute pixel width to ensure cards touch
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
             tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             // Add collapse functionality
@@ -16606,7 +16609,7 @@ namespace Risk_Manager
             // Store reference for event handler
             var statsContainer = new Panel { 
                 Dock = DockStyle.Top,
-                Height = 370,  // Increased to accommodate ComboBox above cards
+                Height = 335,  // Height for model section with ComboBox in layout
                 BackColor = DarkBackground 
             };
 
@@ -16655,15 +16658,9 @@ namespace Risk_Manager
                 // Clear and rebuild stats display
                 statsContainer.Controls.Clear();
                 
-                // Add ComboBox positioned above right card
-                statsContainer.Controls.Add(modelSelector);
-                modelSelector.Location = new Point(statsContainer.Width - modelSelector.Width - 20, 0);
-                
-                var statsPanel = CreateModelStatsDisplay(filteredTrades, models.Count(m => !string.IsNullOrEmpty(m.Name)));
+                var statsPanel = CreateModelStatsDisplay(filteredTrades, models.Count(m => !string.IsNullOrEmpty(m.Name)), modelSelector);
                 statsPanel.Dock = DockStyle.Fill;
-                statsPanel.Padding = new Padding(0, 30, 0, 0);  // Top padding for ComboBox
                 statsContainer.Controls.Add(statsPanel);
-                statsPanel.SendToBack();  // Ensure stats panel is behind ComboBox
             };
             
             var modelCount = models.Count(m => !string.IsNullOrEmpty(m.Name));
@@ -16684,15 +16681,9 @@ namespace Risk_Manager
             // Initial display with all models
             var modelTrades = trades.Where(t => !string.IsNullOrWhiteSpace(t.Model)).ToList();
             
-            // Add ComboBox positioned above right card
-            statsContainer.Controls.Add(modelSelector);
-            modelSelector.Location = new Point(statsContainer.Width - modelSelector.Width - 20, 0);
-            
-            var initialStatsPanel = CreateModelStatsDisplay(modelTrades, modelCount);
+            var initialStatsPanel = CreateModelStatsDisplay(modelTrades, modelCount, modelSelector);
             initialStatsPanel.Dock = DockStyle.Fill;
-            initialStatsPanel.Padding = new Padding(0, 30, 0, 0);  // Top padding for ComboBox
             statsContainer.Controls.Add(initialStatsPanel);
-            initialStatsPanel.SendToBack();  // Ensure stats panel is behind ComboBox
             
             sectionPanel.Controls.Add(statsContainer);
             sectionPanel.Controls.Add(headerPanel);  // Add header last so it appears at top
@@ -16702,7 +16693,7 @@ namespace Risk_Manager
         /// <summary>
         /// Creates the stats display for model performance
         /// </summary>
-        private Panel CreateModelStatsDisplay(List<JournalTrade> modelTrades, int totalModelsCount)
+        private Panel CreateModelStatsDisplay(List<JournalTrade> modelTrades, int totalModelsCount, ComboBox modelSelector = null)
         {
             var modelWins = modelTrades.Count(t => t.Outcome?.ToLower() == "win");
             var modelLosses = modelTrades.Count(t => t.Outcome?.ToLower() == "loss");
@@ -16717,19 +16708,52 @@ namespace Risk_Manager
             var modelPlanAdherence = modelTrades.Count > 0 ? (double)modelFollowedPlan / modelTrades.Count * 100 : 0;
             var modelProfitFactor = modelGrossLosses > 0 ? (double)(modelGrossWins / modelGrossLosses) : 0;
 
-            // Two-column layout using TableLayoutPanel
-            var tableLayout = new TableLayoutPanel
+            // Container panel for cards and ComboBox
+            var container = new Panel
             {
                 Dock = DockStyle.Fill,
+                BackColor = DarkBackground
+            };
+
+            // Two-column, two-row layout using TableLayoutPanel
+            var tableLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
                 ColumnCount = 2,
-                RowCount = 1,
+                RowCount = modelSelector != null ? 2 : 1,  // 2 rows if ComboBox exists
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0),
-                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
-            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            
+            // Use absolute pixel width to ensure cards touch
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
+            
+            if (modelSelector != null)
+            {
+                // Row 0: ComboBox above right card (30px height)
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
+                // Row 1: Cards (auto height)
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                
+                // Add empty panel in top-left
+                var emptyPanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+                tableLayout.Controls.Add(emptyPanel, 0, 0);
+                
+                // Add ComboBox in top-right
+                modelSelector.Dock = DockStyle.Right;
+                modelSelector.Margin = new Padding(0, 0, 0, 5);
+                var comboPanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+                comboPanel.Controls.Add(modelSelector);
+                tableLayout.Controls.Add(comboPanel, 1, 0);
+            }
+            else
+            {
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            }
 
             var leftCard = CreateDetailCard("Trading Model Stats", new[]
             {
@@ -16743,7 +16767,7 @@ namespace Risk_Manager
             });
             leftCard.Dock = DockStyle.Fill;
             leftCard.Margin = new Padding(0, 0, 0, 0);  // No spacing - cards touch
-            tableLayout.Controls.Add(leftCard, 0, 0);
+            tableLayout.Controls.Add(leftCard, 0, modelSelector != null ? 1 : 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
             {
@@ -16757,9 +16781,10 @@ namespace Risk_Manager
             });
             rightCard.Dock = DockStyle.Fill;
             rightCard.Margin = new Padding(0, 0, 0, 0);  // No spacing - cards touch
-            tableLayout.Controls.Add(rightCard, 1, 0);
+            tableLayout.Controls.Add(rightCard, 1, modelSelector != null ? 1 : 0);
 
-            return tableLayout;
+            container.Controls.Add(tableLayout);
+            return container;
         }
 
         /// <summary>
@@ -16848,7 +16873,7 @@ namespace Risk_Manager
             // Store reference for event handler
             var statsContainer = new Panel { 
                 Dock = DockStyle.Top,
-                Height = 370,  // Increased to accommodate ComboBox above cards
+                Height = 335,  // Height for day section with ComboBox in layout
                 BackColor = DarkBackground 
             };
 
@@ -16899,27 +16924,15 @@ namespace Risk_Manager
                 // Clear and rebuild stats display
                 statsContainer.Controls.Clear();
                 
-                // Add ComboBox positioned above right card
-                statsContainer.Controls.Add(daySelector);
-                daySelector.Location = new Point(statsContainer.Width - daySelector.Width - 20, 0);
-                
-                var statsPanel = CreateDayStatsDisplay(filteredTrades);
+                var statsPanel = CreateDayStatsDisplay(filteredTrades, daySelector);
                 statsPanel.Dock = DockStyle.Fill;
-                statsPanel.Padding = new Padding(0, 30, 0, 0);  // Top padding for ComboBox
                 statsContainer.Controls.Add(statsPanel);
-                statsPanel.SendToBack();  // Ensure stats panel is behind ComboBox
             };
 
             // Initial display with all days
-            // Add ComboBox positioned above right card
-            statsContainer.Controls.Add(daySelector);
-            daySelector.Location = new Point(statsContainer.Width - daySelector.Width - 20, 0);
-            
-            var initialStatsPanel = CreateDayStatsDisplay(trades);
+            var initialStatsPanel = CreateDayStatsDisplay(trades, daySelector);
             initialStatsPanel.Dock = DockStyle.Fill;
-            initialStatsPanel.Padding = new Padding(0, 30, 0, 0);  // Top padding for ComboBox
             statsContainer.Controls.Add(initialStatsPanel);
-            initialStatsPanel.SendToBack();  // Ensure stats panel is behind ComboBox
 
             sectionPanel.Controls.Add(statsContainer);
             sectionPanel.Controls.Add(headerPanel);  // Add header last so it appears at top
@@ -16929,7 +16942,7 @@ namespace Risk_Manager
         /// <summary>
         /// Creates the stats display for day performance
         /// </summary>
-        private Panel CreateDayStatsDisplay(List<JournalTrade> dayTrades)
+        private Panel CreateDayStatsDisplay(List<JournalTrade> dayTrades, ComboBox daySelector = null)
         {
             var dayWins = dayTrades.Count(t => t.Outcome?.ToLower() == "win");
             var dayLosses = dayTrades.Count(t => t.Outcome?.ToLower() == "loss");
@@ -16944,19 +16957,52 @@ namespace Risk_Manager
             var dayPlanAdherence = dayTrades.Count > 0 ? (double)dayFollowedPlan / dayTrades.Count * 100 : 0;
             var dayProfitFactor = dayGrossLosses > 0 ? (double)(dayGrossWins / dayGrossLosses) : 0;
 
-            // Two-column layout using TableLayoutPanel
-            var tableLayout = new TableLayoutPanel
+            // Container panel for cards and ComboBox
+            var container = new Panel
             {
                 Dock = DockStyle.Fill,
+                BackColor = DarkBackground
+            };
+
+            // Two-column, two-row layout using TableLayoutPanel
+            var tableLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
                 ColumnCount = 2,
-                RowCount = 1,
+                RowCount = daySelector != null ? 2 : 1,  // 2 rows if ComboBox exists
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0),
-                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
-            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            
+            // Use absolute pixel width to ensure cards touch
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
+            
+            if (daySelector != null)
+            {
+                // Row 0: ComboBox above right card (30px height)
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
+                // Row 1: Cards (auto height)
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                
+                // Add empty panel in top-left
+                var emptyPanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+                tableLayout.Controls.Add(emptyPanel, 0, 0);
+                
+                // Add ComboBox in top-right
+                daySelector.Dock = DockStyle.Right;
+                daySelector.Margin = new Padding(0, 0, 0, 5);
+                var comboPanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+                comboPanel.Controls.Add(daySelector);
+                tableLayout.Controls.Add(comboPanel, 1, 0);
+            }
+            else
+            {
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            }
 
             var leftCard = CreateDetailCard("Day Stats", new[]
             {
@@ -16970,7 +17016,7 @@ namespace Risk_Manager
             });
             leftCard.Dock = DockStyle.Fill;
             leftCard.Margin = new Padding(0, 0, 0, 0);  // No spacing - cards touch
-            tableLayout.Controls.Add(leftCard, 0, 0);
+            tableLayout.Controls.Add(leftCard, 0, daySelector != null ? 1 : 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
             {
@@ -16983,9 +17029,10 @@ namespace Risk_Manager
             });
             rightCard.Dock = DockStyle.Fill;
             rightCard.Margin = new Padding(0, 0, 0, 0);  // No spacing - cards touch
-            tableLayout.Controls.Add(rightCard, 1, 0);
+            tableLayout.Controls.Add(rightCard, 1, daySelector != null ? 1 : 0);
 
-            return tableLayout;
+            container.Controls.Add(tableLayout);
+            return container;
         }
 
         /// <summary>
@@ -17089,7 +17136,7 @@ namespace Risk_Manager
             // Store reference for event handler
             var statsContainer = new Panel { 
                 Dock = DockStyle.Top,
-                Height = 370,  // Increased to accommodate ComboBox above cards
+                Height = 335,  // Height for session section with ComboBox in layout
                 BackColor = DarkBackground 
             };
 
@@ -17138,13 +17185,8 @@ namespace Risk_Manager
                 // Clear and rebuild stats display
                 statsContainer.Controls.Clear();
                 
-                // Add ComboBox positioned above right card
-                statsContainer.Controls.Add(sessionSelector);
-                sessionSelector.Location = new Point(statsContainer.Width - sessionSelector.Width - 20, 0);
-                
-                var statsPanel = CreateSessionStatsDisplay(filteredTrades);
+                var statsPanel = CreateSessionStatsDisplay(filteredTrades, sessionSelector);
                 statsPanel.Dock = DockStyle.Fill;
-                statsPanel.Padding = new Padding(0, 30, 0, 0);  // Top padding for ComboBox
                 statsContainer.Controls.Add(statsPanel);
                 statsPanel.SendToBack();  // Ensure stats panel is behind ComboBox
             };
@@ -17168,15 +17210,9 @@ namespace Risk_Manager
             }
 
             // Initial display with all sessions
-            // Add ComboBox positioned above right card
-            statsContainer.Controls.Add(sessionSelector);
-            sessionSelector.Location = new Point(statsContainer.Width - sessionSelector.Width - 20, 0);
-            
-            var initialStatsPanel = CreateSessionStatsDisplay(sessionTrades);
+            var initialStatsPanel = CreateSessionStatsDisplay(sessionTrades, sessionSelector);
             initialStatsPanel.Dock = DockStyle.Fill;
-            initialStatsPanel.Padding = new Padding(0, 30, 0, 0);  // Top padding for ComboBox
             statsContainer.Controls.Add(initialStatsPanel);
-            initialStatsPanel.SendToBack();  // Ensure stats panel is behind ComboBox
 
             sectionPanel.Controls.Add(statsContainer);
             sectionPanel.Controls.Add(headerPanel);  // Add header last so it appears at top
@@ -17186,7 +17222,7 @@ namespace Risk_Manager
         /// <summary>
         /// Creates the stats display for session performance
         /// </summary>
-        private Panel CreateSessionStatsDisplay(List<JournalTrade> sessionTrades)
+        private Panel CreateSessionStatsDisplay(List<JournalTrade> sessionTrades, ComboBox sessionSelector = null)
         {
             var sessionWins = sessionTrades.Count(t => t.Outcome?.ToLower() == "win");
             var sessionLosses = sessionTrades.Count(t => t.Outcome?.ToLower() == "loss");
@@ -17201,19 +17237,52 @@ namespace Risk_Manager
             var sessionPlanAdherence = sessionTrades.Count > 0 ? (double)sessionFollowedPlan / sessionTrades.Count * 100 : 0;
             var sessionProfitFactor = sessionGrossLosses > 0 ? (double)(sessionGrossWins / sessionGrossLosses) : 0;
 
-            // Two-column layout using TableLayoutPanel
-            var tableLayout = new TableLayoutPanel
+            // Container panel for cards and ComboBox
+            var container = new Panel
             {
                 Dock = DockStyle.Fill,
+                BackColor = DarkBackground
+            };
+
+            // Two-column, two-row layout using TableLayoutPanel
+            var tableLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
                 ColumnCount = 2,
-                RowCount = 1,
+                RowCount = sessionSelector != null ? 2 : 1,  // 2 rows if ComboBox exists
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 10, 0, 0),
-                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
-            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            
+            // Use absolute pixel width to ensure cards touch
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
+            tableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300F));
+            
+            if (sessionSelector != null)
+            {
+                // Row 0: ComboBox above right card (30px height)
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
+                // Row 1: Cards (auto height)
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+                
+                // Add empty panel in top-left
+                var emptyPanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+                tableLayout.Controls.Add(emptyPanel, 0, 0);
+                
+                // Add ComboBox in top-right
+                sessionSelector.Dock = DockStyle.Right;
+                sessionSelector.Margin = new Padding(0, 0, 0, 5);
+                var comboPanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground };
+                comboPanel.Controls.Add(sessionSelector);
+                tableLayout.Controls.Add(comboPanel, 1, 0);
+            }
+            else
+            {
+                tableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            }
 
             var leftCard = CreateDetailCard("Session Stats", new[]
             {
@@ -17227,7 +17296,7 @@ namespace Risk_Manager
             });
             leftCard.Dock = DockStyle.Fill;
             leftCard.Margin = new Padding(0, 0, 0, 0);  // No spacing - cards touch
-            tableLayout.Controls.Add(leftCard, 0, 0);
+            tableLayout.Controls.Add(leftCard, 0, sessionSelector != null ? 1 : 0);
 
             var rightCard = CreateDetailCard("Overall Performance", new[]
             {
@@ -17240,9 +17309,10 @@ namespace Risk_Manager
             });
             rightCard.Dock = DockStyle.Fill;
             rightCard.Margin = new Padding(0, 0, 0, 0);  // No spacing - cards touch
-            tableLayout.Controls.Add(rightCard, 1, 0);
+            tableLayout.Controls.Add(rightCard, 1, sessionSelector != null ? 1 : 0);
 
-            return tableLayout;
+            container.Controls.Add(tableLayout);
+            return container;
         }
 
         /// <summary>
