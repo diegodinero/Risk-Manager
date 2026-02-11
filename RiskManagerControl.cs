@@ -13360,8 +13360,8 @@ namespace Risk_Manager
             var filterPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
+                FlowDirection = FlowDirection.TopDown,  // FIXED: Changed from LeftToRight to TopDown for narrow panel
+                WrapContents = false,  // FIXED: No wrapping needed for vertical layout
                 Padding = new Padding(5),
                 BackColor = Color.Yellow,  // VISUAL DEBUG: Bright yellow to see filterPanel
                 Visible = true,  // VISUAL DEBUG: Explicitly set visible
