@@ -13369,6 +13369,30 @@ namespace Risk_Manager
                 AutoSize = false  // Keep false to respect Dock.Fill
             };
             
+            // VISUAL DEBUG: Add GIANT test control that's impossible to miss
+            var giantTestPanel = new Panel
+            {
+                Width = 800,
+                Height = 100,
+                BackColor = Color.Lime,
+                Visible = true,
+                Margin = new Padding(5)
+            };
+            var giantTestLabel = new Label
+            {
+                Text = "🟢 GIANT TEST CONTROL 🟢\nIf you see this LIME panel, filterPanel CAN render controls!",
+                AutoSize = false,
+                Size = new Size(790, 90),
+                ForeColor = Color.Black,
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter,
+                BackColor = Color.Lime,
+                Dock = DockStyle.Fill,
+                Visible = true
+            };
+            giantTestPanel.Controls.Add(giantTestLabel);
+            filterPanel.Controls.Add(giantTestPanel);  // Add FIRST so it appears at top
+            
             // VISUAL DEBUG: Add dimension info label with more details
             var debugDimensionsLabel = new Label
             {
@@ -13601,16 +13625,28 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine($"filterCard: Size={filterCard.Size}, Height={filterCard.Height}, Visible={filterCard.Visible}");
             System.Diagnostics.Debug.WriteLine($"filterCard: Dock={filterCard.Dock}, BackColor={filterCard.BackColor}");
             System.Diagnostics.Debug.WriteLine($"filterCard: Location={filterCard.Location}, Bounds={filterCard.Bounds}");
+            System.Diagnostics.Debug.WriteLine($"filterCard: ClientSize={filterCard.ClientSize}, ClientRectangle={filterCard.ClientRectangle}");
             System.Diagnostics.Debug.WriteLine($"filterCard: Parent={filterCard.Parent?.GetType().Name}, ControlCount={filterCard.Controls.Count}");
-            System.Diagnostics.Debug.WriteLine($"filterPanel: Size={filterPanel.Size}, Visible={filterPanel.Visible}, ControlCount={filterPanel.Controls.Count}");
-            System.Diagnostics.Debug.WriteLine($"filterPanel: AutoScroll={filterPanel.AutoScroll}, Bounds={filterPanel.Bounds}");
+            
+            System.Diagnostics.Debug.WriteLine("=== FILTER CARD CHILDREN ===");
+            for (int i = 0; i < filterCard.Controls.Count; i++)
+            {
+                var child = filterCard.Controls[i];
+                System.Diagnostics.Debug.WriteLine($"  [{i}] {child.GetType().Name}: Size={child.Size}, Bounds={child.Bounds}, Dock={child.Dock}, Visible={child.Visible}");
+            }
+            
+            System.Diagnostics.Debug.WriteLine("=== FILTER PANEL DEBUG ===");
+            System.Diagnostics.Debug.WriteLine($"filterPanel: Size={filterPanel.Size}, ClientSize={filterPanel.ClientSize}, Visible={filterPanel.Visible}, ControlCount={filterPanel.Controls.Count}");
+            System.Diagnostics.Debug.WriteLine($"filterPanel: Bounds={filterPanel.Bounds}, ClientRectangle={filterPanel.ClientRectangle}");
+            System.Diagnostics.Debug.WriteLine($"filterPanel: AutoScroll={filterPanel.AutoScroll}, AutoSize={filterPanel.AutoSize}");
+            System.Diagnostics.Debug.WriteLine($"filterPanel: Dock={filterPanel.Dock}, Location={filterPanel.Location}");
             
             // Log each control in filterPanel
             System.Diagnostics.Debug.WriteLine("=== FILTER PANEL CONTROLS ===");
             for (int i = 0; i < filterPanel.Controls.Count; i++)
             {
                 var ctrl = filterPanel.Controls[i];
-                System.Diagnostics.Debug.WriteLine($"  [{i}] {ctrl.GetType().Name}: Text='{(ctrl is Label l ? l.Text : ctrl is TextBox t ? $"TextBox({t.Name})" : ctrl is ComboBox c ? $"ComboBox({c.Name})" : ctrl is DateTimePicker d ? $"DatePicker({d.Name})" : ctrl is Button b ? b.Text : "?")}', Size={ctrl.Size}, Visible={ctrl.Visible}, Location={ctrl.Location}");
+                System.Diagnostics.Debug.WriteLine($"  [{i}] {ctrl.GetType().Name}: Text='{(ctrl is Label l ? l.Text : ctrl is TextBox t ? $"TextBox({t.Name})" : ctrl is ComboBox c ? $"ComboBox({c.Name})" : ctrl is DateTimePicker d ? $"DatePicker({d.Name})" : ctrl is Button b ? b.Text : ctrl is Panel p ? "Panel(TEST)" : "?")}', Size={ctrl.Size}, Visible={ctrl.Visible}, Location={ctrl.Location}, Bounds={ctrl.Bounds}");
             }
             
             // DEBUG: Log final page panel details
