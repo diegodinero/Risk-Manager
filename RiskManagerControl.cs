@@ -16208,7 +16208,7 @@ namespace Risk_Manager
             var emojiPanel = new Panel
             {
                 Dock = DockStyle.Left,
-                Width = 45,  // Width for emoji column
+                Width = 30,  // Width for emoji column
                 BackColor = Color.Transparent
             };
 
@@ -16217,7 +16217,7 @@ namespace Risk_Manager
                 Text = emoji,
                 Dock = DockStyle.Fill,
                 ForeColor = emojiColor,
-                Font = new Font("Segoe UI Emoji", 18, FontStyle.Regular),  // Larger emoji
+                Font = new Font("Segoe UI Emoji", 17, FontStyle.Regular),  // Larger emoji
                 TextAlign = ContentAlignment.MiddleCenter,  // Center the emoji
                 AutoSize = false
             };
@@ -16239,8 +16239,8 @@ namespace Risk_Manager
                 Dock = DockStyle.Top,
                 Height = 30,
                 ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 11f, FontStyle.Regular),
-                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 10f, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleCenter,
                 AutoSize = false
             };
             rightPanel.Controls.Add(titleLabel);
@@ -16249,10 +16249,10 @@ namespace Risk_Manager
             var valueControl = new Label
             {
                 Text = value,
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Bottom,
                 ForeColor = valueColor,
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 13, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleCenter,
                 AutoSize = false
             };
             rightPanel.Controls.Add(valueControl);
