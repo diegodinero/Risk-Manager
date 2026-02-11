@@ -16077,18 +16077,7 @@ namespace Risk_Manager
             };
 
             // Title
-            var titleLabel = new Label
-            {
-                Text = title,
-                Dock = DockStyle.Top,
-                Height = 35,  // Increased from 30 to 35 for better spacing
-                ForeColor = TextWhite,
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-            sectionPanel.Controls.Add(titleLabel);
-
-            // Cards container
+            // Cards container - add FIRST so it appears at BOTTOM
             var cardsPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,  // Changed from Fill to Top to prevent overlapping title
@@ -16107,6 +16096,18 @@ namespace Risk_Manager
             }
 
             sectionPanel.Controls.Add(cardsPanel);
+
+            // Title - add SECOND so it appears at TOP
+            var titleLabel = new Label
+            {
+                Text = title,
+                Dock = DockStyle.Top,
+                Height = 35,  // Increased from 30 to 35 for better spacing
+                ForeColor = TextWhite,
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            sectionPanel.Controls.Add(titleLabel);
             return sectionPanel;
         }
 
