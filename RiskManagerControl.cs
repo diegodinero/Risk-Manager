@@ -14447,15 +14447,15 @@ namespace Risk_Manager
             };
             legendPanel.Controls.Add(titleLabel);
             
-            // Legend items flow panel - legend width should match 7 day columns (not weekly stats)
-            legendPanel.Width = (7 * 150); // 1050px - matches the 7 calendar day columns (excludes weekly stats column)
+            // Legend items flow panel - legend width should match full calendar (7 day columns + weekly stats)
+            legendPanel.Width = (7 * 150) + 200; // 1250px - matches full calendar width including weekly stats column
             
             var itemsPanel = new FlowLayoutPanel
             {
                 AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                MaximumSize = new Size((7 * 150) - 40, 0)  // Constrain to calendar width with padding
+                MaximumSize = new Size((7 * 150) + 200 - 40, 0)  // Constrain to full calendar width with padding
             };
             
             // Center items horizontally
