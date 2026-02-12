@@ -18392,7 +18392,7 @@ namespace Risk_Manager
             if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
 
             var lockStatus = settingsService.GetLockStatusString(accountNumber);
-            return lockStatus == "Unlocked" ? "🔓 Unlocked" : "🔒 " + lockStatus;
+            return lockStatus;
         }
 
         private string GetSettingsLockStatus()
@@ -18404,7 +18404,7 @@ namespace Risk_Manager
             if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
 
             var isLocked = settingsService.AreSettingsLocked(accountNumber);
-            return isLocked ? "🔒 Locked" : "🔓 Unlocked";
+            return isLocked ? "Locked" : "Unlocked";
         }
 
         private string GetAutomatedSettingsLockInfo()
@@ -20139,6 +20139,9 @@ namespace Risk_Manager
                         System.Diagnostics.Debug.WriteLine("ShowPage: WARNING - accountNumber is null or empty");
                     }
                 }
+                
+                // Update account labels for all tabs that have LockAccountDisplay labels
+                UpdateAllLockAccountDisplays();
             }
             else
             {
