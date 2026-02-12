@@ -12970,7 +12970,7 @@ namespace Risk_Manager
             {
                 if (kvp.Key == section)
                 {
-                    kvp.Value.BackColor = Color.FromArgb(50, 50, 50);
+                    kvp.Value.BackColor = SelectedColor; // Use theme's selected color
                     kvp.Value.Font = new Font("Segoe UI Emoji", 10, FontStyle.Bold);  // Reverted back to original
                 }
                 else
@@ -13679,28 +13679,8 @@ namespace Risk_Manager
             nextButton.BringToFront();
             
             // Toggle buttons for Plan/P&L mode - positioned on far right
+            // SWAPPED ORDER: Plan button first, then P&L button
             int toggleStartX = calendarWidth - 170; // Position at right side (170px = 2 buttons + gap)
-            var plToggle = new Button
-            {
-                Name = "PLToggle",
-                Text = "P&&L",
-                Size = new Size(80, 35),
-                BackColor = showPlanMode ? CardBackground : blueHighlight, // Blue when selected
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                Location = new Point(toggleStartX, 10),
-                Tag = "PLToggle"
-            };
-            plToggle.FlatAppearance.BorderSize = 0;
-            plToggle.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, plToggle.Width, plToggle.Height, BORDER_RADIUS, BORDER_RADIUS));
-            plToggle.Click += (s, e) =>
-            {
-                showPlanMode = false;
-                RefreshCalendarPage();
-            };
-            headerPanel.Controls.Add(plToggle);
-            
             var planToggle = new Button
             {
                 Name = "PlanToggle",
@@ -13710,7 +13690,7 @@ namespace Risk_Manager
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Location = new Point(toggleStartX + 85, 10),
+                Location = new Point(toggleStartX, 10),
                 Tag = "PlanToggle"
             };
             planToggle.FlatAppearance.BorderSize = 0;
@@ -13721,6 +13701,27 @@ namespace Risk_Manager
                 RefreshCalendarPage();
             };
             headerPanel.Controls.Add(planToggle);
+            
+            var plToggle = new Button
+            {
+                Name = "PLToggle",
+                Text = "P&&L",
+                Size = new Size(80, 35),
+                BackColor = showPlanMode ? CardBackground : blueHighlight, // Blue when selected
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Location = new Point(toggleStartX + 85, 10),
+                Tag = "PLToggle"
+            };
+            plToggle.FlatAppearance.BorderSize = 0;
+            plToggle.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, plToggle.Width, plToggle.Height, BORDER_RADIUS, BORDER_RADIUS));
+            plToggle.Click += (s, e) =>
+            {
+                showPlanMode = false;
+                RefreshCalendarPage();
+            };
+            headerPanel.Controls.Add(plToggle);
             
             // Inline monthly stats - positioned between navigation and toggles
             var inlineStatsPanel = CreateInlineMonthlyStats();
@@ -14107,8 +14108,7 @@ namespace Risk_Manager
                     Location = new Point(i * cellWidth, 0),
                     BackColor = Color.FromArgb(50, 50, 50)
                 };
-                // Add rounded corners to header
-                headerLabel.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, cellWidth, headerHeight, BORDER_RADIUS, BORDER_RADIUS));
+                // No rounded corners for day headers - removed circular borders
                 gridPanel.Controls.Add(headerLabel);
             }
             
@@ -14123,8 +14123,7 @@ namespace Risk_Manager
                 Location = new Point(7 * cellWidth, 0),
                 BackColor = Color.FromArgb(50, 50, 50)
             };
-            // Add rounded corners to week stats header
-            weekStatsHeader.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, weeklyStatsWidth, headerHeight, BORDER_RADIUS, BORDER_RADIUS));
+            // No rounded corners for week stats header - removed circular borders
             gridPanel.Controls.Add(weekStatsHeader);
             
             // Calculate calendar cells and track weekly data
@@ -14313,17 +14312,28 @@ namespace Risk_Manager
                 };
                 flowPanel.Controls.Add(planRatioLabel);
                 
-                // Plan percentage (not bold)
-                var planLabel = new Label
+                // Plan percentage (number and % bold, word "plan" not bold) - split into two labels
+                var planPctLabel = new Label
                 {
-                    Text = $"{planPct:0}% plan",
+                    Text = $"{planPct:0}%",
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = textColor,
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
-                    Margin = new Padding(0, 3, 0, 3)
+                    Margin = new Padding(0, 3, 0, 0)
                 };
-                flowPanel.Controls.Add(planLabel);
+                flowPanel.Controls.Add(planPctLabel);
+                
+                var planWordLabel = new Label
+                {
+                    Text = "plan",
+                    Font = new Font("Segoe UI", 9, FontStyle.Regular), // Not bold
+                    ForeColor = textColor,
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 0, 0, 3)
+                };
+                flowPanel.Controls.Add(planWordLabel);
                 
                 // Win/Loss ratio
                 var wlLabel = new Label
@@ -14661,6 +14671,18 @@ namespace Risk_Manager
             };
             cellPanel.Controls.Add(dayLabel);
             
+            // Trade count label - always show for consistency (0 for empty cells)
+            var countLabel = new Label
+            {
+                Text = tradeCount.ToString(),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = textColor, // Use same color as day number for consistency
+                BackColor = Color.Transparent,
+                AutoSize = true,
+                Location = new Point(TRADE_COUNT_LABEL_X, TRADE_COUNT_LABEL_Y)
+            };
+            cellPanel.Controls.Add(countLabel);
+            
             // Add color dot indicators for days with no trades but may have notes/plan adherence
             if (tradeCount == 0)
             {
@@ -14706,30 +14728,39 @@ namespace Risk_Manager
                 }
                 else
                 {
-                    // Show net P/L without dollar sign
+                    // Show net P/L without dollar sign - centered and color-coded
                     decimal netPL = dayTrades.Sum(t => t.NetPL);
+                    
+                    // Determine color based on P&L value
+                    Color plColor;
+                    if (netPL > BREAKEVEN_THRESHOLD)
+                        plColor = Color.FromArgb(0, 100, 0); // Dark green for profit
+                    else if (netPL < -BREAKEVEN_THRESHOLD)
+                        plColor = Color.FromArgb(139, 0, 0); // Dark red for loss
+                    else
+                        plColor = Color.FromArgb(139, 69, 19); // Brown/dark orange for breakeven
+                    
                     var plLabel = new Label
                     {
                         Text = netPL.ToString(PL_FORMAT_NO_DOLLAR),
                         Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                        ForeColor = Color.Black,
+                        ForeColor = plColor, // Color-coded based on P&L value
                         AutoSize = true,
-                        Location = new Point(5, 35)
+                        TextAlign = ContentAlignment.MiddleCenter
                     };
                     cellPanel.Controls.Add(plLabel);
+                    
+                    // Center the label horizontally after its size is calculated
+                    plLabel.Layout += (s, e) =>
+                    {
+                        if (plLabel.Width > 0)
+                        {
+                            plLabel.Location = new Point((150 - plLabel.Width) / 2, 35);
+                        }
+                    };
+                    // Set initial position centered (estimate)
+                    plLabel.Location = new Point((150 - 50) / 2, 35);
                 }
-                
-                // Trade count (plain text, no background block)
-                var countLabel = new Label
-                {
-                    Text = tradeCount.ToString(),
-                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = Color.Black,
-                    BackColor = Color.Transparent,
-                    AutoSize = true,
-                    Location = new Point(TRADE_COUNT_LABEL_X, TRADE_COUNT_LABEL_Y)
-                };
-                cellPanel.Controls.Add(countLabel);
                 
                 // Click handler to navigate to Trade Log filtered by this date
                 cellPanel.Click += (s, e) =>
