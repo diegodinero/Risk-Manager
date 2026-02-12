@@ -841,11 +841,14 @@ namespace Risk_Manager
         {
             if (string.IsNullOrEmpty(valueText))
                 return false;
-            return valueText.Contains(UNLOCK_EMOJI) || valueText.Contains(LOCK_EMOJI);
+            // Check for emoji-based status (legacy) or text-based status (new)
+            return valueText.Contains(UNLOCK_EMOJI) || valueText.Contains(LOCK_EMOJI) ||
+                   valueText.Contains("Locked") || valueText.Contains("Unlocked");
         }
 
         // Helper method to extract lock status text from emoji-prefixed strings
         // e.g., "🔓 Unlocked" -> "Unlocked", "🔒 Locked (2h 30m)" -> "Locked (2h 30m)"
+        // Also handles non-emoji formats: "Unlocked" -> "Unlocked", "Locked" -> "Locked"
         private string ExtractLockStatusText(string valueText)
         {
             if (string.IsNullOrEmpty(valueText))
@@ -854,11 +857,16 @@ namespace Risk_Manager
             var lockStatusText = valueText;
             if (IsLockStatusValue(valueText))
             {
-                var spaceIndex = valueText.IndexOf(' ');
-                if (spaceIndex >= 0 && spaceIndex + 1 < valueText.Length)
+                // Only extract text after space if it contains an emoji
+                if (valueText.Contains(UNLOCK_EMOJI) || valueText.Contains(LOCK_EMOJI))
                 {
-                    lockStatusText = valueText.Substring(spaceIndex + 1).Trim();
+                    var spaceIndex = valueText.IndexOf(' ');
+                    if (spaceIndex >= 0 && spaceIndex + 1 < valueText.Length)
+                    {
+                        lockStatusText = valueText.Substring(spaceIndex + 1).Trim();
+                    }
                 }
+                // If no emoji, return the text as-is
             }
             return lockStatusText;
         }
@@ -1520,6 +1528,9 @@ namespace Risk_Manager
                     selectedAccount = account;
                     selectedAccountIndex = 0; // Ensure index is set                  
                     LoadAccountSettings();
+                    
+                    // Update account labels in all tabs since AccountSelectorOnSelectedIndexChanged won't fire
+                    UpdateAllLockAccountDisplays();
                 }
             }
         }
@@ -6136,7 +6147,7 @@ namespace Risk_Manager
             // Status label to show lock state with color and remaining time
             var lblSettingsStatus = new Label
             {
-                Text = "Settings Unlocked",
+                Text = $"{UNLOCK_EMOJI}  Settings Unlocked",
                 Left = 0,
                 Top = 0,
                 Width = 400,
@@ -6633,7 +6644,7 @@ namespace Risk_Manager
             // Status label to show lock state with color and remaining time
             var lblManualLockStatus = new Label
             {
-                Text = "Unlocked",
+                Text = $"{UNLOCK_EMOJI}  Unlocked",
                 Left = 0,
                 Top = 0,
                 Width = 400,
@@ -10659,12 +10670,12 @@ namespace Risk_Manager
                 {
                     // Get remaining time and display it
                     var statusString = settingsService.GetSettingsLockStatusString(accountNumber);
-                    lblSettingsStatus.Text = $"Settings {statusString}";
+                    lblSettingsStatus.Text = $"{LOCK_EMOJI}  Settings {statusString}";
                     lblSettingsStatus.ForeColor = Color.Red;
                 }
                 else
                 {
-                    lblSettingsStatus.Text = "Settings Unlocked";
+                    lblSettingsStatus.Text = $"{UNLOCK_EMOJI}  Settings Unlocked";
                     lblSettingsStatus.ForeColor = AccentGreen;
                 }
 
@@ -10732,12 +10743,12 @@ namespace Risk_Manager
                 {
                     // Get remaining time and display it using the same format as Lock Settings
                     var statusString = settingsService.GetLockStatusString(accountNumber);
-                    lblManualLockStatus.Text = statusString;
+                    lblManualLockStatus.Text = $"{LOCK_EMOJI}  {statusString}";
                     lblManualLockStatus.ForeColor = Color.Red;
                 }
                 else
                 {
-                    lblManualLockStatus.Text = "Unlocked";
+                    lblManualLockStatus.Text = $"{UNLOCK_EMOJI}  Unlocked";
                     lblManualLockStatus.ForeColor = AccentGreen;
                 }
 
@@ -18392,7 +18403,7 @@ namespace Risk_Manager
             if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
 
             var lockStatus = settingsService.GetLockStatusString(accountNumber);
-            return lockStatus == "Unlocked" ? "🔓 Unlocked" : "🔒 " + lockStatus;
+            return lockStatus == "Unlocked" ? UNLOCK_EMOJI + " " + lockStatus : LOCK_EMOJI + " " + lockStatus;
         }
 
         private string GetSettingsLockStatus()
@@ -18404,7 +18415,7 @@ namespace Risk_Manager
             if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
 
             var isLocked = settingsService.AreSettingsLocked(accountNumber);
-            return isLocked ? "🔒 Locked" : "🔓 Unlocked";
+            return isLocked ? LOCK_EMOJI + " Locked" : UNLOCK_EMOJI + " Unlocked";
         }
 
         private string GetAutomatedSettingsLockInfo()
@@ -20139,6 +20150,12 @@ namespace Risk_Manager
                         System.Diagnostics.Debug.WriteLine("ShowPage: WARNING - accountNumber is null or empty");
                     }
                 }
+                
+                contentPanel.ResumeLayout();
+                
+                // Update account labels for the tab that was just shown
+                // Call after ResumeLayout to ensure controls are properly initialized
+                UpdateLockAccountDisplaysRecursive(ctrl);
             }
             else
             {
@@ -20153,9 +20170,8 @@ namespace Risk_Manager
                     BackColor = DarkBackground
                 };
                 contentPanel.Controls.Add(lbl);
+                contentPanel.ResumeLayout();
             }
-
-            contentPanel.ResumeLayout();
         }
 
         // Update Dispose to free scaled images (replace existing Dispose(bool) body)
