@@ -6147,7 +6147,7 @@ namespace Risk_Manager
             // Status label to show lock state with color and remaining time
             var lblSettingsStatus = new Label
             {
-                Text = "Settings Unlocked",
+                Text = $"{UNLOCK_EMOJI}  Settings Unlocked",
                 Left = 0,
                 Top = 0,
                 Width = 400,
@@ -6644,7 +6644,7 @@ namespace Risk_Manager
             // Status label to show lock state with color and remaining time
             var lblManualLockStatus = new Label
             {
-                Text = "Unlocked",
+                Text = $"{UNLOCK_EMOJI}  Unlocked",
                 Left = 0,
                 Top = 0,
                 Width = 400,
@@ -10670,12 +10670,12 @@ namespace Risk_Manager
                 {
                     // Get remaining time and display it
                     var statusString = settingsService.GetSettingsLockStatusString(accountNumber);
-                    lblSettingsStatus.Text = $"Settings {statusString}";
+                    lblSettingsStatus.Text = $"{LOCK_EMOJI}  Settings {statusString}";
                     lblSettingsStatus.ForeColor = Color.Red;
                 }
                 else
                 {
-                    lblSettingsStatus.Text = "Settings Unlocked";
+                    lblSettingsStatus.Text = $"{UNLOCK_EMOJI}  Settings Unlocked";
                     lblSettingsStatus.ForeColor = AccentGreen;
                 }
 
@@ -10743,12 +10743,12 @@ namespace Risk_Manager
                 {
                     // Get remaining time and display it using the same format as Lock Settings
                     var statusString = settingsService.GetLockStatusString(accountNumber);
-                    lblManualLockStatus.Text = statusString;
+                    lblManualLockStatus.Text = $"{LOCK_EMOJI}  {statusString}";
                     lblManualLockStatus.ForeColor = Color.Red;
                 }
                 else
                 {
-                    lblManualLockStatus.Text = "Unlocked";
+                    lblManualLockStatus.Text = $"{UNLOCK_EMOJI}  Unlocked";
                     lblManualLockStatus.ForeColor = AccentGreen;
                 }
 
