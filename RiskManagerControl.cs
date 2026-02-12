@@ -13026,9 +13026,6 @@ namespace Risk_Manager
             var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
             System.Diagnostics.Debug.WriteLine($"PagePanel created: AutoScroll={pagePanel.AutoScroll}");
 
-            // ADD BRIGHT TEST LABEL TO CONFIRM TEXT RENDERING
-            // Test label removed - Trade Log is now working!
-
             // ===== IMPORTANT: ADD JOURNAL CARD WITH BUTTONS FIRST =====
             // This ensures buttons are ALWAYS visible at the top, even if viewport is small
             
@@ -13241,13 +13238,8 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine($"JournalCard: Dock={journalCard.Dock}, Height={journalCard.Height}, ControlCount={journalCard.Controls.Count}");
             System.Diagnostics.Debug.WriteLine($"ORANGE TEST PANEL ADDED to Journal Card!");
             
-            // ADD JOURNAL CARD FIRST - This makes buttons appear at TOP
-            pagePanel.Controls.Add(journalCard);
-            
-            // Spacer
-            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
-
-            // NOW add stats and filter BELOW the buttons
+            // NOTE: With Dock=Top, controls added LAST appear at TOP visually
+            // Add in reverse visual order: filters first, then stats, then journal card last
             // Enhanced stats summary card with more metrics
             var statsCard = new Panel
             {
@@ -13304,76 +13296,113 @@ namespace Risk_Manager
             statsLabelsPanel.Controls.Add(avgLossLabel);
             
             statsCard.Controls.Add(statsLabelsPanel);
-            pagePanel.Controls.Add(statsCard);
-
-            // Spacer
-            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
+            // statsCard will be added to pagePanel later in correct Z-order
 
             // Filter and search panel
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 160,  // Increased from 150 to 160 to ensure date pickers are fully visible
-                BackColor = CardBackground,
-                Padding = new Padding(10),
-                Margin = new Padding(0, 0, 0, 10)
+                Height = 110,  // Compact size - nice and compact appearance
+                BackColor = CardBackground,  // Normal dark theme - production ready
+                Padding = new Padding(5),  // Compact padding
+                Margin = new Padding(0, 0, 0, 10),
+                Visible = true
             };
-
-            // Filter diagnostic label removed - Trade Log now working!
 
             var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", GetIconForTitle("Limits"));
             filterHeader.Dock = DockStyle.Top;
-            filterCard.Controls.Add(filterHeader);
-
+            
+            // Filter panel with controls - at top, horizontal layout
             var filterPanel = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
-                Padding = new Padding(5),
-                BackColor = CardBackground
+                Dock = DockStyle.Top,
+                Height = 50,   // Compact height - controls moved up, nice and compact
+                FlowDirection = FlowDirection.LeftToRight,  // Horizontal layout
+                WrapContents = true,  // Allow wrapping to multiple rows
+                Padding = new Padding(3),  // Tight padding
+                BackColor = CardBackground,  // Normal card background
+                Visible = true,
+                AutoScroll = false,  // Disabled - controls fit without scrolling
+                AutoSize = false
             };
-
+            
+            // Note: filterPanel and filterHeader will be added after controls are created
+            // Header will be added LAST to appear at TOP (Dock.Top reverse stacking)
+            
             // Search box
-            var searchLabel = new Label { Text = "Search:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var searchLabel = new Label { 
+                Text = "Search:", 
+                AutoSize = true, 
+                ForeColor = Color.White,  // White for dark background
+                Margin = new Padding(5, 8, 5, 5), 
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Visible = true
+            };
             var searchBox = new TextBox
             {
                 Width = 150,
                 Height = 25,
                 Margin = new Padding(5),
                 Tag = "SearchBox",
-                Name = "TradeSearchBox"
+                Name = "TradeSearchBox",
+                BackColor = Color.White,
+                Visible = true
             };
             searchBox.TextChanged += (s, e) => FilterTrades();
 
             // Outcome filter
-            var outcomeLabel = new Label { Text = "Outcome:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var outcomeLabel = new Label { 
+                Text = "Outcome:", 
+                AutoSize = true, 
+                ForeColor = Color.White,  // White for dark background
+                Margin = new Padding(5, 8, 5, 5), 
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Visible = true
+            };
             var outcomeFilter = new ComboBox
             {
                 Width = 100,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Margin = new Padding(5),
                 Tag = "OutcomeFilter",
-                Name = "OutcomeFilterCombo"
+                Name = "OutcomeFilterCombo",
+                BackColor = Color.White,
+                Visible = true
             };
             outcomeFilter.Items.AddRange(new[] { "All", "Win", "Loss", "Breakeven" });
             outcomeFilter.SelectedIndex = 0;
             outcomeFilter.SelectedIndexChanged += (s, e) => FilterTrades();
 
             // Symbol filter
-            var symbolLabel = new Label { Text = "Symbol:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var symbolLabel = new Label { 
+                Text = "Symbol:", 
+                AutoSize = true, 
+                ForeColor = Color.White,  // White for dark background
+                Margin = new Padding(5, 8, 5, 5), 
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Visible = true
+            };
             var symbolFilter = new TextBox
             {
                 Width = 80,
                 Height = 25,
                 Margin = new Padding(5),
                 Tag = "SymbolFilter",
-                Name = "SymbolFilterBox"
+                Name = "SymbolFilterBox",
+                BackColor = Color.White,
+                Visible = true
             };
             symbolFilter.TextChanged += (s, e) => FilterTrades();
 
             // Date range filters
-            var dateFromLabel = new Label { Text = "From:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(15, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var dateFromLabel = new Label { 
+                Text = "From:", 
+                AutoSize = true, 
+                ForeColor = Color.White,  // White for dark background
+                Margin = new Padding(15, 8, 5, 5), 
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Visible = true
+            };
             var dateFromPicker = new DateTimePicker
             {
                 Width = 120,
@@ -13381,11 +13410,19 @@ namespace Risk_Manager
                 Margin = new Padding(5),
                 Tag = "DateFromPicker",
                 Name = "DateFromPicker",
-                Value = DateTime.Today.AddMonths(-1)
+                Value = DateTime.Today.AddMonths(-1),
+                Visible = true
             };
             dateFromPicker.ValueChanged += (s, e) => FilterTrades();
             
-            var dateToLabel = new Label { Text = "To:", AutoSize = true, ForeColor = Color.White, Margin = new Padding(5, 8, 5, 5), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            var dateToLabel = new Label { 
+                Text = "To:", 
+                AutoSize = true, 
+                ForeColor = Color.White,  // White for dark background
+                Margin = new Padding(5, 8, 5, 5), 
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Visible = true
+            };
             var dateToPicker = new DateTimePicker
             {
                 Width = 120,
@@ -13393,7 +13430,8 @@ namespace Risk_Manager
                 Margin = new Padding(5),
                 Tag = "DateToPicker",
                 Name = "DateToPicker",
-                Value = DateTime.Today
+                Value = DateTime.Today,
+                Visible = true  // VISUAL DEBUG: Explicit
             };
             dateToPicker.ValueChanged += (s, e) => FilterTrades();
 
@@ -13408,7 +13446,8 @@ namespace Risk_Manager
                 ForeColor = Color.White,
                 Cursor = Cursors.Hand,
                 Margin = new Padding(10, 5, 5, 5),
-                Font = new Font("Segoe UI", 9, FontStyle.Bold)
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Visible = true  // VISUAL DEBUG: Explicit
             };
             clearFiltersBtn.FlatAppearance.BorderSize = 0;
             clearFiltersBtn.Click += (s, e) =>
@@ -13433,8 +13472,11 @@ namespace Risk_Manager
             filterPanel.Controls.Add(dateToPicker);
             filterPanel.Controls.Add(clearFiltersBtn);
 
-            filterCard.Controls.Add(filterPanel);
-            pagePanel.Controls.Add(filterCard);
+            // Add controls to filterCard in correct order for Dock.Top stacking
+            // With Dock.Top: FIRST added = BOTTOM, LAST added = TOP
+            filterCard.Controls.Add(filterPanel);    // Add FIRST → appears at BOTTOM
+            filterCard.Controls.Add(filterHeader);   // Add LAST → appears at TOP ✅
+            // filterCard will be added to pagePanel later in correct Z-order
             
             // Collapsible trade details panel (hidden by default)
             var detailsCard = new Panel
@@ -13462,8 +13504,7 @@ namespace Risk_Manager
                 Padding = new Padding(10)
             };
             detailsCard.Controls.Add(detailsContent);
-            
-            pagePanel.Controls.Add(detailsCard);
+            // detailsCard will be added to pagePanel later in correct Z-order
             
             // Add row selection handler to show/hide details
             tradesGrid.SelectionChanged += (s, e) =>
@@ -13479,23 +13520,34 @@ namespace Risk_Manager
                 }
             };
             
-            // DEBUG: Log final page panel details
-            System.Diagnostics.Debug.WriteLine("=== PAGE PANEL DEBUG ===");
-            System.Diagnostics.Debug.WriteLine($"PagePanel: Size={pagePanel.Size}, AutoScroll={pagePanel.AutoScroll}");
-            System.Diagnostics.Debug.WriteLine($"PagePanel: ControlCount={pagePanel.Controls.Count}");
-            for (int i = 0; i < pagePanel.Controls.Count; i++)
-            {
-                var ctrl = pagePanel.Controls[i];
-                System.Diagnostics.Debug.WriteLine($"  [{i}] {ctrl.GetType().Name}: Dock={ctrl.Dock}, Size={ctrl.Size}, Visible={ctrl.Visible}");
-            }
+            // ===== ADD CONTROLS TO PAGEPANEL IN CORRECT Z-ORDER =====
+            // With Dock=Top, controls added LAST appear at TOP visually
+            // So add in REVERSE visual order: we want filters at top, then stats, then journal at bottom
+            
+            // Add journalCard FIRST (will appear at BOTTOM visually)
+            pagePanel.Controls.Add(journalCard);
+            
+            // Add spacer
+            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
+            
+            // Add detailsCard (collapsible trade details - hidden by default)
+            pagePanel.Controls.Add(detailsCard);
+            
+            // Add spacer
+            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
+            
+            // Add statsCard (Trading Statistics - will appear below filters)
+            pagePanel.Controls.Add(statsCard);
+            
+            // Add spacer
+            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
+            
+            // Add filterCard LAST (will appear at TOP visually - above Trading Statistics)
+            pagePanel.Controls.Add(filterCard);
             
             // Load initial data
             RefreshJournalData(tradesGrid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel, 
                 largestWinLabel, largestLossLabel, avgWinLabel, avgLossLabel);
-
-            // Force layout recalculation to ensure proper sizing
-            pagePanel.PerformLayout();
-            System.Diagnostics.Debug.WriteLine($"After PerformLayout - PagePanel size: {pagePanel.Size}");
 
             return pagePanel;
         }
