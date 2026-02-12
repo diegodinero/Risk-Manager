@@ -1528,6 +1528,9 @@ namespace Risk_Manager
                     selectedAccount = account;
                     selectedAccountIndex = 0; // Ensure index is set                  
                     LoadAccountSettings();
+                    
+                    // Update account labels in all tabs since AccountSelectorOnSelectedIndexChanged won't fire
+                    UpdateAllLockAccountDisplays();
                 }
             }
         }
