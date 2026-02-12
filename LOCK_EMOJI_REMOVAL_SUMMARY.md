@@ -96,11 +96,19 @@ If any legacy code or stored data contains emoji-prefixed statuses, the system w
 
 ### Modified Code Locations
 
-1. **RiskManagerControl.cs:18395** - Removed emoji from GetAccountLockStatus()
-2. **RiskManagerControl.cs:18407** - Removed emojis from GetSettingsLockStatus()
+1. **RiskManagerControl.cs:18394-18404** - Modified GetAccountLockStatus() to remove emojis
+2. **RiskManagerControl.cs:18406-18416** - Modified GetSettingsLockStatus() to remove emojis
 3. **RiskManagerControl.cs:840-847** - Updated IsLockStatusValue() to check for text-based status
 4. **RiskManagerControl.cs:851-873** - Updated ExtractLockStatusText() to handle non-emoji formats
-5. **RiskManagerControl.cs:20144** - Added UpdateAllLockAccountDisplays() call in ShowPage()
+5. **RiskManagerControl.cs:20152** - Added UpdateAllLockAccountDisplays() call in ShowPage()
+
+### Performance Notes
+
+The `UpdateAllLockAccountDisplays()` method (Line 7029-7040) performs a recursive search through the control tree to find and update all labels with `Tag="LockAccountDisplay"`. While this involves searching all controls, the operation is:
+- Lightweight (only updates text labels)
+- Consistent with existing usage elsewhere in the codebase (lines 1561, 11922)
+- Called only on tab switches, not continuously
+- Acceptable for typical WinForms applications with moderate control counts
 
 ### Color Coding Logic (Unchanged)
 
