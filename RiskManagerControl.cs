@@ -13766,8 +13766,8 @@ namespace Risk_Manager
             var calendarPanel = CreateCalendarGrid();
             calendarPanel.Dock = DockStyle.Top;
             
-            // Legend panel at the bottom - use wrapper to center it
-            var legendWrapper = CreateCenteredLegendWrapper();
+            // Legend panel at the bottom - use wrapper to align it with calendar
+            var legendWrapper = CreateAlignedLegendWrapper();
             
             contentPanel.Controls.Add(legendWrapper);
             contentPanel.Controls.Add(calendarPanel);
@@ -13866,8 +13866,8 @@ namespace Risk_Manager
                     oldLegendWrapper.Dispose();
                 }
                 
-                // Create new legend wrapper with centered legend
-                var newLegendWrapper = CreateCenteredLegendWrapper();
+                // Create new legend wrapper aligned with calendar
+                var newLegendWrapper = CreateAlignedLegendWrapper();
                 contentPanel.Controls.Add(newLegendWrapper);
                 contentPanel.Controls.SetChildIndex(newLegendWrapper, 0); // Move to top (which is actually bottom due to docking)
             }
@@ -14560,7 +14560,7 @@ namespace Risk_Manager
         /// <summary>
         /// Creates a wrapper panel that positions the calendar legend to align with calendar day columns
         /// </summary>
-        private Panel CreateCenteredLegendWrapper()
+        private Panel CreateAlignedLegendWrapper()
         {
             var legendWrapper = new Panel
             {
