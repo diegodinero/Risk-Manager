@@ -416,7 +416,7 @@ namespace Risk_Manager
         
         // Trading Journal constants
         private const int NOTES_DISPLAY_MAX_LENGTH = 30; // Maximum characters to display in notes column before truncation
-        private const int CALENDAR_LEGEND_WRAPPER_HEIGHT = 70; // Height of the calendar legend wrapper panel (reduced to bring legend closer)
+        private const int CALENDAR_LEGEND_WRAPPER_HEIGHT = 50; // Height of the calendar legend wrapper panel (reduced further for minimal spacing)
         private const int CALENDAR_LEGEND_VERTICAL_PADDING = 2; // Vertical padding for legend within wrapper
         
         // Trade log constants
@@ -13252,77 +13252,7 @@ namespace Risk_Manager
             System.Diagnostics.Debug.WriteLine($"ORANGE TEST PANEL ADDED to Journal Card!");
             
             // NOTE: With Dock=Top, controls added LAST appear at TOP visually
-            // Add in reverse visual order: filters first, then stats, then journal card last
-            // Enhanced stats summary card with more metrics (initially collapsed)
-            var statsCard = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = STATS_CARD_COLLAPSED_HEIGHT,  // Use constant
-                BackColor = CardBackground,  // Professional dark theme
-                Padding = new Padding(10),
-                Margin = new Padding(0, 0, 0, 10),
-                Tag = "StatsCard"
-            };
-            
-            // Stats diagnostic label removed - Trade Log now working!
-            
-            var statsHeader = new CustomCardHeaderControl("📊 Trading Statistics", null);
-            statsHeader.Dock = DockStyle.Top;
-            statsHeader.Cursor = Cursors.Hand;  // Make it clickable
-            statsCard.Controls.Add(statsHeader);
-            
-            var statsLabelsPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
-                Padding = new Padding(5),
-                BackColor = CardBackground,
-                Visible = false,  // Initially hidden
-                Tag = "StatsLabelsPanel"
-            };
-            
-            // Note: The click handler lambda captures statsLabelsPanel and statsCard through closure
-            // This is safe because both variables are in scope when the lambda is defined
-            // Add click handler to header to toggle visibility
-            statsHeader.Click += (s, e) =>
-            {
-                statsLabelsPanel.Visible = !statsLabelsPanel.Visible;
-                statsCard.Height = statsLabelsPanel.Visible ? STATS_CARD_EXPANDED_HEIGHT : STATS_CARD_COLLAPSED_HEIGHT;
-            };
-            
-            // Row 1: Basic stats
-            var totalTradesLabel = new Label { Text = "Total: 0", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-            var winRateLabel = new Label { Text = "Win Rate: 0%", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 10, FontStyle.Regular) };
-            var totalPLLabel = new Label { Text = "Total P/L: $0.00", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-            
-            // Row 2: Detailed stats
-            var avgPLLabel = new Label { Text = "Avg P/L: $0.00", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
-            var largestWinLabel = new Label { Text = "Best: $0.00", AutoSize = true, ForeColor = Color.LimeGreen, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
-            var largestLossLabel = new Label { Text = "Worst: $0.00", AutoSize = true, ForeColor = Color.OrangeRed, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
-            var avgWinLabel = new Label { Text = "Avg Win: $0.00", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
-            var avgLossLabel = new Label { Text = "Avg Loss: $0.00", AutoSize = true, ForeColor = Color.White, Margin = new Padding(3), Font = new Font("Segoe UI", 9, FontStyle.Regular) };
-            
-            totalTradesLabel.Tag = "TotalTrades";
-            winRateLabel.Tag = "WinRate";
-            totalPLLabel.Tag = "TotalPL";
-            avgPLLabel.Tag = "AvgPL";
-            largestWinLabel.Tag = "LargestWin";
-            largestLossLabel.Tag = "LargestLoss";
-            avgWinLabel.Tag = "AvgWin";
-            avgLossLabel.Tag = "AvgLoss";
-            
-            statsLabelsPanel.Controls.Add(totalTradesLabel);
-            statsLabelsPanel.Controls.Add(winRateLabel);
-            statsLabelsPanel.Controls.Add(totalPLLabel);
-            statsLabelsPanel.Controls.Add(avgPLLabel);
-            statsLabelsPanel.Controls.Add(largestWinLabel);
-            statsLabelsPanel.Controls.Add(largestLossLabel);
-            statsLabelsPanel.Controls.Add(avgWinLabel);
-            statsLabelsPanel.Controls.Add(avgLossLabel);
-            
-            statsCard.Controls.Add(statsLabelsPanel);
-            // statsCard will be added to pagePanel later in correct Z-order
+            // Add in reverse visual order: filters first, then journal card last
 
             // Filter and search panel
             var filterCard = new Panel
@@ -13538,13 +13468,6 @@ namespace Risk_Manager
                 if (tradesGrid.SelectedRows.Count > 0)
                 {
                     ShowTradeDetails(tradesGrid, detailsCard, detailsContent);
-                    
-                    // Also expand the statistics panel when a trade is selected
-                    if (statsLabelsPanel != null && !statsLabelsPanel.Visible)
-                    {
-                        statsLabelsPanel.Visible = true;
-                        statsCard.Height = STATS_CARD_EXPANDED_HEIGHT;  // Use constant
-                    }
                 }
                 else
                 {
@@ -13555,7 +13478,7 @@ namespace Risk_Manager
             
             // ===== ADD CONTROLS TO PAGEPANEL IN CORRECT Z-ORDER =====
             // With Dock=Top, controls added LAST appear at TOP visually
-            // So add in REVERSE visual order: we want filters at top, then stats, then journal at bottom
+            // So add in REVERSE visual order: we want filters at top, then journal at bottom
             
             // Add journalCard FIRST (will appear at BOTTOM visually)
             pagePanel.Controls.Add(journalCard);
@@ -13569,18 +13492,11 @@ namespace Risk_Manager
             // Add spacer
             pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
             
-            // Add statsCard (Trading Statistics - will appear below filters)
-            pagePanel.Controls.Add(statsCard);
-            
-            // Add spacer
-            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
-            
-            // Add filterCard LAST (will appear at TOP visually - above Trading Statistics)
+            // Add filterCard LAST (will appear at TOP visually)
             pagePanel.Controls.Add(filterCard);
             
-            // Load initial data
-            RefreshJournalData(tradesGrid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel, 
-                largestWinLabel, largestLossLabel, avgWinLabel, avgLossLabel);
+            // Load initial data (no stats labels to update)
+            RefreshJournalData(tradesGrid);
 
             return pagePanel;
         }
@@ -14366,10 +14282,10 @@ namespace Risk_Manager
                 Margin = new Padding(0)
             };
             
-            // Trades label (always shown)
+            // Trades label (always shown with "trades" text)
             var tradesLabel = new Label
             {
-                Text = $"{tradeCount}",
+                Text = $"{tradeCount} trade{(tradeCount != 1 ? "s" : "")}",
                 Font = new Font("Segoe UI", 9, FontStyle.Regular),
                 ForeColor = textColor,
                 AutoSize = true,
@@ -14420,7 +14336,19 @@ namespace Risk_Manager
             }
             else
             {
-                // P&L Mode: Show profit/loss metrics in order: # trades, % win, W/L: #/#
+                // P&L Mode: Show profit/loss metrics in order: # trades, dollar amount, % win, W/L: #/#
+                
+                // Weekly P&L dollar amount
+                var plLabel = new Label
+                {
+                    Text = weeklyPL.ToString("+$#,##0.00;-$#,##0.00;$0.00"),
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = textColor,
+                    AutoSize = true,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin = new Padding(0, 3, 0, 3)
+                };
+                flowPanel.Controls.Add(plLabel);
                 
                 // Win percentage
                 var winPctLabel = new Label
@@ -14532,10 +14460,10 @@ namespace Risk_Manager
             var greenLabel = new Label
             {
                 Text = "●",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),  // Reduced from 20 to 16
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),  // Reduced from 16 to 14 for better alignment
                 ForeColor = Color.FromArgb(30, 70, 32),
                 AutoSize = true,
-                Margin = new Padding(0, 2, 5, 0)  // Added top margin to align with text
+                Margin = new Padding(0, 4, 5, 0)  // Adjusted top margin to 4 for alignment
             };
             itemsPanel.Controls.Add(greenLabel);
             
@@ -14545,7 +14473,7 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Margin = new Padding(0, 3, 30, 0)  // Adjusted top margin to align with dot
+                Margin = new Padding(0, 5, 30, 0)  // Adjusted top margin to 5 to align with dot baseline
             };
             itemsPanel.Controls.Add(greenText);
             
@@ -14553,10 +14481,10 @@ namespace Risk_Manager
             var yellowLabel = new Label
             {
                 Text = "●",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),  // Reduced from 20 to 16
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),  // Reduced from 16 to 14 for better alignment
                 ForeColor = Color.FromArgb(255, 193, 7),
                 AutoSize = true,
-                Margin = new Padding(0, 2, 5, 0)  // Added top margin to align with text
+                Margin = new Padding(0, 4, 5, 0)  // Adjusted top margin to 4 for alignment
             };
             itemsPanel.Controls.Add(yellowLabel);
             
@@ -14566,7 +14494,7 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Margin = new Padding(0, 3, 30, 0)  // Adjusted top margin to align with dot
+                Margin = new Padding(0, 5, 30, 0)  // Adjusted top margin to 5 to align with dot baseline
             };
             itemsPanel.Controls.Add(yellowText);
             
@@ -14574,10 +14502,10 @@ namespace Risk_Manager
             var pinkLabel = new Label
             {
                 Text = "●",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),  // Reduced from 20 to 16
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),  // Reduced from 16 to 14 for better alignment
                 ForeColor = Color.FromArgb(253, 164, 165),
                 AutoSize = true,
-                Margin = new Padding(0, 2, 5, 0)  // Added top margin to align with text
+                Margin = new Padding(0, 4, 5, 0)  // Adjusted top margin to 4 for alignment
             };
             itemsPanel.Controls.Add(pinkLabel);
             
@@ -14587,7 +14515,7 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Margin = new Padding(0, 3, 30, 0)  // Adjusted top margin to align with dot
+                Margin = new Padding(0, 5, 30, 0)  // Adjusted top margin to 5 to align with dot baseline
             };
             itemsPanel.Controls.Add(pinkText);
             
@@ -14870,7 +14798,7 @@ namespace Risk_Manager
                 WrapContents = false,
                 AutoScroll = true,
                 BackColor = DarkBackground,
-                Padding = new Padding(0, 30, 0, 0),  // Increased top padding from 20 to 30 to ensure top model buttons are visible
+                Padding = new Padding(0, 50, 0, 0),  // Increased top padding from 30 to 50 to ensure top model buttons are fully visible
                 Tag = "ModelsList"
             };
             contentPanel.Controls.Add(modelsListPanel);
@@ -18198,6 +18126,12 @@ namespace Risk_Manager
 
         private static int refreshCallCounter = 0;
         private static List<string> refreshCallLog = new List<string>();
+        
+        // Simple overload that just takes the grid (no stats labels)
+        private void RefreshJournalData(DataGridView grid)
+        {
+            RefreshJournalData(grid, null, null, null, null, null, null, null, null);
+        }
         
         private void RefreshJournalData(DataGridView grid, Label totalTradesLabel, Label winRateLabel, Label totalPLLabel, Label avgPLLabel, 
             Label largestWinLabel = null, Label largestLossLabel = null, Label avgWinLabel = null, Label avgLossLabel = null)
