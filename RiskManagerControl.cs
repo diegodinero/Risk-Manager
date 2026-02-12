@@ -13966,6 +13966,7 @@ namespace Risk_Manager
             
             Color blueHighlight = Color.FromArgb(41, 128, 185);
             Color positiveColor = Color.FromArgb(110, 231, 183); // Green
+            Color positiveColor2 = Color.FromArgb(50, 150, 50); // Green
             Color negativeColor = Color.FromArgb(253, 164, 165); // Pink/Red
             Color negativeColor2 = Color.FromArgb(255, 0, 0); //red
 
@@ -14061,15 +14062,18 @@ namespace Risk_Manager
                 };
                 flowPanel.Controls.Add(label1);
                 
-                var plColor = monthlyNetPL >= 0 ? positiveColor : negativeColor2;
+                var plColor = monthlyNetPL >= 0 ? positiveColor2 : negativeColor2;
                 var label2 = new Label
                 {
                     Text = $"{monthlyNetPL:+$#,##0.00;-$#,##0.00;$0.00} ",
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = plColor,
+                    ForeColor = Color.White,
+                    BackColor = plColor,
                     AutoSize = true,
                     Margin = new Padding(0, 5, 3, 0)
                 };
+                // Add rounded corners
+                label2.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label2.Width + 1, label2.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
                 flowPanel.Controls.Add(label2);
                 
                 // Days (number + "Days" combined with blue background)
