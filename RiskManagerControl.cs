@@ -13522,7 +13522,7 @@ namespace Risk_Manager
             
             // ===== ADD CONTROLS TO PAGEPANEL IN CORRECT Z-ORDER =====
             // With Dock=Top, controls added LAST appear at TOP visually
-            // So add in REVERSE visual order: we want filters at top, journal at bottom
+            // So add in REVERSE visual order: we want filters at top, then stats, then journal at bottom
             
             // Add journalCard FIRST (will appear at BOTTOM visually)
             pagePanel.Controls.Add(journalCard);
@@ -13533,78 +13533,21 @@ namespace Risk_Manager
             // Add detailsCard (collapsible trade details - hidden by default)
             pagePanel.Controls.Add(detailsCard);
             
-            // Add statsCard
+            // Add spacer
+            pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
+            
+            // Add statsCard (Trading Statistics - will appear below filters)
             pagePanel.Controls.Add(statsCard);
             
             // Add spacer
             pagePanel.Controls.Add(new Panel { Height = 10, Dock = DockStyle.Top, BackColor = DarkBackground });
             
-            // Add filterCard LAST (will appear at TOP visually)
+            // Add filterCard LAST (will appear at TOP visually - above Trading Statistics)
             pagePanel.Controls.Add(filterCard);
-            
-            // VISUAL DEBUG: Force filterCard to front and verify
-            filterCard.BringToFront();
-            filterCard.Visible = true;
-            filterPanel.PerformLayout();  // Force layout calculation
-            
-            System.Diagnostics.Debug.WriteLine("=== FILTER CARD DEBUG ===");
-            System.Diagnostics.Debug.WriteLine($"filterCard: Size={filterCard.Size}, Height={filterCard.Height}, Visible={filterCard.Visible}");
-            System.Diagnostics.Debug.WriteLine($"filterCard: Dock={filterCard.Dock}, BackColor={filterCard.BackColor}");
-            System.Diagnostics.Debug.WriteLine($"filterCard: Location={filterCard.Location}, Bounds={filterCard.Bounds}");
-            System.Diagnostics.Debug.WriteLine($"filterCard: ClientSize={filterCard.ClientSize}, ClientRectangle={filterCard.ClientRectangle}");
-            System.Diagnostics.Debug.WriteLine($"filterCard: Parent={filterCard.Parent?.GetType().Name}, ControlCount={filterCard.Controls.Count}");
-            
-            System.Diagnostics.Debug.WriteLine("=== FILTER CARD CHILDREN ===");
-            for (int i = 0; i < filterCard.Controls.Count; i++)
-            {
-                var child = filterCard.Controls[i];
-                System.Diagnostics.Debug.WriteLine($"  [{i}] {child.GetType().Name}: Size={child.Size}, Bounds={child.Bounds}, Dock={child.Dock}, Visible={child.Visible}");
-            }
-            
-            System.Diagnostics.Debug.WriteLine("=== FILTER PANEL DEBUG ===");
-            System.Diagnostics.Debug.WriteLine($"filterPanel: Size={filterPanel.Size}, ClientSize={filterPanel.ClientSize}, Visible={filterPanel.Visible}, ControlCount={filterPanel.Controls.Count}");
-            System.Diagnostics.Debug.WriteLine($"filterPanel: Bounds={filterPanel.Bounds}, ClientRectangle={filterPanel.ClientRectangle}");
-            System.Diagnostics.Debug.WriteLine($"filterPanel: AutoScroll={filterPanel.AutoScroll}, AutoSize={filterPanel.AutoSize}");
-            System.Diagnostics.Debug.WriteLine($"filterPanel: Dock={filterPanel.Dock}, Location={filterPanel.Location}");
-            System.Diagnostics.Debug.WriteLine($"filterPanel: HorizontalScroll.Visible={filterPanel.HorizontalScroll.Visible}, VerticalScroll.Visible={filterPanel.VerticalScroll.Visible}");
-            System.Diagnostics.Debug.WriteLine($"filterPanel: HorizontalScroll.Maximum={filterPanel.HorizontalScroll.Maximum}, VerticalScroll.Maximum={filterPanel.VerticalScroll.Maximum}");
-            
-            // Log parent chain to understand width constraint
-            System.Diagnostics.Debug.WriteLine("=== PARENT CHAIN ===");
-            Control current = filterPanel;
-            int level = 0;
-            while (current != null && level < 5)
-            {
-                System.Diagnostics.Debug.WriteLine($"  Level {level}: {current.GetType().Name} - Size={current.Size}, Dock={current.Dock}");
-                current = current.Parent;
-                level++;
-            }
-            
-            // Log each control in filterPanel
-            System.Diagnostics.Debug.WriteLine("=== FILTER PANEL CONTROLS ===");
-            for (int i = 0; i < filterPanel.Controls.Count; i++)
-            {
-                var ctrl = filterPanel.Controls[i];
-                System.Diagnostics.Debug.WriteLine($"  [{i}] {ctrl.GetType().Name}: Text='{(ctrl is Label l ? l.Text : ctrl is TextBox t ? $"TextBox({t.Name})" : ctrl is ComboBox c ? $"ComboBox({c.Name})" : ctrl is DateTimePicker d ? $"DatePicker({d.Name})" : ctrl is Button b ? b.Text : ctrl is Panel p ? "Panel(TEST)" : "?")}', Size={ctrl.Size}, Visible={ctrl.Visible}, Location={ctrl.Location}, Bounds={ctrl.Bounds}");
-            }
-            
-            // DEBUG: Log final page panel details
-            System.Diagnostics.Debug.WriteLine("=== PAGE PANEL DEBUG ===");
-            System.Diagnostics.Debug.WriteLine($"PagePanel: Size={pagePanel.Size}, AutoScroll={pagePanel.AutoScroll}");
-            System.Diagnostics.Debug.WriteLine($"PagePanel: ControlCount={pagePanel.Controls.Count}");
-            for (int i = 0; i < pagePanel.Controls.Count; i++)
-            {
-                var ctrl = pagePanel.Controls[i];
-                System.Diagnostics.Debug.WriteLine($"  [{i}] {ctrl.GetType().Name}: Dock={ctrl.Dock}, Size={ctrl.Size}, Visible={ctrl.Visible}");
-            }
             
             // Load initial data
             RefreshJournalData(tradesGrid, totalTradesLabel, winRateLabel, totalPLLabel, avgPLLabel, 
                 largestWinLabel, largestLossLabel, avgWinLabel, avgLossLabel);
-
-            // Force layout recalculation to ensure proper sizing
-            pagePanel.PerformLayout();
-            System.Diagnostics.Debug.WriteLine($"After PerformLayout - PagePanel size: {pagePanel.Size}");
 
             return pagePanel;
         }
