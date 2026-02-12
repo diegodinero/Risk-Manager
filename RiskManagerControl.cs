@@ -18127,13 +18127,7 @@ namespace Risk_Manager
         private static int refreshCallCounter = 0;
         private static List<string> refreshCallLog = new List<string>();
         
-        // Simple overload that just takes the grid (no stats labels)
-        private void RefreshJournalData(DataGridView grid)
-        {
-            RefreshJournalData(grid, null, null, null, null, null, null, null, null);
-        }
-        
-        private void RefreshJournalData(DataGridView grid, Label totalTradesLabel, Label winRateLabel, Label totalPLLabel, Label avgPLLabel, 
+        private void RefreshJournalData(DataGridView grid, Label totalTradesLabel = null, Label winRateLabel = null, Label totalPLLabel = null, Label avgPLLabel = null, 
             Label largestWinLabel = null, Label largestLossLabel = null, Label avgWinLabel = null, Label avgLossLabel = null)
         {
             // Track this call
