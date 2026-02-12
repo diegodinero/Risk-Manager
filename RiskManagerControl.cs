@@ -13664,9 +13664,11 @@ namespace Risk_Manager
             }
             
             // Calculate positions for centered layout with equal arrow spacing
+            // Ensure minimum 15px gap between buttons and text for better spacing
+            const int minGap = 15;
             int monthX = (int)(centerX - textWidth / 2);
-            int prevX = (int)(centerX - textWidth / 2 - 10 - 35); // 10px gap from text, 35px button width
-            int nextX = (int)(centerX + textWidth / 2 + 10); // 10px gap from text
+            int prevX = (int)(centerX - textWidth / 2 - minGap - 35); // minimum gap from text, 35px button width
+            int nextX = (int)(centerX + textWidth / 2 + minGap); // minimum gap from text
             
             // Previous month button - left of month with equal spacing
             var prevButton = new Button
@@ -14035,8 +14037,15 @@ namespace Risk_Manager
                     Margin = new Padding(0, 5, 0, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
-                // Add rounded corners
-                label2.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label2.Width + 1, label2.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
+                // Add rounded corners after layout is calculated
+                label2.Layout += (s, e) =>
+                {
+                    var lbl = (Label)s;
+                    if (lbl.Width > 0 && lbl.Height > 0)
+                    {
+                        lbl.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, lbl.Width, lbl.Height, BORDER_RADIUS, BORDER_RADIUS));
+                    }
+                };
                 flowPanel.Controls.Add(label2);
                 
                 // "Followed" text
@@ -14061,8 +14070,15 @@ namespace Risk_Manager
                     Margin = new Padding(0, 5, 0, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
-                // Add rounded corners
-                label4.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label4.Width + 1, label4.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
+                // Add rounded corners after layout is calculated
+                label4.Layout += (s, e) =>
+                {
+                    var lbl = (Label)s;
+                    if (lbl.Width > 0 && lbl.Height > 0)
+                    {
+                        lbl.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, lbl.Width, lbl.Height, BORDER_RADIUS, BORDER_RADIUS));
+                    }
+                };
                 flowPanel.Controls.Add(label4);
             }
             else
@@ -14091,8 +14107,15 @@ namespace Risk_Manager
                     Margin = new Padding(0, 5, 3, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
-                // Add rounded corners
-                label2.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label2.Width + 1, label2.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
+                // Add rounded corners after layout is calculated
+                label2.Layout += (s, e) =>
+                {
+                    var lbl = (Label)s;
+                    if (lbl.Width > 0 && lbl.Height > 0)
+                    {
+                        lbl.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, lbl.Width, lbl.Height, BORDER_RADIUS, BORDER_RADIUS));
+                    }
+                };
                 flowPanel.Controls.Add(label2);
                 
                 // Days (number + "Days" combined with blue background)
@@ -14106,8 +14129,15 @@ namespace Risk_Manager
                     Margin = new Padding(0, 5, 0, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
-                // Add rounded corners
-                label3.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, label3.Width + 1, label3.Height + 1, BORDER_RADIUS, BORDER_RADIUS));
+                // Add rounded corners after layout is calculated
+                label3.Layout += (s, e) =>
+                {
+                    var lbl = (Label)s;
+                    if (lbl.Width > 0 && lbl.Height > 0)
+                    {
+                        lbl.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, lbl.Width, lbl.Height, BORDER_RADIUS, BORDER_RADIUS));
+                    }
+                };
                 flowPanel.Controls.Add(label3);
             }
             
