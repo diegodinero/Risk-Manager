@@ -14383,8 +14383,8 @@ namespace Risk_Manager
                 }
                 else if (weeklyPL < -5)
                 {
-                    // Negative P&L - use bright red on dark background, dark red on light backgrounds
-                    plColor = isDarkBackground ? Color.FromArgb(255, 0, 0) : Color.FromArgb(139, 0, 0);
+                    // Negative P&L - always use bright red for visibility
+                    plColor = Color.FromArgb(255, 0, 0);
                 }
                 else
                 {
