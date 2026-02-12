@@ -14488,12 +14488,12 @@ namespace Risk_Manager
                 }
             };
             
-            // Green indicator
+            // Green indicator - matches calendar cell color
             var greenLabel = new Label
             {
                 Text = "●",
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),  // Reduced from 16 to 14 for better alignment
-                ForeColor = Color.FromArgb(30, 70, 32),
+                ForeColor = Color.FromArgb(109, 231, 181), // Green #6DE7B5 - matches calendar cells
                 AutoSize = true,
                 Margin = new Padding(0, 4, 5, 0)  // Adjusted top margin to 4 for alignment
             };
@@ -14509,12 +14509,12 @@ namespace Risk_Manager
             };
             itemsPanel.Controls.Add(greenText);
             
-            // Yellow indicator
+            // Yellow indicator - matches calendar cell color
             var yellowLabel = new Label
             {
                 Text = "●",
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),  // Reduced from 16 to 14 for better alignment
-                ForeColor = Color.FromArgb(255, 193, 7),
+                ForeColor = Color.FromArgb(252, 212, 75), // Yellow #FCD44B - matches calendar cells
                 AutoSize = true,
                 Margin = new Padding(0, 4, 5, 0)  // Adjusted top margin to 4 for alignment
             };
