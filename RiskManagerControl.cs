@@ -13044,7 +13044,7 @@ namespace Risk_Manager
             
             // Diagnostic label removed - Trade Log now working!
             
-            var journalHeader = new CustomCardHeaderControl("📋 Trade Log", GetIconForTitle("Limits"));
+            var journalHeader = new CustomCardHeaderControl("📋 Trade Log", null);
             journalHeader.Dock = DockStyle.Top;
             journalCard.Controls.Add(journalHeader);
 
@@ -13252,7 +13252,7 @@ namespace Risk_Manager
             
             // Stats diagnostic label removed - Trade Log now working!
             
-            var statsHeader = new CustomCardHeaderControl("📊 Trading Statistics", GetIconForTitle("Limits"));
+            var statsHeader = new CustomCardHeaderControl("📊 Trading Statistics", null);
             statsHeader.Dock = DockStyle.Top;
             statsCard.Controls.Add(statsHeader);
             
@@ -13309,7 +13309,7 @@ namespace Risk_Manager
                 Visible = true
             };
 
-            var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", GetIconForTitle("Limits"));
+            var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", null);
             filterHeader.Dock = DockStyle.Top;
             
             // Filter panel with controls - at top, horizontal layout
@@ -14447,7 +14447,7 @@ namespace Risk_Manager
             legendPanel.Controls.Add(titleLabel);
             
             // Legend items flow panel - legend width should match calendar columns only (not weekly stats)
-            legendPanel.Width = (5 * 150); // 1050px - match calendar width WITHOUT weekly stats column
+            legendPanel.Width = (7 * 150); // 1050px - match calendar width WITHOUT weekly stats column
             
             var itemsPanel = new FlowLayoutPanel
             {
