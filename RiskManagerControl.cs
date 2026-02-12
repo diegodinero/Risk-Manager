@@ -18400,7 +18400,7 @@ namespace Risk_Manager
             if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
 
             var lockStatus = settingsService.GetLockStatusString(accountNumber);
-            return lockStatus;
+            return lockStatus == "Unlocked" ? UNLOCK_EMOJI + " " + lockStatus : LOCK_EMOJI + " " + lockStatus;
         }
 
         private string GetSettingsLockStatus()
@@ -18412,7 +18412,7 @@ namespace Risk_Manager
             if (!settingsService.IsInitialized) return "⚠️ Service not initialized";
 
             var isLocked = settingsService.AreSettingsLocked(accountNumber);
-            return isLocked ? "Locked" : "Unlocked";
+            return isLocked ? LOCK_EMOJI + " Locked" : UNLOCK_EMOJI + " Unlocked";
         }
 
         private string GetAutomatedSettingsLockInfo()
@@ -20148,8 +20148,11 @@ namespace Risk_Manager
                     }
                 }
                 
-                // Update account labels for all tabs that have LockAccountDisplay labels
-                UpdateAllLockAccountDisplays();
+                contentPanel.ResumeLayout();
+                
+                // Update account labels for the tab that was just shown
+                // Call after ResumeLayout to ensure controls are properly initialized
+                UpdateLockAccountDisplaysRecursive(ctrl);
             }
             else
             {
@@ -20164,9 +20167,8 @@ namespace Risk_Manager
                     BackColor = DarkBackground
                 };
                 contentPanel.Controls.Add(lbl);
+                contentPanel.ResumeLayout();
             }
-
-            contentPanel.ResumeLayout();
         }
 
         // Update Dispose to free scaled images (replace existing Dispose(bool) body)
