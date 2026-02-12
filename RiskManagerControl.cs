@@ -13967,7 +13967,7 @@ namespace Risk_Manager
                 var label1 = new Label
                 {
                     Text = "Monthly stats: ",
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    Font = new Font("Segoe UI", 12, FontStyle.Regular),
                     ForeColor = TextWhite,
                     AutoSize = true,
                     Margin = new Padding(0, 5, 0, 0)
@@ -14305,7 +14305,7 @@ namespace Risk_Manager
                 var planRatioLabel = new Label
                 {
                     Text = $"{(planPct >= 70 ? "✓" : "")} {planFollowedCount}/{tradeCount}",
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    Font = new Font("Segoe UI Emoji", 9, FontStyle.Regular),
                     ForeColor = textColor,
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
@@ -14317,7 +14317,7 @@ namespace Risk_Manager
                 var planLabel = new Label
                 {
                     Text = $"{planPct:0}% plan",
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = textColor,
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
@@ -14365,7 +14365,7 @@ namespace Risk_Manager
                 
                 var plLabel = new Label
                 {
-                    Text = weeklyPL.ToString("+$#,##0.00;-$#,##0.00;$0.00"),
+                    Text = weeklyPL.ToString("$+#,##0.00;$-#,##0.00;$0.00"),
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = plColor,  // Use color-coded value instead of textColor
                     AutoSize = true,
@@ -14378,7 +14378,7 @@ namespace Risk_Manager
                 var winPctLabel = new Label
                 {
                     Text = $"{winPct:0}%",
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = textColor,
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
