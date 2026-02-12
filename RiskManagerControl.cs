@@ -423,6 +423,10 @@ namespace Risk_Manager
         private const int STATS_CARD_COLLAPSED_HEIGHT = 40; // Collapsed height showing only header
         private const int STATS_CARD_EXPANDED_HEIGHT = 150; // Expanded height showing statistics
         
+        // Calendar cell label positions
+        private const int TRADE_COUNT_LABEL_X = 110; // X position of trade count label in calendar cell
+        private const int TRADE_COUNT_LABEL_Y = 65;  // Y position of trade count label in calendar cell
+        
         // Number format strings
         private const string PL_FORMAT_NO_DOLLAR = "+#,##0.00;-#,##0.00;0.00"; // P&L format without dollar sign
         
@@ -13278,6 +13282,8 @@ namespace Risk_Manager
                 Tag = "StatsLabelsPanel"
             };
             
+            // Note: Click handler references statsLabelsPanel and statsCard declared in the same scope
+            // This forward reference is safe in C# due to closure semantics
             // Add click handler to header to toggle visibility
             statsHeader.Click += (s, e) =>
             {
@@ -13598,6 +13604,22 @@ namespace Risk_Manager
             
             path.CloseFigure();
             return path;
+        }
+        
+        /// <summary>
+        /// Helper method to apply rounded corners to a label after its layout is calculated.
+        /// Attaches a Layout event handler that creates a rounded region for the label.
+        /// </summary>
+        private void ApplyRoundedCornersOnLayout(Label label)
+        {
+            label.Layout += (s, e) =>
+            {
+                var lbl = (Label)s;
+                if (lbl.Width > 0 && lbl.Height > 0)
+                {
+                    lbl.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, lbl.Width, lbl.Height, BORDER_RADIUS, BORDER_RADIUS));
+                }
+            };
         }
         
         /// <summary>
@@ -14044,15 +14066,7 @@ namespace Risk_Manager
                     Margin = new Padding(0, 5, 0, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
-                // Add rounded corners after layout is calculated
-                label2.Layout += (s, e) =>
-                {
-                    var lbl = (Label)s;
-                    if (lbl.Width > 0 && lbl.Height > 0)
-                    {
-                        lbl.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, lbl.Width, lbl.Height, BORDER_RADIUS, BORDER_RADIUS));
-                    }
-                };
+                ApplyRoundedCornersOnLayout(label2);
                 flowPanel.Controls.Add(label2);
                 
                 // "Followed" text
@@ -14077,15 +14091,7 @@ namespace Risk_Manager
                     Margin = new Padding(0, 5, 0, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
-                // Add rounded corners after layout is calculated
-                label4.Layout += (s, e) =>
-                {
-                    var lbl = (Label)s;
-                    if (lbl.Width > 0 && lbl.Height > 0)
-                    {
-                        lbl.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, lbl.Width, lbl.Height, BORDER_RADIUS, BORDER_RADIUS));
-                    }
-                };
+                ApplyRoundedCornersOnLayout(label4);
                 flowPanel.Controls.Add(label4);
             }
             else
@@ -14122,15 +14128,7 @@ namespace Risk_Manager
                     Margin = new Padding(0, 5, 3, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
-                // Add rounded corners after layout is calculated
-                label2.Layout += (s, e) =>
-                {
-                    var lbl = (Label)s;
-                    if (lbl.Width > 0 && lbl.Height > 0)
-                    {
-                        lbl.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, lbl.Width, lbl.Height, BORDER_RADIUS, BORDER_RADIUS));
-                    }
-                };
+                ApplyRoundedCornersOnLayout(label2);
                 flowPanel.Controls.Add(label2);
                 
                 // Days (number + "Days" combined with blue background)
@@ -14144,15 +14142,7 @@ namespace Risk_Manager
                     Margin = new Padding(0, 5, 0, 0),
                     Padding = new Padding(3, 1, 3, 1)
                 };
-                // Add rounded corners after layout is calculated
-                label3.Layout += (s, e) =>
-                {
-                    var lbl = (Label)s;
-                    if (lbl.Width > 0 && lbl.Height > 0)
-                    {
-                        lbl.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, lbl.Width, lbl.Height, BORDER_RADIUS, BORDER_RADIUS));
-                    }
-                };
+                ApplyRoundedCornersOnLayout(label3);
                 flowPanel.Controls.Add(label3);
             }
             
@@ -14785,7 +14775,7 @@ namespace Risk_Manager
                     ForeColor = Color.Black,
                     BackColor = Color.Transparent,
                     AutoSize = true,
-                    Location = new Point(110, 65)
+                    Location = new Point(TRADE_COUNT_LABEL_X, TRADE_COUNT_LABEL_Y)
                 };
                 cellPanel.Controls.Add(countLabel);
                 
