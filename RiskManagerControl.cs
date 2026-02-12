@@ -11911,6 +11911,7 @@ namespace Risk_Manager
                     RefreshAccountStats(); // Refresh stats detail grid (account row)
                     RefreshCopySettingsAccounts(); // Refresh Copy Settings tab
                     UpdateTitleWithAccountNumber(); // Refresh title bar with masked/unmasked account number
+                    UpdateAllLockAccountDisplays(); // Refresh account labels in all tabs
                 }
             };
 
