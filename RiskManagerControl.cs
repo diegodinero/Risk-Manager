@@ -427,7 +427,7 @@ namespace Risk_Manager
         private const int STATS_CARD_EXPANDED_HEIGHT = 150; // Expanded height showing statistics
         
         // Calendar cell label positions
-        private const int TRADE_COUNT_LABEL_X = 110; // X position of trade count label in calendar cell
+        private const int TRADE_COUNT_LABEL_X = 125; // X position of trade count label in calendar cell (moved right)
         private const int TRADE_COUNT_LABEL_Y = 65;  // Y position of trade count label in calendar cell
         private const int CALENDAR_CELL_WIDTH = 150; // Width of each calendar day cell
         private const int CALENDAR_PL_LABEL_Y = 35;  // Y position of P&L label in calendar cell
@@ -13582,7 +13582,7 @@ namespace Risk_Manager
             };
             
             // Header with reorganized layout
-            int calendarWidth = (7 * 150) + 200; // 1250px - full calendar width including weekly stats
+            int calendarWidth = (7 * 150) + 150; // 1200px - full calendar width including weekly stats (reduced)
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
@@ -14100,7 +14100,7 @@ namespace Risk_Manager
             int cellWidth = 150;
             int cellHeight = 100;
             int headerHeight = 30;
-            int weeklyStatsWidth = 200;  // Width for weekly statistics column
+            int weeklyStatsWidth = 150;  // Width for weekly statistics column (reduced from 200)
             
             // Add day headers
             for (int i = 0; i < 7; i++)
@@ -14113,9 +14113,8 @@ namespace Risk_Manager
                     TextAlign = ContentAlignment.MiddleCenter,
                     Size = new Size(cellWidth, headerHeight),
                     Location = new Point(i * cellWidth, 0),
-                    BackColor = Color.FromArgb(50, 50, 50)
+                    BackColor = Color.Transparent // No background color
                 };
-                // No rounded corners for day headers - removed circular borders
                 gridPanel.Controls.Add(headerLabel);
             }
             
@@ -14128,9 +14127,8 @@ namespace Risk_Manager
                 TextAlign = ContentAlignment.MiddleCenter,
                 Size = new Size(weeklyStatsWidth, headerHeight),
                 Location = new Point(7 * cellWidth, 0),
-                BackColor = Color.FromArgb(50, 50, 50)
+                BackColor = Color.Transparent // No background color
             };
-            // No rounded corners for week stats header - removed circular borders
             gridPanel.Controls.Add(weekStatsHeader);
             
             // Calculate calendar cells and track weekly data
@@ -14265,8 +14263,8 @@ namespace Risk_Manager
                 BorderStyle = BorderStyle.None // Remove border, we'll draw it rounded
             };
             
-            // Add rounded region to panel
-            panel.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, 180, 115, BORDER_RADIUS, BORDER_RADIUS));
+            // Add rounded region to panel - reduced size
+            panel.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, 150, 95, BORDER_RADIUS, BORDER_RADIUS));
             
             if (tradeCount == 0)
             {
@@ -14319,28 +14317,17 @@ namespace Risk_Manager
                 };
                 flowPanel.Controls.Add(planRatioLabel);
                 
-                // Plan percentage (number and % bold, word "plan" not bold) - split into two labels
-                var planPctLabel = new Label
+                // Plan percentage - single bold label
+                var planLabel = new Label
                 {
-                    Text = $"{planPct:0}%",
+                    Text = $"{planPct:0}% plan",
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = textColor,
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
-                    Margin = new Padding(0, 3, 0, 0)
+                    Margin = new Padding(0, 3, 0, 3)
                 };
-                flowPanel.Controls.Add(planPctLabel);
-                
-                var planWordLabel = new Label
-                {
-                    Text = "plan",
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular), // Not bold
-                    ForeColor = textColor,
-                    AutoSize = true,
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    Margin = new Padding(0, 0, 0, 3)
-                };
-                flowPanel.Controls.Add(planWordLabel);
+                flowPanel.Controls.Add(planLabel);
                 
                 // Win/Loss ratio
                 var wlLabel = new Label
@@ -14477,14 +14464,14 @@ namespace Risk_Manager
             legendPanel.Controls.Add(titleLabel);
             
             // Legend items flow panel - legend width should match full calendar (7 day columns + weekly stats)
-            legendPanel.Width = (7 * 150) + 200; // 1250px - matches full calendar width including weekly stats column
+            legendPanel.Width = (7 * 150) + 150; // 1200px - matches full calendar width including weekly stats column (reduced)
             
             var itemsPanel = new FlowLayoutPanel
             {
                 AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                MaximumSize = new Size((7 * 150) + 200 - 40, 0)  // Constrain to full calendar width with padding
+                MaximumSize = new Size((7 * 150) + 150 - 40, 0)  // Constrain to full calendar width with padding (reduced)
             };
             
             // Center items horizontally
@@ -14678,17 +14665,20 @@ namespace Risk_Manager
             };
             cellPanel.Controls.Add(dayLabel);
             
-            // Trade count label - always show for consistency (0 for empty cells)
-            var countLabel = new Label
+            // Trade count label - only show if there are trades
+            if (tradeCount > 0)
             {
-                Text = tradeCount.ToString(),
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                ForeColor = textColor, // Use same color as day number for consistency
-                BackColor = Color.Transparent,
-                AutoSize = true,
-                Location = new Point(TRADE_COUNT_LABEL_X, TRADE_COUNT_LABEL_Y)
-            };
-            cellPanel.Controls.Add(countLabel);
+                var countLabel = new Label
+                {
+                    Text = tradeCount.ToString(),
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = textColor,
+                    BackColor = Color.Transparent,
+                    AutoSize = true,
+                    Location = new Point(TRADE_COUNT_LABEL_X, TRADE_COUNT_LABEL_Y)
+                };
+                cellPanel.Controls.Add(countLabel);
+            }
             
             // Add color dot indicators for days with no trades but may have notes/plan adherence
             if (tradeCount == 0)
@@ -14719,7 +14709,7 @@ namespace Risk_Manager
             {
                 if (showPlanMode)
                 {
-                    // Show plan percentage
+                    // Show plan percentage - centered
                     int yesCount = dayTrades.Count(t => t.FollowedPlan);
                     double planPct = (yesCount * 100.0) / tradeCount;
                     
@@ -14729,8 +14719,17 @@ namespace Risk_Manager
                         Font = new Font("Segoe UI", 9, FontStyle.Regular),
                         ForeColor = Color.Black,
                         AutoSize = true,
-                        Location = new Point(5, 35)
+                        TextAlign = ContentAlignment.MiddleCenter
                     };
+                    
+                    // Center the label horizontally using Graphics.MeasureString
+                    using (Graphics g = cellPanel.CreateGraphics())
+                    {
+                        SizeF textSize = g.MeasureString(planLabel.Text, planLabel.Font);
+                        int centeredX = (CALENDAR_CELL_WIDTH - (int)textSize.Width) / 2;
+                        planLabel.Location = new Point(centeredX, CALENDAR_PL_LABEL_Y);
+                    }
+                    
                     cellPanel.Controls.Add(planLabel);
                 }
                 else
