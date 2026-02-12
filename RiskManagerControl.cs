@@ -13282,13 +13282,13 @@ namespace Risk_Manager
                 Tag = "StatsLabelsPanel"
             };
             
-            // Note: Click handler references statsLabelsPanel and statsCard declared in the same scope
-            // This forward reference is safe in C# due to closure semantics
+            // Note: The click handler lambda captures statsLabelsPanel and statsCard through closure
+            // This is safe because both variables are in scope when the lambda is defined
             // Add click handler to header to toggle visibility
             statsHeader.Click += (s, e) =>
             {
                 statsLabelsPanel.Visible = !statsLabelsPanel.Visible;
-                statsCard.Height = statsLabelsPanel.Visible ? STATS_CARD_EXPANDED_HEIGHT : STATS_CARD_COLLAPSED_HEIGHT;  // Use constants
+                statsCard.Height = statsLabelsPanel.Visible ? STATS_CARD_EXPANDED_HEIGHT : STATS_CARD_COLLAPSED_HEIGHT;
             };
             
             // Row 1: Basic stats
