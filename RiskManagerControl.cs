@@ -14369,14 +14369,23 @@ namespace Risk_Manager
                 // P&L Mode: Show profit/loss metrics
                 
                 // Weekly P&L total (colored by value)
-                // Use darker colors for better readability on all backgrounds
+                // Use colors that contrast well with the background
                 Color plColor;
                 if (weeklyPL > 5)
-                    plColor = Color.FromArgb(0, 100, 0); // Dark green - readable on all backgrounds
+                {
+                    // Positive P&L - use bright green on dark background, dark green on light backgrounds
+                    plColor = (panelColor.R < 100) ? Color.FromArgb(0, 255, 0) : Color.FromArgb(0, 100, 0);
+                }
                 else if (weeklyPL < -5)
-                    plColor = Color.FromArgb(139, 0, 0); // Dark red - readable on all backgrounds
+                {
+                    // Negative P&L - use bright red on dark background, dark red on light backgrounds
+                    plColor = (panelColor.R < 100) ? Color.FromArgb(255, 0, 0) : Color.FromArgb(139, 0, 0);
+                }
                 else
-                    plColor = Color.FromArgb(204, 102, 0); // Dark orange for breakeven
+                {
+                    // Breakeven - use bright orange on dark background, dark orange on light backgrounds
+                    plColor = (panelColor.R < 100) ? Color.FromArgb(255, 165, 0) : Color.FromArgb(204, 102, 0);
+                }
                 var plLabel = new Label
                 {
                     Text = $"P&L: {weeklyPL:+$#,##0.00;-$#,##0.00;$0.00}",
