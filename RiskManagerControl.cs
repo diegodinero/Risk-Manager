@@ -417,6 +417,7 @@ namespace Risk_Manager
         // Trading Journal constants
         private const int NOTES_DISPLAY_MAX_LENGTH = 30; // Maximum characters to display in notes column before truncation
         private const int CALENDAR_LEGEND_WRAPPER_HEIGHT = 90; // Height of the calendar legend wrapper panel
+        private const int CALENDAR_LEGEND_VERTICAL_PADDING = 5; // Vertical padding for legend within wrapper
         
         // Risk Overview card title constants
         private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
@@ -14576,7 +14577,7 @@ namespace Risk_Manager
             {
                 if (legendPanel.Width > 0)
                 {
-                    legendPanel.Location = new Point((legendWrapper.Width - legendPanel.Width) / 2, 5);
+                    legendPanel.Location = new Point((legendWrapper.Width - legendPanel.Width) / 2, CALENDAR_LEGEND_VERTICAL_PADDING);
                 }
             };
             
