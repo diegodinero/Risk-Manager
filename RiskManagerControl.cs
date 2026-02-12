@@ -14234,17 +14234,28 @@ namespace Risk_Manager
             
             // Color the weekly panel based on plan adherence in Plan mode or P&L value in P&L mode
             Color panelColor = CardBackground;
+            Color textColor = TextWhite; // Default text color
+            
             if (tradeCount > 0)
             {
                 if (showPlanMode)
                 {
                     // Plan mode: color by plan adherence
                     if (planPct >= 70)
+                    {
                         panelColor = Color.FromArgb(30, 70, 32); // Dark Green #1E4620
+                        textColor = Color.White; // White text on dark green
+                    }
                     else if (planPct >= 50)
+                    {
                         panelColor = Color.FromArgb(255, 193, 7); // Amber #FFC107
+                        textColor = Color.Black; // Black text on amber
+                    }
                     else
+                    {
                         panelColor = Color.FromArgb(253, 164, 165); // Pink #fda4a5
+                        textColor = Color.Black; // Black text on pink
+                    }
                 }
                 else
                 {
@@ -14252,11 +14263,20 @@ namespace Risk_Manager
                     decimal colorWeeklyPL = weekTrades.Sum(t => t.NetPL);
                     
                     if (colorWeeklyPL > 5) // Positive P&L
+                    {
                         panelColor = Color.FromArgb(30, 70, 32); // Dark Green #1E4620
+                        textColor = Color.White; // White text on dark green
+                    }
                     else if (colorWeeklyPL < -5) // Negative P&L
+                    {
                         panelColor = Color.FromArgb(253, 164, 165); // Pink #fda4a5
+                        textColor = Color.Black; // Black text on pink
+                    }
                     else // Breakeven (within ±$5)
+                    {
                         panelColor = Color.FromArgb(255, 193, 7); // Amber #FFC107
+                        textColor = Color.Black; // Black text on amber
+                    }
                 }
             }
             
@@ -14297,7 +14317,7 @@ namespace Risk_Manager
             {
                 Text = $"Trades: {tradeCount}",
                 Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                ForeColor = TextWhite,
+                ForeColor = textColor,
                 AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Margin = new Padding(0, 5, 0, 3)
@@ -14313,7 +14333,7 @@ namespace Risk_Manager
                 {
                     Text = $"Plan: {planPct:0}%",
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = TextWhite,
+                    ForeColor = textColor,
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Margin = new Padding(0, 3, 0, 3)
@@ -14325,7 +14345,7 @@ namespace Risk_Manager
                 {
                     Text = $"W/L: {winLossRatio}",
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                    ForeColor = TextWhite,
+                    ForeColor = textColor,
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Margin = new Padding(0, 3, 0, 3)
@@ -14337,7 +14357,7 @@ namespace Risk_Manager
                 {
                     Text = $"{(planPct >= 70 ? "✓" : "")} {planFollowedCount}/{tradeCount}",
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                    ForeColor = planPct >= 70 ? Color.FromArgb(30, 70, 32) : TextWhite, // Dark Green if >=70%
+                    ForeColor = textColor,
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Margin = new Padding(0, 3, 0, 5)
@@ -14349,18 +14369,18 @@ namespace Risk_Manager
                 // P&L Mode: Show profit/loss metrics
                 
                 // Weekly P&L total (colored by value)
-                // Use distinct standard colors for readability
+                // Use darker colors for better readability on all backgrounds
                 Color plColor;
                 if (weeklyPL > 5)
-                    plColor = Color.Green; // Standard green - readable on all backgrounds
+                    plColor = Color.FromArgb(0, 100, 0); // Dark green - readable on all backgrounds
                 else if (weeklyPL < -5)
-                    plColor = Color.Red; // Standard red - readable on all backgrounds
+                    plColor = Color.FromArgb(139, 0, 0); // Dark red - readable on all backgrounds
                 else
-                    plColor = Color.Orange; // Orange for breakeven - clearly distinct
+                    plColor = Color.FromArgb(204, 102, 0); // Dark orange for breakeven
                 var plLabel = new Label
                 {
                     Text = $"P&L: {weeklyPL:+$#,##0.00;-$#,##0.00;$0.00}",
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = plColor,
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
@@ -14373,7 +14393,7 @@ namespace Risk_Manager
                 {
                     Text = $"W/L: {winLossRatio}",
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                    ForeColor = TextWhite,
+                    ForeColor = textColor,
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Margin = new Padding(0, 3, 0, 3)
@@ -14385,7 +14405,7 @@ namespace Risk_Manager
                 {
                     Text = $"Win%: {winPct:0}%",
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = TextWhite,
+                    ForeColor = textColor,
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Margin = new Padding(0, 3, 0, 5)
