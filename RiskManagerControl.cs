@@ -14385,7 +14385,7 @@ namespace Risk_Manager
                 // Win percentage
                 var winPctLabel = new Label
                 {
-                    Text = $"{winPct:0}%",
+                    Text = $"{winPct:0}% win",
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = textColor,
                     AutoSize = true,
