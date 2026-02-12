@@ -14122,10 +14122,10 @@ namespace Risk_Manager
                 gridPanel.Controls.Add(headerLabel);
             }
             
-            // Add "Week Stats" header
+            // Add "Weekly" header
             var weekStatsHeader = new Label
             {
-                Text = "Week Stats",
+                Text = "\u2139 Weekly",
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 ForeColor = TextWhite,
                 TextAlign = ContentAlignment.MiddleCenter,
