@@ -14368,23 +14368,28 @@ namespace Risk_Manager
             {
                 // P&L Mode: Show profit/loss metrics
                 
+                // Calculate background luminance to determine if we need bright or dark text
+                // Using standard luminance formula for better color perception
+                double bgLuminance = (0.299 * panelColor.R + 0.587 * panelColor.G + 0.114 * panelColor.B);
+                bool isDarkBackground = bgLuminance < 100;
+                
                 // Weekly P&L total (colored by value)
                 // Use colors that contrast well with the background
                 Color plColor;
                 if (weeklyPL > 5)
                 {
                     // Positive P&L - use bright green on dark background, dark green on light backgrounds
-                    plColor = (panelColor.R < 100) ? Color.FromArgb(0, 255, 0) : Color.FromArgb(0, 100, 0);
+                    plColor = isDarkBackground ? Color.FromArgb(0, 255, 0) : Color.FromArgb(0, 100, 0);
                 }
                 else if (weeklyPL < -5)
                 {
                     // Negative P&L - use bright red on dark background, dark red on light backgrounds
-                    plColor = (panelColor.R < 100) ? Color.FromArgb(255, 0, 0) : Color.FromArgb(139, 0, 0);
+                    plColor = isDarkBackground ? Color.FromArgb(255, 0, 0) : Color.FromArgb(139, 0, 0);
                 }
                 else
                 {
                     // Breakeven - use bright orange on dark background, dark orange on light backgrounds
-                    plColor = (panelColor.R < 100) ? Color.FromArgb(255, 165, 0) : Color.FromArgb(204, 102, 0);
+                    plColor = isDarkBackground ? Color.FromArgb(255, 165, 0) : Color.FromArgb(204, 102, 0);
                 }
                 var plLabel = new Label
                 {
