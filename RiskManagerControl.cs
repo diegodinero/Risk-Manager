@@ -429,6 +429,13 @@ namespace Risk_Manager
         // Calendar cell label positions
         private const int TRADE_COUNT_LABEL_X = 110; // X position of trade count label in calendar cell
         private const int TRADE_COUNT_LABEL_Y = 65;  // Y position of trade count label in calendar cell
+        private const int CALENDAR_CELL_WIDTH = 150; // Width of each calendar day cell
+        private const int CALENDAR_PL_LABEL_Y = 35;  // Y position of P&L label in calendar cell
+        
+        // Calendar P&L label colors for day cells
+        private static readonly Color CalendarProfitColor = Color.FromArgb(0, 100, 0); // Dark green for profit
+        private static readonly Color CalendarLossColor = Color.FromArgb(139, 0, 0); // Dark red for loss
+        private static readonly Color CalendarBreakevenColor = Color.FromArgb(139, 69, 19); // Brown/dark orange for breakeven
         
         // Number format strings
         private const string PL_FORMAT_NO_DOLLAR = "+#,##0.00;-#,##0.00;0.00"; // P&L format without dollar sign
@@ -14734,11 +14741,11 @@ namespace Risk_Manager
                     // Determine color based on P&L value
                     Color plColor;
                     if (netPL > BREAKEVEN_THRESHOLD)
-                        plColor = Color.FromArgb(0, 100, 0); // Dark green for profit
+                        plColor = CalendarProfitColor;
                     else if (netPL < -BREAKEVEN_THRESHOLD)
-                        plColor = Color.FromArgb(139, 0, 0); // Dark red for loss
+                        plColor = CalendarLossColor;
                     else
-                        plColor = Color.FromArgb(139, 69, 19); // Brown/dark orange for breakeven
+                        plColor = CalendarBreakevenColor;
                     
                     var plLabel = new Label
                     {
@@ -14755,11 +14762,11 @@ namespace Risk_Manager
                     {
                         if (plLabel.Width > 0)
                         {
-                            plLabel.Location = new Point((150 - plLabel.Width) / 2, 35);
+                            plLabel.Location = new Point((CALENDAR_CELL_WIDTH - plLabel.Width) / 2, CALENDAR_PL_LABEL_Y);
                         }
                     };
                     // Set initial position centered (estimate)
-                    plLabel.Location = new Point((150 - 50) / 2, 35);
+                    plLabel.Location = new Point((CALENDAR_CELL_WIDTH - 50) / 2, CALENDAR_PL_LABEL_Y);
                 }
                 
                 // Click handler to navigate to Trade Log filtered by this date
