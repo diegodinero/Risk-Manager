@@ -419,6 +419,13 @@ namespace Risk_Manager
         private const int CALENDAR_LEGEND_WRAPPER_HEIGHT = 70; // Height of the calendar legend wrapper panel (reduced to bring legend closer)
         private const int CALENDAR_LEGEND_VERTICAL_PADDING = 2; // Vertical padding for legend within wrapper
         
+        // Trade log constants
+        private const int STATS_CARD_COLLAPSED_HEIGHT = 40; // Collapsed height showing only header
+        private const int STATS_CARD_EXPANDED_HEIGHT = 150; // Expanded height showing statistics
+        
+        // Number format strings
+        private const string PL_FORMAT_NO_DOLLAR = "+#,##0.00;-#,##0.00;0.00"; // P&L format without dollar sign
+        
         // Risk Overview card title constants
         private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
         
@@ -13246,7 +13253,7 @@ namespace Risk_Manager
             var statsCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 40,  // Collapsed height - just show header
+                Height = STATS_CARD_COLLAPSED_HEIGHT,  // Use constant
                 BackColor = CardBackground,  // Professional dark theme
                 Padding = new Padding(10),
                 Margin = new Padding(0, 0, 0, 10),
@@ -13275,7 +13282,7 @@ namespace Risk_Manager
             statsHeader.Click += (s, e) =>
             {
                 statsLabelsPanel.Visible = !statsLabelsPanel.Visible;
-                statsCard.Height = statsLabelsPanel.Visible ? 150 : 40;
+                statsCard.Height = statsLabelsPanel.Visible ? STATS_CARD_EXPANDED_HEIGHT : STATS_CARD_COLLAPSED_HEIGHT;  // Use constants
             };
             
             // Row 1: Basic stats
@@ -13530,7 +13537,7 @@ namespace Risk_Manager
                     if (statsLabelsPanel != null && !statsLabelsPanel.Visible)
                     {
                         statsLabelsPanel.Visible = true;
-                        statsCard.Height = 150;
+                        statsCard.Height = STATS_CARD_EXPANDED_HEIGHT;  // Use constant
                     }
                 }
                 else
@@ -14096,10 +14103,18 @@ namespace Risk_Manager
                 };
                 flowPanel.Controls.Add(label1);
                 
-                var plColor = monthlyNetPL > 0 ? positiveColor2 : monthlyNetPL < 0 ? negativeColor2 : Color.Gray;
+                // Determine P&L color based on value
+                Color plColor;
+                if (monthlyNetPL > 0)
+                    plColor = positiveColor2;
+                else if (monthlyNetPL < 0)
+                    plColor = negativeColor2;
+                else
+                    plColor = Color.Gray;
+                
                 var label2 = new Label
                 {
-                    Text = $"{monthlyNetPL:+#,##0.00;-#,##0.00;0.00} ",
+                    Text = monthlyNetPL.ToString(PL_FORMAT_NO_DOLLAR),
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
                     ForeColor = Color.White,
                     BackColor = plColor,
@@ -14753,7 +14768,7 @@ namespace Risk_Manager
                     decimal netPL = dayTrades.Sum(t => t.NetPL);
                     var plLabel = new Label
                     {
-                        Text = netPL.ToString("+#,##0.00;-#,##0.00;0.00"),
+                        Text = netPL.ToString(PL_FORMAT_NO_DOLLAR),
                         Font = new Font("Segoe UI", 10, FontStyle.Bold),
                         ForeColor = Color.Black,
                         AutoSize = true,
