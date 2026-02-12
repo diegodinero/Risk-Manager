@@ -416,8 +416,8 @@ namespace Risk_Manager
         
         // Trading Journal constants
         private const int NOTES_DISPLAY_MAX_LENGTH = 30; // Maximum characters to display in notes column before truncation
-        private const int CALENDAR_LEGEND_WRAPPER_HEIGHT = 90; // Height of the calendar legend wrapper panel
-        private const int CALENDAR_LEGEND_VERTICAL_PADDING = 5; // Vertical padding for legend within wrapper
+        private const int CALENDAR_LEGEND_WRAPPER_HEIGHT = 20; // Height of the calendar legend wrapper panel (reduced for tight spacing)
+        private const int CALENDAR_LEGEND_VERTICAL_PADDING = 2; // Vertical padding for legend within wrapper (minimal gap)
         
         // Risk Overview card title constants
         private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
@@ -14558,7 +14558,7 @@ namespace Risk_Manager
         }
         
         /// <summary>
-        /// Creates a wrapper panel that centers the calendar legend horizontally
+        /// Creates a wrapper panel that positions the calendar legend to align with calendar day columns
         /// </summary>
         private Panel CreateCenteredLegendWrapper()
         {
@@ -14572,12 +14572,13 @@ namespace Risk_Manager
             
             var legendPanel = CreateCalendarLegendPanel();
             
-            // Center the legend panel horizontally within the wrapper
+            // Position legend at left edge (no centering) to align with calendar grid
+            // This makes the legend bound to the calendar cells width and position
             legendWrapper.Layout += (s, e) =>
             {
                 if (legendPanel.Width > 0)
                 {
-                    legendPanel.Location = new Point((legendWrapper.Width - legendPanel.Width) / 2, CALENDAR_LEGEND_VERTICAL_PADDING);
+                    legendPanel.Location = new Point(0, CALENDAR_LEGEND_VERTICAL_PADDING);
                 }
             };
             
