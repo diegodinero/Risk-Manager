@@ -14755,18 +14755,16 @@ namespace Risk_Manager
                         AutoSize = true,
                         TextAlign = ContentAlignment.MiddleCenter
                     };
-                    cellPanel.Controls.Add(plLabel);
                     
-                    // Center the label horizontally after its size is calculated
-                    plLabel.Layout += (s, e) =>
+                    // Calculate centered position using Graphics.MeasureString for accuracy
+                    using (Graphics g = cellPanel.CreateGraphics())
                     {
-                        if (plLabel.Width > 0)
-                        {
-                            plLabel.Location = new Point((CALENDAR_CELL_WIDTH - plLabel.Width) / 2, CALENDAR_PL_LABEL_Y);
-                        }
-                    };
-                    // Set initial position centered (estimate)
-                    plLabel.Location = new Point((CALENDAR_CELL_WIDTH - 50) / 2, CALENDAR_PL_LABEL_Y);
+                        SizeF textSize = g.MeasureString(plLabel.Text, plLabel.Font);
+                        int centeredX = (CALENDAR_CELL_WIDTH - (int)textSize.Width) / 2;
+                        plLabel.Location = new Point(centeredX, CALENDAR_PL_LABEL_Y);
+                    }
+                    
+                    cellPanel.Controls.Add(plLabel);
                 }
                 
                 // Click handler to navigate to Trade Log filtered by this date
