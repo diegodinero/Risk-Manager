@@ -14722,13 +14722,10 @@ namespace Risk_Manager
                         TextAlign = ContentAlignment.MiddleCenter
                     };
                     
-                    // Center the label horizontally using Graphics.MeasureString
-                    using (Graphics g = cellPanel.CreateGraphics())
-                    {
-                        SizeF textSize = g.MeasureString(planLabel.Text, planLabel.Font);
-                        int centeredX = (CALENDAR_CELL_WIDTH - (int)textSize.Width) / 2;
-                        planLabel.Location = new Point(centeredX, CALENDAR_PL_LABEL_Y);
-                    }
+                    // Center the label horizontally using TextRenderer.MeasureText
+                    Size textSize = TextRenderer.MeasureText(planLabel.Text, planLabel.Font);
+                    int centeredX = (CALENDAR_CELL_WIDTH - textSize.Width) / 2;
+                    planLabel.Location = new Point(centeredX, CALENDAR_PL_LABEL_Y);
                     
                     cellPanel.Controls.Add(planLabel);
                 }
@@ -14755,13 +14752,10 @@ namespace Risk_Manager
                         TextAlign = ContentAlignment.MiddleCenter
                     };
                     
-                    // Calculate centered position using Graphics.MeasureString for accuracy
-                    using (Graphics g = cellPanel.CreateGraphics())
-                    {
-                        SizeF textSize = g.MeasureString(plLabel.Text, plLabel.Font);
-                        int centeredX = (CALENDAR_CELL_WIDTH - (int)textSize.Width) / 2;
-                        plLabel.Location = new Point(centeredX, CALENDAR_PL_LABEL_Y);
-                    }
+                    // Calculate centered position using TextRenderer.MeasureText
+                    Size textSize = TextRenderer.MeasureText(plLabel.Text, plLabel.Font);
+                    int centeredX = (CALENDAR_CELL_WIDTH - textSize.Width) / 2;
+                    plLabel.Location = new Point(centeredX, CALENDAR_PL_LABEL_Y);
                     
                     cellPanel.Controls.Add(plLabel);
                 }
