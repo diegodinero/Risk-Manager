@@ -7069,7 +7069,9 @@ namespace Risk_Manager
                 }
                 else
                 {
-                    lockAccountDisplay.Text = $"Account: {accountNumber}";
+                    // Apply privacy mode masking if enabled
+                    string displayAccountNumber = MaskAccountNumber(accountNumber);
+                    lockAccountDisplay.Text = $"Account: {displayAccountNumber}";
                     lockAccountDisplay.ForeColor = TextWhite;
                 }
                 
