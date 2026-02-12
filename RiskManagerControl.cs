@@ -419,6 +419,9 @@ namespace Risk_Manager
         private const int CALENDAR_LEGEND_WRAPPER_HEIGHT = 75; // Height of the calendar legend wrapper panel (increased to show full legend text)
         private const int CALENDAR_LEGEND_VERTICAL_PADDING = 2; // Vertical padding for legend within wrapper
         
+        // P&L thresholds for color coding
+        private const decimal BREAKEVEN_THRESHOLD = 5m; // Dollar amount threshold for breakeven classification (within ±$5)
+        
         // Trade log constants
         private const int STATS_CARD_COLLAPSED_HEIGHT = 40; // Collapsed height showing only header
         private const int STATS_CARD_EXPANDED_HEIGHT = 150; // Expanded height showing statistics
@@ -14232,17 +14235,17 @@ namespace Risk_Manager
                     // P&L mode: color by actual P&L value
                     decimal colorWeeklyPL = weekTrades.Sum(t => t.NetPL);
                     
-                    if (colorWeeklyPL > 5) // Positive P&L
+                    if (colorWeeklyPL > BREAKEVEN_THRESHOLD) // Positive P&L
                     {
                         panelColor = Color.FromArgb(30, 70, 32); // Dark Green #1E4620
                         textColor = Color.White; // White text on dark green
                     }
-                    else if (colorWeeklyPL < -5) // Negative P&L
+                    else if (colorWeeklyPL < -BREAKEVEN_THRESHOLD) // Negative P&L
                     {
                         panelColor = Color.FromArgb(253, 164, 165); // Pink #fda4a5
                         textColor = Color.Black; // Black text on pink
                     }
-                    else // Breakeven (within ±$5)
+                    else // Breakeven (within threshold)
                     {
                         panelColor = Color.FromArgb(255, 193, 7); // Amber #FFC107
                         textColor = Color.Black; // Black text on amber
@@ -14344,19 +14347,19 @@ namespace Risk_Manager
                 
                 // Weekly P&L dollar amount with color coding
                 Color plColor;
-                if (weeklyPL > 5)
+                if (weeklyPL > BREAKEVEN_THRESHOLD)
                 {
                     // Positive P&L - use bright green on dark background, dark green on light backgrounds
                     plColor = isDarkBackground ? Color.FromArgb(0, 255, 0) : Color.FromArgb(0, 100, 0);
                 }
-                else if (weeklyPL < -5)
+                else if (weeklyPL < -BREAKEVEN_THRESHOLD)
                 {
                     // Negative P&L - always use bright red for visibility
                     plColor = Color.FromArgb(255, 0, 0);
                 }
                 else
                 {
-                    // Breakeven - use bright orange on dark background, dark orange on light backgrounds
+                    // Breakeven (within threshold) - use bright orange on dark background, dark orange on light backgrounds
                     plColor = isDarkBackground ? Color.FromArgb(255, 165, 0) : Color.FromArgb(204, 102, 0);
                 }
                 
