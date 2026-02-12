@@ -12882,7 +12882,7 @@ namespace Risk_Manager
             {
                 Width = 240,
                 Dock = DockStyle.Left,
-                BackColor = Color.FromArgb(35, 35, 35), // Slightly different from main background
+                BackColor = DarkerBackground, // Use theme's darker background color
                 Padding = new Padding(16, 60, 16, 16)  // Increased top padding to 60 to clear the header above
             };
 
@@ -12953,6 +12953,8 @@ namespace Risk_Manager
                 Tag = section
             };
             btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = HoverColor;
+            btn.FlatAppearance.MouseDownBackColor = SelectedColor;
             btn.Click += (s, e) => ShowJournalSection(section);
             
             return btn;
@@ -14724,8 +14726,8 @@ namespace Risk_Manager
                         TextAlign = ContentAlignment.MiddleCenter
                     };
                     
-                    // Center the label horizontally using TextRenderer.MeasureText
-                    Size textSize = TextRenderer.MeasureText(planLabel.Text, planLabel.Font);
+                    // Center the label horizontally using System.Windows.Forms.TextRenderer.MeasureText
+                    Size textSize = System.Windows.Forms.TextRenderer.MeasureText(planLabel.Text, planLabel.Font);
                     int centeredX = (CALENDAR_CELL_WIDTH - textSize.Width) / 2;
                     planLabel.Location = new Point(centeredX, CALENDAR_PL_LABEL_Y);
                     
@@ -14754,8 +14756,8 @@ namespace Risk_Manager
                         TextAlign = ContentAlignment.MiddleCenter
                     };
                     
-                    // Calculate centered position using TextRenderer.MeasureText
-                    Size textSize = TextRenderer.MeasureText(plLabel.Text, plLabel.Font);
+                    // Calculate centered position using System.Windows.Forms.TextRenderer.MeasureText
+                    Size textSize = System.Windows.Forms.TextRenderer.MeasureText(plLabel.Text, plLabel.Font);
                     int centeredX = (CALENDAR_CELL_WIDTH - textSize.Width) / 2;
                     plLabel.Location = new Point(centeredX, CALENDAR_PL_LABEL_Y);
                     
