@@ -431,6 +431,8 @@ namespace Risk_Manager
         private const int TRADE_COUNT_LABEL_Y = 65;  // Y position of trade count label in calendar cell
         private const int CALENDAR_CELL_WIDTH = 150; // Width of each calendar day cell
         private const int CALENDAR_PL_LABEL_Y = 35;  // Y position of P&L label in calendar cell
+        private const int WEEKLY_STATS_WIDTH = 150;  // Width of weekly statistics column
+        private const int WEEKLY_STATS_HEIGHT = 95;  // Height of weekly statistics cells
         
         // Calendar P&L label colors for day cells
         private static readonly Color CalendarProfitColor = Color.FromArgb(0, 100, 0); // Dark green for profit
@@ -13582,7 +13584,7 @@ namespace Risk_Manager
             };
             
             // Header with reorganized layout
-            int calendarWidth = (7 * 150) + 150; // 1200px - full calendar width including weekly stats (reduced)
+            int calendarWidth = (7 * 150) + WEEKLY_STATS_WIDTH; // Full calendar width including weekly stats
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
@@ -14100,7 +14102,7 @@ namespace Risk_Manager
             int cellWidth = 150;
             int cellHeight = 100;
             int headerHeight = 30;
-            int weeklyStatsWidth = 150;  // Width for weekly statistics column (reduced from 200)
+            int weeklyStatsWidth = WEEKLY_STATS_WIDTH;  // Use constant for consistency
             
             // Add day headers
             for (int i = 0; i < 7; i++)
@@ -14113,7 +14115,7 @@ namespace Risk_Manager
                     TextAlign = ContentAlignment.MiddleCenter,
                     Size = new Size(cellWidth, headerHeight),
                     Location = new Point(i * cellWidth, 0),
-                    BackColor = Color.Transparent // No background color
+                    BackColor = Color.Transparent
                 };
                 gridPanel.Controls.Add(headerLabel);
             }
@@ -14127,7 +14129,7 @@ namespace Risk_Manager
                 TextAlign = ContentAlignment.MiddleCenter,
                 Size = new Size(weeklyStatsWidth, headerHeight),
                 Location = new Point(7 * cellWidth, 0),
-                BackColor = Color.Transparent // No background color
+                BackColor = Color.Transparent
             };
             gridPanel.Controls.Add(weekStatsHeader);
             
@@ -14263,8 +14265,8 @@ namespace Risk_Manager
                 BorderStyle = BorderStyle.None // Remove border, we'll draw it rounded
             };
             
-            // Add rounded region to panel - reduced size
-            panel.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, 150, 95, BORDER_RADIUS, BORDER_RADIUS));
+            // Add rounded region to panel using constants
+            panel.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, WEEKLY_STATS_WIDTH, WEEKLY_STATS_HEIGHT, BORDER_RADIUS, BORDER_RADIUS));
             
             if (tradeCount == 0)
             {
@@ -14464,14 +14466,14 @@ namespace Risk_Manager
             legendPanel.Controls.Add(titleLabel);
             
             // Legend items flow panel - legend width should match full calendar (7 day columns + weekly stats)
-            legendPanel.Width = (7 * 150) + 150; // 1200px - matches full calendar width including weekly stats column (reduced)
+            legendPanel.Width = (7 * 150) + WEEKLY_STATS_WIDTH; // Matches full calendar width including weekly stats column
             
             var itemsPanel = new FlowLayoutPanel
             {
                 AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                MaximumSize = new Size((7 * 150) + 150 - 40, 0)  // Constrain to full calendar width with padding (reduced)
+                MaximumSize = new Size((7 * 150) + WEEKLY_STATS_WIDTH - 40, 0)  // Constrain to full calendar width with padding
             };
             
             // Center items horizontally
