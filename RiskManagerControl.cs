@@ -14446,8 +14446,8 @@ namespace Risk_Manager
             };
             legendPanel.Controls.Add(titleLabel);
             
-            // Legend items flow panel - legend width should match calendar columns only (not weekly stats)
-            legendPanel.Width = (7 * 150); // 1050px - match calendar width WITHOUT weekly stats column
+            // Legend items flow panel - legend width should match 7 day columns (not weekly stats)
+            legendPanel.Width = (7 * 150); // 1050px - matches the 7 calendar day columns (excludes weekly stats column)
             
             var itemsPanel = new FlowLayoutPanel
             {
