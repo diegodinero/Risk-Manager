@@ -14240,11 +14240,11 @@ namespace Risk_Manager
                 {
                     // Plan mode: color by plan adherence
                     if (planPct >= 70)
-                        panelColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
+                        panelColor = Color.FromArgb(30, 70, 32); // Dark Green #1E4620
                     else if (planPct >= 50)
-                        panelColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
+                        panelColor = Color.FromArgb(255, 193, 7); // Amber #FFC107
                     else
-                        panelColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
+                        panelColor = Color.FromArgb(253, 164, 165); // Pink #fda4a5
                 }
                 else
                 {
@@ -14252,11 +14252,11 @@ namespace Risk_Manager
                     decimal colorWeeklyPL = weekTrades.Sum(t => t.NetPL);
                     
                     if (colorWeeklyPL > 5) // Positive P&L
-                        panelColor = Color.FromArgb(109, 231, 181); // Green #6DE7B5
+                        panelColor = Color.FromArgb(30, 70, 32); // Dark Green #1E4620
                     else if (colorWeeklyPL < -5) // Negative P&L
-                        panelColor = Color.FromArgb(253, 164, 165); // Pink #FDA4A5
+                        panelColor = Color.FromArgb(253, 164, 165); // Pink #fda4a5
                     else // Breakeven (within ±$5)
-                        panelColor = Color.FromArgb(252, 212, 75); // Yellow #FCD44B
+                        panelColor = Color.FromArgb(255, 193, 7); // Amber #FFC107
                 }
             }
             
@@ -14337,7 +14337,7 @@ namespace Risk_Manager
                 {
                     Text = $"{(planPct >= 70 ? "✓" : "")} {planFollowedCount}/{tradeCount}",
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
-                    ForeColor = planPct >= 70 ? Color.FromArgb(109, 231, 181) : TextWhite, // Green if >=70%
+                    ForeColor = planPct >= 70 ? Color.FromArgb(30, 70, 32) : TextWhite, // Dark Green if >=70%
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Margin = new Padding(0, 3, 0, 5)
@@ -14479,7 +14479,7 @@ namespace Risk_Manager
             {
                 Text = "●",
                 Font = new Font("Segoe UI", 20, FontStyle.Bold),
-                ForeColor = Color.FromArgb(109, 231, 181),
+                ForeColor = Color.FromArgb(30, 70, 32),
                 AutoSize = true,
                 Margin = new Padding(0, 0, 5, 0)
             };
@@ -14500,7 +14500,7 @@ namespace Risk_Manager
             {
                 Text = "●",
                 Font = new Font("Segoe UI", 20, FontStyle.Bold),
-                ForeColor = Color.FromArgb(252, 212, 75),
+                ForeColor = Color.FromArgb(255, 193, 7),
                 AutoSize = true,
                 Margin = new Padding(0, 0, 5, 0)
             };
