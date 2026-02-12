@@ -13764,11 +13764,27 @@ namespace Risk_Manager
             var calendarPanel = CreateCalendarGrid();
             calendarPanel.Dock = DockStyle.Top;
             
-            // Legend panel at the bottom
-            var legendPanel = CreateCalendarLegendPanel();
-            legendPanel.Dock = DockStyle.Top;
+            // Legend panel at the bottom - use wrapper to center it
+            var legendWrapper = new Panel
+            {
+                Name = "CalendarLegendWrapper",
+                Dock = DockStyle.Top,
+                Height = 90, // Slightly more than legend height for spacing
+                BackColor = DarkBackground
+            };
             
-            contentPanel.Controls.Add(legendPanel);
+            var legendPanel = CreateCalendarLegendPanel();
+            // Center the legend panel horizontally within the wrapper
+            legendWrapper.Layout += (s, e) =>
+            {
+                if (legendPanel.Width > 0)
+                {
+                    legendPanel.Location = new Point((legendWrapper.Width - legendPanel.Width) / 2, 5);
+                }
+            };
+            legendWrapper.Controls.Add(legendPanel);
+            
+            contentPanel.Controls.Add(legendWrapper);
             contentPanel.Controls.Add(calendarPanel);
             contentPanel.Controls.Add(headerPanel);
             
@@ -13849,26 +13865,43 @@ namespace Risk_Manager
                 contentPanel.Controls.SetChildIndex(newGrid, 0); // Move to top
                 
                 // Refresh legend panel
-                Control oldLegend = null;
+                Control oldLegendWrapper = null;
                 foreach (Control ctrl in contentPanel.Controls)
                 {
-                    if (ctrl.Name == "CalendarLegendPanel")
+                    if (ctrl.Name == "CalendarLegendWrapper")
                     {
-                        oldLegend = ctrl;
+                        oldLegendWrapper = ctrl;
                         break;
                     }
                 }
                 
-                if (oldLegend != null)
+                if (oldLegendWrapper != null)
                 {
-                    contentPanel.Controls.Remove(oldLegend);
-                    oldLegend.Dispose();
+                    contentPanel.Controls.Remove(oldLegendWrapper);
+                    oldLegendWrapper.Dispose();
                 }
                 
+                // Create new legend wrapper with centered legend
+                var newLegendWrapper = new Panel
+                {
+                    Name = "CalendarLegendWrapper",
+                    Dock = DockStyle.Top,
+                    Height = 90,
+                    BackColor = DarkBackground
+                };
+                
                 var newLegend = CreateCalendarLegendPanel();
-                newLegend.Dock = DockStyle.Top;
-                contentPanel.Controls.Add(newLegend);
-                contentPanel.Controls.SetChildIndex(newLegend, 0); // Move to top (which is actually bottom due to docking)
+                newLegendWrapper.Layout += (s, e) =>
+                {
+                    if (newLegend.Width > 0)
+                    {
+                        newLegend.Location = new Point((newLegendWrapper.Width - newLegend.Width) / 2, 5);
+                    }
+                };
+                newLegendWrapper.Controls.Add(newLegend);
+                
+                contentPanel.Controls.Add(newLegendWrapper);
+                contentPanel.Controls.SetChildIndex(newLegendWrapper, 0); // Move to top (which is actually bottom due to docking)
             }
             
             calendarPage.Refresh();
