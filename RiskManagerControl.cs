@@ -416,6 +416,7 @@ namespace Risk_Manager
         
         // Trading Journal constants
         private const int NOTES_DISPLAY_MAX_LENGTH = 30; // Maximum characters to display in notes column before truncation
+        private const int CALENDAR_LEGEND_WRAPPER_HEIGHT = 90; // Height of the calendar legend wrapper panel
         
         // Risk Overview card title constants
         private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
@@ -13765,24 +13766,7 @@ namespace Risk_Manager
             calendarPanel.Dock = DockStyle.Top;
             
             // Legend panel at the bottom - use wrapper to center it
-            var legendWrapper = new Panel
-            {
-                Name = "CalendarLegendWrapper",
-                Dock = DockStyle.Top,
-                Height = 90, // Slightly more than legend height for spacing
-                BackColor = DarkBackground
-            };
-            
-            var legendPanel = CreateCalendarLegendPanel();
-            // Center the legend panel horizontally within the wrapper
-            legendWrapper.Layout += (s, e) =>
-            {
-                if (legendPanel.Width > 0)
-                {
-                    legendPanel.Location = new Point((legendWrapper.Width - legendPanel.Width) / 2, 5);
-                }
-            };
-            legendWrapper.Controls.Add(legendPanel);
+            var legendWrapper = CreateCenteredLegendWrapper();
             
             contentPanel.Controls.Add(legendWrapper);
             contentPanel.Controls.Add(calendarPanel);
@@ -13882,24 +13866,7 @@ namespace Risk_Manager
                 }
                 
                 // Create new legend wrapper with centered legend
-                var newLegendWrapper = new Panel
-                {
-                    Name = "CalendarLegendWrapper",
-                    Dock = DockStyle.Top,
-                    Height = 90,
-                    BackColor = DarkBackground
-                };
-                
-                var newLegend = CreateCalendarLegendPanel();
-                newLegendWrapper.Layout += (s, e) =>
-                {
-                    if (newLegend.Width > 0)
-                    {
-                        newLegend.Location = new Point((newLegendWrapper.Width - newLegend.Width) / 2, 5);
-                    }
-                };
-                newLegendWrapper.Controls.Add(newLegend);
-                
+                var newLegendWrapper = CreateCenteredLegendWrapper();
                 contentPanel.Controls.Add(newLegendWrapper);
                 contentPanel.Controls.SetChildIndex(newLegendWrapper, 0); // Move to top (which is actually bottom due to docking)
             }
@@ -14587,6 +14554,34 @@ namespace Risk_Manager
             legendPanel.Controls.Add(itemsPanel);
             
             return legendPanel;
+        }
+        
+        /// <summary>
+        /// Creates a wrapper panel that centers the calendar legend horizontally
+        /// </summary>
+        private Panel CreateCenteredLegendWrapper()
+        {
+            var legendWrapper = new Panel
+            {
+                Name = "CalendarLegendWrapper",
+                Dock = DockStyle.Top,
+                Height = CALENDAR_LEGEND_WRAPPER_HEIGHT,
+                BackColor = DarkBackground
+            };
+            
+            var legendPanel = CreateCalendarLegendPanel();
+            
+            // Center the legend panel horizontally within the wrapper
+            legendWrapper.Layout += (s, e) =>
+            {
+                if (legendPanel.Width > 0)
+                {
+                    legendPanel.Location = new Point((legendWrapper.Width - legendPanel.Width) / 2, 5);
+                }
+            };
+            
+            legendWrapper.Controls.Add(legendPanel);
+            return legendWrapper;
         }
         
         /// <summary>
