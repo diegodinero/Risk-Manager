@@ -13967,7 +13967,9 @@ namespace Risk_Manager
             Color blueHighlight = Color.FromArgb(41, 128, 185);
             Color positiveColor = Color.FromArgb(110, 231, 183); // Green
             Color negativeColor = Color.FromArgb(253, 164, 165); // Pink/Red
-            
+            Color negativeColor2 = Color.FromArgb(255, 0, 0); //red
+
+
             var flowPanel = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
@@ -14021,7 +14023,7 @@ namespace Risk_Manager
                 // "Followed" text
                 var label3 = new Label
                 {
-                    Text = " Followed  ",
+                    Text = " ",
                     Font = new Font("Segoe UI", 9, FontStyle.Regular),
                     ForeColor = TextWhite,
                     AutoSize = true,
@@ -14059,7 +14061,7 @@ namespace Risk_Manager
                 };
                 flowPanel.Controls.Add(label1);
                 
-                var plColor = monthlyNetPL >= 0 ? positiveColor : negativeColor;
+                var plColor = monthlyNetPL >= 0 ? positiveColor : negativeColor2;
                 var label2 = new Label
                 {
                     Text = $"{monthlyNetPL:+$#,##0.00;-$#,##0.00;$0.00} ",
@@ -14414,7 +14416,7 @@ namespace Risk_Manager
             {
                 Name = "CalendarLegendPanel",
                 BackColor = CardBackground,
-                Padding = new Padding(20, 10, 20, 10),
+                Padding = new Padding(20, 2, 20, 0),
                 Height = 80
             };
             
