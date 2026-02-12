@@ -83,7 +83,7 @@ class CustomCardHeaderControl : Panel
         {
             Text = title, // Title without emojis
             AutoSize = true,
-            Font = new Font("Segoe UI", 11, FontStyle.Bold),
+            Font = new Font("Segoe UI Emoji", 11, FontStyle.Bold),
             ForeColor = Color.White,
             Dock = DockStyle.Left,
             TextAlign = ContentAlignment.MiddleLeft,
@@ -15302,7 +15302,7 @@ namespace Risk_Manager
             var tradeCountLabel = new Label
             {
                 Text = $"📊 Used in {model.TradeCount} trade{(model.TradeCount != 1 ? "s" : "")}",
-                Font = new Font("Segoe UI", 9),
+                Font = new Font("Segoe UI Emoji", 9),
                 ForeColor = Color.FromArgb(100, 200, 255),
                 AutoSize = true,
                 Location = new Point(0, 70)
