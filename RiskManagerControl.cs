@@ -13302,9 +13302,9 @@ namespace Risk_Manager
             var filterCard = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 150,  // Minimal size - just fits controls without scrollbar
+                Height = 110,  // Compact size - nice and compact appearance
                 BackColor = CardBackground,  // Normal dark theme - production ready
-                Padding = new Padding(10),
+                Padding = new Padding(5),  // Compact padding
                 Margin = new Padding(0, 0, 0, 10),
                 Visible = true
             };
@@ -13316,10 +13316,10 @@ namespace Risk_Manager
             var filterPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 60,   // Minimal height - just beyond control size, no scrollbar
+                Height = 50,   // Compact height - controls moved up, nice and compact
                 FlowDirection = FlowDirection.LeftToRight,  // Horizontal layout
                 WrapContents = true,  // Allow wrapping to multiple rows
-                Padding = new Padding(5),
+                Padding = new Padding(3),  // Tight padding
                 BackColor = CardBackground,  // Normal card background
                 Visible = true,
                 AutoScroll = false,  // Disabled - controls fit without scrolling
