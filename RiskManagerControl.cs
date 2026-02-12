@@ -416,6 +416,8 @@ namespace Risk_Manager
         
         // Trading Journal constants
         private const int NOTES_DISPLAY_MAX_LENGTH = 30; // Maximum characters to display in notes column before truncation
+        private const int CALENDAR_LEGEND_WRAPPER_HEIGHT = 90; // Height of the calendar legend wrapper panel (original height for full visibility)
+        private const int CALENDAR_LEGEND_VERTICAL_PADDING = 2; // Vertical padding for legend within wrapper (reduced for less space)
         
         // Risk Overview card title constants
         private const string CARD_TITLE_ACCOUNT_STATUS = "Account Status";
@@ -13044,7 +13046,7 @@ namespace Risk_Manager
             
             // Diagnostic label removed - Trade Log now working!
             
-            var journalHeader = new CustomCardHeaderControl("📋 Trade Log", GetIconForTitle("Limits"));
+            var journalHeader = new CustomCardHeaderControl("📋 Trade Log", null);
             journalHeader.Dock = DockStyle.Top;
             journalCard.Controls.Add(journalHeader);
 
@@ -13252,7 +13254,7 @@ namespace Risk_Manager
             
             // Stats diagnostic label removed - Trade Log now working!
             
-            var statsHeader = new CustomCardHeaderControl("📊 Trading Statistics", GetIconForTitle("Limits"));
+            var statsHeader = new CustomCardHeaderControl("📊 Trading Statistics", null);
             statsHeader.Dock = DockStyle.Top;
             statsCard.Controls.Add(statsHeader);
             
@@ -13309,7 +13311,7 @@ namespace Risk_Manager
                 Visible = true
             };
 
-            var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", GetIconForTitle("Limits"));
+            var filterHeader = new CustomCardHeaderControl("🔍 Filter & Search", null);
             filterHeader.Dock = DockStyle.Top;
             
             // Filter panel with controls - at top, horizontal layout
@@ -13764,11 +13766,10 @@ namespace Risk_Manager
             var calendarPanel = CreateCalendarGrid();
             calendarPanel.Dock = DockStyle.Top;
             
-            // Legend panel at the bottom
-            var legendPanel = CreateCalendarLegendPanel();
-            legendPanel.Dock = DockStyle.Top;
+            // Legend panel at the bottom - use wrapper to align it with calendar
+            var legendWrapper = CreateAlignedLegendWrapper();
             
-            contentPanel.Controls.Add(legendPanel);
+            contentPanel.Controls.Add(legendWrapper);
             contentPanel.Controls.Add(calendarPanel);
             contentPanel.Controls.Add(headerPanel);
             
@@ -13849,26 +13850,26 @@ namespace Risk_Manager
                 contentPanel.Controls.SetChildIndex(newGrid, 0); // Move to top
                 
                 // Refresh legend panel
-                Control oldLegend = null;
+                Control oldLegendWrapper = null;
                 foreach (Control ctrl in contentPanel.Controls)
                 {
-                    if (ctrl.Name == "CalendarLegendPanel")
+                    if (ctrl.Name == "CalendarLegendWrapper")
                     {
-                        oldLegend = ctrl;
+                        oldLegendWrapper = ctrl;
                         break;
                     }
                 }
                 
-                if (oldLegend != null)
+                if (oldLegendWrapper != null)
                 {
-                    contentPanel.Controls.Remove(oldLegend);
-                    oldLegend.Dispose();
+                    contentPanel.Controls.Remove(oldLegendWrapper);
+                    oldLegendWrapper.Dispose();
                 }
                 
-                var newLegend = CreateCalendarLegendPanel();
-                newLegend.Dock = DockStyle.Top;
-                contentPanel.Controls.Add(newLegend);
-                contentPanel.Controls.SetChildIndex(newLegend, 0); // Move to top (which is actually bottom due to docking)
+                // Create new legend wrapper aligned with calendar
+                var newLegendWrapper = CreateAlignedLegendWrapper();
+                contentPanel.Controls.Add(newLegendWrapper);
+                contentPanel.Controls.SetChildIndex(newLegendWrapper, 0); // Move to top (which is actually bottom due to docking)
             }
             
             calendarPage.Refresh();
@@ -14446,15 +14447,15 @@ namespace Risk_Manager
             };
             legendPanel.Controls.Add(titleLabel);
             
-            // Legend items flow panel - legend width should match calendar columns only (not weekly stats)
-            legendPanel.Width = (5 * 150); // 1050px - match calendar width WITHOUT weekly stats column
+            // Legend items flow panel - legend width should match full calendar (7 day columns + weekly stats)
+            legendPanel.Width = (7 * 150) + 200; // 1250px - matches full calendar width including weekly stats column
             
             var itemsPanel = new FlowLayoutPanel
             {
                 AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                MaximumSize = new Size((7 * 150) - 40, 0)  // Constrain to calendar width with padding
+                MaximumSize = new Size((7 * 150) + 200 - 40, 0)  // Constrain to full calendar width with padding
             };
             
             // Center items horizontally
@@ -14554,6 +14555,35 @@ namespace Risk_Manager
             legendPanel.Controls.Add(itemsPanel);
             
             return legendPanel;
+        }
+        
+        /// <summary>
+        /// Creates a wrapper panel that positions the calendar legend to align with calendar day columns
+        /// </summary>
+        private Panel CreateAlignedLegendWrapper()
+        {
+            var legendWrapper = new Panel
+            {
+                Name = "CalendarLegendWrapper",
+                Dock = DockStyle.Top,
+                Height = CALENDAR_LEGEND_WRAPPER_HEIGHT,
+                BackColor = DarkBackground
+            };
+            
+            var legendPanel = CreateCalendarLegendPanel();
+            
+            // Position legend at left edge (no centering) to align with calendar grid
+            // This makes the legend bound to the calendar cells width and position
+            legendWrapper.Layout += (s, e) =>
+            {
+                if (legendPanel.Width > 0)
+                {
+                    legendPanel.Location = new Point(0, CALENDAR_LEGEND_VERTICAL_PADDING);
+                }
+            };
+            
+            legendWrapper.Controls.Add(legendPanel);
+            return legendWrapper;
         }
         
         /// <summary>
