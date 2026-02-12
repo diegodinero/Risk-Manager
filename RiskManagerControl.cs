@@ -7069,7 +7069,9 @@ namespace Risk_Manager
                 }
                 else
                 {
-                    lockAccountDisplay.Text = $"Account: {accountNumber}";
+                    // Apply privacy mode masking if enabled
+                    string displayAccountNumber = MaskAccountNumber(accountNumber);
+                    lockAccountDisplay.Text = $"Account: {displayAccountNumber}";
                     lockAccountDisplay.ForeColor = TextWhite;
                 }
                 
@@ -11909,6 +11911,7 @@ namespace Risk_Manager
                     RefreshAccountStats(); // Refresh stats detail grid (account row)
                     RefreshCopySettingsAccounts(); // Refresh Copy Settings tab
                     UpdateTitleWithAccountNumber(); // Refresh title bar with masked/unmasked account number
+                    UpdateAllLockAccountDisplays(); // Refresh account labels in all tabs
                 }
             };
 
