@@ -416,7 +416,7 @@ namespace Risk_Manager
         
         // Trading Journal constants
         private const int NOTES_DISPLAY_MAX_LENGTH = 30; // Maximum characters to display in notes column before truncation
-        private const int CALENDAR_LEGEND_WRAPPER_HEIGHT = 50; // Height of the calendar legend wrapper panel (reduced further for minimal spacing)
+        private const int CALENDAR_LEGEND_WRAPPER_HEIGHT = 75; // Height of the calendar legend wrapper panel (increased to show full legend text)
         private const int CALENDAR_LEGEND_VERTICAL_PADDING = 2; // Vertical padding for legend within wrapper
         
         // Trade log constants
@@ -13446,7 +13446,7 @@ namespace Risk_Manager
                 Visible = false
             };
             
-            var detailsHeader = new CustomCardHeaderControl("📝 Trade Details", GetIconForTitle("Limits"));
+            var detailsHeader = new CustomCardHeaderControl("📝 Trade Details", null);  // Remove icon, keep emoji
             detailsHeader.Dock = DockStyle.Top;
             detailsCard.Controls.Add(detailsHeader);
             
@@ -14338,12 +14338,33 @@ namespace Risk_Manager
             {
                 // P&L Mode: Show profit/loss metrics in order: # trades, dollar amount, % win, W/L: #/#
                 
-                // Weekly P&L dollar amount
+                // Calculate background luminance to determine if we need bright or dark text for P&L
+                double bgLuminance = (0.299 * panelColor.R + 0.587 * panelColor.G + 0.114 * panelColor.B);
+                bool isDarkBackground = bgLuminance < 100;
+                
+                // Weekly P&L dollar amount with color coding
+                Color plColor;
+                if (weeklyPL > 5)
+                {
+                    // Positive P&L - use bright green on dark background, dark green on light backgrounds
+                    plColor = isDarkBackground ? Color.FromArgb(0, 255, 0) : Color.FromArgb(0, 100, 0);
+                }
+                else if (weeklyPL < -5)
+                {
+                    // Negative P&L - always use bright red for visibility
+                    plColor = Color.FromArgb(255, 0, 0);
+                }
+                else
+                {
+                    // Breakeven - use bright orange on dark background, dark orange on light backgrounds
+                    plColor = isDarkBackground ? Color.FromArgb(255, 165, 0) : Color.FromArgb(204, 102, 0);
+                }
+                
                 var plLabel = new Label
                 {
                     Text = weeklyPL.ToString("+$#,##0.00;-$#,##0.00;$0.00"),
                     Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                    ForeColor = textColor,
+                    ForeColor = plColor,  // Use color-coded value instead of textColor
                     AutoSize = true,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Margin = new Padding(0, 3, 0, 3)
@@ -14403,7 +14424,7 @@ namespace Risk_Manager
                 Name = "CalendarLegendPanel",
                 BackColor = CardBackground,
                 Padding = new Padding(20, 2, 20, 0),
-                Height = 60  // Reduced from 80 to 60 to bring legend closer
+                Height = 70  // Increased from 60 to 70 to show full text and dots
             };
             
             // Add rounded corners
@@ -16105,7 +16126,7 @@ namespace Risk_Manager
             mainStatsPanel.Dock = DockStyle.Top;
             pagePanel.Controls.Add(mainStatsPanel);
 
-            // Monthly Stats Section (with reduced top padding)
+            // Monthly Stats Section (with minimal top padding)
             var monthlyStatsPanel = CreateStatsSection("Monthly Stats", new[]
             {
                 ("Plan Adherence", $"{monthlyPlanAdherence:0.0}%", Color.FromArgb(91, 140, 255)),
@@ -16114,7 +16135,7 @@ namespace Risk_Manager
                 ("Total P&L", FormatPL(monthlyNetPL), monthlyNetPL >= 0 ? Color.FromArgb(71, 199, 132) : Color.FromArgb(255, 77, 77))
             });
             monthlyStatsPanel.Dock = DockStyle.Top;
-            monthlyStatsPanel.Padding = new Padding(20, 5, 20, 15);  // Reduced top padding from 15 to 5
+            monthlyStatsPanel.Padding = new Padding(20, 0, 20, 15);  // Reduced top padding from 5 to 0 for minimal space
             pagePanel.Controls.Add(monthlyStatsPanel);
 
             // Overall Stats Section
