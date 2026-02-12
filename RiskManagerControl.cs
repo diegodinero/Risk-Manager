@@ -841,11 +841,14 @@ namespace Risk_Manager
         {
             if (string.IsNullOrEmpty(valueText))
                 return false;
-            return valueText.Contains(UNLOCK_EMOJI) || valueText.Contains(LOCK_EMOJI);
+            // Check for emoji-based status (legacy) or text-based status (new)
+            return valueText.Contains(UNLOCK_EMOJI) || valueText.Contains(LOCK_EMOJI) ||
+                   valueText.Contains("Locked") || valueText.Contains("Unlocked");
         }
 
         // Helper method to extract lock status text from emoji-prefixed strings
         // e.g., "🔓 Unlocked" -> "Unlocked", "🔒 Locked (2h 30m)" -> "Locked (2h 30m)"
+        // Also handles non-emoji formats: "Unlocked" -> "Unlocked", "Locked" -> "Locked"
         private string ExtractLockStatusText(string valueText)
         {
             if (string.IsNullOrEmpty(valueText))
@@ -854,11 +857,16 @@ namespace Risk_Manager
             var lockStatusText = valueText;
             if (IsLockStatusValue(valueText))
             {
-                var spaceIndex = valueText.IndexOf(' ');
-                if (spaceIndex >= 0 && spaceIndex + 1 < valueText.Length)
+                // Only extract text after space if it contains an emoji
+                if (valueText.Contains(UNLOCK_EMOJI) || valueText.Contains(LOCK_EMOJI))
                 {
-                    lockStatusText = valueText.Substring(spaceIndex + 1).Trim();
+                    var spaceIndex = valueText.IndexOf(' ');
+                    if (spaceIndex >= 0 && spaceIndex + 1 < valueText.Length)
+                    {
+                        lockStatusText = valueText.Substring(spaceIndex + 1).Trim();
+                    }
                 }
+                // If no emoji, return the text as-is
             }
             return lockStatusText;
         }
