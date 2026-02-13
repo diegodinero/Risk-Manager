@@ -226,7 +226,7 @@ namespace Risk_Manager
         private Button unlockTradingButton; // Unlock Trading button reference
         private ComboBox lockDurationComboBox; // Lock duration selector
         private CheckBox showProgressBarsCheckBox; // Show Progress Bars checkbox in General Settings
-        private bool showProgressBars = false; // Whether to show progress bars in data grids
+        private bool showProgressBars = true; // Whether to show progress bars in data grids
         private CheckBox showPercentageCheckBox; // Show Percentage checkbox in General Settings
         private bool showPercentage = false; // Whether to show percentage instead of dollar amount in progress bars
         private Label currentThemeLabel; // Label to display current theme name
@@ -1394,8 +1394,8 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"Failed to load progress bar preference: {ex.Message}");
             }
             
-            // Default to false (show normal columns)
-            return false;
+            // Default to true (show progress bars)
+            return true;
         }
 
         /// <summary>
