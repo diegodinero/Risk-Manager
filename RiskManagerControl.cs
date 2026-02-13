@@ -4492,10 +4492,30 @@ namespace Risk_Manager
                 }
                 else
                 {
-                    // No limits configured but value is non-zero, show small bar with neutral color
-                    percentage = 10;  // Show at least 10% so it's visible
-                    barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
-                    System.Diagnostics.Debug.WriteLine($"Gross P&L: No limits configured - showing 10% gray bar (pnlValue={pnlValue:F2}, lossLimit={dailyLossLimit:F2}, profitTarget={dailyProfitTarget:F2})");
+                    // No limits configured, use default threshold for visualization
+                    double defaultLimit = 1000;
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / defaultLimit * 100);
+                    
+                    if (pnlValue < 0)
+                    {
+                        // Color scheme for negative values: yellow → orange → red
+                        if (percentage >= 70)
+                            barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
+                        else if (percentage >= 40)
+                            barColor = Color.FromArgb(255, 133, 27);     // Modern orange
+                        else
+                            barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+                    }
+                    else
+                    {
+                        // Positive - green tones
+                        if (percentage >= 70)
+                            barColor = Color.FromArgb(0, 192, 118);      // Bright success green
+                        else
+                            barColor = Color.FromArgb(40, 167, 69);      // Medium green
+                    }
+                    
+                    System.Diagnostics.Debug.WriteLine($"Gross P&L: No limits configured - showing proportional bar (pnlValue={pnlValue:F2}, percentage={percentage:F1}%, color={barColor.Name})");
                 }
             }
             else if (isOpenPnL)
@@ -4546,10 +4566,30 @@ namespace Risk_Manager
                 }
                 else
                 {
-                    // No limits configured but value is non-zero, show small bar with neutral color
-                    percentage = 10;  // Show at least 10% so it's visible
-                    barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
-                    System.Diagnostics.Debug.WriteLine($"Open P&L: No limits configured - showing 10% gray bar (pnlValue={pnlValue:F2}, lossLimit={positionLossLimit:F2}, profitTarget={positionProfitTarget:F2})");
+                    // No limits configured, use default threshold for visualization
+                    double defaultLimit = 1000;
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / defaultLimit * 100);
+                    
+                    if (pnlValue < 0)
+                    {
+                        // Color scheme for negative values: yellow → orange → red
+                        if (percentage >= 70)
+                            barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
+                        else if (percentage >= 40)
+                            barColor = Color.FromArgb(255, 133, 27);     // Modern orange
+                        else
+                            barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+                    }
+                    else
+                    {
+                        // Positive - green tones
+                        if (percentage >= 70)
+                            barColor = Color.FromArgb(0, 192, 118);      // Bright success green
+                        else
+                            barColor = Color.FromArgb(40, 167, 69);      // Medium green
+                    }
+                    
+                    System.Diagnostics.Debug.WriteLine($"Open P&L: No limits configured - showing proportional bar (pnlValue={pnlValue:F2}, percentage={percentage:F1}%, color={barColor.Name})");
                 }
             }
 
