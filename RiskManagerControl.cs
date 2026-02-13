@@ -4845,10 +4845,10 @@ namespace Risk_Manager
                     
                     if (pnlValue < 0)
                     {
-                        // Negative - red tones
+                        // Color scheme for negative values: yellow → orange → red
                         if (percentage >= 70)
                             barColor = Color.FromArgb(220, 53, 69);
-                        else if (percentage >= 50)
+                        else if (percentage >= 40)
                             barColor = Color.FromArgb(255, 133, 27);
                         else
                             barColor = Color.FromArgb(255, 193, 7);
