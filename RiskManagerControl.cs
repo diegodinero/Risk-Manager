@@ -9650,12 +9650,53 @@ namespace Risk_Manager
         /// <summary>
         /// Gets the account number for the currently selected account.
         /// Creates a unique identifier using multiple properties to handle cases where Id/Name are the same.
+        /// Always uses the dropdown (accountSelector) as the source of truth.
         /// </summary>
         private string GetSelectedAccountNumber()
         {
+            // ALWAYS use the dropdown as the source of truth
+            // This ensures we get the current selection even if the event handler hasn't fired
+            if (accountSelector != null)
+            {
+                var dropdownIndex = accountSelector.SelectedIndex;
+                var dropdownSelection = accountSelector.SelectedItem;
+                
+                // Update our cached variables to match the dropdown
+                if (dropdownSelection != null && dropdownIndex >= 0)
+                {
+                    if (dropdownSelection is Account account)
+                    {
+                        // Sync the cached variables with dropdown state
+                        selectedAccount = account;
+                        selectedAccountIndex = dropdownIndex;
+                        
+                        System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using dropdown selection - Index={selectedAccountIndex}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Dropdown item is not an Account object");
+                        selectedAccount = null;
+                        selectedAccountIndex = -1;
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Dropdown has no valid selection (Index={dropdownIndex})");
+                    selectedAccount = null;
+                    selectedAccountIndex = -1;
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: accountSelector is null");
+                selectedAccount = null;
+                selectedAccountIndex = -1;
+            }
+            
+            // Now use the synchronized selectedAccount
             if (selectedAccount == null)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is NULL");
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: No account selected");
                 return null;
             }
             
@@ -9663,7 +9704,7 @@ namespace Risk_Manager
             // This ensures the same identifier is used for locks, settings, and badge updates
             var uniqueId = GetUniqueAccountIdentifier(selectedAccount, selectedAccountIndex);
             
-            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Using GetUniqueAccountIdentifier result='{uniqueId}' with index={selectedAccountIndex}");
+            System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Result='{uniqueId}' with index={selectedAccountIndex}");
             
             return uniqueId;
         }
@@ -20157,6 +20198,9 @@ namespace Risk_Manager
             {
                 ctrl.Dock = DockStyle.Fill;
                 contentPanel.Controls.Add(ctrl);
+                
+                // Update account display labels in the current panel to show the currently selected account
+                UpdateLockAccountDisplaysRecursive(ctrl);
                 
                 // Refresh Risk Overview tab when it's shown
                 if (name.EndsWith("Risk Overview"))
