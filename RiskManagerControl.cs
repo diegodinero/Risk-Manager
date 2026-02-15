@@ -1762,18 +1762,58 @@ namespace Risk_Manager
                         // Check if settings are locked for this account
                         bool isLocked = service.AreSettingsLocked(accountIdentifier);
                         
-                        var checkbox = new CheckBox
+                        if (isLocked)
                         {
-                            Text = $"{account.Name} ({displayIdentifier})" + (isLocked ? " [LOCKED]" : ""),
-                            Tag = account,
-                            AutoSize = true,
-                            Font = new Font("Segoe UI", 9.5f),
-                            ForeColor = isLocked ? Color.FromArgb(231, 76, 60) : TextWhite, // Red for locked accounts
-                            BackColor = DarkerBackground,
-                            Margin = new Padding(0, 5, 0, 5),
-                            Enabled = !isLocked // Disable checkbox for locked accounts (greyed out)
-                        };
-                        copySettingsTargetPanel.Controls.Add(checkbox);
+                            // For locked accounts, create a composite control with white text + red label
+                            var lockedPanel = new FlowLayoutPanel
+                            {
+                                FlowDirection = FlowDirection.LeftToRight,
+                                AutoSize = true,
+                                WrapContents = false,
+                                BackColor = DarkerBackground,
+                                Margin = new Padding(0, 5, 0, 5)
+                            };
+                            
+                            var checkbox = new CheckBox
+                            {
+                                Text = $"{account.Name} ({displayIdentifier}) ",
+                                Tag = new { Account = account, IsLocked = true },
+                                AutoSize = true,
+                                Font = new Font("Segoe UI", 9.5f),
+                                ForeColor = TextWhite,  // White text
+                                BackColor = DarkerBackground,
+                                Margin = new Padding(0)
+                            };
+                            
+                            var lockedLabel = new Label
+                            {
+                                Text = "[LOCKED]",
+                                AutoSize = true,
+                                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                                ForeColor = Color.FromArgb(231, 76, 60), // Red color
+                                BackColor = DarkerBackground,
+                                Margin = new Padding(0)
+                            };
+                            
+                            lockedPanel.Controls.Add(checkbox);
+                            lockedPanel.Controls.Add(lockedLabel);
+                            copySettingsTargetPanel.Controls.Add(lockedPanel);
+                        }
+                        else
+                        {
+                            // For unlocked accounts, use a simple checkbox
+                            var checkbox = new CheckBox
+                            {
+                                Text = $"{account.Name} ({displayIdentifier})",
+                                Tag = new { Account = account, IsLocked = false },
+                                AutoSize = true,
+                                Font = new Font("Segoe UI", 9.5f),
+                                ForeColor = TextWhite,
+                                BackColor = DarkerBackground,
+                                Margin = new Padding(0, 5, 0, 5)
+                            };
+                            copySettingsTargetPanel.Controls.Add(checkbox);
+                        }
                     }
 
                     if (copySettingsTargetPanel.Controls.Count == 0)
@@ -9846,6 +9886,43 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Helper method to extract Account and lock status from checkbox Tag using reflection.
+        /// Handles both direct Account tags and anonymous objects with Account and IsLocked properties.
+        /// </summary>
+        /// <param name="tag">The Tag object from a checkbox</param>
+        /// <param name="account">Output: The extracted Account, or null if extraction failed</param>
+        /// <param name="isLocked">Output: The lock status of the account</param>
+        /// <returns>True if Account was successfully extracted, false otherwise</returns>
+        private bool TryGetAccountLockStatus(object tag, out Account account, out bool isLocked)
+        {
+            account = null;
+            isLocked = false;
+            
+            if (tag == null)
+                return false;
+                
+            try
+            {
+                var tagType = tag.GetType();
+                var accountProp = tagType.GetProperty("Account");
+                var isLockedProp = tagType.GetProperty("IsLocked");
+                
+                if (accountProp != null && isLockedProp != null)
+                {
+                    account = accountProp.GetValue(tag) as Account;
+                    isLocked = (bool)isLockedProp.GetValue(tag);
+                    return account != null;
+                }
+            }
+            catch
+            {
+                // Ignore reflection errors
+            }
+            
+            return false;
+        }
+
+        /// <summary>
         /// Determines the account type based on connection name, account ID, and AdditionalInfo.
         /// Uses word boundary pattern matching to avoid false positives.
         /// </summary>
@@ -12346,18 +12423,58 @@ namespace Risk_Manager
                         // Check if settings are locked for this account
                         bool isLocked = service.AreSettingsLocked(accountIdentifier);
                         
-                        var checkbox = new CheckBox
+                        if (isLocked)
                         {
-                            Text = $"{account.Name} ({displayIdentifier})" + (isLocked ? " [LOCKED]" : ""),
-                            Tag = account,
-                            AutoSize = true,
-                            Font = new Font("Segoe UI", 9.5f),
-                            ForeColor = isLocked ? Color.FromArgb(231, 76, 60) : TextWhite, // Red for locked accounts
-                            BackColor = DarkerBackground,
-                            Margin = new Padding(0, 5, 0, 5),
-                            Enabled = !isLocked // Disable checkbox for locked accounts (greyed out)
-                        };
-                        copySettingsTargetPanel.Controls.Add(checkbox);
+                            // For locked accounts, create a composite control with white text + red label
+                            var lockedPanel = new FlowLayoutPanel
+                            {
+                                FlowDirection = FlowDirection.LeftToRight,
+                                AutoSize = true,
+                                WrapContents = false,
+                                BackColor = DarkerBackground,
+                                Margin = new Padding(0, 5, 0, 5)
+                            };
+                            
+                            var checkbox = new CheckBox
+                            {
+                                Text = $"{account.Name} ({displayIdentifier}) ",
+                                Tag = new { Account = account, IsLocked = true },
+                                AutoSize = true,
+                                Font = new Font("Segoe UI", 9.5f),
+                                ForeColor = TextWhite,  // White text
+                                BackColor = DarkerBackground,
+                                Margin = new Padding(0)
+                            };
+                            
+                            var lockedLabel = new Label
+                            {
+                                Text = "[LOCKED]",
+                                AutoSize = true,
+                                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                                ForeColor = Color.FromArgb(231, 76, 60), // Red color
+                                BackColor = DarkerBackground,
+                                Margin = new Padding(0)
+                            };
+                            
+                            lockedPanel.Controls.Add(checkbox);
+                            lockedPanel.Controls.Add(lockedLabel);
+                            copySettingsTargetPanel.Controls.Add(lockedPanel);
+                        }
+                        else
+                        {
+                            // For unlocked accounts, use a simple checkbox
+                            var checkbox = new CheckBox
+                            {
+                                Text = $"{account.Name} ({displayIdentifier})",
+                                Tag = new { Account = account, IsLocked = false },
+                                AutoSize = true,
+                                Font = new Font("Segoe UI", 9.5f),
+                                ForeColor = TextWhite,
+                                BackColor = DarkerBackground,
+                                Margin = new Padding(0, 5, 0, 5)
+                            };
+                            copySettingsTargetPanel.Controls.Add(checkbox);
+                        }
                     }
 
                     if (copySettingsTargetPanel.Controls.Count == 0)
@@ -12429,8 +12546,40 @@ namespace Risk_Manager
             {
                 foreach (Control control in copySettingsTargetPanel.Controls)
                 {
-                    if (control is CheckBox cb && cb.Enabled) // Only check enabled checkboxes
-                        cb.Checked = true;
+                    // Handle direct checkboxes
+                    if (control is CheckBox cb)
+                    {
+                        // Try to get lock status from tag
+                        if (TryGetAccountLockStatus(cb.Tag, out _, out bool isLocked))
+                        {
+                            // Only check unlocked accounts
+                            if (!isLocked)
+                                cb.Checked = true;
+                        }
+                        else
+                        {
+                            // Fallback: check all if tag is null/invalid (backwards compatibility)
+                            cb.Checked = true;
+                        }
+                    }
+                    // Handle FlowLayoutPanel containing checkbox + label for locked accounts
+                    else if (control is FlowLayoutPanel panel)
+                    {
+                        foreach (Control panelControl in panel.Controls)
+                        {
+                            if (panelControl is CheckBox panelCb)
+                            {
+                                // Try to get lock status from tag
+                                if (TryGetAccountLockStatus(panelCb.Tag, out _, out bool isLocked))
+                                {
+                                    // Only check unlocked accounts
+                                    if (!isLocked)
+                                        panelCb.Checked = true;
+                                }
+                                break; // Only one checkbox per panel
+                            }
+                        }
+                    }
                 }
             };
             buttonPanel.Controls.Add(selectAllButton);
@@ -12451,8 +12600,23 @@ namespace Risk_Manager
             {
                 foreach (Control control in copySettingsTargetPanel.Controls)
                 {
+                    // Handle direct checkboxes
                     if (control is CheckBox cb)
+                    {
                         cb.Checked = false;
+                    }
+                    // Handle FlowLayoutPanel containing checkbox + label for locked accounts
+                    else if (control is FlowLayoutPanel panel)
+                    {
+                        foreach (Control panelControl in panel.Controls)
+                        {
+                            if (panelControl is CheckBox panelCb)
+                            {
+                                panelCb.Checked = false;
+                                break; // Only one checkbox per panel
+                            }
+                        }
+                    }
                 }
             };
             buttonPanel.Controls.Add(deselectAllButton);
@@ -12489,13 +12653,41 @@ namespace Risk_Manager
                         return;
                     }
 
-                    // Get selected target accounts (skip disabled checkboxes which are locked)
+                    // Get selected target accounts (skip locked accounts using helper method)
                     var targetAccounts = new List<string>();
                     foreach (Control control in copySettingsTargetPanel.Controls)
                     {
-                        if (control is CheckBox cb && cb.Checked && cb.Enabled && cb.Tag is Account account)
+                        CheckBox checkbox = null;
+                        
+                        // Handle direct checkboxes
+                        if (control is CheckBox cb)
                         {
-                            targetAccounts.Add(GetAccountIdentifier(account));
+                            checkbox = cb;
+                        }
+                        // Handle FlowLayoutPanel containing checkbox + label for locked accounts
+                        else if (control is FlowLayoutPanel panel)
+                        {
+                            foreach (Control panelControl in panel.Controls)
+                            {
+                                if (panelControl is CheckBox panelCb)
+                                {
+                                    checkbox = panelCb;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // Extract account and validate
+                        if (checkbox != null && checkbox.Checked)
+                        {
+                            if (TryGetAccountLockStatus(checkbox.Tag, out Account account, out bool isLocked))
+                            {
+                                // Only add unlocked accounts
+                                if (!isLocked && account != null)
+                                {
+                                    targetAccounts.Add(GetAccountIdentifier(account));
+                                }
+                            }
                         }
                     }
 
@@ -12567,8 +12759,23 @@ namespace Risk_Manager
                     {
                         foreach (Control control in copySettingsTargetPanel.Controls)
                         {
+                            // Handle direct checkboxes
                             if (control is CheckBox cb)
+                            {
                                 cb.Checked = false;
+                            }
+                            // Handle FlowLayoutPanel containing checkbox + label for locked accounts
+                            else if (control is FlowLayoutPanel panel)
+                            {
+                                foreach (Control panelControl in panel.Controls)
+                                {
+                                    if (panelControl is CheckBox panelCb)
+                                    {
+                                        panelCb.Checked = false;
+                                        break;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
