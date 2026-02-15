@@ -219,7 +219,7 @@ namespace Risk_Manager
         private int selectedAccountIndex = -1; // Track the index of selected account
         private string displayedAccountNumber; // Cache the account number shown in UI
         private Button lockSettingsButton; // Reference to lock settings button
-        private Button unlockSettingsButton; // Reference to unlock settings button
+        // private Button unlockSettingsButton; // Reference to unlock settings button - COMMENTED OUT per user request
         private DataGridView statsDetailGrid;
         private System.Windows.Forms.Timer statsDetailRefreshTimer;
         private DataGridView typeSummaryGrid;
@@ -239,7 +239,7 @@ namespace Risk_Manager
         private Label lblTradingStatusBadgeDebug; // Debug label to show badge transition information
         private ComboBox accountSelector;
         private Button lockTradingButton; // Lock Trading button reference
-        private Button unlockTradingButton; // Unlock Trading button reference
+        // private Button unlockTradingButton; // Unlock Trading button reference - COMMENTED OUT per user request
         private ComboBox lockDurationComboBox; // Lock duration selector
         private CheckBox showProgressBarsCheckBox; // Show Progress Bars checkbox in General Settings
         private bool showProgressBars = false; // Whether to show progress bars in data grids
@@ -2280,21 +2280,22 @@ namespace Risk_Manager
         {
             try
             {
-                if (lockSettingsButton != null && unlockSettingsButton != null)
+                // Note: unlockSettingsButton has been commented out per user request
+                if (lockSettingsButton != null /* && unlockSettingsButton != null */)
                 {
                     if (isLocked.HasValue)
                     {
-                        // Disable lock button if already locked, disable unlock button if already unlocked
+                        // Disable lock button if already locked
                         lockSettingsButton.Enabled = !isLocked.Value;
-                        unlockSettingsButton.Enabled = isLocked.Value;
-                        System.Diagnostics.Debug.WriteLine($"UpdateLockUnlockButtonStates: isLocked={isLocked.Value}, lockButtonEnabled={!isLocked.Value}, unlockButtonEnabled={isLocked.Value}");
+                        // unlockSettingsButton.Enabled = isLocked.Value; // COMMENTED OUT - button removed
+                        System.Diagnostics.Debug.WriteLine($"UpdateLockUnlockButtonStates: isLocked={isLocked.Value}, lockButtonEnabled={!isLocked.Value}");
                     }
                     else
                     {
-                        // No lock status - enable both buttons
+                        // No lock status - enable lock button
                         lockSettingsButton.Enabled = true;
-                        unlockSettingsButton.Enabled = true;
-                        System.Diagnostics.Debug.WriteLine("UpdateLockUnlockButtonStates: No lock status, both buttons enabled");
+                        // unlockSettingsButton.Enabled = true; // COMMENTED OUT - button removed
+                        System.Diagnostics.Debug.WriteLine("UpdateLockUnlockButtonStates: No lock status, lock button enabled");
                     }
                 }
             }
@@ -6328,6 +6329,7 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(lockSettingsButton);
 
+            /* COMMENTED OUT per user request - Unlock Settings button removed
             // Unlock Settings Button
             unlockSettingsButton = new Button
             {
@@ -6383,6 +6385,7 @@ namespace Risk_Manager
                 }
             };
             contentArea.Controls.Add(unlockSettingsButton);
+            */
             
             // Separator line
             var separatorLabel = new Label
@@ -6804,6 +6807,7 @@ namespace Risk_Manager
             lockTradingButton = lockButton; // Store reference
             contentArea.Controls.Add(lockButton);
 
+            /* COMMENTED OUT per user request - Unlock Trading button removed
             var unlockButton = new Button
             {
                 Text = "UNLOCK TRADING",
@@ -6821,6 +6825,7 @@ namespace Risk_Manager
             unlockButton.Click += BtnUnlock_Click;
             unlockTradingButton = unlockButton; // Store reference
             contentArea.Controls.Add(unlockButton);
+            */
 
             // Separator line
             var separatorLabel = new Label
@@ -7401,42 +7406,44 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Updates the enabled/disabled state of lock and unlock buttons based on current lock status.
-        /// Grey out Lock button if already locked, grey out Unlock button if already unlocked.
+        /// Updates the enabled/disabled state of lock button based on current lock status.
+        /// Grey out Lock button if already locked.
+        /// Note: Unlock button has been commented out per user request.
         /// </summary>
         private void UpdateLockButtonStates()
         {
             try
             {
-                if (lockTradingButton == null || unlockTradingButton == null)
+                // Note: unlockTradingButton has been commented out per user request
+                if (lockTradingButton == null /* || unlockTradingButton == null */)
                     return;
 
                 var accountNumber = GetSelectedAccountNumber();
                 if (string.IsNullOrEmpty(accountNumber))
                 {
-                    // No account selected - disable both buttons
+                    // No account selected - disable lock button
                     lockTradingButton.Enabled = false;
-                    unlockTradingButton.Enabled = false;
+                    // unlockTradingButton.Enabled = false; // COMMENTED OUT - button removed
                     return;
                 }
 
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (!settingsService.IsInitialized)
                 {
-                    // Service not initialized - enable both buttons as fallback
+                    // Service not initialized - enable lock button as fallback
                     lockTradingButton.Enabled = true;
-                    unlockTradingButton.Enabled = true;
+                    // unlockTradingButton.Enabled = true; // COMMENTED OUT - button removed
                     return;
                 }
 
                 bool isLocked = settingsService.IsTradingLocked(accountNumber);
 
-                // If locked: disable Lock button, enable Unlock button
-                // If unlocked: enable Lock button, disable Unlock button
+                // If locked: disable Lock button
+                // If unlocked: enable Lock button
                 lockTradingButton.Enabled = !isLocked;
-                unlockTradingButton.Enabled = isLocked;
+                // unlockTradingButton.Enabled = isLocked; // COMMENTED OUT - button removed
                 
-                System.Diagnostics.Debug.WriteLine($"UpdateLockButtonStates: account='{accountNumber}', isLocked={isLocked}, Lock.Enabled={lockTradingButton.Enabled}, Unlock.Enabled={unlockTradingButton.Enabled}");
+                System.Diagnostics.Debug.WriteLine($"UpdateLockButtonStates: account='{accountNumber}', isLocked={isLocked}, Lock.Enabled={lockTradingButton.Enabled}");
             }
             catch (Exception ex)
             {
