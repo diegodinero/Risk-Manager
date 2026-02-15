@@ -2275,7 +2275,11 @@ namespace Risk_Manager
             }
         }
 
-        // Update lock/unlock button states based on current lock status
+        /// <summary>
+        /// Update lock button states based on current lock status.
+        /// NOTE: Method name includes "Unlock" for historical reasons, but currently only manages Lock Settings button
+        /// as the Unlock Settings button has been commented out per user request.
+        /// </summary>
         private void UpdateLockUnlockButtonStates(bool? isLocked)
         {
             try
@@ -7443,7 +7447,7 @@ namespace Risk_Manager
                 lockTradingButton.Enabled = !isLocked;
                 // unlockTradingButton.Enabled = isLocked; // COMMENTED OUT - button removed
                 
-                System.Diagnostics.Debug.WriteLine($"UpdateLockButtonStates: account='{accountNumber}', isLocked={isLocked}, Lock.Enabled={lockTradingButton.Enabled}");
+                System.Diagnostics.Debug.WriteLine($"UpdateLockButtonStates: account='{accountNumber}', isLocked={isLocked}, LockButton.Enabled={lockTradingButton.Enabled}");
             }
             catch (Exception ex)
             {
