@@ -1761,6 +1761,7 @@ namespace Risk_Manager
                 // to ensure privacy mode is applied to target account labels
                 if (currentSelection != null)
                 {
+                    copySettingsTargetPanel.SuspendLayout(); // Suspend layout to prevent flickering
                     copySettingsTargetPanel.Controls.Clear();
                     
                     // Get service instance once before the loop for performance
@@ -1780,7 +1781,7 @@ namespace Risk_Manager
                         
                         if (isLocked)
                         {
-                            // For locked accounts, create a composite control with white text + red label
+                            // For locked accounts, create a composite control with disabled checkbox + red [LOCKED] label
                             var lockedPanel = new FlowLayoutPanel
                             {
                                 FlowDirection = FlowDirection.LeftToRight,
@@ -1796,7 +1797,7 @@ namespace Risk_Manager
                                 Tag = new AccountTagInfo(account, true),
                                 AutoSize = true,
                                 Font = new Font("Segoe UI", 9.5f),
-                                ForeColor = TextWhite,  // White text
+                                ForeColor = TextWhite,
                                 BackColor = DarkerBackground,
                                 Margin = new Padding(0),
                                 Enabled = false  // Disable checkbox for locked accounts (greyed out)
@@ -1845,6 +1846,8 @@ namespace Risk_Manager
                         };
                         copySettingsTargetPanel.Controls.Add(noAccountsLabel);
                     }
+                    
+                    copySettingsTargetPanel.ResumeLayout(); // Resume layout
                 }
                 return;
             }
