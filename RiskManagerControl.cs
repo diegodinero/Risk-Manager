@@ -1798,7 +1798,8 @@ namespace Risk_Manager
                                 Font = new Font("Segoe UI", 9.5f),
                                 ForeColor = TextWhite,  // White text
                                 BackColor = DarkerBackground,
-                                Margin = new Padding(0)
+                                Margin = new Padding(0),
+                                Enabled = false  // Disable checkbox for locked accounts (greyed out)
                             };
                             
                             var lockedLabel = new Label
@@ -12514,7 +12515,8 @@ namespace Risk_Manager
                                 Font = new Font("Segoe UI", 9.5f),
                                 ForeColor = TextWhite,  // White text
                                 BackColor = DarkerBackground,
-                                Margin = new Padding(0)
+                                Margin = new Padding(0),
+                                Enabled = false  // Disable checkbox for locked accounts (greyed out)
                             };
                             
                             var lockedLabel = new Label
@@ -12617,18 +12619,9 @@ namespace Risk_Manager
             {
                 ForEachCopySettingsCheckBox(cb =>
                 {
-                    // Try to get lock status from tag
-                    if (TryGetAccountLockStatus(cb.Tag, out _, out bool isLocked))
-                    {
-                        // Only check unlocked accounts
-                        if (!isLocked)
-                            cb.Checked = true;
-                    }
-                    else
-                    {
-                        // Fallback: check all if tag is null/invalid (backwards compatibility)
+                    // Only check enabled (unlocked) checkboxes
+                    if (cb.Enabled)
                         cb.Checked = true;
-                    }
                 });
             };
             buttonPanel.Controls.Add(selectAllButton);
@@ -12683,17 +12676,16 @@ namespace Risk_Manager
                         return;
                     }
 
-                    // Get selected target accounts (skip locked accounts using helper method)
+                    // Get selected target accounts (only enabled/unlocked checkboxes can be checked)
                     var targetAccounts = new List<string>();
                     ForEachCopySettingsCheckBox(checkbox =>
                     {
-                        // Extract account and validate
-                        if (checkbox.Checked)
+                        // Only process checked and enabled checkboxes (disabled checkboxes are locked accounts)
+                        if (checkbox.Checked && checkbox.Enabled)
                         {
-                            if (TryGetAccountLockStatus(checkbox.Tag, out Account account, out bool isLocked))
+                            if (TryGetAccountLockStatus(checkbox.Tag, out Account account, out _))
                             {
-                                // Only add unlocked accounts
-                                if (!isLocked && account != null)
+                                if (account != null)
                                 {
                                     targetAccounts.Add(GetAccountIdentifier(account));
                                 }
