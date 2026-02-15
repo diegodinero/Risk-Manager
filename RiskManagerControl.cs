@@ -9657,14 +9657,17 @@ namespace Risk_Manager
             // This can happen during initialization or when accounts are updated programmatically
             if (selectedAccount == null && accountSelector != null)
             {
+                // Capture dropdown state atomically to avoid race conditions
+                var dropdownIndex = accountSelector.SelectedIndex;
                 var dropdownSelection = accountSelector.SelectedItem;
-                if (dropdownSelection != null)
+                
+                if (dropdownSelection != null && dropdownIndex >= 0)
                 {
-                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is NULL but accountSelector has selection, syncing...");
+                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is null but accountSelector has selection, syncing...");
                     if (dropdownSelection is Account account)
                     {
                         selectedAccount = account;
-                        selectedAccountIndex = accountSelector.SelectedIndex;
+                        selectedAccountIndex = dropdownIndex;
                         System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Synced selectedAccount from dropdown - Index={selectedAccountIndex}");
                     }
                 }
@@ -9672,7 +9675,7 @@ namespace Risk_Manager
             
             if (selectedAccount == null)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is NULL and no dropdown selection");
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is null and no dropdown selection");
                 return null;
             }
             
