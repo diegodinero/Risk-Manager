@@ -6382,7 +6382,7 @@ namespace Risk_Manager
                     System.Diagnostics.Debug.WriteLine($"Error in Unlock Settings button: {ex}");
                 }
             };
-            contentArea.Controls.Add(unlockSettingsButton);
+            //contentArea.Controls.Add(unlockSettingsButton);
             
             // Separator line
             var separatorLabel = new Label
@@ -6820,7 +6820,7 @@ namespace Risk_Manager
             unlockButton.FlatAppearance.BorderSize = 0;
             unlockButton.Click += BtnUnlock_Click;
             unlockTradingButton = unlockButton; // Store reference
-            contentArea.Controls.Add(unlockButton);
+            //contentArea.Controls.Add(unlockButton);
 
             // Separator line
             var separatorLabel = new Label
