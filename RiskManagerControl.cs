@@ -182,6 +182,22 @@ class CustomHeaderControl : Panel
     public PictureBox IconBox => iconBox;
 }
 
+/// <summary>
+/// Holds account information and lock status for checkbox tags in the Copy Settings panel.
+/// Used to avoid reflection overhead and provide type safety.
+/// </summary>
+public class AccountTagInfo
+{
+    public Account Account { get; set; }
+    public bool IsLocked { get; set; }
+    
+    public AccountTagInfo(Account account, bool isLocked)
+    {
+        Account = account;
+        IsLocked = isLocked;
+    }
+}
+
 namespace Risk_Manager
 {
     // Win32 imports for rounded regions
@@ -1777,7 +1793,7 @@ namespace Risk_Manager
                             var checkbox = new CheckBox
                             {
                                 Text = $"{account.Name} ({displayIdentifier}) ",
-                                Tag = new { Account = account, IsLocked = true },
+                                Tag = new AccountTagInfo(account, true),
                                 AutoSize = true,
                                 Font = new Font("Segoe UI", 9.5f),
                                 ForeColor = TextWhite,  // White text
@@ -1805,7 +1821,7 @@ namespace Risk_Manager
                             var checkbox = new CheckBox
                             {
                                 Text = $"{account.Name} ({displayIdentifier})",
-                                Tag = new { Account = account, IsLocked = false },
+                                Tag = new AccountTagInfo(account, false),
                                 AutoSize = true,
                                 Font = new Font("Segoe UI", 9.5f),
                                 ForeColor = TextWhite,
@@ -9886,8 +9902,8 @@ namespace Risk_Manager
         }
 
         /// <summary>
-        /// Helper method to extract Account and lock status from checkbox Tag using reflection.
-        /// Handles both direct Account tags and anonymous objects with Account and IsLocked properties.
+        /// Helper method to extract Account and lock status from checkbox Tag.
+        /// Handles both AccountTagInfo objects and legacy anonymous objects with reflection fallback.
         /// </summary>
         /// <param name="tag">The Tag object from a checkbox</param>
         /// <param name="account">Output: The extracted Account, or null if extraction failed</param>
@@ -9900,7 +9916,16 @@ namespace Risk_Manager
             
             if (tag == null)
                 return false;
-                
+            
+            // Try direct type cast first (most efficient)
+            if (tag is AccountTagInfo tagInfo)
+            {
+                account = tagInfo.Account;
+                isLocked = tagInfo.IsLocked;
+                return account != null;
+            }
+            
+            // Fallback to reflection for backwards compatibility with anonymous types
             try
             {
                 var tagType = tag.GetType();
@@ -9914,9 +9939,10 @@ namespace Risk_Manager
                     return account != null;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore reflection errors
+                // Log reflection errors for debugging
+                System.Diagnostics.Debug.WriteLine($"TryGetAccountLockStatus: Failed to extract account from tag using reflection. Error: {ex.Message}");
             }
             
             return false;
@@ -12438,7 +12464,7 @@ namespace Risk_Manager
                             var checkbox = new CheckBox
                             {
                                 Text = $"{account.Name} ({displayIdentifier}) ",
-                                Tag = new { Account = account, IsLocked = true },
+                                Tag = new AccountTagInfo(account, true),
                                 AutoSize = true,
                                 Font = new Font("Segoe UI", 9.5f),
                                 ForeColor = TextWhite,  // White text
@@ -12466,7 +12492,7 @@ namespace Risk_Manager
                             var checkbox = new CheckBox
                             {
                                 Text = $"{account.Name} ({displayIdentifier})",
-                                Tag = new { Account = account, IsLocked = false },
+                                Tag = new AccountTagInfo(account, false),
                                 AutoSize = true,
                                 Font = new Font("Segoe UI", 9.5f),
                                 ForeColor = TextWhite,
