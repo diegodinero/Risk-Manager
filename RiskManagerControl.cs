@@ -1761,6 +1761,32 @@ namespace Risk_Manager
                 // to ensure privacy mode is applied to target account labels
                 if (currentSelection != null)
                 {
+                    // Save the checked state of existing checkboxes before rebuilding
+                    var checkedAccountIds = new HashSet<string>();
+                    foreach (Control control in copySettingsTargetPanel.Controls)
+                    {
+                        CheckBox checkbox = null;
+                        if (control is CheckBox cb)
+                        {
+                            checkbox = cb;
+                        }
+                        else if (control is FlowLayoutPanel panel)
+                        {
+                            checkbox = GetCheckBoxFromPanel(panel);
+                        }
+                        
+                        if (checkbox != null && checkbox.Checked)
+                        {
+                            if (TryGetAccountLockStatus(checkbox.Tag, out Account account, out _))
+                            {
+                                if (account != null)
+                                {
+                                    checkedAccountIds.Add(GetAccountIdentifier(account));
+                                }
+                            }
+                        }
+                    }
+                    
                     copySettingsTargetPanel.SuspendLayout(); // Suspend layout to prevent flickering
                     copySettingsTargetPanel.Controls.Clear();
                     
@@ -1778,6 +1804,9 @@ namespace Risk_Manager
                         
                         // Check if settings are locked for this account
                         bool isLocked = service.AreSettingsLocked(accountIdentifier);
+                        
+                        // Check if this account was previously checked
+                        bool wasChecked = checkedAccountIds.Contains(accountIdentifier);
                         
                         if (isLocked)
                         {
@@ -1800,7 +1829,8 @@ namespace Risk_Manager
                                 ForeColor = TextWhite,
                                 BackColor = DarkerBackground,
                                 Margin = new Padding(0),
-                                Enabled = false  // Disable checkbox for locked accounts (greyed out)
+                                Enabled = false,  // Disable checkbox for locked accounts (greyed out)
+                                Checked = wasChecked  // Restore previous checked state
                             };
                             
                             var lockedLabel = new Label
@@ -1828,7 +1858,8 @@ namespace Risk_Manager
                                 Font = new Font("Segoe UI", 9.5f),
                                 ForeColor = TextWhite,
                                 BackColor = DarkerBackground,
-                                Margin = new Padding(0, 5, 0, 5)
+                                Margin = new Padding(0, 5, 0, 5),
+                                Checked = wasChecked  // Restore previous checked state
                             };
                             copySettingsTargetPanel.Controls.Add(checkbox);
                         }
