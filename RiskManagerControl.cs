@@ -1747,6 +1747,9 @@ namespace Risk_Manager
                 {
                     copySettingsTargetPanel.Controls.Clear();
                     
+                    // Get service instance once before the loop for performance
+                    var service = RiskManagerSettingsService.Instance;
+                    
                     // Add checkboxes for all accounts except the source
                     foreach (var account in connectedAccounts)
                     {
@@ -1757,7 +1760,6 @@ namespace Risk_Manager
                         string displayIdentifier = MaskAccountNumber(accountIdentifier);
                         
                         // Check if settings are locked for this account
-                        var service = RiskManagerSettingsService.Instance;
                         bool isLocked = service.AreSettingsLocked(accountIdentifier);
                         
                         var checkbox = new CheckBox
@@ -12288,6 +12290,9 @@ namespace Risk_Manager
                     copySettingsTargetPanel.SuspendLayout(); // Suspend layout to prevent flickering
                     copySettingsTargetPanel.Controls.Clear();
                     
+                    // Get service instance once before the loop for performance
+                    var service = RiskManagerSettingsService.Instance;
+                    
                     // Add checkboxes for all accounts except the source
                     foreach (var account in connectedAccounts)
                     {
@@ -12298,7 +12303,6 @@ namespace Risk_Manager
                         string displayIdentifier = MaskAccountNumber(accountIdentifier);
                         
                         // Check if settings are locked for this account
-                        var service = RiskManagerSettingsService.Instance;
                         bool isLocked = service.AreSettingsLocked(accountIdentifier);
                         
                         var checkbox = new CheckBox
@@ -20274,6 +20278,10 @@ namespace Risk_Manager
                 shutdownTimer?.Stop();
                 shutdownTimer?.Dispose();
                 shutdownTimer = null;
+                
+                copySettingsUpdateTimer?.Stop();
+                copySettingsUpdateTimer?.Dispose();
+                copySettingsUpdateTimer = null;
                 
                 try { shutdownCountdownForm?.Dispose(); } catch { }
                 shutdownCountdownForm = null;
