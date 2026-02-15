@@ -9949,6 +9949,51 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Helper method to extract a checkbox from a FlowLayoutPanel (used for locked account display).
+        /// Returns null if panel does not contain a checkbox.
+        /// </summary>
+        /// <param name="panel">The FlowLayoutPanel to search</param>
+        /// <returns>The CheckBox found in the panel, or null if not found</returns>
+        private CheckBox GetCheckBoxFromPanel(FlowLayoutPanel panel)
+        {
+            if (panel == null)
+                return null;
+                
+            foreach (Control control in panel.Controls)
+            {
+                if (control is CheckBox cb)
+                    return cb;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Iterates through all controls in the copy settings target panel and invokes 
+        /// an action on each checkbox, handling both direct checkboxes and checkboxes 
+        /// nested within FlowLayoutPanels.
+        /// </summary>
+        /// <param name="action">Action to perform on each checkbox</param>
+        private void ForEachCopySettingsCheckBox(Action<CheckBox> action)
+        {
+            if (copySettingsTargetPanel == null || action == null)
+                return;
+                
+            foreach (Control control in copySettingsTargetPanel.Controls)
+            {
+                if (control is CheckBox cb)
+                {
+                    action(cb);
+                }
+                else if (control is FlowLayoutPanel panel)
+                {
+                    var panelCheckBox = GetCheckBoxFromPanel(panel);
+                    if (panelCheckBox != null)
+                        action(panelCheckBox);
+                }
+            }
+        }
+
+        /// <summary>
         /// Determines the account type based on connection name, account ID, and AdditionalInfo.
         /// Uses word boundary pattern matching to avoid false positives.
         /// </summary>
@@ -12570,43 +12615,21 @@ namespace Risk_Manager
             selectAllButton.FlatAppearance.BorderSize = 0;
             selectAllButton.Click += (s, e) =>
             {
-                foreach (Control control in copySettingsTargetPanel.Controls)
+                ForEachCopySettingsCheckBox(cb =>
                 {
-                    // Handle direct checkboxes
-                    if (control is CheckBox cb)
+                    // Try to get lock status from tag
+                    if (TryGetAccountLockStatus(cb.Tag, out _, out bool isLocked))
                     {
-                        // Try to get lock status from tag
-                        if (TryGetAccountLockStatus(cb.Tag, out _, out bool isLocked))
-                        {
-                            // Only check unlocked accounts
-                            if (!isLocked)
-                                cb.Checked = true;
-                        }
-                        else
-                        {
-                            // Fallback: check all if tag is null/invalid (backwards compatibility)
+                        // Only check unlocked accounts
+                        if (!isLocked)
                             cb.Checked = true;
-                        }
                     }
-                    // Handle FlowLayoutPanel containing checkbox + label for locked accounts
-                    else if (control is FlowLayoutPanel panel)
+                    else
                     {
-                        foreach (Control panelControl in panel.Controls)
-                        {
-                            if (panelControl is CheckBox panelCb)
-                            {
-                                // Try to get lock status from tag
-                                if (TryGetAccountLockStatus(panelCb.Tag, out _, out bool isLocked))
-                                {
-                                    // Only check unlocked accounts
-                                    if (!isLocked)
-                                        panelCb.Checked = true;
-                                }
-                                break; // Only one checkbox per panel
-                            }
-                        }
+                        // Fallback: check all if tag is null/invalid (backwards compatibility)
+                        cb.Checked = true;
                     }
-                }
+                });
             };
             buttonPanel.Controls.Add(selectAllButton);
 
@@ -12624,26 +12647,7 @@ namespace Risk_Manager
             deselectAllButton.FlatAppearance.BorderSize = 0;
             deselectAllButton.Click += (s, e) =>
             {
-                foreach (Control control in copySettingsTargetPanel.Controls)
-                {
-                    // Handle direct checkboxes
-                    if (control is CheckBox cb)
-                    {
-                        cb.Checked = false;
-                    }
-                    // Handle FlowLayoutPanel containing checkbox + label for locked accounts
-                    else if (control is FlowLayoutPanel panel)
-                    {
-                        foreach (Control panelControl in panel.Controls)
-                        {
-                            if (panelControl is CheckBox panelCb)
-                            {
-                                panelCb.Checked = false;
-                                break; // Only one checkbox per panel
-                            }
-                        }
-                    }
-                }
+                ForEachCopySettingsCheckBox(cb => cb.Checked = false);
             };
             buttonPanel.Controls.Add(deselectAllButton);
 
@@ -12681,30 +12685,10 @@ namespace Risk_Manager
 
                     // Get selected target accounts (skip locked accounts using helper method)
                     var targetAccounts = new List<string>();
-                    foreach (Control control in copySettingsTargetPanel.Controls)
+                    ForEachCopySettingsCheckBox(checkbox =>
                     {
-                        CheckBox checkbox = null;
-                        
-                        // Handle direct checkboxes
-                        if (control is CheckBox cb)
-                        {
-                            checkbox = cb;
-                        }
-                        // Handle FlowLayoutPanel containing checkbox + label for locked accounts
-                        else if (control is FlowLayoutPanel panel)
-                        {
-                            foreach (Control panelControl in panel.Controls)
-                            {
-                                if (panelControl is CheckBox panelCb)
-                                {
-                                    checkbox = panelCb;
-                                    break;
-                                }
-                            }
-                        }
-                        
                         // Extract account and validate
-                        if (checkbox != null && checkbox.Checked)
+                        if (checkbox.Checked)
                         {
                             if (TryGetAccountLockStatus(checkbox.Tag, out Account account, out bool isLocked))
                             {
@@ -12715,7 +12699,7 @@ namespace Risk_Manager
                                 }
                             }
                         }
-                    }
+                    });
 
                     if (targetAccounts.Count == 0)
                     {
@@ -12783,26 +12767,7 @@ namespace Risk_Manager
                     // Clear selections on success
                     if (successCount > 0)
                     {
-                        foreach (Control control in copySettingsTargetPanel.Controls)
-                        {
-                            // Handle direct checkboxes
-                            if (control is CheckBox cb)
-                            {
-                                cb.Checked = false;
-                            }
-                            // Handle FlowLayoutPanel containing checkbox + label for locked accounts
-                            else if (control is FlowLayoutPanel panel)
-                            {
-                                foreach (Control panelControl in panel.Controls)
-                                {
-                                    if (panelControl is CheckBox panelCb)
-                                    {
-                                        panelCb.Checked = false;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+                        ForEachCopySettingsCheckBox(cb => cb.Checked = false);
                     }
                 }
                 catch (Exception ex)
