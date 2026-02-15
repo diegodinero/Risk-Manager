@@ -1693,6 +1693,39 @@ namespace Risk_Manager
         }
         
         /// <summary>
+        /// Helper method to extract account and lock status from Tag object using reflection.
+        /// </summary>
+        /// <returns>True if account info was successfully extracted</returns>
+        private bool TryGetAccountLockStatus(object tag, out Account account, out bool isLocked)
+        {
+            account = null;
+            isLocked = false;
+            
+            if (tag == null)
+                return false;
+                
+            try
+            {
+                var tagType = tag.GetType();
+                var accountProp = tagType.GetProperty("Account");
+                var isLockedProp = tagType.GetProperty("IsLocked");
+                
+                if (accountProp != null && isLockedProp != null)
+                {
+                    account = accountProp.GetValue(tag) as Account;
+                    isLocked = (bool)isLockedProp.GetValue(tag);
+                    return account != null;
+                }
+            }
+            catch
+            {
+                // Ignore reflection errors
+            }
+            
+            return false;
+        }
+        
+        /// <summary>
         /// Refreshes the Copy Settings panel source dropdown with connected accounts.
         /// </summary>
         /// <param name="forceRefresh">If true, forces a refresh even if accounts haven't changed (e.g., for privacy mode updates)</param>
@@ -12473,20 +12506,15 @@ namespace Risk_Manager
                     // Handle direct checkboxes
                     if (control is CheckBox cb)
                     {
-                        // Check if it's locked via Tag
-                        if (cb.Tag != null)
+                        // Check if it's locked via Tag helper method
+                        if (TryGetAccountLockStatus(cb.Tag, out _, out bool isLocked))
                         {
-                            var tagType = cb.Tag.GetType();
-                            var isLockedProp = tagType.GetProperty("IsLocked");
-                            if (isLockedProp != null)
-                            {
-                                bool isLocked = (bool)isLockedProp.GetValue(cb.Tag);
-                                if (!isLocked) // Only check unlocked accounts
-                                    cb.Checked = true;
-                            }
+                            if (!isLocked) // Only check unlocked accounts
+                                cb.Checked = true;
                         }
                         else
                         {
+                            // No tag or invalid tag structure - treat as unlocked
                             cb.Checked = true;
                         }
                     }
@@ -12498,16 +12526,10 @@ namespace Risk_Manager
                             if (innerControl is CheckBox innerCb)
                             {
                                 // Don't check locked accounts
-                                if (innerCb.Tag != null)
+                                if (TryGetAccountLockStatus(innerCb.Tag, out _, out bool isLocked))
                                 {
-                                    var tagType = innerCb.Tag.GetType();
-                                    var isLockedProp = tagType.GetProperty("IsLocked");
-                                    if (isLockedProp != null)
-                                    {
-                                        bool isLocked = (bool)isLockedProp.GetValue(innerCb.Tag);
-                                        if (!isLocked)
-                                            innerCb.Checked = true;
-                                    }
+                                    if (!isLocked)
+                                        innerCb.Checked = true;
                                 }
                             }
                         }
@@ -12604,20 +12626,13 @@ namespace Risk_Manager
                             }
                         }
                         
-                        if (checkbox != null && checkbox.Checked && checkbox.Tag != null)
+                        if (checkbox != null && checkbox.Checked)
                         {
-                            // Extract account and lock status from Tag
-                            var tagType = checkbox.Tag.GetType();
-                            var accountProp = tagType.GetProperty("Account");
-                            var isLockedProp = tagType.GetProperty("IsLocked");
-                            
-                            if (accountProp != null && isLockedProp != null)
+                            // Extract account and lock status from Tag using helper method
+                            if (TryGetAccountLockStatus(checkbox.Tag, out Account account, out bool isLocked))
                             {
-                                var account = accountProp.GetValue(checkbox.Tag) as Account;
-                                bool isLocked = (bool)isLockedProp.GetValue(checkbox.Tag);
-                                
                                 // Only add unlocked accounts
-                                if (account != null && !isLocked)
+                                if (!isLocked)
                                 {
                                     targetAccounts.Add(GetAccountIdentifier(account));
                                 }
