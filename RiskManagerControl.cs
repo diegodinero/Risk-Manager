@@ -295,6 +295,7 @@ namespace Risk_Manager
         // Copy Settings controls
         private ComboBox copySettingsSourceComboBox;
         private FlowLayoutPanel copySettingsTargetPanel;
+        private System.Windows.Forms.Timer copySettingsUpdateTimer; // Debounce timer for target panel updates
         
         private SoundPlayer alertSoundPlayer;
         
@@ -1755,15 +1756,20 @@ namespace Risk_Manager
                         string accountIdentifier = GetAccountIdentifier(account);
                         string displayIdentifier = MaskAccountNumber(accountIdentifier);
                         
+                        // Check if settings are locked for this account
+                        var service = RiskManagerSettingsService.Instance;
+                        bool isLocked = service.AreSettingsLocked(accountIdentifier);
+                        
                         var checkbox = new CheckBox
                         {
-                            Text = $"{account.Name} ({displayIdentifier})",
+                            Text = $"{account.Name} ({displayIdentifier})" + (isLocked ? " [LOCKED]" : ""),
                             Tag = account,
                             AutoSize = true,
                             Font = new Font("Segoe UI", 9.5f),
-                            ForeColor = TextWhite,
+                            ForeColor = isLocked ? Color.FromArgb(231, 76, 60) : TextWhite, // Red for locked accounts
                             BackColor = DarkerBackground,
-                            Margin = new Padding(0, 5, 0, 5)
+                            Margin = new Padding(0, 5, 0, 5),
+                            Enabled = !isLocked // Disable checkbox for locked accounts
                         };
                         copySettingsTargetPanel.Controls.Add(checkbox);
                     }
@@ -12180,6 +12186,22 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
+            // Account Number Display - shows which account is currently selected
+            var copySettingsAccountDisplay = new Label
+            {
+                Text = "Account: Not Selected",
+                Dock = DockStyle.Top,
+                Height = 30,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Padding = new Padding(10, 5, 10, 0),
+                BackColor = CardBackground,
+                ForeColor = TextWhite,
+                AutoSize = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                Tag = "LockAccountDisplay" // Tag for identification
+            };
+
             // Content area
             var contentArea = new Panel
             {
@@ -12249,10 +12271,11 @@ namespace Risk_Manager
             // Initial population will happen in RefreshCopySettingsAccounts
             RefreshCopySettingsAccounts();
 
-            // Update target checkboxes when source is selected
-            copySettingsSourceComboBox.SelectedIndexChanged += (s, e) =>
+            // Create debounce timer for target panel updates (prevents flickering when refreshing)
+            copySettingsUpdateTimer = new System.Windows.Forms.Timer { Interval = 300 }; // 300ms debounce
+            copySettingsUpdateTimer.Tick += (timerSender, timerArgs) =>
             {
-                copySettingsTargetPanel.Controls.Clear();
+                copySettingsUpdateTimer.Stop();
                 
                 if (copySettingsSourceComboBox.SelectedItem is Account sourceAccount)
                 {
@@ -12261,6 +12284,9 @@ namespace Risk_Manager
                     var connectedAccounts = core?.Accounts?
                         .Where(a => a != null && a.Connection != null)
                         .ToList() ?? new List<Account>();
+                    
+                    copySettingsTargetPanel.SuspendLayout(); // Suspend layout to prevent flickering
+                    copySettingsTargetPanel.Controls.Clear();
                     
                     // Add checkboxes for all accounts except the source
                     foreach (var account in connectedAccounts)
@@ -12271,15 +12297,20 @@ namespace Risk_Manager
                         string accountIdentifier = GetAccountIdentifier(account);
                         string displayIdentifier = MaskAccountNumber(accountIdentifier);
                         
+                        // Check if settings are locked for this account
+                        var service = RiskManagerSettingsService.Instance;
+                        bool isLocked = service.AreSettingsLocked(accountIdentifier);
+                        
                         var checkbox = new CheckBox
                         {
-                            Text = $"{account.Name} ({displayIdentifier})",
+                            Text = $"{account.Name} ({displayIdentifier})" + (isLocked ? " [LOCKED]" : ""),
                             Tag = account,
                             AutoSize = true,
                             Font = new Font("Segoe UI", 9.5f),
-                            ForeColor = TextWhite,
+                            ForeColor = isLocked ? Color.FromArgb(231, 76, 60) : TextWhite, // Red for locked accounts
                             BackColor = DarkerBackground,
-                            Margin = new Padding(0, 5, 0, 5)
+                            Margin = new Padding(0, 5, 0, 5),
+                            Enabled = !isLocked // Disable checkbox for locked accounts
                         };
                         copySettingsTargetPanel.Controls.Add(checkbox);
                     }
@@ -12296,6 +12327,35 @@ namespace Risk_Manager
                         };
                         copySettingsTargetPanel.Controls.Add(noAccountsLabel);
                     }
+                    
+                    copySettingsTargetPanel.ResumeLayout(); // Resume layout
+                }
+            };
+
+            // Update target checkboxes when source is selected (debounced)
+            copySettingsSourceComboBox.SelectedIndexChanged += (s, e) =>
+            {
+                // Stop any pending timer
+                copySettingsUpdateTimer.Stop();
+                
+                // Clear immediately to give feedback
+                copySettingsTargetPanel.Controls.Clear();
+                
+                if (copySettingsSourceComboBox.SelectedItem != null)
+                {
+                    // Add a loading message
+                    var loadingLabel = new Label
+                    {
+                        Text = "Loading accounts...",
+                        AutoSize = true,
+                        Font = new Font("Segoe UI", 9.5f, FontStyle.Italic),
+                        ForeColor = TextGray,
+                        BackColor = DarkerBackground
+                    };
+                    copySettingsTargetPanel.Controls.Add(loadingLabel);
+                    
+                    // Start the debounce timer
+                    copySettingsUpdateTimer.Start();
                 }
             };
 
@@ -12324,7 +12384,7 @@ namespace Risk_Manager
             {
                 foreach (Control control in copySettingsTargetPanel.Controls)
                 {
-                    if (control is CheckBox cb)
+                    if (control is CheckBox cb && cb.Enabled) // Only check enabled checkboxes
                         cb.Checked = true;
                 }
             };
@@ -12384,11 +12444,11 @@ namespace Risk_Manager
                         return;
                     }
 
-                    // Get selected target accounts
+                    // Get selected target accounts (skip disabled checkboxes which are locked)
                     var targetAccounts = new List<string>();
                     foreach (Control control in copySettingsTargetPanel.Controls)
                     {
-                        if (control is CheckBox cb && cb.Checked && cb.Tag is Account account)
+                        if (control is CheckBox cb && cb.Checked && cb.Enabled && cb.Tag is Account account)
                         {
                             targetAccounts.Add(GetAccountIdentifier(account));
                         }
@@ -12480,6 +12540,7 @@ namespace Risk_Manager
             // Add controls in correct order
             mainPanel.Controls.Add(copyButton);
             mainPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(copySettingsAccountDisplay);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(copySettingsHeader);
 
