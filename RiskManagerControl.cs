@@ -9653,9 +9653,21 @@ namespace Risk_Manager
         /// </summary>
         private string GetSelectedAccountNumber()
         {
+            // If selectedAccount is null but accountSelector has a selection, sync them
+            if (selectedAccount == null && accountSelector != null && accountSelector.SelectedItem != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is NULL but accountSelector has selection, syncing...");
+                if (accountSelector.SelectedItem is Account account)
+                {
+                    selectedAccount = account;
+                    selectedAccountIndex = accountSelector.SelectedIndex;
+                    System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: Synced selectedAccount from dropdown - Index={selectedAccountIndex}");
+                }
+            }
+            
             if (selectedAccount == null)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is NULL");
+                System.Diagnostics.Debug.WriteLine($"GetSelectedAccountNumber: selectedAccount is NULL and no dropdown selection");
                 return null;
             }
             
