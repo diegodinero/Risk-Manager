@@ -7739,7 +7739,7 @@ namespace Risk_Manager
                 var settingsService = RiskManagerSettingsService.Instance;
                 if (settingsService.IsInitialized)
                 {
-                    int accountIndex = 0;
+                    int checkIndex = 0;
                     TimeSpan? maxExistingLock = null;
                     string accountWithLongestLock = null;
                     
@@ -7748,11 +7748,11 @@ namespace Risk_Manager
                     {
                         if (account == null)
                         {
-                            accountIndex++;
+                            checkIndex++;
                             continue;
                         }
                         
-                        string accountNumber = GetUniqueAccountIdentifier(account, accountIndex);
+                        string accountNumber = GetUniqueAccountIdentifier(account, checkIndex);
                         
                         // Check if account has an active lock
                         if (settingsService.IsTradingLocked(accountNumber))
@@ -7769,7 +7769,7 @@ namespace Risk_Manager
                             }
                         }
                         
-                        accountIndex++;
+                        checkIndex++;
                     }
                     
                     // If accounts are already locked, new duration must be >= existing lock
