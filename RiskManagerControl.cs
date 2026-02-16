@@ -3714,7 +3714,7 @@ namespace Risk_Manager
             header.Dock = DockStyle.Top;
             header.Margin = new Padding(10, 0, 0, 0); // External spacing
 
-            // Create a container panel to hold the centered "Done For the Day" button and dropdown
+            // Create a container panel to hold the centered Lock Trading button and dropdown
             // Width of 1000px provides adequate space for button + dropdown + margins
             var buttonContainer = new Panel
             {
@@ -3757,7 +3757,7 @@ namespace Risk_Manager
                 lockAllDurationComboBox.SelectedIndex = 0; // Fallback to first item
             }
 
-            // "Done For the Day" button with icons on both sides - centered in container
+            // Lock Trading button with icons on both sides - centered in container
             // Dimensions match Emergency Flatten button (250x26)
             var lockAllButton = new Panel
             {
@@ -3808,7 +3808,7 @@ namespace Risk_Manager
             // Center label with text
             var lockAllLabel = new Label
             {
-                Text = "Done For the Day",
+                Text = "Lock Trading",
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),  // Adjusted for smaller button height
                 ForeColor = Color.White,
                 TextAlign = ContentAlignment.MiddleCenter,
@@ -7735,6 +7735,65 @@ namespace Risk_Manager
                     return;
                 }
 
+                // SECURITY CHECK: Prevent bypassing existing locks with shorter durations
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (settingsService.IsInitialized)
+                {
+                    int accountIndex = 0;
+                    TimeSpan? maxExistingLock = null;
+                    string accountWithLongestLock = null;
+                    
+                    // Check all accounts for existing locks
+                    foreach (var account in core.Accounts)
+                    {
+                        if (account == null)
+                        {
+                            accountIndex++;
+                            continue;
+                        }
+                        
+                        string accountNumber = GetUniqueAccountIdentifier(account, accountIndex);
+                        
+                        // Check if account has an active lock
+                        if (settingsService.IsTradingLocked(accountNumber))
+                        {
+                            var remainingTime = settingsService.GetRemainingLockTime(accountNumber);
+                            if (remainingTime.HasValue && remainingTime.Value > TimeSpan.Zero)
+                            {
+                                // Track the longest existing lock
+                                if (!maxExistingLock.HasValue || remainingTime.Value > maxExistingLock.Value)
+                                {
+                                    maxExistingLock = remainingTime.Value;
+                                    accountWithLongestLock = accountNumber;
+                                }
+                            }
+                        }
+                        
+                        accountIndex++;
+                    }
+                    
+                    // If accounts are already locked, new duration must be >= existing lock
+                    if (maxExistingLock.HasValue && duration.Value < maxExistingLock.Value)
+                    {
+                        // Format remaining time for display
+                        int hours = (int)maxExistingLock.Value.TotalHours;
+                        int minutes = maxExistingLock.Value.Minutes;
+                        string timeDisplay = hours > 0 ? $"{hours}h {minutes}m" : $"{minutes}m";
+                        
+                        MessageBox.Show(
+                            $"Cannot lock accounts with a shorter duration!\n\n" +
+                            $"One or more accounts are already locked for {timeDisplay}.\n\n" +
+                            $"The new lock duration ({durationText}) would allow trading sooner than the existing lock.\n\n" +
+                            "To change the lock duration:\n" +
+                            "1. First unlock all accounts manually, or\n" +
+                            "2. Select a duration equal to or longer than the existing lock",
+                            "Lock Duration Too Short",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+
                 // Show confirmation dialog with selected duration
                 string confirmMessage = $"Are you sure you want to lock ALL accounts for {durationText}?\n\n" +
                     "This will:\n" +
@@ -7757,7 +7816,7 @@ namespace Risk_Manager
                 // Flatten all trades before locking accounts
                 FlattenAllTrades();
 
-                var settingsService = RiskManagerSettingsService.Instance;
+                // Verify settings service is still initialized (already checked above)
                 if (!settingsService.IsInitialized)
                 {
                     MessageBox.Show("Settings service not initialized.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
