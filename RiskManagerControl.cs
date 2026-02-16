@@ -8137,91 +8137,8 @@ namespace Risk_Manager
 
             string selection = lockDurationComboBox.SelectedItem.ToString();
             
-            // Get Eastern Time Zone
-            TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
-            DateTime nowEt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
-            DateTime fivePmEtToday = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0); // 5 PM ET today
-            
-            switch (selection)
-            {
-                case "5 Minutes":
-                case "15 Minutes":
-                case "1 Hour":
-                case "4 Hours":
-                    // Calculate the normal duration
-                    TimeSpan normalDuration;
-                    switch (selection)
-                    {
-                        case "5 Minutes":
-                            normalDuration = TimeSpan.FromMinutes(5);
-                            break;
-                        case "15 Minutes":
-                            normalDuration = TimeSpan.FromMinutes(15);
-                            break;
-                        case "1 Hour":
-                            normalDuration = TimeSpan.FromHours(1);
-                            break;
-                        case "4 Hours":
-                            normalDuration = TimeSpan.FromHours(4);
-                            break;
-                        default:
-                            normalDuration = TimeSpan.Zero;
-                            break;
-                    }
-                    
-                    // Calculate when the lock would normally expire
-                    DateTime normalExpiration = nowEt.Add(normalDuration);
-                    
-                    // If normal expiration is after 5 PM ET today, cap it at 5 PM ET today
-                    if (normalExpiration > fivePmEtToday && nowEt < fivePmEtToday)
-                    {
-                        // Lock until 5 PM ET today instead
-                        return fivePmEtToday - nowEt;
-                    }
-                    else
-                    {
-                        // Use normal duration
-                        return normalDuration;
-                    }
-                    
-                case "2 Hours":
-                    return TimeSpan.FromHours(2);
-                    
-                case "All Day (Until 5:00 PM ET)":
-                    // Calculate time until 5 PM ET today (or tomorrow if past 5 PM ET)
-                    var targetTime = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0); // 5 PM ET today
-                    if (nowEt >= targetTime)
-                    {
-                        // If past 5 PM ET, lock until 5 PM ET tomorrow
-                        targetTime = targetTime.AddDays(1);
-                    }
-                    return targetTime - nowEt;
-                    
-                case "All Week (Until 5:00 PM ET Friday)":
-                    // Lock until 5 PM ET Friday
-                    int daysUntilFriday = ((int)DayOfWeek.Friday - (int)nowEt.DayOfWeek + 7) % 7;
-                    DateTime fridayAt5PM;
-                    
-                    if (daysUntilFriday == 0)
-                    {
-                        // Today is Friday
-                        fridayAt5PM = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0);
-                        if (nowEt >= fridayAt5PM)
-                        {
-                            // Already past 5 PM Friday, lock until next Friday at 5 PM ET
-                            fridayAt5PM = fridayAt5PM.AddDays(7);
-                        }
-                    }
-                    else
-                    {
-                        // Calculate this coming Friday at 5 PM ET
-                        fridayAt5PM = nowEt.AddDays(daysUntilFriday).Date.AddHours(17);
-                    }
-                    
-                    return fridayAt5PM - nowEt;
-                default:
-                    return null; // Fallback, should not happen
-            }
+            // Delegate to the shared helper method
+            return GetLockDurationFromSelection(selection);
         }
 
         /// <summary>
@@ -8282,6 +8199,8 @@ namespace Risk_Manager
                     }
                     
                 case "2 Hours":
+                    // Note: 2 Hours is intentionally not capped at 5 PM ET (unlike shorter durations)
+                    // This allows for longer trading sessions that extend into after-hours if needed
                     return TimeSpan.FromHours(2);
                     
                 case "All Day (Until 5:00 PM ET)":
