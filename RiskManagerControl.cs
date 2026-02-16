@@ -3715,11 +3715,11 @@ namespace Risk_Manager
             header.Margin = new Padding(10, 0, 0, 0); // External spacing
 
             // Create a container panel to hold the centered Lock Trading button and dropdown
-            // Width of 800px extends from right edge, moving controls left toward center
+            // Width of 1200px extends further from right edge, moving controls toward center-left
             var buttonContainer = new Panel
             {
                 Dock = DockStyle.Right,
-                Width = 800, // Larger width pushes container (and centered controls) further left
+                Width = 1200, // Larger width pushes container further left into window
                 Height = 40,
                 BackColor = Color.Transparent
             };
