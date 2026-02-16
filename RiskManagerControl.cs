@@ -3714,7 +3714,7 @@ namespace Risk_Manager
             header.Dock = DockStyle.Top;
             header.Margin = new Padding(10, 0, 0, 0); // External spacing
 
-            // Create a container panel to hold the centered Lock Trading button and dropdown
+            // Create a container panel to hold the centered "Done For the Day" button and dropdown
             // Width of 1000px provides adequate space for button + dropdown + margins
             var buttonContainer = new Panel
             {
@@ -3747,7 +3747,7 @@ namespace Risk_Manager
             lockAllDurationComboBox.Items.Add("All Week (Until 5:00 PM ET Friday)");
             lockAllDurationComboBox.SelectedIndex = 5; // Default to "All Day (Until 5:00 PM ET)"
 
-            // Lock All Accounts button with icons on both sides - centered in container
+            // "Done For the Day" button with icons on both sides - centered in container
             // Dimensions match Emergency Flatten button (250x26)
             var lockAllButton = new Panel
             {
@@ -8143,7 +8143,7 @@ namespace Risk_Manager
 
         /// <summary>
         /// Gets the lock duration from a duration selection string.
-        /// This is similar to GetSelectedLockDuration but works with any duration string parameter.
+        /// This is the core implementation used by GetSelectedLockDuration().
         /// All calculations are based on Eastern Time (ET).
         /// </summary>
         private TimeSpan? GetLockDurationFromSelection(string selection)
