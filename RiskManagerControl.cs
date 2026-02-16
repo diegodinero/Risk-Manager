@@ -3745,7 +3745,17 @@ namespace Risk_Manager
             lockAllDurationComboBox.Items.Add("4 Hours");
             lockAllDurationComboBox.Items.Add("All Day (Until 5:00 PM ET)");
             lockAllDurationComboBox.Items.Add("All Week (Until 5:00 PM ET Friday)");
-            lockAllDurationComboBox.SelectedIndex = 5; // Default to "All Day (Until 5:00 PM ET)"
+            
+            // Set default to "All Day" by finding the item
+            int allDayIndex = lockAllDurationComboBox.Items.IndexOf("All Day (Until 5:00 PM ET)");
+            if (allDayIndex >= 0)
+            {
+                lockAllDurationComboBox.SelectedIndex = allDayIndex;
+            }
+            else
+            {
+                lockAllDurationComboBox.SelectedIndex = 0; // Fallback to first item
+            }
 
             // "Done For the Day" button with icons on both sides - centered in container
             // Dimensions match Emergency Flatten button (250x26)
@@ -8199,8 +8209,9 @@ namespace Risk_Manager
                     }
                     
                 case "2 Hours":
-                    // Note: 2 Hours is intentionally not capped at 5 PM ET (unlike shorter durations)
-                    // This allows for longer trading sessions that extend into after-hours if needed
+                    // Note: 2 Hours is intentionally not capped at 5 PM ET
+                    // (unlike 5 min, 15 min, 1 hour, and 4 hours which are capped)
+                    // This provides a middle-ground duration that can extend into after-hours trading
                     return TimeSpan.FromHours(2);
                     
                 case "All Day (Until 5:00 PM ET)":
