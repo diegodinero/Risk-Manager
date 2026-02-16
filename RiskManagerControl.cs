@@ -241,6 +241,7 @@ namespace Risk_Manager
         private Button lockTradingButton; // Lock Trading button reference
         private Button unlockTradingButton; // Unlock Trading button reference
         private ComboBox lockDurationComboBox; // Lock duration selector
+        private ComboBox lockAllDurationComboBox; // Lock all accounts duration selector
         private CheckBox showProgressBarsCheckBox; // Show Progress Bars checkbox in General Settings
         private bool showProgressBars = false; // Whether to show progress bars in data grids
         private CheckBox showPercentageCheckBox; // Show Percentage checkbox in General Settings
@@ -3713,17 +3714,38 @@ namespace Risk_Manager
             header.Dock = DockStyle.Top;
             header.Margin = new Padding(10, 0, 0, 0); // External spacing
 
-            // Create a container panel to hold the centered Lock Trading button
-            // Width of 400px provides adequate space for centering while staying within
-            // typical window widths. The button (250px) centers within this space,
-            // creating approximately 75px margins on each side for visual balance.
+            // Create a container panel to hold the centered Lock Trading button and dropdown
+            // Width of 1000px provides adequate space for button + dropdown + margins
             var buttonContainer = new Panel
             {
                 Dock = DockStyle.Right,
-                Width = 1000, // Fixed width appropriate for button (250px) + margins
+                Width = 1000, // Fixed width appropriate for button (250px) + dropdown (200px) + margins
                 Height = 40,
                 BackColor = Color.Transparent
             };
+
+            // Lock All Accounts duration dropdown - same presets as individual lock
+            lockAllDurationComboBox = new ComboBox
+            {
+                Width = 200,
+                Height = 26,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = new Font("Segoe UI", 9),
+                BackColor = DarkerBackground,
+                ForeColor = TextWhite,
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.None  // Allow free positioning for centering
+            };
+
+            // Add duration options (same as individual account locking)
+            lockAllDurationComboBox.Items.Add("5 Minutes");
+            lockAllDurationComboBox.Items.Add("15 Minutes");
+            lockAllDurationComboBox.Items.Add("1 Hour");
+            lockAllDurationComboBox.Items.Add("2 Hours");
+            lockAllDurationComboBox.Items.Add("4 Hours");
+            lockAllDurationComboBox.Items.Add("All Day (Until 5:00 PM ET)");
+            lockAllDurationComboBox.Items.Add("All Week (Until 5:00 PM ET Friday)");
+            lockAllDurationComboBox.SelectedIndex = 5; // Default to "All Day (Until 5:00 PM ET)"
 
             // Lock All Accounts button with icons on both sides - centered in container
             // Dimensions match Emergency Flatten button (250x26)
@@ -3776,7 +3798,7 @@ namespace Risk_Manager
             // Center label with text
             var lockAllLabel = new Label
             {
-                Text = "Lock Trading",
+                Text = "Done For the Day",
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),  // Adjusted for smaller button height
                 ForeColor = Color.White,
                 TextAlign = ContentAlignment.MiddleCenter,
@@ -3798,13 +3820,32 @@ namespace Risk_Manager
                 }
             }
 
-            // Center the button in the container
-            CenterControlInContainer(buttonContainer, lockAllButton);
+            // Position the dropdown and button side by side in the container
+            // Helper method to center both controls together
+            Action centerControls = () =>
+            {
+                // Calculate total width (dropdown + spacing + button)
+                int totalWidth = lockAllDurationComboBox.Width + 10 + lockAllButton.Width; // 10px spacing
+                int startX = (buttonContainer.Width - totalWidth) / 2;
+                int centerY = (buttonContainer.Height - lockAllButton.Height) / 2;
+
+                // Position dropdown on left
+                lockAllDurationComboBox.Left = startX;
+                lockAllDurationComboBox.Top = centerY;
+
+                // Position button on right
+                lockAllButton.Left = startX + lockAllDurationComboBox.Width + 10; // 10px spacing
+                lockAllButton.Top = centerY;
+            };
+
+            // Initial centering
+            centerControls();
             
             // Re-center on resize
-            buttonContainer.Resize += (s, e) => CenterControlInContainer(buttonContainer, lockAllButton);
+            buttonContainer.Resize += (s, e) => centerControls();
 
-            // Add button to container
+            // Add dropdown and button to container
+            buttonContainer.Controls.Add(lockAllDurationComboBox);
             buttonContainer.Controls.Add(lockAllButton);
             
             // Add container to header (must be added before text/icon due to dock order)
@@ -7668,14 +7709,32 @@ namespace Risk_Manager
                     return;
                 }
 
-                // Show confirmation dialog
-                var confirmResult = MessageBox.Show(
-                    "Are you sure you want to lock ALL accounts until 5:00 PM ET?\n\n" +
+                // Get lock duration from dropdown selection
+                if (lockAllDurationComboBox == null || lockAllDurationComboBox.SelectedItem == null)
+                {
+                    MessageBox.Show("Please select a lock duration.", "No Duration Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                string durationText = lockAllDurationComboBox.SelectedItem.ToString();
+                TimeSpan? duration = GetLockDurationFromSelection(durationText);
+
+                if (!duration.HasValue)
+                {
+                    MessageBox.Show("Invalid lock duration selected.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Show confirmation dialog with selected duration
+                string confirmMessage = $"Are you sure you want to lock ALL accounts for {durationText}?\n\n" +
                     "This will:\n" +
                     "• Flatten all open trades\n" +
                     "• Disable all Buy/Sell buttons\n" +
                     "• Lock all settings (limits, symbols, toggles, etc.)\n\n" +
-                    "Both locks will remain until 5:00 PM ET today.",
+                    $"Both locks will remain active for {durationText}.";
+                
+                var confirmResult = MessageBox.Show(
+                    confirmMessage,
                     "Confirm Lock All Accounts",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Warning);
@@ -7694,10 +7753,6 @@ namespace Risk_Manager
                     MessageBox.Show("Settings service not initialized.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-
-                // Get lock duration for "All Day (Until 5:00 PM ET)"
-                TimeSpan? duration = GetLockDurationForAllDay();
-                string durationText = "All Day (Until 5:00 PM ET)";
 
                 // Check if the LockAccount method exists
                 var lockMethod = core.GetType().GetMethod("LockAccount");
@@ -7760,7 +7815,7 @@ namespace Risk_Manager
 
                 // Show success message
                 MessageBox.Show(
-                    $"Successfully locked {lockedCount} account(s) until 5:00 PM ET.\n\n" +
+                    $"Successfully locked {lockedCount} account(s) for {durationText}.\n\n" +
                     "All Buy/Sell buttons and settings are now locked.",
                     "Accounts Locked",
                     MessageBoxButtons.OK,
@@ -8081,6 +8136,103 @@ namespace Risk_Manager
                 return null;
 
             string selection = lockDurationComboBox.SelectedItem.ToString();
+            
+            // Get Eastern Time Zone
+            TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            DateTime nowEt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
+            DateTime fivePmEtToday = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0); // 5 PM ET today
+            
+            switch (selection)
+            {
+                case "5 Minutes":
+                case "15 Minutes":
+                case "1 Hour":
+                case "4 Hours":
+                    // Calculate the normal duration
+                    TimeSpan normalDuration;
+                    switch (selection)
+                    {
+                        case "5 Minutes":
+                            normalDuration = TimeSpan.FromMinutes(5);
+                            break;
+                        case "15 Minutes":
+                            normalDuration = TimeSpan.FromMinutes(15);
+                            break;
+                        case "1 Hour":
+                            normalDuration = TimeSpan.FromHours(1);
+                            break;
+                        case "4 Hours":
+                            normalDuration = TimeSpan.FromHours(4);
+                            break;
+                        default:
+                            normalDuration = TimeSpan.Zero;
+                            break;
+                    }
+                    
+                    // Calculate when the lock would normally expire
+                    DateTime normalExpiration = nowEt.Add(normalDuration);
+                    
+                    // If normal expiration is after 5 PM ET today, cap it at 5 PM ET today
+                    if (normalExpiration > fivePmEtToday && nowEt < fivePmEtToday)
+                    {
+                        // Lock until 5 PM ET today instead
+                        return fivePmEtToday - nowEt;
+                    }
+                    else
+                    {
+                        // Use normal duration
+                        return normalDuration;
+                    }
+                    
+                case "2 Hours":
+                    return TimeSpan.FromHours(2);
+                    
+                case "All Day (Until 5:00 PM ET)":
+                    // Calculate time until 5 PM ET today (or tomorrow if past 5 PM ET)
+                    var targetTime = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0); // 5 PM ET today
+                    if (nowEt >= targetTime)
+                    {
+                        // If past 5 PM ET, lock until 5 PM ET tomorrow
+                        targetTime = targetTime.AddDays(1);
+                    }
+                    return targetTime - nowEt;
+                    
+                case "All Week (Until 5:00 PM ET Friday)":
+                    // Lock until 5 PM ET Friday
+                    int daysUntilFriday = ((int)DayOfWeek.Friday - (int)nowEt.DayOfWeek + 7) % 7;
+                    DateTime fridayAt5PM;
+                    
+                    if (daysUntilFriday == 0)
+                    {
+                        // Today is Friday
+                        fridayAt5PM = new DateTime(nowEt.Year, nowEt.Month, nowEt.Day, 17, 0, 0);
+                        if (nowEt >= fridayAt5PM)
+                        {
+                            // Already past 5 PM Friday, lock until next Friday at 5 PM ET
+                            fridayAt5PM = fridayAt5PM.AddDays(7);
+                        }
+                    }
+                    else
+                    {
+                        // Calculate this coming Friday at 5 PM ET
+                        fridayAt5PM = nowEt.AddDays(daysUntilFriday).Date.AddHours(17);
+                    }
+                    
+                    return fridayAt5PM - nowEt;
+                default:
+                    return null; // Fallback, should not happen
+            }
+        }
+
+        /// <summary>
+        /// Gets the lock duration from a duration selection string.
+        /// This is similar to GetSelectedLockDuration but works with any duration string parameter.
+        /// All calculations are based on Eastern Time (ET).
+        /// </summary>
+        private TimeSpan? GetLockDurationFromSelection(string selection)
+        {
+            if (string.IsNullOrEmpty(selection))
+                return null;
             
             // Get Eastern Time Zone
             TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
