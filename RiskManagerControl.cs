@@ -230,6 +230,7 @@ namespace Risk_Manager
         private System.Windows.Forms.Timer ledIndicatorTimer; // Timer to monitor orders and positions for LED indicator
         private Panel ledIndicatorPanel; // Visual LED indicator panel on the top panel
         private ToolTip ledIndicatorToolTip; // Tooltip for LED indicator
+        private ToolTip shutdownButtonToolTip; // Tooltip for shutdown button
         private ComboBox typeSummaryFilterComboBox;
         private string selectedNavItem = null;
         private readonly List<Button> navButtons = new();
@@ -2671,6 +2672,10 @@ namespace Risk_Manager
             };
             shutdownButton.FlatAppearance.BorderSize = 0;
             shutdownButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(231, 76, 60); // Red hover color
+
+            // Add tooltip to explain the Shutdown button's purpose
+            shutdownButtonToolTip = new ToolTip();
+            shutdownButtonToolTip.SetToolTip(shutdownButton, "Emergency Shutdown! Close the application immediately! Unsafe");
 
             // Set shutdown icon image
             Image shutdownImg = null;
