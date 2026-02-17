@@ -305,6 +305,11 @@ namespace Risk_Manager
         private CheckBox symbolsFeatureCheckbox;
         private CheckBox tradingTimesFeatureCheckbox;
         
+        // General settings checkboxes
+        private CheckBox cardStyleCheckBox; // Use Greyed Out Style for Disabled Cards checkbox
+        private Dictionary<string, CheckBox> columnVisibilityCheckboxes = new Dictionary<string, CheckBox>(); // Account Summary Column visibility checkboxes
+        private bool isLoadingAccountSettings = false; // Flag to prevent saves during account settings load
+        
         // Risk enforcement mode radio buttons
         private RadioButton strictModeRadioButton;
         private RadioButton warningModeRadioButton;
@@ -2104,6 +2109,43 @@ namespace Risk_Manager
                 
                 // Update column visibility in Account Summary grid
                 UpdateAccountSummaryColumnVisibility();
+                
+                // Update General Settings checkboxes
+                isLoadingAccountSettings = true;
+                try
+                {
+                    if (cardStyleCheckBox != null && !string.IsNullOrEmpty(accountNumber))
+                    {
+                        var currentSettings = settingsService.GetSettings(accountNumber);
+                        if (currentSettings != null)
+                        {
+                            cardStyleCheckBox.Checked = currentSettings.UseGreyedOutCardStyle;
+                        }
+                    }
+                    
+                    // Update column visibility checkboxes
+                    if (columnVisibilityCheckboxes.Count > 0 && !string.IsNullOrEmpty(accountNumber))
+                    {
+                        var currentSettings = settingsService.GetSettings(accountNumber);
+                        if (currentSettings != null)
+                        {
+                            foreach (var kvp in columnVisibilityCheckboxes)
+                            {
+                                var propertyName = kvp.Key;
+                                var checkbox = kvp.Value;
+                                var prop = typeof(AccountSettings).GetProperty(propertyName);
+                                if (prop != null && checkbox != null)
+                                {
+                                    checkbox.Checked = (bool)prop.GetValue(currentSettings);
+                                }
+                            }
+                        }
+                    }
+                }
+                finally
+                {
+                    isLoadingAccountSettings = false;
+                }
             }
             catch (Exception ex)
             {
@@ -12334,7 +12376,7 @@ namespace Risk_Manager
             contentArea.Controls.Add(cardStyleSectionLabel);
 
             // Card display style checkbox
-            var cardStyleCheckBox = new CheckBox
+            cardStyleCheckBox = new CheckBox
             {
                 Text = "Use Greyed Out Style for Disabled Cards",
                 AutoSize = true,
@@ -12358,6 +12400,10 @@ namespace Risk_Manager
 
             cardStyleCheckBox.CheckedChanged += (s, e) =>
             {
+                // Don't save if we're loading account settings
+                if (isLoadingAccountSettings)
+                    return;
+                    
                 if (accountSelector != null && accountSelector.SelectedItem is Account currentAccount)
                 {
                     var accountNumber = GetAccountIdentifier(currentAccount);
@@ -12420,8 +12466,8 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(columnVisibilityInfoLabel);
 
-            // Create column visibility checkboxes in a grid layout
-            var columnCheckboxes = new Dictionary<string, CheckBox>();
+            // Clear and initialize column visibility checkboxes dictionary
+            columnVisibilityCheckboxes.Clear();
             var columnSettings = new[]
             {
                 new { Name = "Provider", Property = "ShowProviderColumn", DisplayText = "Provider" },
@@ -12495,6 +12541,10 @@ namespace Risk_Manager
 
                 checkbox.CheckedChanged += (s, e) =>
                 {
+                    // Don't save if we're loading account settings
+                    if (isLoadingAccountSettings)
+                        return;
+                        
                     if (accountSelector != null && accountSelector.SelectedItem is Account currentAccount)
                     {
                         var accountNumber = GetAccountIdentifier(currentAccount);
@@ -12509,7 +12559,7 @@ namespace Risk_Manager
                     }
                 };
 
-                columnCheckboxes[colSetting.Name] = checkbox;
+                columnVisibilityCheckboxes[colSetting.Property] = checkbox; // Store by property name for easy access in LoadAccountSettings
                 checkboxGridPanel.Controls.Add(checkbox, columnIndex, rowIndex);
 
                 // Move to next cell (left to right, top to bottom)
