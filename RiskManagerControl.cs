@@ -12340,7 +12340,7 @@ namespace Risk_Manager
                 }
                 
                 // Set checkbox state based on all accounts
-                // Privacy mode is a global setting that applies to ALL accounts when changed
+                // Privacy mode is stored per-account but the UI checkbox controls it globally for ALL accounts
                 // Only enable checkbox if ALL accounts consistently have it enabled
                 // Otherwise, default to disabled (safer state) to avoid unexpected privacy mode
                 if (allAccountsHaveSamePrivacyMode)
