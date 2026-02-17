@@ -12341,15 +12341,22 @@ namespace Risk_Manager
                         {
                             // Found accounts with different privacy mode settings
                             allAccountsHaveSamePrivacyMode = false;
+                            
+                            // Early exit: if we already know settings are inconsistent and at least one is enabled,
+                            // we have all the information we need
+                            if (anyEnabled)
+                            {
+                                break;
+                            }
                         }
                     }
                 }
                 
                 // Set checkbox state based on all accounts
                 // If all accounts have the same setting, use that; otherwise use anyEnabled
-                if (allAccountsHaveSamePrivacyMode && commonPrivacyMode.HasValue)
+                if (allAccountsHaveSamePrivacyMode)
                 {
-                    privacyModeCheckBox.Checked = commonPrivacyMode.Value;
+                    privacyModeCheckBox.Checked = commonPrivacyMode.GetValueOrDefault(false);
                 }
                 else
                 {
