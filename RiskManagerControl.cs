@@ -2114,30 +2114,38 @@ namespace Risk_Manager
                 isLoadingAccountSettings = true;
                 try
                 {
-                    if (cardStyleCheckBox != null && !string.IsNullOrEmpty(accountNumber))
+                    if (cardStyleCheckBox != null && settings != null)
                     {
-                        var currentSettings = settingsService.GetSettings(accountNumber);
-                        if (currentSettings != null)
-                        {
-                            cardStyleCheckBox.Checked = currentSettings.UseGreyedOutCardStyle;
-                        }
+                        cardStyleCheckBox.Checked = settings.UseGreyedOutCardStyle;
                     }
                     
                     // Update column visibility checkboxes
-                    if (columnVisibilityCheckboxes.Count > 0 && !string.IsNullOrEmpty(accountNumber))
+                    if (columnVisibilityCheckboxes.Count > 0 && settings != null)
                     {
-                        var currentSettings = settingsService.GetSettings(accountNumber);
-                        if (currentSettings != null)
+                        foreach (var kvp in columnVisibilityCheckboxes)
                         {
-                            foreach (var kvp in columnVisibilityCheckboxes)
+                            var propertyName = kvp.Key;
+                            var checkbox = kvp.Value;
+                            if (checkbox != null)
                             {
-                                var propertyName = kvp.Key;
-                                var checkbox = kvp.Value;
-                                var prop = typeof(AccountSettings).GetProperty(propertyName);
-                                if (prop != null && checkbox != null)
+                                // Use switch instead of reflection for better performance
+                                checkbox.Checked = propertyName switch
                                 {
-                                    checkbox.Checked = (bool)prop.GetValue(currentSettings);
-                                }
+                                    "ShowProviderColumn" => settings.ShowProviderColumn,
+                                    "ShowConnectionColumn" => settings.ShowConnectionColumn,
+                                    "ShowTypeColumn" => settings.ShowTypeColumn,
+                                    "ShowEquityColumn" => settings.ShowEquityColumn,
+                                    "ShowOpenPnLColumn" => settings.ShowOpenPnLColumn,
+                                    "ShowClosedPnLColumn" => settings.ShowClosedPnLColumn,
+                                    "ShowDailyPnLColumn" => settings.ShowDailyPnLColumn,
+                                    "ShowGrossPnLColumn" => settings.ShowGrossPnLColumn,
+                                    "ShowTrailingDrawdownColumn" => settings.ShowTrailingDrawdownColumn,
+                                    "ShowPositionsColumn" => settings.ShowPositionsColumn,
+                                    "ShowContractsColumn" => settings.ShowContractsColumn,
+                                    "ShowStatusColumn" => settings.ShowStatusColumn,
+                                    "ShowDrawdownColumn" => settings.ShowDrawdownColumn,
+                                    _ => true // Default to true if unknown property
+                                };
                             }
                         }
                     }
