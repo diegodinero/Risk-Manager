@@ -12356,7 +12356,8 @@ namespace Risk_Manager
                 // If all accounts have the same setting, use that; otherwise use anyEnabled
                 if (allAccountsHaveSamePrivacyMode)
                 {
-                    privacyModeCheckBox.Checked = commonPrivacyMode.GetValueOrDefault(false);
+                    // commonPrivacyMode is guaranteed to have a value since Items.Count > 0
+                    privacyModeCheckBox.Checked = commonPrivacyMode.Value;
                 }
                 else
                 {
