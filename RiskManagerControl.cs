@@ -12314,8 +12314,9 @@ namespace Risk_Manager
             {
                 bool? commonPrivacyMode = null;
                 bool allAccountsHaveSamePrivacyMode = true;
+                bool anyEnabled = false;
                 
-                // Check privacy mode setting for all accounts
+                // Check privacy mode setting for all accounts in a single pass
                 foreach (var item in accountSelector.Items)
                 {
                     if (item is Account account)
@@ -12324,6 +12325,13 @@ namespace Risk_Manager
                         var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
                         bool accountPrivacyMode = settings?.PrivacyModeEnabled ?? false;
                         
+                        // Track if any account has privacy mode enabled
+                        if (accountPrivacyMode)
+                        {
+                            anyEnabled = true;
+                        }
+                        
+                        // Check if all accounts have the same privacy mode setting
                         if (commonPrivacyMode == null)
                         {
                             // First account sets the initial state
@@ -12333,34 +12341,19 @@ namespace Risk_Manager
                         {
                             // Found accounts with different privacy mode settings
                             allAccountsHaveSamePrivacyMode = false;
-                            break;
                         }
                     }
                 }
                 
                 // Set checkbox state based on all accounts
-                // If all accounts have the same setting, use that; otherwise default to enabled if any account has it enabled
+                // If all accounts have the same setting, use that; otherwise use anyEnabled
                 if (allAccountsHaveSamePrivacyMode && commonPrivacyMode.HasValue)
                 {
                     privacyModeCheckBox.Checked = commonPrivacyMode.Value;
                 }
-                else if (!allAccountsHaveSamePrivacyMode)
+                else
                 {
-                    // Accounts have inconsistent settings - check if any account has it enabled
-                    bool anyEnabled = false;
-                    foreach (var item in accountSelector.Items)
-                    {
-                        if (item is Account account)
-                        {
-                            var accountNumber = GetAccountIdentifier(account);
-                            var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
-                            if (settings?.PrivacyModeEnabled == true)
-                            {
-                                anyEnabled = true;
-                                break;
-                            }
-                        }
-                    }
+                    // Accounts have inconsistent settings - enable if any account has it enabled
                     privacyModeCheckBox.Checked = anyEnabled;
                 }
             }
