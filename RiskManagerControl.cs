@@ -1687,7 +1687,9 @@ namespace Risk_Manager
                 }
 
                 // Refresh ALL UI elements to apply/remove masking in real-time
-                RefreshAccountDropdown(); // Refresh main account selector
+                // Note: RefreshAccountDropdown() will call UpdatePrivacyModeCheckboxState(), but that's harmless
+                // because the event handler is temporarily disabled during the update
+                RefreshAccountDropdown(); // Refresh main account selector (and checkbox state)
                 accountSelector.Refresh(); // Force immediate visual repaint of the account selector dropdown to reflect privacy mode changes
                 RefreshAccountsSummary(); // Refresh stats grid (account column)
                 RefreshAccountStats(); // Refresh stats detail grid (account row)
