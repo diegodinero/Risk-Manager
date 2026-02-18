@@ -1514,7 +1514,10 @@ namespace Risk_Manager
             // Check all accounts in a single pass for efficiency
             bool hasExistingAccounts = false;
             bool allExistingHavePrivacyMode = true;
-            var newAccounts = new List<Account>();
+            var newAccountsWithIds = new List<(Account account, string accountId)>();
+            
+            // Cache the service instance to avoid repeated property access
+            var settingsService = RiskManagerSettingsService.Instance;
             
             // Process connected accounts directly to avoid UI control overhead
             foreach (var account in connectedAccounts)
@@ -1522,9 +1525,9 @@ namespace Risk_Manager
                 // Add to dropdown
                 accountSelector.Items.Add(account);
                 
-                // Check privacy mode settings
+                // Get account identifier once and reuse
                 var accountId = GetAccountIdentifier(account);
-                var settings = RiskManagerSettingsService.Instance.GetSettings(accountId);
+                var settings = settingsService.GetSettings(accountId);
                 
                 if (settings != null)
                 {
@@ -1538,18 +1541,17 @@ namespace Risk_Manager
                 }
                 else
                 {
-                    // This is a new account without settings yet
-                    newAccounts.Add(account);
+                    // This is a new account without settings yet - store with accountId to avoid recalculating
+                    newAccountsWithIds.Add((account, accountId));
                 }
             }
             
             // Apply privacy mode to new accounts if all existing accounts have it enabled
-            if (hasExistingAccounts && allExistingHavePrivacyMode && newAccounts.Count > 0)
+            if (hasExistingAccounts && allExistingHavePrivacyMode && newAccountsWithIds.Count > 0)
             {
-                foreach (var account in newAccounts)
+                foreach (var (account, accountId) in newAccountsWithIds)
                 {
-                    var accountId = GetAccountIdentifier(account);
-                    RiskManagerSettingsService.Instance.UpdatePrivacyMode(accountId, true);
+                    settingsService.UpdatePrivacyMode(accountId, true);
                 }
             }
 
