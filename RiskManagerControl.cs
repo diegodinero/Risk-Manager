@@ -247,6 +247,7 @@ namespace Risk_Manager
         private bool showProgressBars = false; // Whether to show progress bars in data grids
         private CheckBox showPercentageCheckBox; // Show Percentage checkbox in General Settings
         private bool showPercentage = false; // Whether to show percentage instead of dollar amount in progress bars
+        private CheckBox privacyModeCheckBox; // Privacy Mode checkbox in General Settings
         private Label currentThemeLabel; // Label to display current theme name
         private Dictionary<string, TypeSummaryData> typeSummaryAggregatedData = new Dictionary<string, TypeSummaryData>(); // Aggregated data for type summary rows
         
@@ -1586,6 +1587,113 @@ namespace Risk_Manager
                     selectedAccountIndex = 0; // Ensure index is set                  
                     LoadAccountSettings();
                 }
+            }
+            
+            // Update privacy mode checkbox state based on current accounts
+            UpdatePrivacyModeCheckboxState();
+        }
+
+        /// <summary>
+        /// Updates the privacy mode checkbox state based on all accounts.
+        /// Should be called when accounts are loaded/refreshed.
+        /// </summary>
+        private void UpdatePrivacyModeCheckboxState()
+        {
+            if (privacyModeCheckBox == null || accountSelector == null)
+                return;
+
+            // Temporarily disable event handling to avoid triggering CheckedChanged
+            privacyModeCheckBox.CheckedChanged -= PrivacyModeCheckBox_CheckedChanged;
+
+            try
+            {
+                // Load current privacy mode setting by checking all accounts
+                // Since privacy mode applies to ALL accounts when changed, we need to check all accounts
+                if (accountSelector.Items.Count > 0)
+                {
+                    bool? commonPrivacyMode = null;
+                    bool allAccountsHaveSamePrivacyMode = true;
+
+                    // Check privacy mode setting for all accounts
+                    foreach (var item in accountSelector.Items)
+                    {
+                        if (item is Account account)
+                        {
+                            var accountNumber = GetAccountIdentifier(account);
+                            var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
+                            bool accountPrivacyMode = settings?.PrivacyModeEnabled ?? false;
+
+                            // Check if all accounts have the same privacy mode setting
+                            if (commonPrivacyMode == null)
+                            {
+                                // First account sets the initial state
+                                commonPrivacyMode = accountPrivacyMode;
+                            }
+                            else if (commonPrivacyMode != accountPrivacyMode)
+                            {
+                                // Found accounts with different privacy mode settings
+                                allAccountsHaveSamePrivacyMode = false;
+                                break; // Early exit - we know settings are inconsistent
+                            }
+                        }
+                    }
+
+                    // Set checkbox state based on all accounts
+                    // Privacy mode is stored per-account but the UI checkbox controls it globally for ALL accounts
+                    // Only enable checkbox if ALL accounts consistently have it enabled
+                    // Otherwise, default to disabled (safer state) to avoid unexpected privacy mode
+                    if (allAccountsHaveSamePrivacyMode)
+                    {
+                        // All accounts have the same setting - use that value
+                        // commonPrivacyMode is guaranteed to have a value since Items.Count > 0
+                        privacyModeCheckBox.Checked = commonPrivacyMode.Value;
+                    }
+                    else
+                    {
+                        // Accounts have inconsistent settings - default to OFF (safer state)
+                        // This prevents privacy mode from being unexpectedly enabled
+                        privacyModeCheckBox.Checked = false;
+                    }
+                }
+                else
+                {
+                    // No accounts loaded - default to unchecked
+                    privacyModeCheckBox.Checked = false;
+                }
+            }
+            finally
+            {
+                // Re-enable event handling
+                privacyModeCheckBox.CheckedChanged += PrivacyModeCheckBox_CheckedChanged;
+            }
+        }
+
+        /// <summary>
+        /// Event handler for privacy mode checkbox changes.
+        /// Applies privacy mode to all accounts and refreshes UI.
+        /// </summary>
+        private void PrivacyModeCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (accountSelector != null)
+            {
+                // Apply privacy mode to ALL accounts
+                foreach (var item in accountSelector.Items)
+                {
+                    if (item is Account account)
+                    {
+                        var accountNumber = GetAccountIdentifier(account);
+                        RiskManagerSettingsService.Instance.UpdatePrivacyMode(accountNumber, privacyModeCheckBox.Checked);
+                    }
+                }
+
+                // Refresh ALL UI elements to apply/remove masking in real-time
+                RefreshAccountDropdown(); // Refresh main account selector
+                accountSelector.Refresh(); // Force immediate visual repaint of the account selector dropdown to reflect privacy mode changes
+                RefreshAccountsSummary(); // Refresh stats grid (account column)
+                RefreshAccountStats(); // Refresh stats detail grid (account row)
+                RefreshCopySettingsAccounts(); // Refresh Copy Settings tab
+                UpdateTitleWithAccountNumber(); // Refresh title bar with masked/unmasked account number
+                UpdateAllLockAccountDisplays(); // Refresh account labels in all tabs
             }
         }
 
@@ -12337,8 +12445,8 @@ namespace Risk_Manager
             };
             contentArea.Controls.Add(privacyModeSectionLabel);
 
-            // Privacy mode checkbox
-            var privacyModeCheckBox = new CheckBox
+            // Privacy mode checkbox (use class field to allow re-initialization)
+            privacyModeCheckBox = new CheckBox
             {
                 Text = "Privacy Mode (mask account numbers)",
                 AutoSize = true,
@@ -12349,79 +12457,10 @@ namespace Risk_Manager
                 Margin = new Padding(0, 0, 0, 8)
             };
             
-            // Load current privacy mode setting by checking all accounts
-            // Since privacy mode applies to ALL accounts when changed, we need to check all accounts
-            if (accountSelector != null && accountSelector.Items.Count > 0)
-            {
-                bool? commonPrivacyMode = null;
-                bool allAccountsHaveSamePrivacyMode = true;
-                
-                // Check privacy mode setting for all accounts
-                foreach (var item in accountSelector.Items)
-                {
-                    if (item is Account account)
-                    {
-                        var accountNumber = GetAccountIdentifier(account);
-                        var settings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
-                        bool accountPrivacyMode = settings?.PrivacyModeEnabled ?? false;
-                        
-                        // Check if all accounts have the same privacy mode setting
-                        if (commonPrivacyMode == null)
-                        {
-                            // First account sets the initial state
-                            commonPrivacyMode = accountPrivacyMode;
-                        }
-                        else if (commonPrivacyMode != accountPrivacyMode)
-                        {
-                            // Found accounts with different privacy mode settings
-                            allAccountsHaveSamePrivacyMode = false;
-                            break; // Early exit - we know settings are inconsistent
-                        }
-                    }
-                }
-                
-                // Set checkbox state based on all accounts
-                // Privacy mode is stored per-account but the UI checkbox controls it globally for ALL accounts
-                // Only enable checkbox if ALL accounts consistently have it enabled
-                // Otherwise, default to disabled (safer state) to avoid unexpected privacy mode
-                if (allAccountsHaveSamePrivacyMode)
-                {
-                    // All accounts have the same setting - use that value
-                    // commonPrivacyMode is guaranteed to have a value since Items.Count > 0
-                    privacyModeCheckBox.Checked = commonPrivacyMode.Value;
-                }
-                else
-                {
-                    // Accounts have inconsistent settings - default to OFF (safer state)
-                    // This prevents privacy mode from being unexpectedly enabled
-                    privacyModeCheckBox.Checked = false;
-                }
-            }
+            // Initialize checkbox state based on current accounts
+            UpdatePrivacyModeCheckboxState();
             
-            privacyModeCheckBox.CheckedChanged += (s, e) =>
-            {
-                if (accountSelector != null)
-                {
-                    // Apply privacy mode to ALL accounts
-                    foreach (var item in accountSelector.Items)
-                    {
-                        if (item is Account account)
-                        {
-                            var accountNumber = GetAccountIdentifier(account);
-                            RiskManagerSettingsService.Instance.UpdatePrivacyMode(accountNumber, privacyModeCheckBox.Checked);
-                        }
-                    }
-                    
-                    // Refresh ALL UI elements to apply/remove masking in real-time
-                    RefreshAccountDropdown(); // Refresh main account selector
-                    accountSelector.Refresh(); // Force immediate visual repaint of the account selector dropdown to reflect privacy mode changes
-                    RefreshAccountsSummary(); // Refresh stats grid (account column)
-                    RefreshAccountStats(); // Refresh stats detail grid (account row)
-                    RefreshCopySettingsAccounts(); // Refresh Copy Settings tab
-                    UpdateTitleWithAccountNumber(); // Refresh title bar with masked/unmasked account number
-                    UpdateAllLockAccountDisplays(); // Refresh account labels in all tabs
-                }
-            };
+            privacyModeCheckBox.CheckedChanged += PrivacyModeCheckBox_CheckedChanged;
 
             contentArea.Controls.Add(privacyModeCheckBox);
 
