@@ -1509,10 +1509,6 @@ namespace Risk_Manager
             accountSelector.SelectedIndexChanged -= AccountSelectorOnSelectedIndexChanged;
 
             accountSelector.Items.Clear();
-            foreach (var account in connectedAccounts)
-            {
-                accountSelector.Items.Add(account);
-            }
             
             // Apply privacy mode to new accounts if it's currently enabled
             // Check all accounts in a single pass for efficiency
@@ -1520,29 +1516,30 @@ namespace Risk_Manager
             bool allExistingHavePrivacyMode = true;
             var newAccounts = new List<Account>();
             
-            // Single pass: check existing accounts and collect new accounts
-            foreach (var item in accountSelector.Items)
+            // Process connected accounts directly to avoid UI control overhead
+            foreach (var account in connectedAccounts)
             {
-                if (item is Account account)
+                // Add to dropdown
+                accountSelector.Items.Add(account);
+                
+                // Check privacy mode settings
+                var accountId = GetAccountIdentifier(account);
+                var settings = RiskManagerSettingsService.Instance.GetSettings(accountId);
+                
+                if (settings != null)
                 {
-                    var accountId = GetAccountIdentifier(account);
-                    var settings = RiskManagerSettingsService.Instance.GetSettings(accountId);
-                    
-                    if (settings != null)
+                    // This is an existing account with settings
+                    hasExistingAccounts = true;
+                    if (!settings.PrivacyModeEnabled)
                     {
-                        // This is an existing account with settings
-                        hasExistingAccounts = true;
-                        if (!settings.PrivacyModeEnabled)
-                        {
-                            allExistingHavePrivacyMode = false;
-                            // Note: Can't break early - still need to collect all new accounts
-                        }
+                        allExistingHavePrivacyMode = false;
+                        // Note: Can't break early - still need to collect all new accounts
                     }
-                    else
-                    {
-                        // This is a new account without settings yet
-                        newAccounts.Add(account);
-                    }
+                }
+                else
+                {
+                    // This is a new account without settings yet
+                    newAccounts.Add(account);
                 }
             }
             
