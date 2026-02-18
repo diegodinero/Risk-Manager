@@ -1513,6 +1513,40 @@ namespace Risk_Manager
             {
                 accountSelector.Items.Add(account);
             }
+            
+            // Apply privacy mode to new accounts if it's currently enabled
+            // Check if any existing account has privacy mode enabled to determine the current state
+            bool privacyModeEnabled = false;
+            if (accountSelector.Items.Count > 0)
+            {
+                // Check the first account's privacy mode setting as representative
+                var firstAccount = accountSelector.Items[0] as Account;
+                if (firstAccount != null)
+                {
+                    var accountId = GetAccountIdentifier(firstAccount);
+                    var settings = RiskManagerSettingsService.Instance.GetSettings(accountId);
+                    privacyModeEnabled = settings?.PrivacyModeEnabled ?? false;
+                }
+                
+                // If privacy mode is enabled, ensure all accounts have it enabled
+                // This handles new accounts that were just loaded
+                if (privacyModeEnabled)
+                {
+                    foreach (var item in accountSelector.Items)
+                    {
+                        if (item is Account account)
+                        {
+                            var accountNumber = GetAccountIdentifier(account);
+                            var accountSettings = RiskManagerSettingsService.Instance.GetSettings(accountNumber);
+                            // Only update if the account doesn't have privacy mode enabled yet
+                            if (accountSettings == null || !accountSettings.PrivacyModeEnabled)
+                            {
+                                RiskManagerSettingsService.Instance.UpdatePrivacyMode(accountNumber, true);
+                            }
+                        }
+                    }
+                }
+            }
 
             // Restore selection or select first
             // Check if current selection exists in the new items list
@@ -12373,6 +12407,7 @@ namespace Risk_Manager
                     
                     // Refresh ALL UI elements to apply/remove masking in real-time
                     RefreshAccountDropdown(); // Refresh main account selector
+                    accountSelector.Refresh(); // Force immediate visual update of the dropdown
                     RefreshAccountsSummary(); // Refresh stats grid (account column)
                     RefreshAccountStats(); // Refresh stats detail grid (account row)
                     RefreshCopySettingsAccounts(); // Refresh Copy Settings tab
