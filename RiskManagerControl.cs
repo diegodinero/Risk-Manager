@@ -1642,15 +1642,14 @@ namespace Risk_Manager
                     // Privacy mode is stored per-account but the UI checkbox controls it globally for ALL accounts
                     // Only enable checkbox if ALL accounts consistently have it enabled
                     // Otherwise, default to disabled (safer state) to avoid unexpected privacy mode
-                    if (allAccountsHaveSamePrivacyMode)
+                    if (allAccountsHaveSamePrivacyMode && commonPrivacyMode.HasValue)
                     {
                         // All accounts have the same setting - use that value
-                        // commonPrivacyMode is guaranteed to have a value since Items.Count > 0
                         privacyModeCheckBox.Checked = commonPrivacyMode.Value;
                     }
                     else
                     {
-                        // Accounts have inconsistent settings - default to OFF (safer state)
+                        // Accounts have inconsistent settings or no valid Account instances - default to OFF (safer state)
                         // This prevents privacy mode from being unexpectedly enabled
                         privacyModeCheckBox.Checked = false;
                     }
@@ -1687,8 +1686,8 @@ namespace Risk_Manager
                 }
 
                 // Refresh ALL UI elements to apply/remove masking in real-time
-                // Note: RefreshAccountDropdown() will call UpdatePrivacyModeCheckboxState(), but that's harmless
-                // because the event handler is temporarily disabled during the update
+                // Note: RefreshAccountDropdown() will call UpdatePrivacyModeCheckboxState()
+                // UpdatePrivacyModeCheckboxState() disables its own handler before making changes, so this is safe
                 RefreshAccountDropdown(); // Refresh main account selector (and checkbox state)
                 accountSelector.Refresh(); // Force immediate visual repaint of the account selector dropdown to reflect privacy mode changes
                 RefreshAccountsSummary(); // Refresh stats grid (account column)
