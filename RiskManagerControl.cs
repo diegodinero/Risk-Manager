@@ -1516,45 +1516,43 @@ namespace Risk_Manager
             
             // Apply privacy mode to new accounts if it's currently enabled
             // Check all accounts in a single pass for efficiency
-            if (accountSelector.Items.Count > 0)
+            bool hasExistingAccounts = false;
+            bool allExistingHavePrivacyMode = true;
+            var newAccounts = new List<Account>();
+            
+            // Single pass: check existing accounts and collect new accounts
+            foreach (var item in accountSelector.Items)
             {
-                bool hasExistingAccounts = false;
-                bool allExistingHavePrivacyMode = true;
-                var newAccounts = new List<Account>();
-                
-                // Single pass: check existing accounts and collect new accounts
-                foreach (var item in accountSelector.Items)
+                if (item is Account account)
                 {
-                    if (item is Account account)
+                    var accountId = GetAccountIdentifier(account);
+                    var settings = RiskManagerSettingsService.Instance.GetSettings(accountId);
+                    
+                    if (settings != null)
                     {
-                        var accountId = GetAccountIdentifier(account);
-                        var settings = RiskManagerSettingsService.Instance.GetSettings(accountId);
-                        
-                        if (settings != null)
+                        // This is an existing account with settings
+                        hasExistingAccounts = true;
+                        if (!settings.PrivacyModeEnabled)
                         {
-                            // This is an existing account with settings
-                            hasExistingAccounts = true;
-                            if (!settings.PrivacyModeEnabled)
-                            {
-                                allExistingHavePrivacyMode = false;
-                            }
+                            allExistingHavePrivacyMode = false;
+                            // Note: Can't break early - still need to collect all new accounts
                         }
-                        else
-                        {
-                            // This is a new account without settings yet
-                            newAccounts.Add(account);
-                        }
+                    }
+                    else
+                    {
+                        // This is a new account without settings yet
+                        newAccounts.Add(account);
                     }
                 }
-                
-                // Apply privacy mode to new accounts if all existing accounts have it enabled
-                if (hasExistingAccounts && allExistingHavePrivacyMode && newAccounts.Count > 0)
+            }
+            
+            // Apply privacy mode to new accounts if all existing accounts have it enabled
+            if (hasExistingAccounts && allExistingHavePrivacyMode && newAccounts.Count > 0)
+            {
+                foreach (var account in newAccounts)
                 {
-                    foreach (var account in newAccounts)
-                    {
-                        var accountId = GetAccountIdentifier(account);
-                        RiskManagerSettingsService.Instance.UpdatePrivacyMode(accountId, true);
-                    }
+                    var accountId = GetAccountIdentifier(account);
+                    RiskManagerSettingsService.Instance.UpdatePrivacyMode(accountId, true);
                 }
             }
 
