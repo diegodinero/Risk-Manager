@@ -1515,22 +1515,40 @@ namespace Risk_Manager
             }
             
             // Apply privacy mode to new accounts if it's currently enabled
-            // Check if any existing account has privacy mode enabled to determine the current state
-            bool privacyModeEnabled = false;
+            // Check all existing accounts to determine if privacy mode should be enabled
+            // Privacy mode is considered enabled only if ALL existing accounts have it enabled
+            bool shouldEnablePrivacyMode = false;
+            bool hasExistingAccounts = false;
+            
             if (accountSelector.Items.Count > 0)
             {
-                // Check the first account's privacy mode setting as representative
-                var firstAccount = accountSelector.Items[0] as Account;
-                if (firstAccount != null)
+                // Check if all accounts currently have privacy mode enabled
+                bool allHavePrivacyMode = true;
+                foreach (var item in accountSelector.Items)
                 {
-                    var accountId = GetAccountIdentifier(firstAccount);
-                    var settings = RiskManagerSettingsService.Instance.GetSettings(accountId);
-                    privacyModeEnabled = settings?.PrivacyModeEnabled ?? false;
+                    if (item is Account account)
+                    {
+                        var accountId = GetAccountIdentifier(account);
+                        var settings = RiskManagerSettingsService.Instance.GetSettings(accountId);
+                        
+                        // If this account has settings, it's an existing account
+                        if (settings != null)
+                        {
+                            hasExistingAccounts = true;
+                            if (!settings.PrivacyModeEnabled)
+                            {
+                                allHavePrivacyMode = false;
+                                break;
+                            }
+                        }
+                    }
                 }
                 
-                // If privacy mode is enabled, ensure all accounts have it enabled
-                // This handles new accounts that were just loaded
-                if (privacyModeEnabled)
+                // Enable privacy mode for new accounts only if all existing accounts have it enabled
+                shouldEnablePrivacyMode = hasExistingAccounts && allHavePrivacyMode;
+                
+                // Apply privacy mode to accounts that don't have it yet (new accounts)
+                if (shouldEnablePrivacyMode)
                 {
                     foreach (var item in accountSelector.Items)
                     {
