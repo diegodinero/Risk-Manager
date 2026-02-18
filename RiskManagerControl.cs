@@ -1536,7 +1536,7 @@ namespace Risk_Manager
                     if (!settings.PrivacyModeEnabled)
                     {
                         allExistingHavePrivacyMode = false;
-                        // Note: Can't break early - still need to collect all new accounts
+                        // Note: Can't break early - need to add all accounts to dropdown and collect new accounts
                     }
                 }
                 else
@@ -12414,7 +12414,7 @@ namespace Risk_Manager
                     
                     // Refresh ALL UI elements to apply/remove masking in real-time
                     RefreshAccountDropdown(); // Refresh main account selector
-                    accountSelector.Refresh(); // Force immediate visual update of the dropdown
+                    accountSelector.Refresh(); // Force immediate visual repaint of the account selector dropdown to reflect privacy mode changes
                     RefreshAccountsSummary(); // Refresh stats grid (account column)
                     RefreshAccountStats(); // Refresh stats detail grid (account row)
                     RefreshCopySettingsAccounts(); // Refresh Copy Settings tab
