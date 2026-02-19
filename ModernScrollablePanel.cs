@@ -99,17 +99,18 @@ public class ModernScrollablePanel : Panel
         Scroll += (_, __) => ShowThumb();
     }
 
-    // ── Override WM_NCCALCSIZE to "eat" the native vertical scrollbar ──────
+    // ── Override WM_NCCALCSIZE to "eat" the native scrollbars ────────────
     protected override void WndProc(ref Message m)
     {
         if (m.Msg == WM_NCCALCSIZE && m.WParam.ToInt32() == 1)
         {
             base.WndProc(ref m);
-            // Expand the client rect rightward to absorb the native scrollbar
-            // width, making it invisible in the non-client area.
+            // Expand the client rect to absorb both native scrollbars,
+            // making them invisible while keeping AutoScroll functionality.
             var p = (NCCALCSIZE_PARAMS)Marshal.PtrToStructure(
                         m.LParam, typeof(NCCALCSIZE_PARAMS));
-            p.rgrc0.Right += SystemInformation.VerticalScrollBarWidth;
+            p.rgrc0.Right  += SystemInformation.VerticalScrollBarWidth;
+            p.rgrc0.Bottom += SystemInformation.HorizontalScrollBarHeight;
             Marshal.StructureToPtr(p, m.LParam, false);
             m.Result = IntPtr.Zero;
             return;

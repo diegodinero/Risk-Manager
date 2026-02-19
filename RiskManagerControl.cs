@@ -3643,12 +3643,21 @@ namespace Risk_Manager
             navToggleButton.Click += ToggleNavigation;
             headerPanel.Controls.Add(navToggleButton);
 
-            var navContainer = new FlowLayoutPanel
+            var navContainer = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = DarkerBackground,
+            };
+
+            var navFlow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
-                AutoScroll = true,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                AutoScroll = false,
                 BackColor = DarkerBackground,
                 Padding = new Padding(0, 5, 0, 5)
             };
@@ -3656,10 +3665,11 @@ namespace Risk_Manager
             foreach (var item in NavItems)
             {
                 var navButton = CreateNavButton(item);
-                navContainer.Controls.Add(navButton);
+                navFlow.Controls.Add(navButton);
                 navButtons.Add(navButton);
             }
 
+            navContainer.Controls.Add(navFlow);
             sidebarPanel.Controls.Add(navContainer);
             sidebarPanel.Controls.Add(headerPanel);
             return sidebarPanel;
@@ -3670,7 +3680,7 @@ namespace Risk_Manager
             var button = new Button
             {
                 Text = "  " + text,
-                Width = LeftPanelWidth - 4,
+                Width = (isNavigationCollapsed ? LeftPanelCollapsedWidth : LeftPanelExpandedWidth) - 4,
                 Height = 36,
                 FlatStyle = FlatStyle.Flat,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -12227,13 +12237,22 @@ namespace Risk_Manager
                 AutoSize = false
             };
 
-            // Content area
-            var contentArea = new FlowLayoutPanel
+            // Content area with modern scrollbar
+            var contentScrollPanel = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = CardBackground,
+            };
+
+            var contentArea = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
                 BackColor = CardBackground,
                 Padding = new Padding(15),
-                AutoScroll = true,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                AutoScroll = false,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false
             };
@@ -12702,7 +12721,8 @@ namespace Risk_Manager
             contentArea.Controls.Add(checkboxGridPanel);
 
             // Add controls in correct order for docking
-            mainPanel.Controls.Add(contentArea);
+            contentScrollPanel.Controls.Add(contentArea);
+            mainPanel.Controls.Add(contentScrollPanel);
             mainPanel.Controls.Add(subtitleLabel);
             mainPanel.Controls.Add(generalSettingsHeader);
 
