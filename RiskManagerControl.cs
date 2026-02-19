@@ -6541,7 +6541,29 @@ namespace Risk_Manager
 
                     // Calculate duration until 5 PM ET
                     var duration = RiskManagerSettingsService.CalculateDurationUntil5PMET();
-                    
+
+                    // SECURITY CHECK: Prevent bypassing an existing settings lock with a shorter duration
+                    if (settingsService.AreSettingsLocked(accountNumber))
+                    {
+                        var remainingTime = settingsService.GetRemainingSettingsLockTime(accountNumber);
+                        if (remainingTime.HasValue && remainingTime.Value > TimeSpan.Zero && duration < remainingTime.Value)
+                        {
+                            int hours = (int)remainingTime.Value.TotalHours;
+                            int minutes = remainingTime.Value.Minutes;
+                            string timeDisplay = hours > 0 ? $"{hours}h {minutes}m" : $"{minutes}m";
+
+                            MessageBox.Show(
+                                $"Cannot lock settings with a shorter duration!\n\n" +
+                                $"Account '{accountNumber}' settings are already locked for {timeDisplay}.\n\n" +
+                                "The new lock (until 5:00 PM ET) would expire sooner than the existing lock.\n\n" +
+                                "To change the lock duration, first unlock settings manually.",
+                                "Lock Duration Too Short",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+
                     // Show confirmation dialog
                     var confirmResult = MessageBox.Show(
                         $"Are you sure you want to lock settings for account '{accountNumber}' until 5:00 PM ET?\n\n" +
@@ -7984,7 +8006,7 @@ namespace Risk_Manager
                         
                         string accountNumber = GetUniqueAccountIdentifier(account, checkIndex);
                         
-                        // Check if account has an active lock
+                        // Check if account has an active trading lock
                         if (settingsService.IsTradingLocked(accountNumber))
                         {
                             var remainingTime = settingsService.GetRemainingLockTime(accountNumber);
@@ -7994,6 +8016,21 @@ namespace Risk_Manager
                                 if (!maxExistingLock.HasValue || remainingTime.Value > maxExistingLock.Value)
                                 {
                                     maxExistingLock = remainingTime.Value;
+                                    accountWithLongestLock = accountNumber;
+                                }
+                            }
+                        }
+
+                        // Also check if account has an active settings lock
+                        if (settingsService.AreSettingsLocked(accountNumber))
+                        {
+                            var remainingSettingsTime = settingsService.GetRemainingSettingsLockTime(accountNumber);
+                            if (remainingSettingsTime.HasValue && remainingSettingsTime.Value > TimeSpan.Zero)
+                            {
+                                // Track the longest existing lock (across both trading and settings)
+                                if (!maxExistingLock.HasValue || remainingSettingsTime.Value > maxExistingLock.Value)
+                                {
+                                    maxExistingLock = remainingSettingsTime.Value;
                                     accountWithLongestLock = accountNumber;
                                 }
                             }
