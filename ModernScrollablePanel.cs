@@ -47,18 +47,34 @@ public class ModernScrollablePanel : Panel
     private int   _dragStartScrollY;
 
     // ── Child controls / timers ────────────────────────────────────────────
-    private readonly Panel _overlay;   // transparent panel that paints the thumb
+    private readonly ScrollbarOverlay _overlay;   // transparent panel that paints the thumb
     private readonly Timer _hideTimer; // idle → begin fade-out
     private readonly Timer _fadeTimer; // animate opacity down
+
+    // ── Nested transparent overlay panel ──────────────────────────────────
+    private sealed class ScrollbarOverlay : Panel
+    {
+        public ScrollbarOverlay()
+        {
+            // Enable truly transparent background and flicker-free painting
+            SetStyle(
+                ControlStyles.SupportsTransparentBackColor |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.AllPaintingInWmPaint,
+                true);
+            BackColor = Color.Transparent;
+        }
+    }
 
     // ──────────────────────────────────────────────────────────────────────
     public ModernScrollablePanel()
     {
-        AutoScroll   = true;
-        DoubleBuffered = true;
+        AutoScroll = true;
+        // Enable flicker-free, double-buffered painting for this panel
+        SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
 
         // ── overlay ──
-        _overlay = new Panel { BackColor = Color.Transparent };
+        _overlay = new ScrollbarOverlay();
         _overlay.Paint      += OnOverlayPaint;
         _overlay.MouseEnter += OnOverlayMouseEnter;
         _overlay.MouseLeave += OnOverlayMouseLeave;
@@ -80,7 +96,7 @@ public class ModernScrollablePanel : Panel
         };
 
         // ── hook scroll / wheel events ──
-        Scroll     += (_, __) => ShowThumb();
+        Scroll += (_, __) => ShowThumb();
     }
 
     // ── Override WM_NCCALCSIZE to "eat" the native vertical scrollbar ──────
@@ -144,7 +160,6 @@ public class ModernScrollablePanel : Panel
 
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.Clear(Color.Transparent);
 
         int trackH = _overlay.Height;
         var (thumbY, thumbH) = ComputeThumb(trackH);
@@ -214,10 +229,10 @@ public class ModernScrollablePanel : Panel
         var (thumbY, thumbH) = ComputeThumb(_overlay.Height);
         if (e.Y < thumbY || e.Y > thumbY + thumbH) return;
 
-        _dragging        = true;
-        _dragStartY      = e.Y;
+        _dragging         = true;
+        _dragStartY       = e.Y;
         _dragStartScrollY = Math.Abs(AutoScrollPosition.Y);
-        _overlay.Capture = true;
+        _overlay.Capture  = true;
         _overlay.Invalidate();
     }
 
@@ -232,10 +247,10 @@ public class ModernScrollablePanel : Panel
         int thumbRange   = trackH - thumbH;
         if (thumbRange <= 0) return;
 
-        int   scrollRange = contentH - clientH;
-        int   delta       = e.Y - _dragStartY;
-        int   newScrollY  = Math.Max(0, Math.Min(scrollRange,
-                                _dragStartScrollY + (int)((float)delta * scrollRange / thumbRange)));
+        int scrollRange = contentH - clientH;
+        int delta       = e.Y - _dragStartY;
+        int newScrollY  = Math.Max(0, Math.Min(scrollRange,
+                              _dragStartScrollY + (int)((float)delta * scrollRange / thumbRange)));
 
         AutoScrollPosition = new Point(0, newScrollY);
         _overlay.Invalidate();
