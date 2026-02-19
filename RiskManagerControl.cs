@@ -6541,7 +6541,13 @@ namespace Risk_Manager
 
                     // Calculate duration until 5 PM ET
                     var duration = RiskManagerSettingsService.CalculateDurationUntil5PMET();
-                    
+
+                    // Always keep the longest settings lock duration: if an existing lock outlasts the
+                    // new "until 5 PM ET" duration, preserve the existing expiration instead.
+                    var existingSettingsRemaining = settingsService.GetRemainingSettingsLockTime(accountNumber);
+                    if (existingSettingsRemaining.HasValue && existingSettingsRemaining.Value > duration)
+                        duration = existingSettingsRemaining.Value;
+
                     // Show confirmation dialog
                     var confirmResult = MessageBox.Show(
                         $"Are you sure you want to lock settings for account '{accountNumber}' until 5:00 PM ET?\n\n" +
@@ -7747,6 +7753,31 @@ namespace Risk_Manager
                 TimeSpan? duration = GetSelectedLockDuration();
                 string durationText = lockDurationComboBox?.SelectedItem?.ToString() ?? "Unknown";
 
+                // SECURITY CHECK: Prevent bypassing an existing lock with a shorter duration
+                var settingsServiceCheck = RiskManagerSettingsService.Instance;
+                if (settingsServiceCheck.IsInitialized && settingsServiceCheck.IsTradingLocked(accountNumber))
+                {
+                    var remainingTime = settingsServiceCheck.GetRemainingLockTime(accountNumber);
+                    if (remainingTime.HasValue && remainingTime.Value > TimeSpan.Zero && duration.HasValue && duration.Value < remainingTime.Value)
+                    {
+                        int hours = (int)remainingTime.Value.TotalHours;
+                        int minutes = remainingTime.Value.Minutes;
+                        string timeDisplay = hours > 0 ? $"{hours}h {minutes}m" : $"{minutes}m";
+
+                        MessageBox.Show(
+                            $"Cannot lock account with a shorter duration!\n\n" +
+                            $"Account '{accountNumber}' is already locked for {timeDisplay}.\n\n" +
+                            $"The new lock duration ({durationText}) would allow trading sooner than the existing lock.\n\n" +
+                            "To change the lock duration:\n" +
+                            "1. First unlock the account manually, or\n" +
+                            "2. Select a duration equal to or longer than the existing lock",
+                            "Lock Duration Too Short",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+
                 // Show confirmation dialog
                 var confirmResult = MessageBox.Show(
                     $"Are you sure you want to lock account '{accountNumber}' for {durationText}?\n\n" +
@@ -7959,7 +7990,7 @@ namespace Risk_Manager
                         
                         string accountNumber = GetUniqueAccountIdentifier(account, checkIndex);
                         
-                        // Check if account has an active lock
+                        // Check if account has an active trading lock
                         if (settingsService.IsTradingLocked(accountNumber))
                         {
                             var remainingTime = settingsService.GetRemainingLockTime(accountNumber);
@@ -8060,9 +8091,13 @@ namespace Risk_Manager
                         string tradingReason = $"Lock All Accounts button - {durationText}";
                         settingsService.SetTradingLock(accountNumber, true, tradingReason, duration);
 
-                        // Also lock the settings for this account
+                        // Also lock the settings for this account, keeping the longest duration
                         string settingsReason = $"Lock All Accounts button - {durationText}";
-                        settingsService.SetSettingsLock(accountNumber, true, settingsReason, duration);
+                        var existingSettingsRemaining = settingsService.GetRemainingSettingsLockTime(accountNumber);
+                        var effectiveSettingsDuration = (existingSettingsRemaining.HasValue && existingSettingsRemaining.Value > duration)
+                            ? existingSettingsRemaining.Value
+                            : duration;
+                        settingsService.SetSettingsLock(accountNumber, true, settingsReason, effectiveSettingsDuration);
 
                         System.Diagnostics.Debug.WriteLine($"[LOCK ALL] Locked account (trading & settings): {accountNumber} for {durationText}");
                         lockedCount++;
