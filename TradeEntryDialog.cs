@@ -58,7 +58,7 @@ namespace Risk_Manager
             this.MinimizeBox = false;
             this.BackColor = Color.FromArgb(30, 30, 30);
 
-            var mainPanel = new Panel
+            var mainPanel = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 Padding = new Padding(20),
