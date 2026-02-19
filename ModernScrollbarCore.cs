@@ -10,7 +10,7 @@ using System.Windows.Forms;
 /// </summary>
 internal sealed class ModernScrollbarCore : IDisposable
 {
-    // ── Appearance constants (used by host classes too) ────────────────────
+    // ── Appearance constants ───────────────────────────────────────────────
     internal const int ThumbNormalWidth = 6;
     internal const int ThumbHoverWidth  = 10;
     internal const int ThumbMargin      = 3;    // gap from right edge
@@ -30,22 +30,54 @@ internal sealed class ModernScrollbarCore : IDisposable
     private int   _dragStartScrollY;
 
     // ── References ─────────────────────────────────────────────────────────
-    private readonly ScrollableControl _parent;
-    private readonly Panel             _overlay;
-    private readonly Timer             _hideTimer;
-    private readonly Timer             _fadeTimer;
+    private readonly ScrollableControl  _parent;
+    private readonly ScrollbarOverlay   _overlay;
+    private readonly Timer              _hideTimer;
+    private readonly Timer              _fadeTimer;
 
-    // ── Nested overlay control with proper WinForms transparency ───────────
+    // ── Nested overlay control ─────────────────────────────────────────────
+    // IMPORTANT: This overlay is added to the parent's Controls collection.
+    // For FlowLayoutPanel parents the layout engine would normally flow this
+    // control like any other child (allocating ~200x100 px of space for it)
+    // and override any explicit bounds we set.
+    //
+    // We prevent that by:
+    //   1. Overriding DefaultSize → Size.Empty  so the initial size is (0,0).
+    //   2. Overriding SetBoundsCore to ignore calls from the layout engine.
+    //   3. Providing CoreSetBounds() for our own explicit positioning.
     internal sealed class ScrollbarOverlay : Panel
     {
+        private bool _corePositioning;
+
+        // Makes the overlay start at (0,0,0,0) so FlowLayoutPanel allocates
+        // no space for it in the initial flow layout pass.
+        protected override Size DefaultSize => Size.Empty;
+
         internal ScrollbarOverlay()
         {
             SetStyle(
                 ControlStyles.SupportsTransparentBackColor |
-                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.OptimizedDoubleBuffer         |
                 ControlStyles.AllPaintingInWmPaint,
                 true);
             BackColor = Color.Transparent;
+        }
+
+        // Block the FlowLayoutPanel layout engine from repositioning us.
+        // Only allow positioning when called explicitly via CoreSetBounds.
+        protected override void SetBoundsCore(int x, int y, int width, int height, BoundsSpecified specified)
+        {
+            if (_corePositioning)
+                base.SetBoundsCore(x, y, width, height, specified);
+            // else: silently ignore – layout engine is trying to position us
+        }
+
+        // Used by ModernScrollbarCore to position the overlay explicitly.
+        internal void CoreSetBounds(int x, int y, int w, int h)
+        {
+            _corePositioning = true;
+            try   { base.SetBoundsCore(x, y, w, h, BoundsSpecified.All); }
+            finally { _corePositioning = false; }
         }
     }
 
@@ -106,7 +138,9 @@ internal sealed class ModernScrollbarCore : IDisposable
     private void PositionOverlay()
     {
         if (_overlay == null) return;
-        _overlay.SetBounds(
+        // Use CoreSetBounds so the call is not silently ignored by our
+        // SetBoundsCore override (which blocks the layout engine).
+        _overlay.CoreSetBounds(
             _parent.ClientSize.Width - OverlayWidth, 0,
             OverlayWidth, _parent.ClientSize.Height);
         _overlay.BringToFront();
