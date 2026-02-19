@@ -3680,7 +3680,7 @@ namespace Risk_Manager
             var button = new Button
             {
                 Text = "  " + text,
-                Width = (isNavigationCollapsed ? LeftPanelCollapsedWidth : LeftPanelExpandedWidth) - 4,
+                Width = LeftPanelWidth - 4,
                 Height = 36,
                 FlatStyle = FlatStyle.Flat,
                 TextAlign = ContentAlignment.MiddleLeft,
