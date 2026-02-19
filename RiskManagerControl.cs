@@ -544,7 +544,7 @@ namespace Risk_Manager
             leftPanel = CreateLeftSidebar();
 
             // Main content panel
-            contentPanel = new Panel
+            contentPanel = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 AutoSize = false,
@@ -3577,7 +3577,7 @@ namespace Risk_Manager
             
             var initialWidth = isNavigationCollapsed ? LeftPanelCollapsedWidth : LeftPanelExpandedWidth;
             
-            var sidebarPanel = new Panel
+            var sidebarPanel = new ModernScrollablePanel
             {
                 Dock = DockStyle.Left,
                 Width = initialWidth,
@@ -6480,7 +6480,7 @@ namespace Risk_Manager
                 Tag = "LockAccountDisplay" // Tag for identification - will be updated by UpdateLockAccountDisplay
             };
 
-            var contentArea = new Panel
+            var contentArea = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
@@ -6977,7 +6977,7 @@ namespace Risk_Manager
                 Tag = "LockAccountDisplay" // Tag for identification
             };
 
-            var contentArea = new Panel
+            var contentArea = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
@@ -12753,7 +12753,7 @@ namespace Risk_Manager
             };
 
             // Content area
-            var contentArea = new Panel
+            var contentArea = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
@@ -13176,7 +13176,7 @@ namespace Risk_Manager
             };
 
             // Content area with scroll
-            var contentArea = new Panel
+            var contentArea = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
@@ -13507,7 +13507,7 @@ namespace Risk_Manager
         }
 
         // Store current journal section and content panel
-        private Panel journalContentPanel;
+        private ModernScrollablePanel journalContentPanel;
         private string currentJournalSection = "Trade Log";
         private Dictionary<string, Button> journalNavButtons = new Dictionary<string, Button>();
         
@@ -13571,7 +13571,7 @@ namespace Risk_Manager
             }
 
             // CONTENT AREA (Right panel - fills remaining space)
-            journalContentPanel = new Panel
+            journalContentPanel = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
@@ -13707,7 +13707,7 @@ namespace Risk_Manager
         private Control CreateTradeLogPage()
         {
             System.Diagnostics.Debug.WriteLine("=== CreateTradeLogPage CALLED ===");
-            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
+            var pagePanel = new ModernScrollablePanel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
             System.Diagnostics.Debug.WriteLine($"PagePanel created: AutoScroll={pagePanel.AutoScroll}");
 
             // ===== IMPORTANT: ADD JOURNAL CARD WITH BUTTONS FIRST =====
@@ -14214,10 +14214,10 @@ namespace Risk_Manager
         /// </summary>
         private Control CreateCalendarPage()
         {
-            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true, Tag = "CalendarPagePanel" };
+            var pagePanel = new ModernScrollablePanel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true, Tag = "CalendarPagePanel" };
             
             // Main content container with rounded border
-            var contentPanel = new Panel
+            var contentPanel = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
@@ -15450,10 +15450,10 @@ namespace Risk_Manager
         /// </summary>
         private Control CreateTradingModelsPage()
         {
-            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
+            var pagePanel = new ModernScrollablePanel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
             
             // Main content panel
-            var contentPanel = new Panel
+            var contentPanel = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
@@ -16144,10 +16144,10 @@ namespace Risk_Manager
         /// </summary>
         private Control CreateNotesPage()
         {
-            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
+            var pagePanel = new ModernScrollablePanel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
             
             // Main content panel
-            var contentPanel = new Panel
+            var contentPanel = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
@@ -16744,7 +16744,7 @@ namespace Risk_Manager
         /// </summary>
         private Control CreateDashboardPage()
         {
-            var pagePanel = new Panel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
+            var pagePanel = new ModernScrollablePanel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true };
 
             // Get current account using the same method as TradeLog
             string accountNumber = GetSelectedAccountNumber();
@@ -20048,7 +20048,7 @@ namespace Risk_Manager
             };
 
             // Content area
-            var contentArea = new Panel
+            var contentArea = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
@@ -20241,7 +20241,7 @@ namespace Risk_Manager
             };
 
             // Content area
-            var contentArea = new Panel
+            var contentArea = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
@@ -20441,7 +20441,7 @@ namespace Risk_Manager
             };
 
             // Content area
-            var contentArea = new Panel
+            var contentArea = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,

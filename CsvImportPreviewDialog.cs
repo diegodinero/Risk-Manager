@@ -94,7 +94,7 @@ namespace Risk_Manager
             // Errors/Warnings panel (if any)
             if (_errors.Count > 0 || _warnings.Count > 0)
             {
-                var errorsPanel = new Panel
+                var errorsPanel = new ModernScrollablePanel
                 {
                     Dock = DockStyle.Top,
                     Height = 100,
