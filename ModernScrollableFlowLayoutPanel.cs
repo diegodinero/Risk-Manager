@@ -3,15 +3,14 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 /// <summary>
-/// A Panel subclass that replaces the native Win32 scrollbar with a modern,
-/// macOS-style thin scrollbar. Features:
-///   - Thin (6 px) thumb that widens to 10 px on hover
-///   - Fully rounded (pill-shaped) thumb
-///   - Smooth fade-in on scroll / mouse-enter, fade-out after idle
-///   - Dark-theme compatible semi-transparent gray
-/// Drop-in replacement for Panel anywhere AutoScroll = true is needed.
+/// A FlowLayoutPanel subclass that replaces the native Win32 scrollbar with a
+/// modern, macOS-style thin scrollbar. Identical behaviour to
+/// <see cref="ModernScrollablePanel"/> but inherits from
+/// <see cref="FlowLayoutPanel"/> so that <c>FlowDirection</c>,
+/// <c>WrapContents</c> and other flow properties work as normal.
+/// Drop-in replacement for FlowLayoutPanel anywhere AutoScroll = true is needed.
 /// </summary>
-public class ModernScrollablePanel : Panel
+public class ModernScrollableFlowLayoutPanel : FlowLayoutPanel
 {
     // ── Win32 constants ────────────────────────────────────────────────────
     private const int WM_NCCALCSIZE = 0x0083;
@@ -28,7 +27,7 @@ public class ModernScrollablePanel : Panel
 
     private readonly ModernScrollbarCore _scrollbar;
 
-    public ModernScrollablePanel()
+    public ModernScrollableFlowLayoutPanel()
     {
         AutoScroll = true;
         SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);

@@ -3643,7 +3643,7 @@ namespace Risk_Manager
             navToggleButton.Click += ToggleNavigation;
             headerPanel.Controls.Add(navToggleButton);
 
-            var navContainer = new FlowLayoutPanel
+            var navContainer = new ModernScrollableFlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.TopDown,
@@ -6124,7 +6124,7 @@ namespace Risk_Manager
             };
 
             // Main content area using FlowLayoutPanel for proper vertical layout
-            var contentArea = new FlowLayoutPanel
+            var contentArea = new ModernScrollableFlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
@@ -12021,7 +12021,7 @@ namespace Risk_Manager
             };
 
             // Content area with features
-            var contentArea = new FlowLayoutPanel
+            var contentArea = new ModernScrollableFlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
@@ -12228,7 +12228,7 @@ namespace Risk_Manager
             };
 
             // Content area
-            var contentArea = new FlowLayoutPanel
+            var contentArea = new ModernScrollableFlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = CardBackground,
@@ -14121,7 +14121,7 @@ namespace Risk_Manager
             detailsHeader.Dock = DockStyle.Top;
             detailsCard.Controls.Add(detailsHeader);
             
-            var detailsContent = new FlowLayoutPanel
+            var detailsContent = new ModernScrollableFlowLayoutPanel
             {
                 Name = "TradeDetailsContent",
                 Dock = DockStyle.Fill,
@@ -15505,7 +15505,7 @@ namespace Risk_Manager
             contentPanel.Controls.Add(modelFormPanel);
 
             // Models list panel
-            var modelsListPanel = new FlowLayoutPanel
+            var modelsListPanel = new ModernScrollableFlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.TopDown,
@@ -16199,7 +16199,7 @@ namespace Risk_Manager
             contentPanel.Controls.Add(noteFormPanel);
 
             // Notes list panel
-            var notesListPanel = new FlowLayoutPanel
+            var notesListPanel = new ModernScrollableFlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.TopDown,
