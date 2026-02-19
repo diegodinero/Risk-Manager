@@ -7747,6 +7747,31 @@ namespace Risk_Manager
                 TimeSpan? duration = GetSelectedLockDuration();
                 string durationText = lockDurationComboBox?.SelectedItem?.ToString() ?? "Unknown";
 
+                // SECURITY CHECK: Prevent bypassing an existing lock with a shorter duration
+                var settingsServiceCheck = RiskManagerSettingsService.Instance;
+                if (settingsServiceCheck.IsInitialized && settingsServiceCheck.IsTradingLocked(accountNumber))
+                {
+                    var remainingTime = settingsServiceCheck.GetRemainingLockTime(accountNumber);
+                    if (remainingTime.HasValue && remainingTime.Value > TimeSpan.Zero && duration.HasValue && duration.Value < remainingTime.Value)
+                    {
+                        int hours = (int)remainingTime.Value.TotalHours;
+                        int minutes = remainingTime.Value.Minutes;
+                        string timeDisplay = hours > 0 ? $"{hours}h {minutes}m" : $"{minutes}m";
+
+                        MessageBox.Show(
+                            $"Cannot lock account with a shorter duration!\n\n" +
+                            $"Account '{accountNumber}' is already locked for {timeDisplay}.\n\n" +
+                            $"The new lock duration ({durationText}) would allow trading sooner than the existing lock.\n\n" +
+                            "To change the lock duration:\n" +
+                            "1. First unlock the account manually, or\n" +
+                            "2. Select a duration equal to or longer than the existing lock",
+                            "Lock Duration Too Short",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+
                 // Show confirmation dialog
                 var confirmResult = MessageBox.Show(
                     $"Are you sure you want to lock account '{accountNumber}' for {durationText}?\n\n" +
