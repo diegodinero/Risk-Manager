@@ -17244,6 +17244,7 @@ namespace Risk_Manager
             var card = new Panel
             {
                 Height = 280,  // Restored to original height
+                Width = 300,   // Explicit width so statPanel/label/value widths are calculated correctly
                 MaximumSize = new Size(300, 0),  // Adjusted width to 300px (was 250px)
                 BackColor = CardBackground,
                 Padding = new Padding(20)  // Restored to original padding
