@@ -388,13 +388,21 @@ namespace Risk_Manager
             Blue,
             Black,
             White,
-            YellowBlueBlack   // New Black variant with yellow negatives / blue positives
+            YellowBlueBlack,  // Black variant with yellow negatives / blue positives
+            Galaxy,           // Neon/cosmic dark theme with bright accent colors
+            Neon              // Pure black background with super bright neon borders and text
         }
         
         private Theme currentTheme = Theme.Blue;  // Default theme
         private bool isInitializing = true;  // Flag to prevent saving during initialization
 
-        // Per-value accent colors (used by YellowBlueBlack)
+        // Returns true for themes that apply distinct positive/negative value coloring in cells and labels
+        private bool IsSpecialColoringTheme =>
+            currentTheme == Theme.YellowBlueBlack ||
+            currentTheme == Theme.Galaxy ||
+            currentTheme == Theme.Neon;
+
+        // Per-value accent colors (used by YellowBlueBlack, Galaxy, and Neon)
         private Color PositiveValueColor;
         private Color NegativeValueColor;
 
@@ -710,6 +718,36 @@ namespace Risk_Manager
                     PositiveValueColor = ColorTranslator.FromHtml("#3179f5"); // blue
                     NegativeValueColor = ColorTranslator.FromHtml("#fbc02d"); // yellow
                     break;
+
+                case Theme.Galaxy:
+                    DarkBackground = Color.FromArgb(11, 16, 38);     // Deep dark navy #0b1026
+                    DarkerBackground = Color.FromArgb(7, 10, 26);    // Even deeper navy
+                    CardBackground = Color.FromArgb(18, 24, 52);     // Dark navy card
+                    AccentGreen = Color.FromArgb(0, 198, 255);       // Success/highlight: neon cyan #00C6FF
+                    AccentAmber = Color.FromArgb(255, 228, 51);      // Warning/gold: neon yellow #FFE433
+                    AccentBlue = Color.FromArgb(199, 58, 138);       // Primary accent: neon magenta #c73a8a
+                    TextWhite = Color.FromArgb(241, 245, 249);       // Bright white #f1f5f9
+                    TextGray = Color.FromArgb(148, 163, 184);        // Muted slate
+                    HoverColor = Color.FromArgb(30, 40, 70);         // Hover navy
+                    SelectedColor = Color.FromArgb(40, 55, 95);      // Selected navy
+                    PositiveValueColor = Color.FromArgb(0, 198, 255);  // Neon cyan for positives
+                    NegativeValueColor = Color.FromArgb(255, 0, 136);  // Neon magenta #FF0088 for negatives
+                    break;
+
+                case Theme.Neon:
+                    DarkBackground = Color.FromArgb(0, 0, 0);        // Pure black
+                    DarkerBackground = Color.FromArgb(0, 0, 0);      // Pure black sidebar
+                    CardBackground = Color.FromArgb(10, 10, 10);     // Near-black card
+                    AccentGreen = Color.FromArgb(0, 255, 65);        // Electric green #00FF41
+                    AccentAmber = Color.FromArgb(255, 230, 0);       // Hot yellow #FFE600
+                    AccentBlue = Color.FromArgb(0, 225, 255);        // Electric cyan #00E1FF
+                    TextWhite = Color.FromArgb(255, 255, 255);       // Pure white
+                    TextGray = Color.FromArgb(180, 255, 255);        // Bright cyan-tinted secondary text
+                    HoverColor = Color.FromArgb(20, 20, 20);         // Dark hover
+                    SelectedColor = Color.FromArgb(30, 30, 30);      // Dark selected
+                    PositiveValueColor = Color.FromArgb(0, 255, 65); // Electric green for positives
+                    NegativeValueColor = Color.FromArgb(255, 0, 102);// Hot pink/red #FF0066 for negatives
+                    break;
             }
 
             // Save theme preference
@@ -821,13 +859,13 @@ namespace Risk_Manager
             }
         }
 
-        // Color numeric cells for specified column keys when YellowBlueBlack theme active
+        // Color numeric cells for specified column keys when the current theme applies special positive/negative coloring
         private void ColorizeNumericCells(DataGridView grid, params string[] columnNames)
         {
             if (grid == null || columnNames == null || columnNames.Length == 0) return;
             try
             {
-                bool applySpecial = currentTheme == Theme.YellowBlueBlack;
+                bool applySpecial = IsSpecialColoringTheme;
                 for (int r = 0; r < grid.Rows.Count; r++)
                 {
                     var row = grid.Rows[r];
@@ -1100,7 +1138,7 @@ namespace Risk_Manager
             else if (control is Label label)
             {
                 // If label.Tag is a getter delegate (used by Risk Overview value labels),
-                // skip overriding ForeColor here so specialized coloring (YellowBlueBlack) persists.
+                // skip overriding ForeColor here so specialized coloring (YellowBlueBlack/Galaxy/Neon) persists.
                 bool isValueGetterLabel = label.Tag is Func<string>;
 
                 if (!isValueGetterLabel)
@@ -1277,6 +1315,10 @@ namespace Risk_Manager
                     return "White";
                 case Theme.YellowBlueBlack:
                     return "Yellow/Blue/Black";
+                case Theme.Galaxy:
+                    return "Galaxy";
+                case Theme.Neon:
+                    return "Neon";
                 default:
                     return "Unknown";
             }
@@ -3279,7 +3321,7 @@ namespace Risk_Manager
 
             themeButton.Click += (s, e) =>
             {
-                // Cycle through themes: Blue -> Black -> White -> Blue
+                // Cycle through themes: Blue -> Black -> White -> Galaxy -> YellowBlueBlack -> Neon -> Blue
                 switch (currentTheme)
                 {
                     case Theme.Blue:
@@ -3289,9 +3331,15 @@ namespace Risk_Manager
                         ApplyTheme(Theme.White);
                         break;
                     case Theme.White:
+                        ApplyTheme(Theme.Galaxy);
+                        break;
+                    case Theme.Galaxy:
                         ApplyTheme(Theme.YellowBlueBlack);
                         break;
                     case Theme.YellowBlueBlack:
+                        ApplyTheme(Theme.Neon);
+                        break;
+                    case Theme.Neon:
                         ApplyTheme(Theme.Blue);
                         break;
                     default:
@@ -4447,7 +4495,7 @@ namespace Risk_Manager
             {
                 statsGrid.ResumeLayout();
                 // Re-apply numeric coloring for the accounts summary *after* rows were rebuilt
-                if (currentTheme == Theme.YellowBlueBlack)
+                if (IsSpecialColoringTheme)
                 {
                     ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
                 }
@@ -4625,7 +4673,7 @@ namespace Risk_Manager
                 statsDetailGrid.Rows.Add("Trading Lock Status", lockStatus);
 
                 // Apply special coloring for metrics when theme requires it
-                if (currentTheme == Theme.YellowBlueBlack)
+                if (IsSpecialColoringTheme)
                 {
                     for (int i = 0; i < statsDetailGrid.Rows.Count; i++)
                     {
@@ -5660,7 +5708,7 @@ namespace Risk_Manager
         {
             try
             {
-                if (currentTheme == Theme.YellowBlueBlack)
+                if (IsSpecialColoringTheme)
                 {
                     // Accounts summary columns
                     ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
@@ -12364,7 +12412,7 @@ namespace Risk_Manager
 
             themeSwitcherButton.Click += (s, e) =>
             {
-                // Cycle through themes: Blue -> Black -> White -> YellowBlueBlack -> Blue
+                // Cycle through themes: Blue -> Black -> White -> Galaxy -> YellowBlueBlack -> Neon -> Blue
                 switch (currentTheme)
                 {
                     case Theme.Blue:
@@ -12374,9 +12422,15 @@ namespace Risk_Manager
                         ApplyTheme(Theme.White);
                         break;
                     case Theme.White:
+                        ApplyTheme(Theme.Galaxy);
+                        break;
+                    case Theme.Galaxy:
                         ApplyTheme(Theme.YellowBlueBlack);
                         break;
                     case Theme.YellowBlueBlack:
+                        ApplyTheme(Theme.Neon);
+                        break;
+                    case Theme.Neon:
                         ApplyTheme(Theme.Blue);
                         break;
                     default:
@@ -19905,7 +19959,7 @@ namespace Risk_Manager
                         else
                         {
                             // If theme requires special numeric coloring, detect numeric content and sign
-                            bool applySpecialThemeColoring = currentTheme == Theme.YellowBlueBlack;
+                            bool applySpecialThemeColoring = IsSpecialColoringTheme;
                             bool hasDigit = display.Any(char.IsDigit);
                             bool isNegative = IsNegativeNumericString(display);
 
@@ -21286,7 +21340,7 @@ namespace Risk_Manager
                             var lockStatusText = ExtractLockStatusText(display);
                             colorToApply = GetLockStatusColor(lockStatusText);
                         }
-                        else if (currentTheme == Theme.YellowBlueBlack)
+                        else if (IsSpecialColoringTheme)
                         {
                             // Only these getters should get the positive/negative color mapping
                             if (methodName == nameof(GetPositionLossLimit) ||
