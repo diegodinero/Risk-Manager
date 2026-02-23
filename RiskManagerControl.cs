@@ -10489,6 +10489,23 @@ namespace Risk_Manager
             //   - BX: PA (Personal Account)
             //   - APEX: Eval (Evaluation/Funded Account)
 
+            // Practice / Sim
+            if (accountId.Contains("practice", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            // Live accounts
+            if (accountId.Contains("ampclearing", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_LIVE;
+
+            if (accountId.Contains("NinjaTraderBrokerage", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_LIVE;
+
+            if (accountId.Equals("amp", StringComparison.OrdinalIgnoreCase) ||
+                accountId.StartsWith("amp", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_LIVE;
+
+
+
             // 5PV prefix -> Sim Funded Account
             if (accountId.StartsWith("7PV", StringComparison.OrdinalIgnoreCase))
                 return ACCOUNT_TYPE_SIM_FUND;
@@ -10506,8 +10523,90 @@ namespace Risk_Manager
 
             // BX prefix -> Eval account
             if (accountId.StartsWith("bx", StringComparison.OrdinalIgnoreCase))
-                return ACCOUNT_TYPE_EVAL;          
-            
+                return ACCOUNT_TYPE_EVAL;
+
+            // DT prefix -> Eval account
+            if (accountId.StartsWith("dt-", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.Contains("MFFUSF", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+
+            if (accountId.Contains("TPPRO", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+
+            if (accountId.Contains("ELITE", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+
+            if (accountId.Contains("EXPRE", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+
+            if (accountId.Contains("DTP", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+
+            if (accountId.Contains("PP-CASH", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+
+            if (accountId.Contains("BLU", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+
+            if (accountId.Contains("LTD", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+
+            if (accountId.Contains("LTF", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+
+            if (accountId.Contains("EOD", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+
+            if (accountId.Contains("TTE", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_PA;
+
+            // Eval specific prefixes
+
+            if (accountId.StartsWith("DT-", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.StartsWith("PST-", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.StartsWith("LL-", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.Contains("ETF", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.Contains("MFFUETL", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.Contains("MFFUEV", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.Contains("TFD", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.Contains("tcp", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.Contains("gau", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.Contains("TPT", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.Contains("PP-", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.Contains("LTE", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.Contains("S1", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+            if (accountId.Contains("EVAL", StringComparison.OrdinalIgnoreCase))
+                return ACCOUNT_TYPE_EVAL;
+
+
             // APEX prefix -> Eval account
             if (accountId.StartsWith("apex", StringComparison.OrdinalIgnoreCase))
                 return ACCOUNT_TYPE_EVAL;
