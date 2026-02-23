@@ -396,7 +396,13 @@ namespace Risk_Manager
         private Theme currentTheme = Theme.Blue;  // Default theme
         private bool isInitializing = true;  // Flag to prevent saving during initialization
 
-        // Per-value accent colors (used by YellowBlueBlack)
+        // Returns true for themes that apply distinct positive/negative value coloring in cells and labels
+        private bool IsSpecialColoringTheme =>
+            currentTheme == Theme.YellowBlueBlack ||
+            currentTheme == Theme.Galaxy ||
+            currentTheme == Theme.Neon;
+
+        // Per-value accent colors (used by YellowBlueBlack, Galaxy, and Neon)
         private Color PositiveValueColor;
         private Color NegativeValueColor;
 
@@ -853,13 +859,13 @@ namespace Risk_Manager
             }
         }
 
-        // Color numeric cells for specified column keys when YellowBlueBlack theme active
+        // Color numeric cells for specified column keys when the current theme applies special positive/negative coloring
         private void ColorizeNumericCells(DataGridView grid, params string[] columnNames)
         {
             if (grid == null || columnNames == null || columnNames.Length == 0) return;
             try
             {
-                bool applySpecial = currentTheme == Theme.YellowBlueBlack;
+                bool applySpecial = IsSpecialColoringTheme;
                 for (int r = 0; r < grid.Rows.Count; r++)
                 {
                     var row = grid.Rows[r];
@@ -1132,7 +1138,7 @@ namespace Risk_Manager
             else if (control is Label label)
             {
                 // If label.Tag is a getter delegate (used by Risk Overview value labels),
-                // skip overriding ForeColor here so specialized coloring (YellowBlueBlack) persists.
+                // skip overriding ForeColor here so specialized coloring (YellowBlueBlack/Galaxy/Neon) persists.
                 bool isValueGetterLabel = label.Tag is Func<string>;
 
                 if (!isValueGetterLabel)
@@ -4489,7 +4495,7 @@ namespace Risk_Manager
             {
                 statsGrid.ResumeLayout();
                 // Re-apply numeric coloring for the accounts summary *after* rows were rebuilt
-                if (currentTheme == Theme.YellowBlueBlack)
+                if (IsSpecialColoringTheme)
                 {
                     ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
                 }
@@ -4667,7 +4673,7 @@ namespace Risk_Manager
                 statsDetailGrid.Rows.Add("Trading Lock Status", lockStatus);
 
                 // Apply special coloring for metrics when theme requires it
-                if (currentTheme == Theme.YellowBlueBlack)
+                if (IsSpecialColoringTheme)
                 {
                     for (int i = 0; i < statsDetailGrid.Rows.Count; i++)
                     {
@@ -5702,7 +5708,7 @@ namespace Risk_Manager
         {
             try
             {
-                if (currentTheme == Theme.YellowBlueBlack)
+                if (IsSpecialColoringTheme)
                 {
                     // Accounts summary columns
                     ColorizeNumericCells(statsGrid, "OpenPnL", "ClosedPnL", "DailyPnL", "GrossPnL");
@@ -19953,7 +19959,7 @@ namespace Risk_Manager
                         else
                         {
                             // If theme requires special numeric coloring, detect numeric content and sign
-                            bool applySpecialThemeColoring = currentTheme == Theme.YellowBlueBlack;
+                            bool applySpecialThemeColoring = IsSpecialColoringTheme;
                             bool hasDigit = display.Any(char.IsDigit);
                             bool isNegative = IsNegativeNumericString(display);
 
@@ -21334,7 +21340,7 @@ namespace Risk_Manager
                             var lockStatusText = ExtractLockStatusText(display);
                             colorToApply = GetLockStatusColor(lockStatusText);
                         }
-                        else if (currentTheme == Theme.YellowBlueBlack)
+                        else if (IsSpecialColoringTheme)
                         {
                             // Only these getters should get the positive/negative color mapping
                             if (methodName == nameof(GetPositionLossLimit) ||
