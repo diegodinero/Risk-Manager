@@ -389,7 +389,8 @@ namespace Risk_Manager
             Black,
             White,
             YellowBlueBlack,  // Black variant with yellow negatives / blue positives
-            Galaxy            // Neon/cosmic dark theme with bright accent colors
+            Galaxy,           // Neon/cosmic dark theme with bright accent colors
+            Neon              // Pure black background with super bright neon borders and text
         }
         
         private Theme currentTheme = Theme.Blue;  // Default theme
@@ -725,6 +726,21 @@ namespace Risk_Manager
                     SelectedColor = Color.FromArgb(40, 55, 95);      // Selected navy
                     PositiveValueColor = Color.FromArgb(0, 198, 255);  // Neon cyan for positives
                     NegativeValueColor = Color.FromArgb(255, 0, 136);  // Neon magenta #FF0088 for negatives
+                    break;
+
+                case Theme.Neon:
+                    DarkBackground = Color.FromArgb(0, 0, 0);        // Pure black
+                    DarkerBackground = Color.FromArgb(0, 0, 0);      // Pure black sidebar
+                    CardBackground = Color.FromArgb(10, 10, 10);     // Near-black card
+                    AccentGreen = Color.FromArgb(0, 255, 65);        // Electric green #00FF41
+                    AccentAmber = Color.FromArgb(255, 230, 0);       // Hot yellow #FFE600
+                    AccentBlue = Color.FromArgb(0, 225, 255);        // Electric cyan #00E1FF
+                    TextWhite = Color.FromArgb(255, 255, 255);       // Pure white
+                    TextGray = Color.FromArgb(180, 255, 255);        // Bright cyan-tinted secondary text
+                    HoverColor = Color.FromArgb(20, 20, 20);         // Dark hover
+                    SelectedColor = Color.FromArgb(30, 30, 30);      // Dark selected
+                    PositiveValueColor = Color.FromArgb(0, 255, 65); // Electric green for positives
+                    NegativeValueColor = Color.FromArgb(255, 0, 102);// Hot pink/red #FF0066 for negatives
                     break;
             }
 
@@ -1295,6 +1311,8 @@ namespace Risk_Manager
                     return "Yellow/Blue/Black";
                 case Theme.Galaxy:
                     return "Galaxy";
+                case Theme.Neon:
+                    return "Neon";
                 default:
                     return "Unknown";
             }
@@ -3297,7 +3315,7 @@ namespace Risk_Manager
 
             themeButton.Click += (s, e) =>
             {
-                // Cycle through themes: Blue -> Black -> White -> Galaxy -> Blue
+                // Cycle through themes: Blue -> Black -> White -> Galaxy -> YellowBlueBlack -> Neon -> Blue
                 switch (currentTheme)
                 {
                     case Theme.Blue:
@@ -3310,9 +3328,12 @@ namespace Risk_Manager
                         ApplyTheme(Theme.Galaxy);
                         break;
                     case Theme.Galaxy:
-                        ApplyTheme(Theme.Blue);
+                        ApplyTheme(Theme.YellowBlueBlack);
                         break;
                     case Theme.YellowBlueBlack:
+                        ApplyTheme(Theme.Neon);
+                        break;
+                    case Theme.Neon:
                         ApplyTheme(Theme.Blue);
                         break;
                     default:
@@ -12385,7 +12406,7 @@ namespace Risk_Manager
 
             themeSwitcherButton.Click += (s, e) =>
             {
-                // Cycle through themes: Blue -> Black -> White -> Galaxy -> Blue
+                // Cycle through themes: Blue -> Black -> White -> Galaxy -> YellowBlueBlack -> Neon -> Blue
                 switch (currentTheme)
                 {
                     case Theme.Blue:
@@ -12398,9 +12419,12 @@ namespace Risk_Manager
                         ApplyTheme(Theme.Galaxy);
                         break;
                     case Theme.Galaxy:
-                        ApplyTheme(Theme.Blue);
+                        ApplyTheme(Theme.YellowBlueBlack);
                         break;
                     case Theme.YellowBlueBlack:
+                        ApplyTheme(Theme.Neon);
+                        break;
+                    case Theme.Neon:
                         ApplyTheme(Theme.Blue);
                         break;
                     default:
