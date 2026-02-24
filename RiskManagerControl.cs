@@ -6978,10 +6978,6 @@ namespace Risk_Manager
                 }
             }
             
-            // Store reference to LoadAutoLockSettings so it can be called when account changes
-            // Tag the checkbox with the reload action
-            chkAutoLockEnabled.Tag = new { ReloadAction = (Action)LoadAutoLockSettings };
-            
             // Call LoadAutoLockSettings initially
             LoadAutoLockSettings();
 
