@@ -14508,7 +14508,7 @@ namespace Risk_Manager
             prevButton.Click += (s, e) =>
             {
                 currentCalendarMonth = currentCalendarMonth.AddMonths(-1);
-                RefreshCalendarPage();
+                BeginInvoke(new Action(() => ShowJournalSection("Calendar")));
             };
             
             // Month/Year label - centered in header
@@ -14541,7 +14541,7 @@ namespace Risk_Manager
             nextButton.Click += (s, e) =>
             {
                 currentCalendarMonth = currentCalendarMonth.AddMonths(1);
-                RefreshCalendarPage();
+                BeginInvoke(new Action(() => ShowJournalSection("Calendar")));
             };
             
             // Add navigation buttons first
@@ -14570,7 +14570,7 @@ namespace Risk_Manager
             planToggle.Click += (s, e) =>
             {
                 showPlanMode = true;
-                RefreshCalendarPage();
+                BeginInvoke(new Action(() => ShowJournalSection("Calendar")));
             };
             headerPanel.Controls.Add(planToggle);
             
@@ -14591,7 +14591,7 @@ namespace Risk_Manager
             plToggle.Click += (s, e) =>
             {
                 showPlanMode = false;
-                RefreshCalendarPage();
+                BeginInvoke(new Action(() => ShowJournalSection("Calendar")));
             };
             headerPanel.Controls.Add(plToggle);
             
@@ -19014,8 +19014,8 @@ namespace Risk_Manager
                     break;
                     
                 case "Calendar":
-                    // Refresh calendar for the new account
-                    RefreshCalendarPage();
+                    // Refresh calendar for the new account - full recreation ensures correct data
+                    ShowJournalSection("Calendar");
                     break;
                     
                 case "Dashboard":
