@@ -7931,6 +7931,25 @@ namespace Risk_Manager
                     return;
                 }
 
+                var settingsService = RiskManagerSettingsService.Instance;
+                if (!settingsService.IsInitialized)
+                {
+                    MessageBox.Show("Settings service not initialized.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Check if this lock can be bypassed
+                if (!settingsService.CanBypassTradingLock(accountNumber))
+                {
+                    var blockReason = settingsService.GetTradingLockBypassBlockReason(accountNumber);
+                    MessageBox.Show(
+                        blockReason ?? "This trading lock cannot be manually bypassed.",
+                        "Cannot Unlock Trading",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
                 // Find the account by the cached identifier
                 var core = Core.Instance;
                 if (core == null)
@@ -7953,7 +7972,6 @@ namespace Risk_Manager
                     unlockMethod.Invoke(core, new object[] { targetAccount });
                     
                     // Update the settings service to track the unlock status
-                    var settingsService = RiskManagerSettingsService.Instance;
                     if (settingsService.IsInitialized)
                     {
                         settingsService.SetTradingLock(accountNumber, false, "Manual unlock via Unlock Trading button");
@@ -8346,6 +8364,9 @@ namespace Risk_Manager
                         shutdownCountdownForm?.Close();
                         shutdownCountdownForm?.Dispose();
                         shutdownCountdownForm = null;
+
+                        // Allow the application to close by setting the flag
+                        Risk_Manager.Program.AllowClose = true;
 
                         // Close the application gracefully
                         var parentForm = this.FindForm();
@@ -9755,7 +9776,8 @@ namespace Risk_Manager
                 TimeSpan lockDuration = CalculateTimeUntil5PMET();
                 
                 var settingsService = RiskManagerSettingsService.Instance;
-                settingsService.SetTradingLock(accountId, true, reason, lockDuration);
+                // Mark this as an automated rule violation lock - cannot be manually bypassed
+                settingsService.SetTradingLock(accountId, true, reason, lockDuration, Risk_Manager.Data.LockSource.AutomatedRuleViolation);
 
                 // Lock the account in Core API
                 try
@@ -9764,7 +9786,7 @@ namespace Risk_Manager
                     if (lockMethod != null)
                     {
                         lockMethod.Invoke(core, new object[] { account });
-                        System.Diagnostics.Debug.WriteLine($"Locked account {accountId} in Core API");
+                        System.Diagnostics.Debug.WriteLine($"Locked account {accountId} in Core API due to rule violation");
                     }
                 }
                 catch (Exception ex)
@@ -9883,7 +9905,8 @@ namespace Risk_Manager
                 TimeSpan lockDuration = CalculateTimeUntil5PMETFriday();
                 
                 var settingsService = RiskManagerSettingsService.Instance;
-                settingsService.SetTradingLock(accountId, true, reason, lockDuration);
+                // Mark this as an automated rule violation lock - cannot be manually bypassed
+                settingsService.SetTradingLock(accountId, true, reason, lockDuration, Risk_Manager.Data.LockSource.AutomatedRuleViolation);
 
                 // Lock the account in Core API
                 try
@@ -9892,7 +9915,7 @@ namespace Risk_Manager
                     if (lockMethod != null)
                     {
                         lockMethod.Invoke(core, new object[] { account });
-                        System.Diagnostics.Debug.WriteLine($"Locked account {accountId} in Core API until Friday 5 PM ET");
+                        System.Diagnostics.Debug.WriteLine($"Locked account {accountId} in Core API until Friday 5 PM ET due to rule violation");
                     }
                 }
                 catch (Exception ex)
@@ -21467,6 +21490,27 @@ namespace Risk_Manager
                 // recurse
                 ApplyValueLabelColoring(child);
             }
+        }
+
+        /// <summary>
+        /// Override to block Alt+F4 key combination and other bypass attempts.
+        /// Only the shutdown button can close the application.
+        /// </summary>
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // Block Alt+F4 combination
+            if (keyData == (Keys.Alt | Keys.F4))
+            {
+                MessageBox.Show(
+                    "Alt+F4 is disabled.\n\n" +
+                    "Use the 🚪 Shutdown button in the top-right corner to lock accounts and close the application safely.",
+                    "Cannot Close Application",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return true; // Mark as handled
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
         }
     }
 }

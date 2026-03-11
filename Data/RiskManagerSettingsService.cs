@@ -963,7 +963,7 @@ namespace Risk_Manager.Data
 
         #region Locks
 
-        public void SetTradingLock(string accountNumber, bool isLocked, string? reason = null, TimeSpan? duration = null)
+        public void SetTradingLock(string accountNumber, bool isLocked, string? reason = null, TimeSpan? duration = null, LockSource source = LockSource.Manual)
         {
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
@@ -981,13 +981,14 @@ namespace Risk_Manager.Data
                     LockDayOfWeek = isLocked ? DateTime.UtcNow.DayOfWeek : null,
                     LockReason = reason,
                     LockDuration = duration,
-                    LockExpirationTime = expirationTime
+                    LockExpirationTime = expirationTime,
+                    Source = source
                 };
                 SaveSettings(settings);
             }
         }
 
-        public void SetSettingsLock(string accountNumber, bool isLocked, string? reason = null, TimeSpan? duration = null)
+        public void SetSettingsLock(string accountNumber, bool isLocked, string? reason = null, TimeSpan? duration = null, LockSource source = LockSource.Manual)
         {
             var settings = GetOrCreateSettings(accountNumber);
             if (settings != null)
@@ -1005,7 +1006,8 @@ namespace Risk_Manager.Data
                     LockDayOfWeek = isLocked ? DateTime.UtcNow.DayOfWeek : null,
                     LockReason = reason,
                     LockDuration = duration,
-                    LockExpirationTime = expirationTime
+                    LockExpirationTime = expirationTime,
+                    Source = source
                 };
                 SaveSettings(settings);
             }
@@ -1144,6 +1146,61 @@ namespace Risk_Manager.Data
                 return $"Locked ({ts.Minutes}m)";
             else
                 return "Locked (<1m)"; // Less than 1 minute remaining
+        }
+        
+        /// <summary>
+        /// Checks if a trading lock can be manually bypassed (unlocked).
+        /// Automated locks from rule violations cannot be bypassed.
+        /// </summary>
+        /// <param name="accountNumber">The account number to check</param>
+        /// <returns>True if the lock can be manually unlocked or no lock exists, False if it's an automated lock that must expire</returns>
+        public bool CanBypassTradingLock(string accountNumber)
+        {
+            var settings = GetSettings(accountNumber);
+            if (settings?.TradingLock == null || !settings.TradingLock.IsLocked)
+                return true; // Not locked, so manual unlock operation is allowed (no-op)
+            
+            // Check if this is an automated lock that cannot be bypassed
+            return !settings.TradingLock.IsAutoLocked;
+        }
+        
+        /// <summary>
+        /// Gets information about why a trading lock cannot be bypassed.
+        /// </summary>
+        /// <param name="accountNumber">The account number to check</param>
+        /// <returns>A message explaining why the lock cannot be bypassed, or null if it can be bypassed</returns>
+        public string? GetTradingLockBypassBlockReason(string accountNumber)
+        {
+            var settings = GetSettings(accountNumber);
+            if (settings?.TradingLock == null || !settings.TradingLock.IsLocked)
+                return null; // Not locked
+            
+            if (!settings.TradingLock.IsAutoLocked)
+                return null; // Can be bypassed
+            
+            // Build message based on lock source
+            var reason = settings.TradingLock.LockReason ?? "Unknown reason";
+            var remainingTime = GetRemainingLockTime(accountNumber);
+            
+            string timeMessage = "";
+            if (remainingTime.HasValue && remainingTime.Value > TimeSpan.Zero)
+            {
+                var ts = remainingTime.Value;
+                // Use complete days and remaining hours/minutes for accurate display
+                if (ts.TotalDays >= 1)
+                {
+                    int days = (int)Math.Floor(ts.TotalDays);
+                    timeMessage = $" Lock expires in {days}d {ts.Hours}h {ts.Minutes}m.";
+                }
+                else if (ts.TotalHours >= 1)
+                    timeMessage = $" Lock expires in {ts.Hours}h {ts.Minutes}m.";
+                else if (ts.TotalMinutes >= 1)
+                    timeMessage = $" Lock expires in {ts.Minutes}m.";
+                else
+                    timeMessage = " Lock expires in less than 1 minute.";
+            }
+            
+            return $"This trading lock was automatically applied due to a rule violation and cannot be manually bypassed.\n\nReason: {reason}{timeMessage}";
         }
         
         /// <summary>
@@ -1504,6 +1561,28 @@ namespace Risk_Manager.Data
     }
 
     /// <summary>
+    /// Specifies the source/reason why a lock was applied.
+    /// </summary>
+    public enum LockSource
+    {
+        /// <summary>
+        /// Lock was manually applied by user via UI button
+        /// </summary>
+        Manual = 0,
+        
+        /// <summary>
+        /// Lock was automatically applied due to rule violation (loss limit, profit target, etc.)
+        /// These locks cannot be manually bypassed until expiration
+        /// </summary>
+        AutomatedRuleViolation = 1,
+        
+        /// <summary>
+        /// Lock was applied due to settings being locked
+        /// </summary>
+        SettingsLocked = 2
+    }
+
+    /// <summary>
     /// Lock information data class.
     /// </summary>
     public class LockInfo
@@ -1522,6 +1601,18 @@ namespace Risk_Manager.Data
         /// The time when the lock will expire (optional). If null, lock is indefinite.
         /// </summary>
         public DateTime? LockExpirationTime { get; set; }
+        
+        /// <summary>
+        /// The source of the lock (manual, automated rule violation, or settings locked).
+        /// Defaults to Manual for backward compatibility.
+        /// </summary>
+        public LockSource Source { get; set; } = LockSource.Manual;
+        
+        /// <summary>
+        /// Helper property to check if this is an automated lock that cannot be manually bypassed.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsAutoLocked => Source == LockSource.AutomatedRuleViolation || Source == LockSource.SettingsLocked;
     }
 
     /// <summary>
