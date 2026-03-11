@@ -244,7 +244,7 @@ namespace Risk_Manager
         private ComboBox lockDurationComboBox; // Lock duration selector
         private ComboBox lockAllDurationComboBox; // Lock all accounts duration selector
         private CheckBox showProgressBarsCheckBox; // Show Progress Bars checkbox in General Settings
-        private bool showProgressBars = false; // Whether to show progress bars in data grids
+        private bool showProgressBars = true; // Whether to show progress bars in data grids
         private CheckBox showPercentageCheckBox; // Show Percentage checkbox in General Settings
         private bool showPercentage = false; // Whether to show percentage instead of dollar amount in progress bars
         private CheckBox privacyModeCheckBox; // Privacy Mode checkbox in General Settings
@@ -268,6 +268,9 @@ namespace Risk_Manager
         // File-based debug logging for Settings Badge
         private string _badgeDebugLogPath = null;
         private readonly object _badgeDebugLogLock = new object();
+        
+        // Progress bar configuration
+        private const double DEFAULT_PNL_LIMIT = 1000.0; // Default limit for progress bar visualization when no limit is configured
 
         // Settings input control references for persistence
         private TextBox dailyLossLimitInput;
@@ -1461,8 +1464,8 @@ namespace Risk_Manager
                 System.Diagnostics.Debug.WriteLine($"Failed to load progress bar preference: {ex.Message}");
             }
             
-            // Default to false (show normal columns)
-            return false;
+            // Default to true (show progress bars)
+            return true;
         }
 
         /// <summary>
@@ -4877,14 +4880,7 @@ namespace Risk_Manager
                     // Negative P&L approaching loss limit (both values are negative)
                     // Calculate what percentage of the limit we've used
                     percentage = Math.Abs(pnlValue) / Math.Abs(dailyLossLimit) * 100;
-                    
-                    // Color scheme for negative values: yellow → orange → red
-                    if (percentage >= 70)
-                        barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
-                    else if (percentage >= 40)
-                        barColor = Color.FromArgb(255, 133, 27);     // Modern orange
-                    else
-                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+                    barColor = GetProgressBarColorForValue(percentage, true);
                     
                     System.Diagnostics.Debug.WriteLine($"Gross P&L: Loss scenario - percentage={percentage:F1}%");
                 }
@@ -4892,23 +4888,17 @@ namespace Risk_Manager
                 {
                     // Positive P&L approaching profit target
                     percentage = pnlValue / dailyProfitTarget * 100;
-                    
-                    // Modern color scheme for profits
-                    if (percentage >= 90)
-                        barColor = Color.FromArgb(0, 192, 118);      // Bright success green
-                    else if (percentage >= 70)
-                        barColor = Color.FromArgb(40, 167, 69);      // Medium green
-                    else
-                        barColor = Color.FromArgb(100, 180, 100);    // Light green
+                    barColor = GetProgressBarColorForValue(percentage, false);
                     
                     System.Diagnostics.Debug.WriteLine($"Gross P&L: Profit scenario - percentage={percentage:F1}%");
                 }
                 else
                 {
-                    // No limits configured but value is non-zero, show small bar with neutral color
-                    percentage = 10;  // Show at least 10% so it's visible
-                    barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
-                    System.Diagnostics.Debug.WriteLine($"Gross P&L: No limits configured - showing 10% gray bar (pnlValue={pnlValue:F2}, lossLimit={dailyLossLimit:F2}, profitTarget={dailyProfitTarget:F2})");
+                    // No limits configured, use default threshold for visualization
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / DEFAULT_PNL_LIMIT * 100);
+                    barColor = GetProgressBarColorForValue(percentage, pnlValue < 0);
+                    
+                    System.Diagnostics.Debug.WriteLine($"Gross P&L: No limits configured - showing proportional bar (pnlValue={pnlValue:F2}, percentage={percentage:F1}%, color={barColor.Name})");
                 }
             }
             else if (isOpenPnL)
@@ -4931,14 +4921,7 @@ namespace Risk_Manager
                     // Negative P&L approaching position loss limit (both values are negative)
                     // Calculate what percentage of the limit we've used
                     percentage = Math.Abs(pnlValue) / Math.Abs(positionLossLimit) * 100;
-                    
-                    // Color scheme for negative values: yellow → orange → red
-                    if (percentage >= 70)
-                        barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
-                    else if (percentage >= 40)
-                        barColor = Color.FromArgb(255, 133, 27);     // Modern orange
-                    else
-                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+                    barColor = GetProgressBarColorForValue(percentage, true);
                     
                     System.Diagnostics.Debug.WriteLine($"Open P&L: Loss scenario - percentage={percentage:F1}%");
                 }
@@ -4946,23 +4929,17 @@ namespace Risk_Manager
                 {
                     // Positive P&L approaching position profit target
                     percentage = pnlValue / positionProfitTarget * 100;
-                    
-                    // Modern color scheme for profits
-                    if (percentage >= 90)
-                        barColor = Color.FromArgb(0, 192, 118);      // Bright success green
-                    else if (percentage >= 70)
-                        barColor = Color.FromArgb(40, 167, 69);      // Medium green
-                    else
-                        barColor = Color.FromArgb(100, 180, 100);    // Light green
+                    barColor = GetProgressBarColorForValue(percentage, false);
                     
                     System.Diagnostics.Debug.WriteLine($"Open P&L: Profit scenario - percentage={percentage:F1}%");
                 }
                 else
                 {
-                    // No limits configured but value is non-zero, show small bar with neutral color
-                    percentage = 10;  // Show at least 10% so it's visible
-                    barColor = Color.FromArgb(108, 117, 125);        // Bootstrap secondary gray
-                    System.Diagnostics.Debug.WriteLine($"Open P&L: No limits configured - showing 10% gray bar (pnlValue={pnlValue:F2}, lossLimit={positionLossLimit:F2}, profitTarget={positionProfitTarget:F2})");
+                    // No limits configured, use default threshold for visualization
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / DEFAULT_PNL_LIMIT * 100);
+                    barColor = GetProgressBarColorForValue(percentage, pnlValue < 0);
+                    
+                    System.Diagnostics.Debug.WriteLine($"Open P&L: No limits configured - showing proportional bar (pnlValue={pnlValue:F2}, percentage={percentage:F1}%, color={barColor.Name})");
                 }
             }
 
@@ -5151,6 +5128,36 @@ namespace Risk_Manager
         }
 
         /// <summary>
+        /// Gets the appropriate progress bar color based on percentage and whether the value is negative
+        /// </summary>
+        /// <param name="percentage">The percentage value (0-100)</param>
+        /// <param name="isNegative">True if the value is negative (loss), false if positive (profit)</param>
+        /// <returns>The color to use for the progress bar</returns>
+        private Color GetProgressBarColorForValue(double percentage, bool isNegative)
+        {
+            if (isNegative)
+            {
+                // Color scheme for negative values: yellow → orange → red
+                if (percentage >= 70)
+                    return Color.FromArgb(220, 53, 69);      // Bootstrap danger red
+                else if (percentage >= 40)
+                    return Color.FromArgb(255, 133, 27);     // Modern orange
+                else
+                    return Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+            }
+            else
+            {
+                // Color scheme for positive values: light green → medium green → bright green
+                if (percentage >= 90)
+                    return Color.FromArgb(0, 192, 118);      // Bright success green
+                else if (percentage >= 70)
+                    return Color.FromArgb(40, 167, 69);      // Medium green
+                else
+                    return Color.FromArgb(100, 180, 100);    // Light green
+            }
+        }
+
+        /// <summary>
         /// Custom cell painting for progress bars in the type summary grid
         /// </summary>
         private void TypeSummaryGrid_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
@@ -5228,52 +5235,19 @@ namespace Risk_Manager
                 {
                     // Negative P&L approaching loss limit
                     percentage = Math.Min(100, Math.Abs(pnlValue) / Math.Abs(dailyLossLimit) * 100);
-                    
-                    // Color scheme for negative values: yellow → orange → red
-                    if (percentage >= 70)
-                        barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
-                    else if (percentage >= 40)
-                        barColor = Color.FromArgb(255, 133, 27);     // Modern orange
-                    else
-                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+                    barColor = GetProgressBarColorForValue(percentage, true);
                 }
                 else if (pnlValue > 0 && dailyProfitTarget > 0)
                 {
                     // Positive P&L approaching profit target
                     percentage = Math.Min(100, pnlValue / dailyProfitTarget * 100);
-                    
-                    // Modern color scheme for profits
-                    if (percentage >= 90)
-                        barColor = Color.FromArgb(0, 192, 118);      // Bright success green
-                    else if (percentage >= 70)
-                        barColor = Color.FromArgb(40, 167, 69);      // Medium green
-                    else
-                        barColor = Color.FromArgb(100, 180, 100);    // Light green
+                    barColor = GetProgressBarColorForValue(percentage, false);
                 }
                 else
                 {
                     // No limits configured, use default threshold for visualization
-                    double defaultLimit = 1000;
-                    percentage = Math.Min(100, Math.Abs(pnlValue) / defaultLimit * 100);
-                    
-                    if (pnlValue < 0)
-                    {
-                        // Negative - red tones
-                        if (percentage >= 70)
-                            barColor = Color.FromArgb(220, 53, 69);
-                        else if (percentage >= 50)
-                            barColor = Color.FromArgb(255, 133, 27);
-                        else
-                            barColor = Color.FromArgb(255, 193, 7);
-                    }
-                    else
-                    {
-                        // Positive - green tones
-                        if (percentage >= 70)
-                            barColor = Color.FromArgb(0, 192, 118);
-                        else
-                            barColor = Color.FromArgb(40, 167, 69);
-                    }
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / DEFAULT_PNL_LIMIT * 100);
+                    barColor = GetProgressBarColorForValue(percentage, pnlValue < 0);
                 }
             }
             else if (isOpenPnL)
@@ -5283,52 +5257,19 @@ namespace Risk_Manager
                 {
                     // Negative P&L approaching position loss limit
                     percentage = Math.Min(100, Math.Abs(pnlValue) / Math.Abs(positionLossLimit) * 100);
-                    
-                    // Color scheme for negative values: yellow → orange → red
-                    if (percentage >= 70)
-                        barColor = Color.FromArgb(220, 53, 69);      // Bootstrap danger red
-                    else if (percentage >= 40)
-                        barColor = Color.FromArgb(255, 133, 27);     // Modern orange
-                    else
-                        barColor = Color.FromArgb(255, 193, 7);      // Bootstrap warning yellow
+                    barColor = GetProgressBarColorForValue(percentage, true);
                 }
                 else if (pnlValue > 0 && positionProfitTarget > 0)
                 {
                     // Positive P&L approaching position profit target
                     percentage = Math.Min(100, pnlValue / positionProfitTarget * 100);
-                    
-                    // Modern color scheme for profits
-                    if (percentage >= 90)
-                        barColor = Color.FromArgb(0, 192, 118);      // Bright success green
-                    else if (percentage >= 70)
-                        barColor = Color.FromArgb(40, 167, 69);      // Medium green
-                    else
-                        barColor = Color.FromArgb(100, 180, 100);    // Light green
+                    barColor = GetProgressBarColorForValue(percentage, false);
                 }
                 else
                 {
                     // No limits configured, use default threshold for visualization
-                    double defaultLimit = 1000;
-                    percentage = Math.Min(100, Math.Abs(pnlValue) / defaultLimit * 100);
-                    
-                    if (pnlValue < 0)
-                    {
-                        // Color scheme for negative values: yellow → orange → red
-                        if (percentage >= 70)
-                            barColor = Color.FromArgb(220, 53, 69);
-                        else if (percentage >= 40)
-                            barColor = Color.FromArgb(255, 133, 27);
-                        else
-                            barColor = Color.FromArgb(255, 193, 7);
-                    }
-                    else
-                    {
-                        // Positive - green tones
-                        if (percentage >= 70)
-                            barColor = Color.FromArgb(0, 192, 118);
-                        else
-                            barColor = Color.FromArgb(40, 167, 69);
-                    }
+                    percentage = Math.Min(100, Math.Abs(pnlValue) / DEFAULT_PNL_LIMIT * 100);
+                    barColor = GetProgressBarColorForValue(percentage, pnlValue < 0);
                 }
             }
 
