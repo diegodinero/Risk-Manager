@@ -54,6 +54,13 @@
   <ItemGroup Condition="'$(_QuantowerDllsPresent)' == 'true'">
     <Compile Remove="Stubs\**" />
   </ItemGroup>
+  <!-- Exclude any nested obj/bin build artifacts (e.g. a stale Stubs/obj left from when
+       TradingPlatform.Stubs.csproj was a separate project) so their auto-generated
+       AssemblyInfo files don't cause CS0579 duplicate attribute errors. -->
+  <ItemGroup>
+    <Compile Remove="**/obj/**" />
+    <Compile Remove="**/bin/**" />
+  </ItemGroup>
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
