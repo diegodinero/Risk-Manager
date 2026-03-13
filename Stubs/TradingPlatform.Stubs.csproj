@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <AssemblyName>TradingPlatform.BusinessLayer</AssemblyName>
-    <RootNamespace>TradingPlatform</RootNamespace>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>disable</ImplicitUsings>
-  </PropertyGroup>
-</Project>

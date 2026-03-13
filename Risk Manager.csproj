@@ -48,14 +48,10 @@
     </Reference>
   </ItemGroup>
 
-  <!-- Stub project – only when the Quantower DLLs are NOT present -->
-  <ItemGroup Condition="'$(_QuantowerDllsPresent)' != 'true'">
-    <ProjectReference Include="Stubs\TradingPlatform.Stubs.csproj" />
-  </ItemGroup>
-
-  <!-- Always exclude the stubs directory from the main project's compile glob
-       so the stub CS files are never double-compiled into Risk_Manager.dll -->
-  <ItemGroup>
+  <!-- Compile stub files directly into Risk_Manager.dll when Quantower DLLs are absent.
+       The SDK auto-includes all *.cs files, so we only need to exclude them when the
+       real DLLs ARE present to avoid double-defining the same types. -->
+  <ItemGroup Condition="'$(_QuantowerDllsPresent)' == 'true'">
     <Compile Remove="Stubs\**" />
   </ItemGroup>
   <ItemGroup>
