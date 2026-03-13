@@ -8,7 +8,8 @@ using System.Windows.Forms;
 namespace Risk_Manager
 {
     /// <summary>
-    /// Dialog for previewing and selecting trades to import from CSV
+    /// Dialog for previewing and selecting trades to import into the journal.
+    /// Supports imports from both the Quantower GetTrades API and legacy CSV files.
     /// </summary>
     public class CsvImportPreviewDialog : Form
     {
@@ -45,7 +46,7 @@ namespace Risk_Manager
 
         private void InitializeComponent()
         {
-            this.Text = "CSV Import Preview";
+            this.Text = "Import Trades Preview";
             this.Size = new Size(1200, 700);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.Sizable;
@@ -62,7 +63,7 @@ namespace Risk_Manager
             // Title
             var titleLabel = new Label
             {
-                Text = "📊 Import Trades from CSV",
+                Text = "📊 Import Trades Preview",
                 Dock = DockStyle.Top,
                 Height = 40,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
@@ -268,6 +269,19 @@ namespace Risk_Manager
             _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Fees", HeaderText = "Fees", ReadOnly = true });
             _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "NetPL", HeaderText = "Net P/L", ReadOnly = true });
 
+            // Editable columns for notes and plan adherence
+            var followedPlanColumn = new DataGridViewCheckBoxColumn
+            {
+                Name = "FollowedPlan",
+                HeaderText = "Followed Plan",
+                Width = 100,
+                TrueValue = true,
+                FalseValue = false,
+                ReadOnly = false
+            };
+            _tradesGrid.Columns.Add(followedPlanColumn);
+            _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Notes", HeaderText = "Notes", ReadOnly = false, MinimumWidth = 150 });
+
             // Load trades
             foreach (var trade in _allTrades)
             {
@@ -284,6 +298,8 @@ namespace Risk_Manager
                 row.Cells["PL"].Value = trade.PL.ToString("C2");
                 row.Cells["Fees"].Value = trade.Fees.ToString("C2");
                 row.Cells["NetPL"].Value = trade.NetPL.ToString("C2");
+                row.Cells["FollowedPlan"].Value = trade.FollowedPlan;
+                row.Cells["Notes"].Value = trade.Notes ?? "";
                 row.Tag = trade; // Store trade object
 
                 // Color code outcome
@@ -312,7 +328,7 @@ namespace Risk_Manager
         {
             if (_allTrades.Count == 0)
             {
-                _summaryLabel.Text = "No trades found in CSV file.";
+                _summaryLabel.Text = "No trades found.";
                 _importButton.Enabled = false;
                 return;
             }
@@ -355,6 +371,13 @@ namespace Risk_Manager
                 {
                     if (row.Tag is JournalTrade trade)
                     {
+                        // Capture editable fields from the grid before importing
+                        trade.FollowedPlan = row.Cells["FollowedPlan"].Value is bool fp && fp;
+
+                        var notesCell = row.Cells["Notes"].Value;
+                        if (notesCell != null)
+                            trade.Notes = notesCell.ToString();
+
                         SelectedTrades.Add(trade);
                     }
                 }
