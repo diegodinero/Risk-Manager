@@ -14004,7 +14004,7 @@ namespace Risk_Manager
 
             var importButton = new Button
             {
-                Text = "IMPORT CSV",  // Changed to plain text for better visibility
+                Text = "GET TRADES",
                 Width = 130,
                 Height = 35,
                 FlatStyle = FlatStyle.Flat,
@@ -14014,7 +14014,7 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 10, FontStyle.Bold)  // Larger, bold font
             };
             importButton.FlatAppearance.BorderSize = 0;
-            importButton.Click += ImportCsv_Click;
+            importButton.Click += GetTradesFromApi_Click;
 
             buttonsPanel.Controls.Add(addButton);
             buttonsPanel.Controls.Add(editButton);
@@ -18833,6 +18833,257 @@ namespace Risk_Manager
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Fetches trades from the Quantower GetTrades API for a chosen date range,
+        /// shows a preview dialog so the user can select trades and add notes/followed-plan,
+        /// then imports the selected trades into the Trading Journal.
+        /// </summary>
+        private void GetTradesFromApi_Click(object sender, EventArgs e)
+        {
+            // ── Step 1: ask the user for a date range ──────────────────────────────
+            DateTime fromDate;
+            DateTime toDate;
+
+            using (var rangeForm = new Form())
+            {
+                rangeForm.Text = "Select Date Range";
+                rangeForm.Size = new Size(360, 200);
+                rangeForm.StartPosition = FormStartPosition.CenterParent;
+                rangeForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+                rangeForm.MaximizeBox = false;
+                rangeForm.MinimizeBox = false;
+                rangeForm.BackColor = Color.FromArgb(30, 30, 30);
+
+                var fromLabel = new Label { Text = "From:", Location = new Point(20, 20), ForeColor = Color.White, AutoSize = true };
+                var fromPicker = new DateTimePicker { Location = new Point(80, 15), Width = 220, Value = DateTime.Today, Format = DateTimePickerFormat.Short };
+
+                var toLabel = new Label { Text = "To:", Location = new Point(20, 65), ForeColor = Color.White, AutoSize = true };
+                var toPicker = new DateTimePicker { Location = new Point(80, 60), Width = 220, Value = DateTime.Now, Format = DateTimePickerFormat.Custom, CustomFormat = "MM/dd/yyyy hh:mm tt" };
+
+                var okBtn = new Button
+                {
+                    Text = "Fetch Trades",
+                    DialogResult = DialogResult.OK,
+                    Location = new Point(80, 110),
+                    Width = 120,
+                    Height = 35,
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.FromArgb(50, 150, 50),
+                    ForeColor = Color.White
+                };
+                okBtn.FlatAppearance.BorderSize = 0;
+
+                var cancelBtn = new Button
+                {
+                    Text = "Cancel",
+                    DialogResult = DialogResult.Cancel,
+                    Location = new Point(215, 110),
+                    Width = 85,
+                    Height = 35,
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.FromArgb(100, 100, 100),
+                    ForeColor = Color.White
+                };
+                cancelBtn.FlatAppearance.BorderSize = 0;
+
+                rangeForm.Controls.AddRange(new Control[] { fromLabel, fromPicker, toLabel, toPicker, okBtn, cancelBtn });
+                rangeForm.AcceptButton = okBtn;
+                rangeForm.CancelButton = cancelBtn;
+
+                if (rangeForm.ShowDialog() != DialogResult.OK)
+                    return;
+
+                fromDate = fromPicker.Value.Date;
+                toDate = toPicker.Value;
+            }
+
+            // ── Step 2: fetch trades from the Quantower API ───────────────────────
+            try
+            {
+                var core = Core.Instance;
+                if (core == null)
+                {
+                    MessageBox.Show("Cannot connect to Quantower core. Please ensure Quantower is running.",
+                        "Connection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                var request = new TradesHistoryRequestParameters
+                {
+                    From = fromDate,
+                    To = toDate
+                };
+
+                var rawTrades = core.GetTrades(request, null);
+
+                if (rawTrades == null || rawTrades.Count == 0)
+                {
+                    MessageBox.Show($"No trades found between {fromDate:MM/dd/yyyy} and {toDate:MM/dd/yyyy}.",
+                        "No Trades Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // ── Step 3: convert API trades to JournalTrade objects ────────────
+                var journalTrades = ConvertHistoryItemsToJournalTrades(rawTrades);
+
+                if (journalTrades.Count == 0)
+                {
+                    MessageBox.Show("No valid trades could be converted from the API response.",
+                        "No Trades Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // ── Step 4: show preview dialog (allows notes + followed-plan) ────
+                using (var previewDialog = new CsvImportPreviewDialog(journalTrades, new List<string>(), new List<string>()))
+                {
+                    if (previewDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        var tradesToImport = previewDialog.SelectedTrades;
+                        if (tradesToImport.Count > 0)
+                        {
+                            // Import trades to their respective accounts
+                            var importResults = TradingJournalService.Instance.ImportTradesToRespectiveAccounts(tradesToImport);
+
+                            int totalImported = importResults.Values.Sum();
+                            int totalDuplicates = tradesToImport.Count - totalImported;
+
+                            var messageLines = new List<string>();
+
+                            if (totalImported > 0)
+                            {
+                                messageLines.Add($"Successfully imported {totalImported} trade(s) to {importResults.Count} account(s).");
+
+                                if (importResults.Count > 1)
+                                {
+                                    messageLines.Add("");
+                                    messageLines.Add("Breakdown by account:");
+                                    foreach (var kvp in importResults.OrderByDescending(x => x.Value))
+                                    {
+                                        if (kvp.Value > 0)
+                                            messageLines.Add($"  • {kvp.Key}: {kvp.Value} trade(s)");
+                                    }
+                                }
+
+                                if (totalDuplicates > 0)
+                                {
+                                    messageLines.Add("");
+                                    messageLines.Add($"{totalDuplicates} duplicate(s) skipped.");
+                                }
+
+                                MessageBox.Show(string.Join("\n", messageLines),
+                                    "Import Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                                RefreshJournalDataForCurrentAccount();
+                                RefreshCalendarPage();
+                            }
+                            else
+                            {
+                                MessageBox.Show("No new trades were imported. All selected trades already exist in the journal.",
+                                    "No New Trades", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error fetching trades: {ex.Message}\n\n{ex.StackTrace}",
+                    "Fetch Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Converts a list of Quantower HistoryItem objects (returned by Core.Instance.GetTrades)
+        /// into JournalTrade objects suitable for the Trading Journal.
+        /// </summary>
+        private List<JournalTrade> ConvertHistoryItemsToJournalTrades(System.Collections.IList rawTrades)
+        {
+            var result = new List<JournalTrade>();
+
+            // Pre-build a map of Quantower account ID → journal unique identifier
+            // to avoid a linear scan through all accounts for every trade (O(n+m) instead of O(n×m)).
+            var accountIdMap = new Dictionary<string, string>();
+            if (Core.Instance?.Accounts != null)
+            {
+                int accountIndex = 0;
+                foreach (var acc in Core.Instance.Accounts)
+                {
+                    if (acc != null && !string.IsNullOrEmpty(acc.Id))
+                        accountIdMap[acc.Id] = GetUniqueAccountIdentifier(acc, accountIndex);
+                    accountIndex++;
+                }
+            }
+
+            foreach (var item in rawTrades)
+            {
+                if (item == null) continue;
+
+                try
+                {
+                    var historyItem = (HistoryItem)item;
+
+                    // Determine trade direction from the closing side:
+                    // A SELL close means the position was opened Long; BUY close = Short.
+                    string tradeType;
+                    if (historyItem.Side == TradeSide.Sell)
+                        tradeType = "Long";
+                    else if (historyItem.Side == TradeSide.Buy)
+                        tradeType = "Short";
+                    else
+                        tradeType = "";
+
+                    // Gross P&L (before fees)
+                    decimal grossPL = (decimal)historyItem.GrossPnl;
+                    decimal fees = (decimal)historyItem.Fee;
+                    if (fees < 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[GET TRADES] Negative fee ({fees}) for {historyItem.Symbol?.Name}; storing absolute value.");
+                        fees = Math.Abs(fees);
+                    }
+
+                    string outcome = grossPL > 0 ? "Win" : grossPL < 0 ? "Loss" : "Breakeven";
+
+                    // Resolve the account to the unique identifier used throughout the journal
+                    string accountId = "";
+                    if (historyItem.Account != null)
+                    {
+                        string rawId = historyItem.Account.Id ?? "";
+                        if (!string.IsNullOrEmpty(rawId) && accountIdMap.TryGetValue(rawId, out string mappedId))
+                            accountId = mappedId;
+                        else
+                            accountId = rawId.Length > 0 ? rawId : (historyItem.Account.Name ?? "");
+                    }
+
+                    var trade = new JournalTrade
+                    {
+                        Id = Guid.NewGuid(),
+                        Date = historyItem.OpenTime.Date,
+                        Symbol = historyItem.Symbol?.Name ?? historyItem.Symbol?.ToString() ?? "",
+                        TradeType = tradeType,
+                        Outcome = outcome,
+                        EntryTime = historyItem.OpenTime.ToString("h:mm:ss tt"),
+                        ExitTime = historyItem.CloseTime.ToString("h:mm:ss tt"),
+                        EntryPrice = (decimal)historyItem.OpenPrice,
+                        ExitPrice = (decimal)historyItem.ClosePrice,
+                        Contracts = (int)Math.Round(historyItem.Quantity),
+                        PL = grossPL,
+                        Fees = fees,
+                        Account = accountId,
+                        FollowedPlan = true,  // default (matches TradeEntryDialog); user can adjust in preview
+                        Notes = ""             // default; user can fill in preview
+                    };
+
+                    result.Add(trade);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[GET TRADES] Could not convert HistoryItem: {ex.Message}");
+                }
+            }
+
+            return result;
         }
 
         private void ImportCsv_Click(object sender, EventArgs e)

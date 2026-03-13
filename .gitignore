@@ -367,3 +367,6 @@ FodyWeavers.xsd
 *.db-shm
 *.db-wal
 RiskManager/
+
+# Quantower-specific build output (Windows absolute output path used in .csproj)
+C:/

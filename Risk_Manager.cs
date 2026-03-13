@@ -85,42 +85,6 @@ namespace Risk_Manager
         public override void Populate(PluginParameters args = null)
         {
             base.Populate(args);
-
-            try
-            {
-                var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                var log = System.IO.Path.Combine(desktop, "RiskManager_attach_log.txt");
-
-                System.IO.File.AppendAllText(log, $"Populate called at {DateTime.Now:O}{Environment.NewLine}");
-                System.Diagnostics.Debug.WriteLine($"RiskManager: Populate called at {DateTime.Now:O}");
-                System.Diagnostics.Trace.WriteLine($"RiskManager: Populate called at {DateTime.Now:O}");
-
-                // Show an unobtrusive MessageBox for immediate feedback (hosts may suppress it)
-                try
-                {
-                    MessageBox.Show("Risk_Manager.Populate executed. Check your Desktop for RiskManager_attach_log.txt", "Risk Manager - Debug", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch
-                {
-                    // ignore if host prevents UI from plugins
-                }
-
-                // Keep minimal attach attempt so behavior is unchanged (optional)
-                // var control = new RiskManagerControl { Dock = System.Windows.Forms.DockStyle.Fill };
-                // ... attach logic omitted for brevity
-            }
-            catch (Exception ex)
-            {
-                try
-                {
-                    var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                    var log = System.IO.Path.Combine(desktop, "RiskManager_attach_log.txt");
-                    System.IO.File.AppendAllText(log, $"Populate exception: {ex}{Environment.NewLine}");
-                    System.Diagnostics.Debug.WriteLine("RiskManager: Populate exception: " + ex);
-                }
-                catch { /* give up if writing fails */ }
-            }
-
             PerformFullUpdate();
         }
 
