@@ -23,20 +23,40 @@
     <OutputPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.11\..\..\Settings\Scripts\Indicators\Risk Manager</OutputPath>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
-  <!-- References with Private=False to prevent copy-to-output bloat -->
-  <ItemGroup>
+  <!-- References with Private=False to prevent copy-to-output bloat.
+       When the real Quantower DLLs exist on the developer's machine they are used.
+       Otherwise (e.g. CI / sandbox) a local stub project provides the same API surface
+       so the solution can still compile and be analysed. -->
+  <PropertyGroup>
+    <_QuantowerDllDir>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.11\bin</_QuantowerDllDir>
+    <_QuantowerDllsPresent Condition="Exists('$(_QuantowerDllDir)\TradingPlatform.BusinessLayer.dll')">true</_QuantowerDllsPresent>
+  </PropertyGroup>
+
+  <!-- Real DLLs – only when the Quantower installation is present -->
+  <ItemGroup Condition="'$(_QuantowerDllsPresent)' == 'true'">
     <Reference Include="TradingPlatform.BusinessLayer">
-      <HintPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.11\bin\TradingPlatform.BusinessLayer.dll</HintPath>
+      <HintPath>$(_QuantowerDllDir)\TradingPlatform.BusinessLayer.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="TradingPlatform.PresentationLayer">
-      <HintPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.11\bin\TradingPlatform.PresentationLayer.dll</HintPath>
+      <HintPath>$(_QuantowerDllDir)\TradingPlatform.PresentationLayer.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="TradingPlatform.PresentationLayer.Plugins">
-      <HintPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.11\bin\TradingPlatform.PresentationLayer.Plugins.dll</HintPath>
+      <HintPath>$(_QuantowerDllDir)\TradingPlatform.PresentationLayer.Plugins.dll</HintPath>
       <Private>False</Private>
     </Reference>
+  </ItemGroup>
+
+  <!-- Stub project – only when the Quantower DLLs are NOT present -->
+  <ItemGroup Condition="'$(_QuantowerDllsPresent)' != 'true'">
+    <ProjectReference Include="Stubs\TradingPlatform.Stubs.csproj" />
+  </ItemGroup>
+
+  <!-- Always exclude the stubs directory from the main project's compile glob
+       so the stub CS files are never double-compiled into Risk_Manager.dll -->
+  <ItemGroup>
+    <Compile Remove="Stubs\**" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
