@@ -301,6 +301,14 @@ namespace Risk_Manager
                 ReadOnly = false,
                 MinimumWidth = 150
             });
+
+            _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Status",
+                HeaderText = "Status",
+                ReadOnly = true,
+                Width = 80
+            });
         }
 
         // ── Event Handlers ────────────────────────────────────────────────────────
@@ -343,12 +351,20 @@ namespace Risk_Manager
                 _fetchedTrades = result.Trades ?? new List<JournalTrade>();
                 PopulateGrid(_fetchedTrades);
 
+                int newCount = _fetchedTrades.Count(t => !TradingJournalService.Instance.IsGlobalDuplicate(t));
+                int dupCount = _fetchedTrades.Count - newCount;
                 string fillsInfo = result.TotalFills > 0 ? $" ({result.TotalFills} fills)" : "";
-                _statusLabel.Text = _fetchedTrades.Count > 0
-                    ? $"Found {_fetchedTrades.Count} trade(s){fillsInfo}."
-                    : $"No trades found for the selected date range{fillsInfo}.";
+                if (_fetchedTrades.Count > 0)
+                {
+                    string dupInfo = dupCount > 0 ? $", {dupCount} duplicate(s) skipped" : "";
+                    _statusLabel.Text = $"Found {_fetchedTrades.Count} trade(s){fillsInfo}: {newCount} new{dupInfo}.";
+                }
+                else
+                {
+                    _statusLabel.Text = $"No trades found for the selected date range{fillsInfo}.";
+                }
 
-                _importButton.Enabled = _fetchedTrades.Count > 0;
+                _importButton.Enabled = newCount > 0;
             }
             finally
             {
@@ -360,10 +376,18 @@ namespace Risk_Manager
         {
             _tradesGrid.Rows.Clear();
 
+            var dimFore = Color.FromArgb(100, 100, 100);
+            var dimBack = Color.FromArgb(30, 30, 30);
+            var dupStatusColor = Color.FromArgb(200, 80, 80);
+            var newStatusColor = Color.FromArgb(80, 180, 80);
+
             foreach (var trade in trades)
             {
+                bool isDuplicate = TradingJournalService.Instance.IsGlobalDuplicate(trade);
+
                 var row = _tradesGrid.Rows[_tradesGrid.Rows.Add()];
-                row.Cells["Import"].Value = true;
+                row.Cells["Import"].Value = !isDuplicate;
+                row.Cells["Import"].ReadOnly = isDuplicate;
                 row.Cells["Account"].Value = trade.Account ?? "";
                 row.Cells["Date"].Value = trade.Date.ToString("MM/dd/yyyy");
                 row.Cells["Symbol"].Value = trade.Symbol;
@@ -377,20 +401,27 @@ namespace Risk_Manager
                 row.Cells["NetPL"].Value = trade.NetPL.ToString("C2");
                 row.Cells["FollowedPlan"].Value = false;
                 row.Cells["Notes"].Value = "";
+                row.Cells["Status"].Value = isDuplicate ? "Duplicate" : "New";
                 row.Tag = trade;
 
-                // Colour-code outcome
-                Color outcomeColor = TextWhite;
-                if (trade.Outcome == "Win") outcomeColor = Color.LightGreen;
-                else if (trade.Outcome == "Loss") outcomeColor = Color.LightCoral;
-                row.Cells["Outcome"].Style.ForeColor = outcomeColor;
+                if (isDuplicate)
+                {
+                    row.DefaultCellStyle.ForeColor = dimFore;
+                    row.DefaultCellStyle.BackColor = dimBack;
+                    row.Cells["Status"].Style.ForeColor = dupStatusColor;
+                }
+                else
+                {
+                    row.Cells["Status"].Style.ForeColor = newStatusColor;
 
-                // Colour-code Net P/L
-                Color plColor = TextWhite;
-                if (trade.NetPL > 0) plColor = Color.LightGreen;
-                else if (trade.NetPL < 0) plColor = Color.LightCoral;
-                row.Cells["NetPL"].Style.ForeColor = plColor;
-                row.Cells["PL"].Style.ForeColor = trade.PL > 0 ? Color.LightGreen : (trade.PL < 0 ? Color.LightCoral : TextWhite);
+                    // Colour-code outcome
+                    if (trade.Outcome == "Win") row.Cells["Outcome"].Style.ForeColor = Color.LightGreen;
+                    else if (trade.Outcome == "Loss") row.Cells["Outcome"].Style.ForeColor = Color.LightCoral;
+
+                    // Colour-code Net P/L
+                    row.Cells["NetPL"].Style.ForeColor = trade.NetPL > 0 ? Color.LightGreen : (trade.NetPL < 0 ? Color.LightCoral : TextWhite);
+                    row.Cells["PL"].Style.ForeColor = trade.PL > 0 ? Color.LightGreen : (trade.PL < 0 ? Color.LightCoral : TextWhite);
+                }
             }
         }
 
@@ -398,7 +429,8 @@ namespace Risk_Manager
         {
             foreach (DataGridViewRow row in _tradesGrid.Rows)
             {
-                row.Cells["Import"].Value = _selectAllCheckbox.Checked;
+                if (!row.Cells["Import"].ReadOnly)
+                    row.Cells["Import"].Value = _selectAllCheckbox.Checked;
             }
         }
 
