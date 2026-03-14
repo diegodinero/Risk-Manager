@@ -70,7 +70,8 @@ namespace Risk_Manager
                 Height = 44,
                 Font = new Font("Segoe UI", 16, FontStyle.Bold),
                 ForeColor = TextWhite,
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                UseCompatibleTextRendering = true
             };
             mainPanel.Controls.Add(titleLabel);
 
@@ -135,7 +136,8 @@ namespace Risk_Manager
                 BackColor = AccentPurple,
                 ForeColor = Color.White,
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                UseCompatibleTextRendering = true
             };
             _fetchButton.FlatAppearance.BorderSize = 0;
             _fetchButton.Click += FetchButton_Click;
@@ -274,11 +276,11 @@ namespace Risk_Manager
             _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Account", HeaderText = "Account", ReadOnly = true, Width = 130 });
             _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Date", HeaderText = "Date", ReadOnly = true, Width = 90 });
             _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Symbol", HeaderText = "Symbol", ReadOnly = true, Width = 80 });
-            _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Type", HeaderText = "Type", ReadOnly = true, Width = 60 });
+            _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Type", HeaderText = "Trade Type", ReadOnly = true, Width = 90 });
             _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Outcome", HeaderText = "Outcome", ReadOnly = true, Width = 75 });
-            _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "EntryTime", HeaderText = "Entry", ReadOnly = true, Width = 90 });
-            _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "ExitTime", HeaderText = "Exit", ReadOnly = true, Width = 90 });
-            _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Qty", HeaderText = "Qty", ReadOnly = true, Width = 50 });
+            _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "EntryTime", HeaderText = "Entry Time", ReadOnly = true, Width = 110 });
+            _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "ExitTime", HeaderText = "Exit Time", ReadOnly = true, Width = 110 });
+            _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Qty", HeaderText = "Contracts", ReadOnly = true, Width = 90 });
             _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "PL", HeaderText = "Gross P/L", ReadOnly = true, Width = 90 });
             _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Fees", HeaderText = "Fees", ReadOnly = true, Width = 70 });
             _tradesGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "NetPL", HeaderText = "Net P/L", ReadOnly = true, Width = 90 });
