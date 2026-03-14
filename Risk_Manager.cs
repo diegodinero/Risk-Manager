@@ -22,8 +22,8 @@ namespace Risk_Manager
                 Group = PluginGroup.Portfolio,
                 ShortName = "RMMUI",
                 SortIndex = 34,
-                // Use default constructor (Dialog mode) instead of Panel to ensure title bar is shown
-                WindowParameters = new NativeWindowParameters()
+                // Panel mode: docks into the workspace so it appears in Quantower's panel browser
+                WindowParameters = new NativeWindowParameters(NativeWindowParameters.Panel)
                 {
                     BrowserUsageType = BrowserUsageType.None,
                     WindowStyle = NativeWindowStyle.SingleBorderWindow,
@@ -31,9 +31,7 @@ namespace Risk_Manager
                     AllowActionsButton = true,
                     AllowCloseButton = true,
                     AllowMaximizeButton = true,
-                    AllowFullScreenButton = true,
-                    ShowInTaskbar = true
-
+                    AllowFullScreenButton = true
                 },
                 CustomProperties = new Dictionary<string, object>
                 {
