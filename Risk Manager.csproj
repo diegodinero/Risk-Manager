@@ -34,10 +34,6 @@
       <HintPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.11\bin\TradingPlatform.PresentationLayer.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="TradingPlatform.PresentationLayer.Plugins">
-      <HintPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.11\bin\TradingPlatform.PresentationLayer.Plugins.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">

@@ -8,17 +8,6 @@ using System.Windows.Forms;
 using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Plugins;
 using TradingPlatform.PresentationLayer.Renderers.Table;
-using BrowserUsageType = TradingPlatform.PresentationLayer.Plugins.BrowserUsageType;
-using NativeResizeMode = TradingPlatform.PresentationLayer.Plugins.NativeResizeMode;
-using NativeWindowParameters = TradingPlatform.PresentationLayer.Plugins.NativeWindowParameters;
-using NativeWindowStyle = TradingPlatform.PresentationLayer.Plugins.NativeWindowStyle;
-using PluginGroup = TradingPlatform.PresentationLayer.Plugins.PluginGroup;
-using PluginInfo = TradingPlatform.PresentationLayer.Plugins.PluginInfo;
-using PluginParameters = TradingPlatform.PresentationLayer.Plugins.PluginParameters;
-using TableColumnDefinition = TradingPlatform.BusinessLayer.TableColumnDefinition;
-using TableComparingType = TradingPlatform.PresentationLayer.Renderers.Table.TableComparingType;
-using TableItem = TradingPlatform.BusinessLayer.TableItem;
-using TablePlugin = TradingPlatform.PresentationLayer.Plugins.TablePlugin;
 
 namespace Risk_Manager
 {
