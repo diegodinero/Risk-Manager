@@ -68,12 +68,11 @@ namespace Risk_Manager
                 Text = "📈 Get Trades from Quantower API",
                 Dock = DockStyle.Top,
                 Height = 44,
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                Font = new Font("Segoe UI Emoji", 16, FontStyle.Bold),
                 ForeColor = TextWhite,
                 TextAlign = ContentAlignment.MiddleLeft,
                 UseCompatibleTextRendering = true
             };
-            mainPanel.Controls.Add(titleLabel);
 
             // ── Date-range picker panel ───────────────────────────────────────────
             var dateRangePanel = new Panel
@@ -136,7 +135,7 @@ namespace Risk_Manager
                 BackColor = AccentPurple,
                 ForeColor = Color.White,
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Font = new Font("Segoe UI Emoji", 10, FontStyle.Bold),
                 UseCompatibleTextRendering = true
             };
             _fetchButton.FlatAppearance.BorderSize = 0;
@@ -151,8 +150,6 @@ namespace Risk_Manager
                 ForeColor = Color.FromArgb(180, 180, 180)
             };
             dateRangePanel.Controls.Add(_statusLabel);
-
-            mainPanel.Controls.Add(dateRangePanel);
 
             // ── Select-all checkbox ──────────────────────────────────────────────
             var checkboxPanel = new Panel
@@ -173,7 +170,6 @@ namespace Risk_Manager
             };
             _selectAllCheckbox.CheckedChanged += SelectAllCheckbox_CheckedChanged;
             checkboxPanel.Controls.Add(_selectAllCheckbox);
-            mainPanel.Controls.Add(checkboxPanel);
 
             // ── Trade grid ────────────────────────────────────────────────────────
             _tradesGrid = new DataGridView
@@ -206,6 +202,12 @@ namespace Risk_Manager
             _tradesGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
 
             SetupGridColumns();
+
+            // Add DockStyle.Top panels in correct z-order: last added = outermost (topmost).
+            // Desired visual order top→bottom: titleLabel, dateRangePanel, checkboxPanel.
+            mainPanel.Controls.Add(checkboxPanel);    // innermost – sits just above grid
+            mainPanel.Controls.Add(dateRangePanel);   // middle
+            mainPanel.Controls.Add(titleLabel);       // outermost – appears at very top
             mainPanel.Controls.Add(_tradesGrid);
 
             // ── Bottom buttons panel ─────────────────────────────────────────────
