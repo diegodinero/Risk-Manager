@@ -14693,17 +14693,19 @@ namespace Risk_Manager
             outerCard.Controls.Add(donutPanel);
 
             // Legend - right side of donut
+            // Numbers use 12pt (was 15pt) to avoid overlapping the "winners"/"losers" label below.
+            // Layout per row: color dot (Y+9), count number (Y), label (Y+24)
             int lx = donutSize + 28;
 
-            // Win row
-            outerCard.Controls.Add(new Panel { Size = new Size(10, 10), Location = new Point(lx, 40), BackColor = winColor });
+            // Win row  (vertically centered in upper half of donut, ~Y 36-62)
+            outerCard.Controls.Add(new Panel { Size = new Size(10, 10), Location = new Point(lx, 45), BackColor = winColor });
             outerCard.Controls.Add(new Label
             {
                 Text = winCount.ToString(),
-                Font = new Font("Segoe UI", 15, FontStyle.Bold),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Location = new Point(lx + 16, 30)
+                Location = new Point(lx + 16, 36)
             });
             outerCard.Controls.Add(new Label
             {
@@ -14711,18 +14713,18 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 8, FontStyle.Regular),
                 ForeColor = Color.FromArgb(140, 140, 140),
                 AutoSize = true,
-                Location = new Point(lx + 16, 56)
+                Location = new Point(lx + 16, 60)
             });
 
-            // Loss row
-            outerCard.Controls.Add(new Panel { Size = new Size(10, 10), Location = new Point(lx, 93), BackColor = lossColor });
+            // Loss row  (vertically centered in lower half of donut, ~Y 96-122)
+            outerCard.Controls.Add(new Panel { Size = new Size(10, 10), Location = new Point(lx, 102), BackColor = lossColor });
             outerCard.Controls.Add(new Label
             {
                 Text = lossCount.ToString(),
-                Font = new Font("Segoe UI", 15, FontStyle.Bold),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Location = new Point(lx + 16, 83)
+                Location = new Point(lx + 16, 93)
             });
             outerCard.Controls.Add(new Label
             {
@@ -14730,7 +14732,7 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 8, FontStyle.Regular),
                 ForeColor = Color.FromArgb(140, 140, 140),
                 AutoSize = true,
-                Location = new Point(lx + 16, 109)
+                Location = new Point(lx + 16, 117)
             });
 
             return outerCard;
@@ -15132,20 +15134,16 @@ namespace Risk_Manager
         /// </summary>
         private Control CreateCalendarPage()
         {
+            // Single-level scrollable container.  Using a nested DockStyle.Fill + AutoScroll panel
+            // inside another AutoScroll panel prevents reliable full-height scrolling, so we keep
+            // a single ModernScrollablePanel here and add all children to it directly.
             var pagePanel = new ModernScrollablePanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
                 AutoScroll = true,
-                Tag = "CalendarPagePanel"
-            };
-
-            var contentPanel = new ModernScrollablePanel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = DarkBackground,
-                Padding = new Padding(15),
-                AutoScroll = true
+                Tag = "CalendarPagePanel",
+                Padding = new Padding(15)
             };
 
             // ---- Calendar navigation header ----
@@ -15341,12 +15339,16 @@ namespace Risk_Manager
             var topStatsBar    = CreateCalendarTopStatsBar();
             var bottomStatsBar = CreateCalendarBottomStatsBar();
 
-            // ---- Assemble content panel (last added = visually topmost) ----
-            contentPanel.Controls.Add(bottomStatsBar);   // index 0 → bottom
-            contentPanel.Controls.Add(middlePanel);      // index 1
-            contentPanel.Controls.Add(topStatsBar);      // index 2 → top
+            // ---- Add all children directly to pagePanel (last added = visually topmost) ----
+            // Setting AutoScrollMinSize guarantees the full content height is scrollable even
+            // before the panel has been fully laid out.
+            int totalContentH = topStatsBar.Height + middlePanel.Height + bottomStatsBar.Height
+                                 + pagePanel.Padding.Top + pagePanel.Padding.Bottom;
+            pagePanel.AutoScrollMinSize = new Size(0, totalContentH);
 
-            pagePanel.Controls.Add(contentPanel);
+            pagePanel.Controls.Add(bottomStatsBar);   // index 0 → bottom
+            pagePanel.Controls.Add(middlePanel);      // index 1
+            pagePanel.Controls.Add(topStatsBar);      // index 2 → top
             return pagePanel;
         }
         
