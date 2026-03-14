@@ -33,14 +33,38 @@ namespace Risk_Manager
         private Button _importButton;
         private Button _cancelButton;
 
-        // Dark theme colours (mirror CsvImportPreviewDialog)
-        private static readonly Color DarkBackground = Color.FromArgb(30, 30, 30);
-        private static readonly Color CardBackground = Color.FromArgb(40, 40, 40);
-        private static readonly Color TextWhite = Color.FromArgb(240, 240, 240);
-        private static readonly Color AccentGreen = Color.FromArgb(50, 150, 50);
-        private static readonly Color AccentBlue = Color.FromArgb(50, 100, 200);
-        private static readonly Color AccentPurple = Color.FromArgb(100, 50, 200);
+        // Theme colours – set by the caller to match the application's current theme.
+        // Defaults mirror the Black theme so the dialog looks sensible even when
+        // opened without explicit theme colours.
+        private Color DarkBackground = Color.FromArgb(20, 20, 20);
+        private Color CardBackground = Color.FromArgb(30, 30, 30);
+        private Color TextWhite = Color.White;
+        private Color AccentGreen = Color.FromArgb(0, 200, 83);
+        private Color AccentBlue = Color.FromArgb(0, 149, 255);
+        private Color AccentPurple = Color.FromArgb(100, 50, 200);
 
+        /// <summary>
+        /// Opens the dialog using the application's current theme colours so the
+        /// window blends seamlessly with the rest of the UI.
+        /// </summary>
+        public GetTradesImportDialog(
+            Color darkBackground,
+            Color cardBackground,
+            Color textColor,
+            Color accentGreen,
+            Color accentBlue,
+            Color accentPurple)
+        {
+            DarkBackground = darkBackground;
+            CardBackground = cardBackground;
+            TextWhite = textColor;
+            AccentGreen = accentGreen;
+            AccentBlue = accentBlue;
+            AccentPurple = accentPurple;
+            InitializeComponent();
+        }
+
+        /// <summary>Parameterless constructor – uses Black-theme defaults.</summary>
         public GetTradesImportDialog()
         {
             InitializeComponent();
@@ -58,21 +82,14 @@ namespace Risk_Manager
             var mainPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(20),
+                Padding = new Padding(15),
                 BackColor = DarkBackground
             };
 
-            // ── Title ─────────────────────────────────────────────────────────────
-            var titleLabel = new Label
-            {
-                Text = "📈 Get Trades from Quantower API",
-                Dock = DockStyle.Top,
-                Height = 44,
-                Font = new Font("Segoe UI Emoji", 16, FontStyle.Bold),
-                ForeColor = TextWhite,
-                TextAlign = ContentAlignment.MiddleLeft,
-                UseCompatibleTextRendering = true
-            };
+            // ── Title – uses the same CustomCardHeaderControl as the Trade Log ────
+            var headerControl = new CustomCardHeaderControl("📈 Get Trades from Quantower API", null);
+            headerControl.BackColor = DarkBackground;
+            headerControl.TitleLabel.ForeColor = TextWhite;
 
             // ── Date-range picker panel ───────────────────────────────────────────
             var dateRangePanel = new Panel
@@ -171,10 +188,12 @@ namespace Risk_Manager
             _selectAllCheckbox.CheckedChanged += SelectAllCheckbox_CheckedChanged;
             checkboxPanel.Controls.Add(_selectAllCheckbox);
 
-            // ── Trade grid ────────────────────────────────────────────────────────
+            // ── Trade grid – matches Trade Log setup exactly ──────────────────────
             _tradesGrid = new DataGridView
             {
                 Dock = DockStyle.Fill,
+                Width = 1800,
+                MinimumSize = new Size(1200, 200),
                 BackgroundColor = Color.FromArgb(35, 35, 35),
                 GridColor = Color.FromArgb(60, 60, 60),
                 BorderStyle = BorderStyle.None,
@@ -188,6 +207,7 @@ namespace Risk_Manager
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
                 RowHeadersVisible = false,
+                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells,
                 EnableHeadersVisualStyles = false
             };
 
@@ -195,20 +215,19 @@ namespace Risk_Manager
             _tradesGrid.DefaultCellStyle.ForeColor = TextWhite;
             _tradesGrid.DefaultCellStyle.SelectionBackColor = AccentBlue;
             _tradesGrid.DefaultCellStyle.SelectionForeColor = TextWhite;
-            _tradesGrid.DefaultCellStyle.Padding = new Padding(4);
+            _tradesGrid.DefaultCellStyle.Padding = new Padding(5);
 
             _tradesGrid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(45, 45, 45);
             _tradesGrid.ColumnHeadersDefaultCellStyle.ForeColor = TextWhite;
+            _tradesGrid.ColumnHeadersDefaultCellStyle.SelectionBackColor = AccentBlue;
             _tradesGrid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
 
-            SetupGridColumns();
+            _tradesGrid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(32, 32, 32);
+            _tradesGrid.AlternatingRowsDefaultCellStyle.ForeColor = TextWhite;
 
-            // Add DockStyle.Top panels in correct z-order: last added = outermost (topmost).
-            // Desired visual order top→bottom: titleLabel, dateRangePanel, checkboxPanel.
-            mainPanel.Controls.Add(checkboxPanel);    // innermost – sits just above grid
-            mainPanel.Controls.Add(dateRangePanel);   // middle
-            mainPanel.Controls.Add(titleLabel);       // outermost – appears at very top
-            mainPanel.Controls.Add(_tradesGrid);
+            _tradesGrid.RowTemplate.Height = 30;
+
+            SetupGridColumns();
 
             // ── Bottom buttons panel ─────────────────────────────────────────────
             var buttonsPanel = new FlowLayoutPanel
@@ -252,6 +271,19 @@ namespace Risk_Manager
             _importButton.Click += ImportButton_Click;
             buttonsPanel.Controls.Add(_importButton);
 
+            // Add controls in the same order used by the Trade Log card:
+            //   1. Header (Top) first → becomes the topmost strip after BringToFront on the grid
+            //   2. Date-range panel (Top)
+            //   3. Checkbox panel (Top, innermost)
+            //   4. Trade grid (Fill) → BringToFront moves it to z-index 0, pushing Top
+            //      controls to higher indices; WinForms then docks Top controls from
+            //      highest z-order outward, so header (index 1) appears at the very top
+            //   5. Buttons panel (Bottom)
+            mainPanel.Controls.Add(headerControl);
+            mainPanel.Controls.Add(dateRangePanel);
+            mainPanel.Controls.Add(checkboxPanel);
+            mainPanel.Controls.Add(_tradesGrid);
+            _tradesGrid.BringToFront();
             mainPanel.Controls.Add(buttonsPanel);
 
             this.Controls.Add(mainPanel);
@@ -381,9 +413,9 @@ namespace Risk_Manager
             _tradesGrid.Rows.Clear();
 
             var dimFore = Color.FromArgb(100, 100, 100);
-            var dimBack = Color.FromArgb(30, 30, 30);
+            var dimBack = DarkBackground;
             var dupStatusColor = Color.FromArgb(200, 80, 80);
-            var newStatusColor = Color.FromArgb(80, 180, 80);
+            var newStatusColor = AccentGreen;
 
             foreach (var trade in trades)
             {
@@ -418,13 +450,13 @@ namespace Risk_Manager
                 {
                     row.Cells["Status"].Style.ForeColor = newStatusColor;
 
-                    // Colour-code outcome
-                    if (trade.Outcome == "Win") row.Cells["Outcome"].Style.ForeColor = Color.LightGreen;
+                    // Colour-code outcome using theme accent colours
+                    if (trade.Outcome == "Win") row.Cells["Outcome"].Style.ForeColor = AccentGreen;
                     else if (trade.Outcome == "Loss") row.Cells["Outcome"].Style.ForeColor = Color.LightCoral;
 
                     // Colour-code Net P/L
-                    row.Cells["NetPL"].Style.ForeColor = trade.NetPL > 0 ? Color.LightGreen : (trade.NetPL < 0 ? Color.LightCoral : TextWhite);
-                    row.Cells["PL"].Style.ForeColor = trade.PL > 0 ? Color.LightGreen : (trade.PL < 0 ? Color.LightCoral : TextWhite);
+                    row.Cells["NetPL"].Style.ForeColor = trade.NetPL > 0 ? AccentGreen : (trade.NetPL < 0 ? Color.LightCoral : TextWhite);
+                    row.Cells["PL"].Style.ForeColor = trade.PL > 0 ? AccentGreen : (trade.PL < 0 ? Color.LightCoral : TextWhite);
                 }
             }
         }

@@ -18977,7 +18977,7 @@ namespace Risk_Manager
         /// </summary>
         private void GetTrades_Click(object sender, EventArgs e)
         {
-            using (var dialog = new GetTradesImportDialog())
+            using (var dialog = new GetTradesImportDialog(DarkBackground, CardBackground, TextWhite, AccentGreen, AccentBlue, Color.FromArgb(100, 50, 200)))
             {
                 dialog.FetchTradesCallback = (from, to) =>
                 {
