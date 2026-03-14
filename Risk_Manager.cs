@@ -15,9 +15,9 @@ using NativeWindowStyle = TradingPlatform.PresentationLayer.Plugins.NativeWindow
 using PluginGroup = TradingPlatform.PresentationLayer.Plugins.PluginGroup;
 using PluginInfo = TradingPlatform.PresentationLayer.Plugins.PluginInfo;
 using PluginParameters = TradingPlatform.PresentationLayer.Plugins.PluginParameters;
-using TableColumnDefinition = TradingPlatform.PresentationLayer.Plugins.TableColumnDefinition;
+using TableColumnDefinition = TradingPlatform.BusinessLayer.TableColumnDefinition;
 using TableComparingType = TradingPlatform.PresentationLayer.Renderers.Table.TableComparingType;
-using TableItem = TradingPlatform.PresentationLayer.Plugins.TableItem;
+using TableItem = TradingPlatform.BusinessLayer.TableItem;
 using TablePlugin = TradingPlatform.PresentationLayer.Plugins.TablePlugin;
 
 namespace Risk_Manager
