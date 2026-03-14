@@ -1,11 +1,13 @@
 // Copyright QUANTOWER LLC. © 2017-2023. All rights reserved.
 
+extern alias BL;
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using TradingPlatform.BusinessLayer;
+using BL::TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Plugins;
 using TradingPlatform.PresentationLayer.Renderers.Table;
 

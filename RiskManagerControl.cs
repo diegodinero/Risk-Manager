@@ -1,4 +1,6 @@
-﻿using Risk_Manager.Data;
+﻿extern alias BL;
+
+using Risk_Manager.Data;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -12,7 +14,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using TradingPlatform.BusinessLayer;
+using BL::TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Renderers.Chart;
 using DockStyle = System.Windows.Forms.DockStyle;
 

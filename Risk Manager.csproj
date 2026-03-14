@@ -11,6 +11,7 @@
     <AssemblyName>Risk_Manager</AssemblyName>
     <RootNamespace>Risk_Manager</RootNamespace>
     <_ProjectFileVersion>17.8.0</_ProjectFileVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <!-- DEBUG configuration -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -27,6 +28,7 @@
   <ItemGroup>
     <Reference Include="TradingPlatform.BusinessLayer">
       <HintPath>C:\Users\LaDarrious\Desktop\Quantower\TradingPlatform\v1.145.11\bin\TradingPlatform.BusinessLayer.dll</HintPath>
+      <Aliases>BL</Aliases>
       <Private>False</Private>
     </Reference>
     <Reference Include="TradingPlatform.PresentationLayer">
