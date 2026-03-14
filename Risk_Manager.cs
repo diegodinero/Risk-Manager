@@ -1,15 +1,16 @@
 // Copyright QUANTOWER LLC. © 2017-2023. All rights reserved.
 
-extern alias BL;
-
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using BL::TradingPlatform.BusinessLayer;
+using TradingPlatform.BusinessLayer;
 using TradingPlatform.PresentationLayer.Plugins;
 using TradingPlatform.PresentationLayer.Renderers.Table;
+using PluginInfo = TradingPlatform.PresentationLayer.Plugins.PluginInfo;
+using PluginParameters = TradingPlatform.PresentationLayer.Plugins.PluginParameters;
+using TableComparingType = TradingPlatform.PresentationLayer.Renderers.Table.TableComparingType;
 
 namespace Risk_Manager
 {
