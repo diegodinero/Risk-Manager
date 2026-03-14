@@ -466,6 +466,19 @@ namespace Risk_Manager
         private const int CALENDAR_PL_LABEL_Y = 35;  // Y position of P&L label in calendar cell
         private const int WEEKLY_STATS_WIDTH = 150;  // Width of weekly statistics column
         private const int WEEKLY_STATS_HEIGHT = 95;  // Height of weekly statistics cells
+
+        // Calendar dashboard panel heights
+        private const int DONUT_CARD_HEIGHT = 195;          // Height of each win-rate donut card
+        private const int PL_CHART_CARD_HEIGHT = 215;       // Height of cumulative P&L chart card
+        private const int CAL_TOP_STATS_BAR_HEIGHT = 88;    // Height of top 4-metric stats bar
+        private const int CAL_BOTTOM_STATS_BAR_HEIGHT = 65; // Height of bottom 6-metric stats bar
+        private const int PL_CHART_BOTTOM_MARGIN = 4;       // Bottom margin on P&L chart card
+
+        // Calendar dashboard colours (reused across top/bottom bars and charts)
+        private static readonly Color CalDashGreen = Color.FromArgb(0, 200, 83);   // Positive P&L / win
+        private static readonly Color CalDashRed   = Color.FromArgb(255, 80, 80);  // Negative P&L / loss
+        private static readonly Color CalDashTeal  = Color.FromArgb(26, 188, 156); // Donut win arc
+        private static readonly Color CalDashSalmon = Color.FromArgb(231, 76, 60); // Donut loss arc
         
         // Calendar P&L label colors for day cells
         private static readonly Color CalendarProfitColor = Color.FromArgb(0, 100, 0); // Dark green for profit
@@ -14413,41 +14426,728 @@ namespace Risk_Manager
             };
         }
         
+        // ========== CALENDAR DASHBOARD: TOP STATS BAR ==========
+
         /// <summary>
-        /// Creates the Calendar page placeholder
+        /// Creates the 4-card top statistics bar for the calendar dashboard.
+        /// Shows Total NET P&amp;L, Profit Factor, Average Winning Trade, Average Losing Trade.
         /// </summary>
-        private Control CreateCalendarPage()
+        private Panel CreateCalendarTopStatsBar()
         {
-            var pagePanel = new ModernScrollablePanel { Dock = DockStyle.Fill, BackColor = DarkBackground, AutoScroll = true, Tag = "CalendarPagePanel" };
-            
-            // Main content container with rounded border
-            var contentPanel = new ModernScrollablePanel
+            var accountNumber = GetSelectedAccountNumber();
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+
+            decimal totalNetPL = trades.Sum(t => t.NetPL);
+            int totalTradeCount = trades.Count;
+
+            var wins = trades.Where(t => t.Outcome?.ToLower() == "win").ToList();
+            var losses = trades.Where(t => t.Outcome?.ToLower() == "loss").ToList();
+
+            decimal grossProfit = wins.Sum(t => t.NetPL);
+            decimal grossLoss = Math.Abs(losses.Sum(t => t.NetPL));
+            double profitFactor = grossLoss > 0
+                ? (double)(grossProfit / grossLoss)
+                : (grossProfit > 0 ? 999.9 : 0);
+
+            decimal avgWin = wins.Count > 0 ? wins.Average(t => t.NetPL) : 0m;
+            decimal avgLoss = losses.Count > 0 ? losses.Average(t => t.NetPL) : 0m;
+
+            var bar = new Panel
             {
+                Name = "CalTopStatsBar",
+                Dock = DockStyle.Top,
+                Height = CAL_TOP_STATS_BAR_HEIGHT,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 0, 0, 6)
+            };
+
+            var table = new TableLayoutPanel
+            {
+                ColumnCount = 4,
+                RowCount = 1,
                 Dock = DockStyle.Fill,
                 BackColor = DarkBackground,
-                Padding = new Padding(20),
-                AutoScroll = true
+                Margin = new Padding(0),
+                Padding = new Padding(0)
             };
-            
-            // Add rounded border to content panel
-            contentPanel.Paint += (s, e) =>
+            for (int i = 0; i < 4; i++)
+                table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
+
+            // Card 1: Total NET P&L
+            string plText = totalNetPL >= 0
+                ? $"${totalNetPL:N2}"
+                : $"(${Math.Abs(totalNetPL):N2})";
+            Color plColor = totalNetPL >= 0 ? CalDashGreen : CalDashRed;
+            table.Controls.Add(
+                CreateCalTopStatCard("TOTAL NET P&L", plText, plColor, $"Trades in total: {totalTradeCount}"), 0, 0);
+
+            // Card 2: Profit Factor
+            string pfText = profitFactor >= 999 ? "∞" : profitFactor.ToString("F2");
+            table.Controls.Add(CreateCalTopStatCard("PROFIT FACTOR", pfText, TextWhite, ""), 1, 0);
+
+            // Card 3: Average Winning Trade
+            table.Controls.Add(
+                CreateCalTopStatCard("AVERAGE WINNING TRADE", $"${avgWin:N2}", CalDashGreen, ""), 2, 0);
+
+            // Card 4: Average Losing Trade (parentheses notation for negative)
+            string avgLossText = avgLoss <= 0
+                ? $"(${Math.Abs(avgLoss):N2})"
+                : $"${avgLoss:N2}";
+            Color avgLossColor = avgLoss < 0 ? CalDashRed : TextWhite;
+            table.Controls.Add(CreateCalTopStatCard("AVERAGE LOSING TRADE", avgLossText, avgLossColor, ""), 3, 0);
+
+            bar.Controls.Add(table);
+            return bar;
+        }
+
+        /// <summary>Helper: Creates a single top-stat card with title, large value, and optional subtitle.</summary>
+        private Panel CreateCalTopStatCard(string title, string value, Color valueColor, string subtitle)
+        {
+            var card = new Panel
             {
-                if (contentPanel.ClientRectangle.Width > 20 && contentPanel.ClientRectangle.Height > 20)
+                BackColor = CardBackground,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(3, 3, 3, 0)
+            };
+
+            // Rounded corners
+            card.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                using (var path = GetRoundedRectangle(rect, 8))
                 {
-                    var borderRect = new Rectangle(10, 10, contentPanel.ClientRectangle.Width - 20, contentPanel.ClientRectangle.Height - 20);
-                    using (GraphicsPath borderPath = GetRoundedRectangle(borderRect, BORDER_RADIUS))
+                    using (var brush = new SolidBrush(CardBackground))
+                        e.Graphics.FillPath(brush, path);
+                    using (var pen = new Pen(Color.FromArgb(55, 55, 55), 1))
+                        e.Graphics.DrawPath(pen, path);
+                }
+            };
+            card.Resize += (s, e) =>
+            {
+                var rect = new Rectangle(0, 0, card.Width, card.Height);
+                using (var path = GetRoundedRectangle(rect, 8))
+                    card.Region = new Region(path);
+            };
+
+            var titleLbl = new Label
+            {
+                Text = title,
+                Font = new Font("Segoe UI", 7.5f, FontStyle.Regular),
+                ForeColor = Color.FromArgb(140, 140, 140),
+                AutoSize = true,
+                Location = new Point(12, 9)
+            };
+            card.Controls.Add(titleLbl);
+
+            var valueLbl = new Label
+            {
+                Text = value,
+                Font = new Font("Segoe UI", 18, FontStyle.Bold),
+                ForeColor = valueColor,
+                AutoSize = true,
+                Location = new Point(12, 24)
+            };
+            card.Controls.Add(valueLbl);
+
+            if (!string.IsNullOrEmpty(subtitle))
+            {
+                var subLbl = new Label
+                {
+                    Text = subtitle,
+                    Font = new Font("Segoe UI", 7.5f, FontStyle.Regular),
+                    ForeColor = Color.FromArgb(120, 120, 120),
+                    AutoSize = true,
+                    Location = new Point(12, 60)
+                };
+                card.Controls.Add(subLbl);
+            }
+
+            return card;
+        }
+
+        // ========== CALENDAR DASHBOARD: WIN-RATE DONUT CHART ==========
+
+        /// <summary>
+        /// Creates a donut-chart card showing win-rate percentage with a legend.
+        /// </summary>
+        private Panel CreateWinRateDonutCard(
+            string title, int winCount, int lossCount,
+            string winLabel = "winners", string lossLabel = "losers")
+        {
+            int totalCount = winCount + lossCount;
+            double winPct = totalCount > 0 ? (winCount * 100.0) / totalCount : 0;
+
+            Color winColor   = CalDashTeal;
+            Color lossColor  = CalDashSalmon;
+            Color emptyColor = Color.FromArgb(60, 60, 60);
+
+            var outerCard = new Panel
+            {
+                Name = $"DonutCard_{title.Replace(" ", "").Replace("%", "Pct")}",
+                BackColor = CardBackground,
+                Height = DONUT_CARD_HEIGHT,
+                Dock = DockStyle.Top,
+                Margin = new Padding(3, 3, 3, 5)
+            };
+
+            // Rounded corners for the card
+            outerCard.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, outerCard.Width - 1, outerCard.Height - 1);
+                using (var path = GetRoundedRectangle(rect, 8))
+                {
+                    using (var brush = new SolidBrush(CardBackground))
+                        e.Graphics.FillPath(brush, path);
+                    using (var pen = new Pen(Color.FromArgb(55, 55, 55), 1))
+                        e.Graphics.DrawPath(pen, path);
+                }
+            };
+            outerCard.Resize += (s, e) =>
+            {
+                var rect = new Rectangle(0, 0, outerCard.Width, outerCard.Height);
+                using (var path = GetRoundedRectangle(rect, 8))
+                    outerCard.Region = new Region(path);
+            };
+
+            // Title
+            var titleLbl = new Label
+            {
+                Text = title,
+                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                ForeColor = Color.FromArgb(150, 150, 150),
+                AutoSize = true,
+                Location = new Point(12, 10)
+            };
+            outerCard.Controls.Add(titleLbl);
+
+            // Donut panel (draws the chart via Paint)
+            const int donutSize = 120;
+            var donutPanel = new Panel
+            {
+                Size = new Size(donutSize, donutSize),
+                Location = new Point(12, 32),
+                BackColor = CardBackground
+            };
+
+            donutPanel.Paint += (s, e) =>
+            {
+                var g = e.Graphics;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+
+                int sz = Math.Min(donutPanel.Width, donutPanel.Height) - 4;
+                int ox = (donutPanel.Width  - sz) / 2;
+                int oy = (donutPanel.Height - sz) / 2;
+                Rectangle outerRect = new Rectangle(ox, oy, sz, sz);
+
+                int inSz = (int)(sz * 0.60);
+                Rectangle innerRect = new Rectangle(
+                    ox + (sz - inSz) / 2, oy + (sz - inSz) / 2, inSz, inSz);
+
+                if (totalCount == 0)
+                {
+                    using (var brush = new SolidBrush(emptyColor))
+                        g.FillEllipse(brush, outerRect);
+                }
+                else
+                {
+                    float winSweep  = (float)(winPct / 100.0 * 360.0);
+                    float lossSweep = 360.0f - winSweep;
+
+                    // Use winCount guard to avoid floating-point edge cases
+                    using (var brush = new SolidBrush(winColor))
+                        g.FillPie(brush, outerRect, -90f, winCount > 0 ? (winSweep > 0f ? winSweep : 360f) : 360f);
+
+                    if (lossCount > 0 && lossSweep > 0.5f)
                     {
-                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                        using (Pen borderPen = new Pen(CardBackground, 2))
+                        using (var brush = new SolidBrush(lossColor))
+                            g.FillPie(brush, outerRect, -90f + winSweep, lossSweep);
+                    }
+                }
+
+                // Donut hole
+                using (var brush = new SolidBrush(CardBackground))
+                    g.FillEllipse(brush, innerRect);
+
+                // Center percentage text
+                string pctText = $"{winPct:F0}%";
+                using (var font = new Font("Segoe UI", 13, FontStyle.Bold))
+                using (var brush = new SolidBrush(TextWhite))
+                {
+                    SizeF sz2 = g.MeasureString(pctText, font);
+                    g.DrawString(pctText, font, brush,
+                        donutPanel.Width / 2f - sz2.Width / 2f,
+                        donutPanel.Height / 2f - sz2.Height / 2f - 6f);
+                }
+                using (var font = new Font("Segoe UI", 6.5f, FontStyle.Regular))
+                using (var brush = new SolidBrush(Color.FromArgb(140, 140, 140)))
+                {
+                    const string rateLabel = "WINRATE";
+                    SizeF sz2 = g.MeasureString(rateLabel, font);
+                    g.DrawString(rateLabel, font, brush,
+                        donutPanel.Width / 2f - sz2.Width / 2f,
+                        donutPanel.Height / 2f + 4f);
+                }
+            };
+            outerCard.Controls.Add(donutPanel);
+
+            // Legend - right side of donut
+            // Numbers use 12pt (was 15pt) to avoid overlapping the "winners"/"losers" label below.
+            // Layout per row: color dot (Y+9), count number (Y), label (Y+24)
+            int lx = donutSize + 28;
+
+            // Win row  (vertically centered in upper half of donut, ~Y 36-62)
+            outerCard.Controls.Add(new Panel { Size = new Size(10, 10), Location = new Point(lx, 45), BackColor = winColor });
+            outerCard.Controls.Add(new Label
+            {
+                Text = winCount.ToString(),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(lx + 16, 36)
+            });
+            outerCard.Controls.Add(new Label
+            {
+                Text = winLabel,
+                Font = new Font("Segoe UI", 8, FontStyle.Regular),
+                ForeColor = Color.FromArgb(140, 140, 140),
+                AutoSize = true,
+                Location = new Point(lx + 16, 60)
+            });
+
+            // Loss row  (vertically centered in lower half of donut, ~Y 96-122)
+            outerCard.Controls.Add(new Panel { Size = new Size(10, 10), Location = new Point(lx, 102), BackColor = lossColor });
+            outerCard.Controls.Add(new Label
+            {
+                Text = lossCount.ToString(),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = TextWhite,
+                AutoSize = true,
+                Location = new Point(lx + 16, 93)
+            });
+            outerCard.Controls.Add(new Label
+            {
+                Text = lossLabel,
+                Font = new Font("Segoe UI", 8, FontStyle.Regular),
+                ForeColor = Color.FromArgb(140, 140, 140),
+                AutoSize = true,
+                Location = new Point(lx + 16, 117)
+            });
+
+            return outerCard;
+        }
+
+        // ========== CALENDAR DASHBOARD: LEFT CHARTS PANEL ==========
+
+        /// <summary>
+        /// Creates the left panel containing the two win-rate donut charts
+        /// (Winning % By Trades and Winning % By Days).
+        /// </summary>
+        private Panel CreateLeftChartsPanel()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+
+            int winTradeCount  = trades.Count(t => t.Outcome?.ToLower() == "win");
+            int lossTradeCount = trades.Count(t => t.Outcome?.ToLower() == "loss");
+
+            var tradingDays = trades
+                .Where(t => t.Date != default(DateTime))
+                .GroupBy(t => t.Date.Date)
+                .Select(g => new { PL = g.Sum(t => t.NetPL) })
+                .ToList();
+            int winDays  = tradingDays.Count(d => d.PL > 0);
+            int lossDays = tradingDays.Count(d => d.PL < 0);
+
+            var panel = new Panel
+            {
+                Name = "LeftChartsPanel",
+                Width = 340,
+                Dock = DockStyle.Left,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 0, 6, 0)
+            };
+
+            var daysDonut   = CreateWinRateDonutCard("WINNING % BY DAYS",   winDays,        lossDays);
+            var tradesDonut = CreateWinRateDonutCard("WINNING % BY TRADES", winTradeCount,  lossTradeCount);
+
+            // Last added = visually topmost (DockStyle.Top ordering rule)
+            panel.Controls.Add(daysDonut);    // bottom
+            panel.Controls.Add(tradesDonut);  // top
+
+            return panel;
+        }
+
+        // ========== CALENDAR DASHBOARD: P&L LINE CHART ==========
+
+        /// <summary>
+        /// Creates the cumulative Daily Net P&amp;L line-chart panel.
+        /// Draws a smooth green line with gradient fill from all-time trade data.
+        /// </summary>
+        private Panel CreatePLLineChartPanel()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            var allTrades = TradingJournalService.Instance.GetTrades(accountNumber);
+
+            // Build cumulative daily P&L data
+            var cumulativeData = new List<(DateTime date, decimal cumPL)>();
+            decimal running = 0m;
+            foreach (var day in allTrades
+                .Where(t => t.Date != default(DateTime))
+                .GroupBy(t => t.Date.Date)
+                .OrderBy(g => g.Key)
+                .Select(g => new { Date = g.Key, DayPL = g.Sum(t => t.NetPL) }))
+            {
+                running += day.DayPL;
+                cumulativeData.Add((day.Date, running));
+            }
+
+            var outerCard = new Panel
+            {
+                Name = "PLLineChart",
+                BackColor = CardBackground,
+                Height = PL_CHART_CARD_HEIGHT,
+                Dock = DockStyle.Top,
+                Margin = new Padding(0, 0, 0, PL_CHART_BOTTOM_MARGIN)
+            };
+
+            // Rounded corners
+            outerCard.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, outerCard.Width - 1, outerCard.Height - 1);
+                using (var path = GetRoundedRectangle(rect, 8))
+                {
+                    using (var brush = new SolidBrush(CardBackground))
+                        e.Graphics.FillPath(brush, path);
+                    using (var pen = new Pen(Color.FromArgb(55, 55, 55), 1))
+                        e.Graphics.DrawPath(pen, path);
+                }
+            };
+            outerCard.Resize += (s, e) =>
+            {
+                var rect = new Rectangle(0, 0, outerCard.Width, outerCard.Height);
+                using (var path = GetRoundedRectangle(rect, 8))
+                    outerCard.Region = new Region(path);
+            };
+
+            var titleLbl = new Label
+            {
+                Text = "DAILY NET CUMULATIVE P&L",
+                Font = new Font("Segoe UI", 8, FontStyle.Bold),
+                ForeColor = Color.FromArgb(150, 150, 150),
+                AutoSize = true,
+                Location = new Point(14, 9)
+            };
+            outerCard.Controls.Add(titleLbl);
+
+            Color lineColor = CalDashGreen;
+
+            // Inner chart panel (fills remaining card area)
+            var chartPanel = new Panel
+            {
+                BackColor = CardBackground,
+                Location = new Point(8, 28),
+                Size = new Size(Math.Max(10, outerCard.Width - 16), outerCard.Height - 36)
+            };
+            chartPanel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+
+            chartPanel.Paint += (s, e) =>
+            {
+                if (chartPanel.Width < 80 || chartPanel.Height < 40) return;
+
+                var g = e.Graphics;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+
+                const int padL = 55;  // Left padding: room for Y-axis labels
+                const int padR = 60;  // Right padding: room for right-side Y labels
+                const int padT = 10;  // Top padding
+                const int padB = 28;  // Bottom padding: room for X-axis date labels
+                int cw = chartPanel.Width  - padL - padR;
+                int ch = chartPanel.Height - padT - padB;
+                if (cw <= 0 || ch <= 0) return;
+
+                // Empty state
+                if (cumulativeData.Count == 0)
+                {
+                    using (var pen = new Pen(Color.FromArgb(50, 50, 50), 1))
+                    {
+                        g.DrawLine(pen, padL, padT, padL, padT + ch);
+                        g.DrawLine(pen, padL, padT + ch, padL + cw, padT + ch);
+                    }
+                    return;
+                }
+
+                decimal minPL = cumulativeData.Min(d => d.cumPL);
+                decimal maxPL = cumulativeData.Max(d => d.cumPL);
+                if (minPL == maxPL) { minPL -= 1; maxPL += 1; }
+
+                decimal range    = maxPL - minPL;
+                decimal chartMin = minPL - range * 0.08m;
+                decimal chartMax = maxPL + range * 0.08m;
+                decimal chartRange = chartMax - chartMin;
+                if (chartRange == 0m) chartRange = 1m;
+
+                Func<int, float> getX = (i) =>
+                    cumulativeData.Count == 1
+                        ? padL + cw / 2f
+                        : padL + (float)i / (cumulativeData.Count - 1) * cw;
+
+                Func<decimal, float> getY = (pl) =>
+                    padT + (float)((chartMax - pl) / chartRange) * ch;
+
+                var points = new PointF[cumulativeData.Count];
+                for (int i = 0; i < cumulativeData.Count; i++)
+                    points[i] = new PointF(getX(i), getY(cumulativeData[i].cumPL));
+
+                // Gradient fill below the line (down to zero-baseline)
+                if (cumulativeData.Count >= 2)
+                {
+                    float baseY = Math.Min(Math.Max(getY(0m), padT), padT + ch);
+                    var fillPts = new PointF[cumulativeData.Count + 2];
+                    fillPts[0] = new PointF(points[0].X, baseY);
+                    for (int i = 0; i < cumulativeData.Count; i++)
+                        fillPts[i + 1] = points[i];
+                    fillPts[fillPts.Length - 1] = new PointF(points[cumulativeData.Count - 1].X, baseY);
+
+                    using (var gradBrush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                        new Point(0, padT), new Point(0, padT + ch),
+                        Color.FromArgb(70, 0, 200, 83),
+                        Color.FromArgb(5,  0, 200, 83)))
+                    {
+                        g.FillPolygon(gradBrush, fillPts);
+                    }
+                }
+
+                // Zero baseline (dashed)
+                {
+                    float zeroY = getY(0m);
+                    if (zeroY >= padT && zeroY <= padT + ch)
+                    {
+                        using (var pen = new Pen(Color.FromArgb(60, 150, 150, 150), 1))
                         {
-                            e.Graphics.DrawPath(borderPen, borderPath);
+                            pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                            g.DrawLine(pen, padL, zeroY, padL + cw, zeroY);
                         }
                     }
                 }
+
+                // Draw the line
+                if (cumulativeData.Count >= 2)
+                {
+                    using (var pen = new Pen(lineColor, 2))
+                        g.DrawLines(pen, points);
+                }
+                else if (cumulativeData.Count == 1)
+                {
+                    using (var brush = new SolidBrush(lineColor))
+                        g.FillEllipse(brush, points[0].X - 4, points[0].Y - 4, 8, 8);
+                }
+
+                // X-axis labels
+                int maxXLabels = Math.Min(8, cumulativeData.Count);
+                if (maxXLabels > 0)
+                {
+                    using (var font = new Font("Segoe UI", 7, FontStyle.Regular))
+                    using (var brush = new SolidBrush(Color.FromArgb(110, 110, 110)))
+                    {
+                        for (int i = 0; i < maxXLabels; i++)
+                        {
+                            int idx = cumulativeData.Count > 1
+                                ? (int)Math.Round((double)i / (maxXLabels - 1) * (cumulativeData.Count - 1))
+                                : 0;
+                            if (idx >= cumulativeData.Count) idx = cumulativeData.Count - 1;
+                            string lbl = cumulativeData[idx].date.ToString("MMM d");
+                            SizeF ts = g.MeasureString(lbl, font);
+                            g.DrawString(lbl, font, brush, getX(idx) - ts.Width / 2f, padT + ch + 5);
+                        }
+                    }
+                }
+
+                // Y-axis labels (right side)
+                using (var font = new Font("Segoe UI", 7, FontStyle.Regular))
+                using (var brush = new SolidBrush(Color.FromArgb(110, 110, 110)))
+                {
+                    string maxStr = $"${chartMax:N0}";
+                    g.DrawString(maxStr, font, brush, padL + cw + 4, padT - 2);
+
+                    float zeroY = getY(0m);
+                    if (zeroY >= padT && zeroY <= padT + ch)
+                        g.DrawString("$0", font, brush, padL + cw + 4, zeroY - 6f);
+                }
             };
-            
-            // Header with reorganized layout
-            int calendarWidth = (7 * 150) + WEEKLY_STATS_WIDTH; // Full calendar width including weekly stats
+
+            outerCard.Controls.Add(chartPanel);
+
+            outerCard.Resize += (s, e) =>
+            {
+                int nw = Math.Max(10, outerCard.Width  - 16);
+                int nh = Math.Max(10, outerCard.Height - 36);
+                chartPanel.Size = new Size(nw, nh);
+                chartPanel.Invalidate();
+            };
+
+            return outerCard;
+        }
+
+        // ========== CALENDAR DASHBOARD: BOTTOM STATS BAR ==========
+
+        /// <summary>
+        /// Creates the 6-metric bottom stats bar:
+        /// Best Day, Worst Day, AVG P&amp;L/Day, AVG R:R, Win Days, Loss Days.
+        /// </summary>
+        private Panel CreateCalendarBottomStatsBar()
+        {
+            var accountNumber = GetSelectedAccountNumber();
+            var trades = TradingJournalService.Instance.GetTrades(accountNumber);
+
+            var tradingDays = trades
+                .Where(t => t.Date != default(DateTime))
+                .GroupBy(t => t.Date.Date)
+                .Select(g => new { PL = g.Sum(t => t.NetPL) })
+                .ToList();
+
+            decimal bestDay  = tradingDays.Count > 0 ? tradingDays.Max(d => d.PL) : 0m;
+            decimal worstDay = tradingDays.Count > 0 ? tradingDays.Min(d => d.PL) : 0m;
+            decimal totalPL  = trades.Sum(t => t.NetPL);
+            decimal avgPLDay = tradingDays.Count > 0 ? totalPL / tradingDays.Count : 0m;
+            double  avgRR    = trades.Count > 0 ? trades.Average(t => t.RR) : 0.0;
+            int     winDays  = tradingDays.Count(d => d.PL > 0);
+            int     lossDays = tradingDays.Count(d => d.PL < 0);
+
+            var bar = new Panel
+            {
+                Name = "CalBottomStatsBar",
+                Dock = DockStyle.Top,
+                Height = CAL_BOTTOM_STATS_BAR_HEIGHT,
+                BackColor = DarkBackground,
+                Padding = new Padding(0, 5, 0, 0)
+            };
+
+            var table = new TableLayoutPanel
+            {
+                ColumnCount = 6,
+                RowCount = 1,
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground,
+                Margin = new Padding(0),
+                Padding = new Padding(0)
+            };
+            for (int i = 0; i < 6; i++)
+                table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / 6f));
+
+            // Best Day
+            string bestStr = tradingDays.Count > 0 ? $"${bestDay:N2}" : "-";
+            table.Controls.Add(CreateCalBottomStatCard(
+                "BEST DAY", bestStr,
+                bestDay > 0 ? CalDashGreen : TextWhite), 0, 0);
+
+            // Worst Day
+            string worstStr = tradingDays.Count > 0 && worstDay < 0
+                ? $"(${Math.Abs(worstDay):N2})" : "-";
+            table.Controls.Add(CreateCalBottomStatCard(
+                "WORST DAY", worstStr,
+                worstDay < 0 ? CalDashRed : TextWhite), 1, 0);
+
+            // AVG P&L/Day
+            string avgDayStr = tradingDays.Count > 0
+                ? (avgPLDay >= 0 ? $"${avgPLDay:N2}" : $"(${Math.Abs(avgPLDay):N2})")
+                : "-";
+            table.Controls.Add(CreateCalBottomStatCard(
+                "AVG P&L/DAY", avgDayStr,
+                avgPLDay >= 0 ? CalDashGreen : CalDashRed), 2, 0);
+
+            // AVG R:R
+            table.Controls.Add(CreateCalBottomStatCard(
+                "AVG R:R", trades.Count > 0 ? avgRR.ToString("F2") : "-", TextWhite), 3, 0);
+
+            // Win Days
+            table.Controls.Add(CreateCalBottomStatCard(
+                "WIN DAYS", winDays.ToString(),
+                winDays > 0 ? CalDashGreen : TextWhite), 4, 0);
+
+            // Loss Days
+            table.Controls.Add(CreateCalBottomStatCard(
+                "LOSS DAYS", lossDays.ToString(),
+                lossDays > 0 ? CalDashRed : TextWhite), 5, 0);
+
+            bar.Controls.Add(table);
+            return bar;
+        }
+
+        /// <summary>Helper: Creates a single bottom-stat card with a small title and a bold value.</summary>
+        private Panel CreateCalBottomStatCard(string title, string value, Color valueColor)
+        {
+            var card = new Panel
+            {
+                BackColor = CardBackground,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(3, 0, 3, 0)
+            };
+
+            // Rounded corners
+            card.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+                using (var path = GetRoundedRectangle(rect, 8))
+                {
+                    using (var brush = new SolidBrush(CardBackground))
+                        e.Graphics.FillPath(brush, path);
+                    using (var pen = new Pen(Color.FromArgb(55, 55, 55), 1))
+                        e.Graphics.DrawPath(pen, path);
+                }
+            };
+            card.Resize += (s, e) =>
+            {
+                var rect = new Rectangle(0, 0, card.Width, card.Height);
+                using (var path = GetRoundedRectangle(rect, 8))
+                    card.Region = new Region(path);
+            };
+
+            card.Controls.Add(new Label
+            {
+                Text = title,
+                Font = new Font("Segoe UI", 7, FontStyle.Regular),
+                ForeColor = Color.FromArgb(120, 120, 120),
+                AutoSize = true,
+                Location = new Point(10, 7)
+            });
+            card.Controls.Add(new Label
+            {
+                Text = value,
+                Font = new Font("Segoe UI", 13, FontStyle.Bold),
+                ForeColor = valueColor,
+                AutoSize = true,
+                Location = new Point(10, 22)
+            });
+            return card;
+        }
+
+        // ========== CALENDAR PAGE ==========
+
+        /// <summary>
+        /// Creates the Calendar page with the full dashboard layout:
+        /// top stats bar, left donut charts, cumulative P&amp;L chart,
+        /// monthly calendar grid, and bottom stats bar.
+        /// </summary>
+        private Control CreateCalendarPage()
+        {
+            // Single-level scrollable container.  Using a nested DockStyle.Fill + AutoScroll panel
+            // inside another AutoScroll panel prevents reliable full-height scrolling, so we keep
+            // a single ModernScrollablePanel here and add all children to it directly.
+            var pagePanel = new ModernScrollablePanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = DarkBackground,
+                AutoScroll = true,
+                Tag = "CalendarPagePanel",
+                Padding = new Padding(15)
+            };
+
+            // ---- Calendar navigation header ----
+            int calendarWidth = (7 * 150) + WEEKLY_STATS_WIDTH;
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
@@ -14456,10 +15156,9 @@ namespace Risk_Manager
                 BackColor = DarkBackground,
                 Padding = new Padding(10, 10, 10, 10)
             };
-            
+
             Color blueHighlight = Color.FromArgb(41, 128, 185);
-            
-            // "Trading Calendar" title label - FAR LEFT
+
             var titleLabel = new Label
             {
                 Name = "TradingCalendarTitle",
@@ -14470,48 +15169,43 @@ namespace Risk_Manager
                 Location = new Point(10, 15)
             };
             headerPanel.Controls.Add(titleLabel);
-            
-            // Navigation group positioning - center the month with arrows equally distant from text
+
             int centerX = calendarWidth / 2;
             string monthText = currentCalendarMonth.ToString("MMMM yyyy");
-            
-            // Measure actual text width for precise positioning
+
             float textWidth;
             using (Graphics g = headerPanel.CreateGraphics())
             {
                 SizeF textSize = g.MeasureString(monthText, new Font("Segoe UI", 14, FontStyle.Bold));
                 textWidth = textSize.Width;
             }
-            
-            // Calculate positions for centered layout with equal arrow spacing
-            // Ensure minimum 15px gap between buttons and text for better spacing
+
             const int minGap = 15;
-            int monthX = (int)(centerX - textWidth / 2);
-            int prevX = (int)(centerX - textWidth / 2 - minGap - 35); // minimum gap from text, 35px button width
-            int nextX = (int)(centerX + textWidth / 2 + minGap); // minimum gap from text
-            
-            // Previous month button - left of month with equal spacing
+            int monthX  = (int)(centerX - textWidth / 2);
+            int prevX   = (int)(centerX - textWidth / 2 - minGap - 35);
+            int nextX   = (int)(centerX + textWidth / 2 + minGap);
+
             var prevButton = new Button
             {
                 Name = "PrevMonthButton",
                 Text = "◀",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Size = new Size(35, 35),
-                Location = new Point(prevX, 12), // Vertically centered
-                BackColor = blueHighlight, // Blue background for navigation
+                Location = new Point(prevX, 12),
+                BackColor = blueHighlight,
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand
             };
             prevButton.FlatAppearance.BorderSize = 0;
-            prevButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, prevButton.Width, prevButton.Height, BORDER_RADIUS, BORDER_RADIUS));
+            prevButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(
+                0, 0, prevButton.Width, prevButton.Height, BORDER_RADIUS, BORDER_RADIUS));
             prevButton.Click += (s, e) =>
             {
                 currentCalendarMonth = currentCalendarMonth.AddMonths(-1);
                 BeginInvoke(new Action(() => ShowJournalSection("Calendar")));
             };
-            
-            // Month/Year label - centered in header
+
             var monthYearLabel = new Label
             {
                 Name = "MonthYearLabel",
@@ -14519,46 +15213,43 @@ namespace Risk_Manager
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 ForeColor = TextWhite,
                 AutoSize = true,
-                Location = new Point(monthX, 17) // Vertically centered
+                Location = new Point(monthX, 17)
             };
             headerPanel.Controls.Add(monthYearLabel);
-            
-            // Next month button - right of month with equal spacing
+
             var nextButton = new Button
             {
                 Name = "NextMonthButton",
                 Text = "▶",
                 Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Size = new Size(35, 35),
-                Location = new Point(nextX, 12), // Vertically centered
-                BackColor = blueHighlight, // Blue background for navigation
+                Location = new Point(nextX, 12),
+                BackColor = blueHighlight,
                 ForeColor = TextWhite,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand
             };
             nextButton.FlatAppearance.BorderSize = 0;
-            nextButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, nextButton.Width, nextButton.Height, BORDER_RADIUS, BORDER_RADIUS));
+            nextButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(
+                0, 0, nextButton.Width, nextButton.Height, BORDER_RADIUS, BORDER_RADIUS));
             nextButton.Click += (s, e) =>
             {
                 currentCalendarMonth = currentCalendarMonth.AddMonths(1);
                 BeginInvoke(new Action(() => ShowJournalSection("Calendar")));
             };
-            
-            // Add navigation buttons first
+
             headerPanel.Controls.Add(prevButton);
             headerPanel.Controls.Add(nextButton);
-            prevButton.BringToFront(); // Ensure buttons are visible on top
+            prevButton.BringToFront();
             nextButton.BringToFront();
-            
-            // Toggle buttons for Plan/P&L mode - positioned on far right
-            // SWAPPED ORDER: Plan button first, then P&L button
-            int toggleStartX = calendarWidth - 170; // Position at right side (170px = 2 buttons + gap)
+
+            int toggleStartX = calendarWidth - 170;
             var planToggle = new Button
             {
                 Name = "PlanToggle",
                 Text = "Plan",
                 Size = new Size(80, 35),
-                BackColor = showPlanMode ? blueHighlight : CardBackground, // Blue when selected
+                BackColor = showPlanMode ? blueHighlight : CardBackground,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
@@ -14566,20 +15257,21 @@ namespace Risk_Manager
                 Tag = "PlanToggle"
             };
             planToggle.FlatAppearance.BorderSize = 0;
-            planToggle.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, planToggle.Width, planToggle.Height, BORDER_RADIUS, BORDER_RADIUS));
+            planToggle.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(
+                0, 0, planToggle.Width, planToggle.Height, BORDER_RADIUS, BORDER_RADIUS));
             planToggle.Click += (s, e) =>
             {
                 showPlanMode = true;
                 BeginInvoke(new Action(() => ShowJournalSection("Calendar")));
             };
             headerPanel.Controls.Add(planToggle);
-            
+
             var plToggle = new Button
             {
                 Name = "PLToggle",
                 Text = "P&&L",
                 Size = new Size(80, 35),
-                BackColor = showPlanMode ? CardBackground : blueHighlight, // Blue when selected
+                BackColor = showPlanMode ? CardBackground : blueHighlight,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
@@ -14587,133 +15279,89 @@ namespace Risk_Manager
                 Tag = "PLToggle"
             };
             plToggle.FlatAppearance.BorderSize = 0;
-            plToggle.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, plToggle.Width, plToggle.Height, BORDER_RADIUS, BORDER_RADIUS));
+            plToggle.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(
+                0, 0, plToggle.Width, plToggle.Height, BORDER_RADIUS, BORDER_RADIUS));
             plToggle.Click += (s, e) =>
             {
                 showPlanMode = false;
                 BeginInvoke(new Action(() => ShowJournalSection("Calendar")));
             };
             headerPanel.Controls.Add(plToggle);
-            
-            // Inline monthly stats - positioned between navigation and toggles
+
             var inlineStatsPanel = CreateInlineMonthlyStats();
-            int statsX = nextX + 40; // After next button + gap
+            int statsX = nextX + 40;
             inlineStatsPanel.Location = new Point(statsX, 10);
-            int maxStatsWidth = toggleStartX - statsX - 10; // Space between nav and toggles
+            int maxStatsWidth = toggleStartX - statsX - 10;
             inlineStatsPanel.MaximumSize = new Size(maxStatsWidth, 40);
             headerPanel.Controls.Add(inlineStatsPanel);
-            
-            // Calendar grid panel
+
+            // ---- Calendar grid and legend ----
             var calendarPanel = CreateCalendarGrid();
             calendarPanel.Dock = DockStyle.Top;
-            
-            // Legend panel at the bottom - use wrapper to align it with calendar
             var legendWrapper = CreateAlignedLegendWrapper();
-            
-            contentPanel.Controls.Add(legendWrapper);
-            contentPanel.Controls.Add(calendarPanel);
-            contentPanel.Controls.Add(headerPanel);
-            
-            pagePanel.Controls.Add(contentPanel);
-            
+
+            // ---- P&L line chart ----
+            var plChartPanel = CreatePLLineChartPanel();
+
+            // ---- Left donut charts ----
+            var leftChartsPanel = CreateLeftChartsPanel();
+
+            // ---- Right content: plChart (top) → header → calendar → legend (bottom) ----
+            var rightContentPanel = new Panel
+            {
+                Name = "CalRightContent",
+                BackColor = DarkBackground,
+                Dock = DockStyle.Fill
+            };
+            // Add in ascending index order so that last-added = visually topmost (DockStyle.Top rule)
+            rightContentPanel.Controls.Add(legendWrapper);    // index 0 → bottom
+            rightContentPanel.Controls.Add(calendarPanel);    // index 1
+            rightContentPanel.Controls.Add(headerPanel);      // index 2
+            rightContentPanel.Controls.Add(plChartPanel);     // index 3 → top
+
+            // ---- Middle panel: left charts | right content ----
+            // rightH accounts for: P&L chart height + its bottom margin + calendar header + grid + legend
+            int rightH = PL_CHART_CARD_HEIGHT + PL_CHART_BOTTOM_MARGIN
+                         + headerPanel.Height
+                         + calendarPanel.Height + CALENDAR_LEGEND_WRAPPER_HEIGHT;
+            int leftH  = DONUT_CARD_HEIGHT * 2 + 20;  // two donut cards + their margins
+            var middlePanel = new Panel
+            {
+                Name = "CalMiddlePanel",
+                Dock = DockStyle.Top,
+                Height = Math.Max(rightH, leftH) + 10,
+                BackColor = DarkBackground
+            };
+            middlePanel.Controls.Add(rightContentPanel);  // Fill (added first → processed last)
+            middlePanel.Controls.Add(leftChartsPanel);    // Left (added second → docks first)
+
+            // ---- Top and bottom stats bars ----
+            var topStatsBar    = CreateCalendarTopStatsBar();
+            var bottomStatsBar = CreateCalendarBottomStatsBar();
+
+            // ---- Add all children directly to pagePanel (last added = visually topmost) ----
+            // Setting AutoScrollMinSize guarantees the full content height is scrollable even
+            // before the panel has been fully laid out.
+            int totalContentH = topStatsBar.Height + middlePanel.Height + bottomStatsBar.Height
+                                 + pagePanel.Padding.Top + pagePanel.Padding.Bottom;
+            pagePanel.AutoScrollMinSize = new Size(0, totalContentH);
+
+            pagePanel.Controls.Add(bottomStatsBar);   // index 0 → bottom
+            pagePanel.Controls.Add(middlePanel);      // index 1
+            pagePanel.Controls.Add(topStatsBar);      // index 2 → top
             return pagePanel;
         }
         
         /// <summary>
-        /// Refreshes the calendar page when month or mode changes
+        /// Refreshes the calendar page (e.g. after trade import or month/mode change).
+        /// Recreates the entire page so that all dashboard panels reflect the latest data.
         /// </summary>
         private void RefreshCalendarPage()
         {
             if (journalContentPanel == null || currentJournalSection != "Calendar")
                 return;
-                
-            // Find the calendar page panel
-            var calendarPage = FindControlByTag(journalContentPanel, "CalendarPagePanel") as Panel;
-            if (calendarPage == null)
-            {
-                // Recreate the entire page
-                ShowJournalSection("Calendar");
-                return;
-            }
-            
-            // Update month/year label
-            var monthYearLabel = FindControlByName(calendarPage, "MonthYearLabel") as Label;
-            if (monthYearLabel != null)
-                monthYearLabel.Text = currentCalendarMonth.ToString("MMMM yyyy");
-            
-            // Update toggle button colors
-            var plToggle = FindControlByTag(calendarPage, "PLToggle") as Button;
-            var planToggle = FindControlByTag(calendarPage, "PlanToggle") as Button;
-            if (plToggle != null)
-                plToggle.BackColor = showPlanMode ? CardBackground : Color.FromArgb(41, 128, 185);
-            if (planToggle != null)
-                planToggle.BackColor = showPlanMode ? Color.FromArgb(41, 128, 185) : CardBackground;
-            
-            // Update inline monthly stats panel
-            var oldInlineStats = FindControlByName(calendarPage, "InlineMonthlyStats") as Panel;
-            if (oldInlineStats != null)
-            {
-                var headerPanel = oldInlineStats.Parent;
-                var statsLocation = oldInlineStats.Location;
-                headerPanel.Controls.Remove(oldInlineStats);
-                oldInlineStats.Dispose();
-                
-                var newInlineStats = CreateInlineMonthlyStats();
-                newInlineStats.Location = statsLocation;
-                headerPanel.Controls.Add(newInlineStats);
-            }
-            
-            // Refresh the calendar grid
-            var contentPanel = calendarPage.Controls[0] as Panel;
-            if (contentPanel != null)
-            {
-                // Find and remove old calendar grid
-                Control oldGrid = null;
-                foreach (Control ctrl in contentPanel.Controls)
-                {
-                    if (ctrl.Name == "CalendarGrid")
-                    {
-                        oldGrid = ctrl;
-                        break;
-                    }
-                }
-                
-                if (oldGrid != null)
-                {
-                    contentPanel.Controls.Remove(oldGrid);
-                    oldGrid.Dispose();
-                }
-                
-                // Create and add new calendar grid
-                var newGrid = CreateCalendarGrid();
-                newGrid.Dock = DockStyle.Top;
-                contentPanel.Controls.Add(newGrid);
-                contentPanel.Controls.SetChildIndex(newGrid, 0); // Move to top
-                
-                // Refresh legend panel
-                Control oldLegendWrapper = null;
-                foreach (Control ctrl in contentPanel.Controls)
-                {
-                    if (ctrl.Name == "CalendarLegendWrapper")
-                    {
-                        oldLegendWrapper = ctrl;
-                        break;
-                    }
-                }
-                
-                if (oldLegendWrapper != null)
-                {
-                    contentPanel.Controls.Remove(oldLegendWrapper);
-                    oldLegendWrapper.Dispose();
-                }
-                
-                // Create new legend wrapper aligned with calendar
-                var newLegendWrapper = CreateAlignedLegendWrapper();
-                contentPanel.Controls.Add(newLegendWrapper);
-                contentPanel.Controls.SetChildIndex(newLegendWrapper, 0); // Move to top (which is actually bottom due to docking)
-            }
-            
-            calendarPage.Refresh();
+
+            ShowJournalSection("Calendar");
         }
         
         /// <summary>
