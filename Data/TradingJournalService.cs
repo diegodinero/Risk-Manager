@@ -498,6 +498,27 @@ namespace Risk_Manager.Data
         }
 
         /// <summary>
+        /// Checks if a trade already exists in the journal across ALL accounts using the same
+        /// criteria as ImportTrades (Date, Symbol, EntryTime, P/L, Contracts).
+        /// </summary>
+        /// <param name="trade">The trade to check</param>
+        /// <returns>True if a matching trade already exists in any account</returns>
+        public bool IsGlobalDuplicate(JournalTrade trade)
+        {
+            if (trade == null)
+                return false;
+
+            return _accountTrades.Values
+                .SelectMany(list => list)
+                .Any(t =>
+                    t.Date.Date == trade.Date.Date &&
+                    t.Symbol == trade.Symbol &&
+                    t.EntryTime == trade.EntryTime &&
+                    t.PL == trade.PL &&
+                    t.Contracts == trade.Contracts);
+        }
+
+        /// <summary>
         /// Import trades from CSV file into the journal
         /// Checks for duplicates and adds only new trades
         /// </summary>

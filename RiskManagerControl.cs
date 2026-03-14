@@ -14004,17 +14004,17 @@ namespace Risk_Manager
 
             var importButton = new Button
             {
-                Text = "IMPORT CSV",  // Changed to plain text for better visibility
+                Text = "GET TRADES",
                 Width = 130,
                 Height = 35,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(100, 50, 200),
-                ForeColor = Color.White,  // Explicit bright white
+                ForeColor = Color.White,
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold)  // Larger, bold font
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
             };
             importButton.FlatAppearance.BorderSize = 0;
-            importButton.Click += ImportCsv_Click;
+            importButton.Click += GetTrades_Click;
 
             buttonsPanel.Controls.Add(addButton);
             buttonsPanel.Controls.Add(editButton);
@@ -18965,6 +18965,84 @@ namespace Risk_Manager
                     {
                         MessageBox.Show($"Error importing trades: {ex.Message}\n\n{ex.StackTrace}", 
                             "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Handles the GET TRADES button click: opens the GetTradesImportDialog so the user
+        /// can choose a date range, fetch trades via Core.Instance.GetTrades(), add per-trade
+        /// notes and followed-plan flags, then import into the journal.
+        /// </summary>
+        private void GetTrades_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new GetTradesImportDialog(DarkBackground, CardBackground, TextWhite, AccentGreen, AccentBlue, Color.FromArgb(100, 50, 200)))
+            {
+                dialog.FetchTradesCallback = (from, to) =>
+                {
+                    var service = new GetTradesService();
+                    return service.FetchAndConvertTrades(from, to);
+                };
+
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    var tradesToImport = dialog.SelectedTrades;
+                    if (tradesToImport.Count > 0)
+                    {
+                        try
+                        {
+                            // Map raw account IDs (from Trade.Account.Id) to journal unique identifiers
+                            var accountMapping = MapCsvAccountsToDropdownAccounts(tradesToImport);
+                            foreach (var trade in tradesToImport)
+                            {
+                                if (!string.IsNullOrEmpty(trade.Account) && accountMapping.ContainsKey(trade.Account))
+                                    trade.Account = accountMapping[trade.Account];
+                            }
+
+                            var importResults = TradingJournalService.Instance.ImportTradesToRespectiveAccounts(tradesToImport);
+                            int totalImported = importResults.Values.Sum();
+                            int totalDuplicates = tradesToImport.Count - totalImported;
+
+                            if (totalImported > 0)
+                            {
+                                var messageLines = new System.Collections.Generic.List<string>();
+                                messageLines.Add($"Successfully imported {totalImported} trade(s) to {importResults.Count} account(s).");
+
+                                if (importResults.Count > 1)
+                                {
+                                    messageLines.Add("");
+                                    messageLines.Add("Breakdown by account:");
+                                    foreach (var kvp in importResults.OrderByDescending(x => x.Value))
+                                    {
+                                        if (kvp.Value > 0)
+                                            messageLines.Add($"  • {kvp.Key}: {kvp.Value} trade(s)");
+                                    }
+                                }
+
+                                if (totalDuplicates > 0)
+                                {
+                                    messageLines.Add("");
+                                    messageLines.Add($"{totalDuplicates} duplicate(s) skipped.");
+                                }
+
+                                MessageBox.Show(string.Join("\n", messageLines),
+                                    "Import Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                                RefreshJournalDataForCurrentAccount();
+                                RefreshCalendarPage();
+                            }
+                            else
+                            {
+                                MessageBox.Show("No new trades were imported. All selected trades already exist in the journal.",
+                                    "No New Trades", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Error importing trades: {ex.Message}\n\n{ex.StackTrace}",
+                                "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                     }
                 }
             }
