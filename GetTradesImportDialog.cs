@@ -418,7 +418,7 @@ namespace Risk_Manager
                     {
                         // Apply user-edited Notes and FollowedPlan back to the trade object
                         trade.Notes = row.Cells["Notes"].Value?.ToString() ?? "";
-                        trade.FollowedPlan = row.Cells["FollowedPlan"].Value is bool fp ? fp : true;
+                        trade.FollowedPlan = row.Cells["FollowedPlan"].Value is bool fp ? fp : false;
                         SelectedTrades.Add(trade);
                     }
                 }

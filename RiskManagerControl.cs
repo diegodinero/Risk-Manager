@@ -18981,7 +18981,7 @@ namespace Risk_Manager
             {
                 dialog.FetchTradesCallback = (from, to) =>
                 {
-                    var service = new Risk_Manager.Data.GetTradesService();
+                    var service = new GetTradesService();
                     return service.FetchAndConvertTrades(from, to);
                 };
 
