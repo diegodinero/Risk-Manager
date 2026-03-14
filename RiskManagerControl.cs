@@ -466,6 +466,19 @@ namespace Risk_Manager
         private const int CALENDAR_PL_LABEL_Y = 35;  // Y position of P&L label in calendar cell
         private const int WEEKLY_STATS_WIDTH = 150;  // Width of weekly statistics column
         private const int WEEKLY_STATS_HEIGHT = 95;  // Height of weekly statistics cells
+
+        // Calendar dashboard panel heights
+        private const int DONUT_CARD_HEIGHT = 195;          // Height of each win-rate donut card
+        private const int PL_CHART_CARD_HEIGHT = 215;       // Height of cumulative P&L chart card
+        private const int CAL_TOP_STATS_BAR_HEIGHT = 88;    // Height of top 4-metric stats bar
+        private const int CAL_BOTTOM_STATS_BAR_HEIGHT = 65; // Height of bottom 6-metric stats bar
+        private const int PL_CHART_BOTTOM_MARGIN = 4;       // Bottom margin on P&L chart card
+
+        // Calendar dashboard colours (reused across top/bottom bars and charts)
+        private static readonly Color CalDashGreen = Color.FromArgb(0, 200, 83);   // Positive P&L / win
+        private static readonly Color CalDashRed   = Color.FromArgb(255, 80, 80);  // Negative P&L / loss
+        private static readonly Color CalDashTeal  = Color.FromArgb(26, 188, 156); // Donut win arc
+        private static readonly Color CalDashSalmon = Color.FromArgb(231, 76, 60); // Donut loss arc
         
         // Calendar P&L label colors for day cells
         private static readonly Color CalendarProfitColor = Color.FromArgb(0, 100, 0); // Dark green for profit
@@ -14443,7 +14456,7 @@ namespace Risk_Manager
             {
                 Name = "CalTopStatsBar",
                 Dock = DockStyle.Top,
-                Height = 88,
+                Height = CAL_TOP_STATS_BAR_HEIGHT,
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 0, 0, 6)
             };
@@ -14464,7 +14477,7 @@ namespace Risk_Manager
             string plText = totalNetPL >= 0
                 ? $"${totalNetPL:N2}"
                 : $"(${Math.Abs(totalNetPL):N2})";
-            Color plColor = totalNetPL >= 0 ? Color.FromArgb(0, 200, 83) : Color.FromArgb(255, 80, 80);
+            Color plColor = totalNetPL >= 0 ? CalDashGreen : CalDashRed;
             table.Controls.Add(
                 CreateCalTopStatCard("TOTAL NET P&L", plText, plColor, $"Trades in total: {totalTradeCount}"), 0, 0);
 
@@ -14474,13 +14487,13 @@ namespace Risk_Manager
 
             // Card 3: Average Winning Trade
             table.Controls.Add(
-                CreateCalTopStatCard("AVERAGE WINNING TRADE", $"${avgWin:N2}", Color.FromArgb(0, 200, 83), ""), 2, 0);
+                CreateCalTopStatCard("AVERAGE WINNING TRADE", $"${avgWin:N2}", CalDashGreen, ""), 2, 0);
 
             // Card 4: Average Losing Trade (parentheses notation for negative)
             string avgLossText = avgLoss <= 0
                 ? $"(${Math.Abs(avgLoss):N2})"
                 : $"${avgLoss:N2}";
-            Color avgLossColor = avgLoss < 0 ? Color.FromArgb(255, 80, 80) : TextWhite;
+            Color avgLossColor = avgLoss < 0 ? CalDashRed : TextWhite;
             table.Controls.Add(CreateCalTopStatCard("AVERAGE LOSING TRADE", avgLossText, avgLossColor, ""), 3, 0);
 
             bar.Controls.Add(table);
@@ -14565,15 +14578,15 @@ namespace Risk_Manager
             int totalCount = winCount + lossCount;
             double winPct = totalCount > 0 ? (winCount * 100.0) / totalCount : 0;
 
-            Color winColor  = Color.FromArgb(26, 188, 156);   // Teal
-            Color lossColor = Color.FromArgb(231, 76,  60);   // Red/salmon
+            Color winColor   = CalDashTeal;
+            Color lossColor  = CalDashSalmon;
             Color emptyColor = Color.FromArgb(60, 60, 60);
 
             var outerCard = new Panel
             {
                 Name = $"DonutCard_{title.Replace(" ", "").Replace("%", "Pct")}",
                 BackColor = CardBackground,
-                Height = 195,
+                Height = DONUT_CARD_HEIGHT,
                 Dock = DockStyle.Top,
                 Margin = new Padding(3, 3, 3, 5)
             };
@@ -14642,8 +14655,9 @@ namespace Risk_Manager
                     float winSweep  = (float)(winPct / 100.0 * 360.0);
                     float lossSweep = 360.0f - winSweep;
 
+                    // Use winCount guard to avoid floating-point edge cases
                     using (var brush = new SolidBrush(winColor))
-                        g.FillPie(brush, outerRect, -90f, winSweep > 0 ? winSweep : 360f);
+                        g.FillPie(brush, outerRect, -90f, winCount > 0 ? (winSweep > 0f ? winSweep : 360f) : 360f);
 
                     if (lossCount > 0 && lossSweep > 0.5f)
                     {
@@ -14657,7 +14671,7 @@ namespace Risk_Manager
                     g.FillEllipse(brush, innerRect);
 
                 // Center percentage text
-                string pctText = $"{winPct:0}%";
+                string pctText = $"{winPct:F0}%";
                 using (var font = new Font("Segoe UI", 13, FontStyle.Bold))
                 using (var brush = new SolidBrush(TextWhite))
                 {
@@ -14791,9 +14805,9 @@ namespace Risk_Manager
             {
                 Name = "PLLineChart",
                 BackColor = CardBackground,
-                Height = 215,
+                Height = PL_CHART_CARD_HEIGHT,
                 Dock = DockStyle.Top,
-                Margin = new Padding(0, 0, 0, 4)
+                Margin = new Padding(0, 0, 0, PL_CHART_BOTTOM_MARGIN)
             };
 
             // Rounded corners
@@ -14826,7 +14840,7 @@ namespace Risk_Manager
             };
             outerCard.Controls.Add(titleLbl);
 
-            Color lineColor = Color.FromArgb(0, 200, 83);
+            Color lineColor = CalDashGreen;
 
             // Inner chart panel (fills remaining card area)
             var chartPanel = new Panel
@@ -14844,7 +14858,10 @@ namespace Risk_Manager
                 var g = e.Graphics;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
 
-                const int padL = 55, padR = 60, padT = 10, padB = 28;
+                const int padL = 55;  // Left padding: room for Y-axis labels
+                const int padR = 60;  // Right padding: room for right-side Y labels
+                const int padT = 10;  // Top padding
+                const int padB = 28;  // Bottom padding: room for X-axis date labels
                 int cw = chartPanel.Width  - padL - padR;
                 int ch = chartPanel.Height - padT - padB;
                 if (cw <= 0 || ch <= 0) return;
@@ -15001,7 +15018,7 @@ namespace Risk_Manager
             {
                 Name = "CalBottomStatsBar",
                 Dock = DockStyle.Top,
-                Height = 65,
+                Height = CAL_BOTTOM_STATS_BAR_HEIGHT,
                 BackColor = DarkBackground,
                 Padding = new Padding(0, 5, 0, 0)
             };
@@ -15022,14 +15039,14 @@ namespace Risk_Manager
             string bestStr = tradingDays.Count > 0 ? $"${bestDay:N2}" : "-";
             table.Controls.Add(CreateCalBottomStatCard(
                 "BEST DAY", bestStr,
-                bestDay > 0 ? Color.FromArgb(0, 200, 83) : TextWhite), 0, 0);
+                bestDay > 0 ? CalDashGreen : TextWhite), 0, 0);
 
             // Worst Day
             string worstStr = tradingDays.Count > 0 && worstDay < 0
                 ? $"(${Math.Abs(worstDay):N2})" : "-";
             table.Controls.Add(CreateCalBottomStatCard(
                 "WORST DAY", worstStr,
-                worstDay < 0 ? Color.FromArgb(255, 80, 80) : TextWhite), 1, 0);
+                worstDay < 0 ? CalDashRed : TextWhite), 1, 0);
 
             // AVG P&L/Day
             string avgDayStr = tradingDays.Count > 0
@@ -15037,7 +15054,7 @@ namespace Risk_Manager
                 : "-";
             table.Controls.Add(CreateCalBottomStatCard(
                 "AVG P&L/DAY", avgDayStr,
-                avgPLDay >= 0 ? Color.FromArgb(0, 200, 83) : Color.FromArgb(255, 80, 80)), 2, 0);
+                avgPLDay >= 0 ? CalDashGreen : CalDashRed), 2, 0);
 
             // AVG R:R
             table.Controls.Add(CreateCalBottomStatCard(
@@ -15046,12 +15063,12 @@ namespace Risk_Manager
             // Win Days
             table.Controls.Add(CreateCalBottomStatCard(
                 "WIN DAYS", winDays.ToString(),
-                winDays > 0 ? Color.FromArgb(0, 200, 83) : TextWhite), 4, 0);
+                winDays > 0 ? CalDashGreen : TextWhite), 4, 0);
 
             // Loss Days
             table.Controls.Add(CreateCalBottomStatCard(
                 "LOSS DAYS", lossDays.ToString(),
-                lossDays > 0 ? Color.FromArgb(255, 80, 80) : TextWhite), 5, 0);
+                lossDays > 0 ? CalDashRed : TextWhite), 5, 0);
 
             bar.Controls.Add(table);
             return bar;
@@ -15305,9 +15322,11 @@ namespace Risk_Manager
             rightContentPanel.Controls.Add(plChartPanel);     // index 3 → top
 
             // ---- Middle panel: left charts | right content ----
-            int rightH = plChartPanel.Height + headerPanel.Height
+            // rightH accounts for: P&L chart height + its bottom margin + calendar header + grid + legend
+            int rightH = PL_CHART_CARD_HEIGHT + PL_CHART_BOTTOM_MARGIN
+                         + headerPanel.Height
                          + calendarPanel.Height + CALENDAR_LEGEND_WRAPPER_HEIGHT;
-            int leftH  = 195 * 2 + 20;  // two donut cards
+            int leftH  = DONUT_CARD_HEIGHT * 2 + 20;  // two donut cards + their margins
             var middlePanel = new Panel
             {
                 Name = "CalMiddlePanel",
